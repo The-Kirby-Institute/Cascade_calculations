@@ -1,0 +1,174 @@
+---
+title: "Draft STI Cascade Structure"
+author: "Richard T. Gray"
+date: Date - `r format(Sys.Date(), format="%B %d %Y")`
+output: word_document
+---
+
+This Rmarkdown document produces a figure for the proposed clinical management and service delivery cascade for sexually transmitted infections (STIs) in Australia. Currently it uses dummy values as inputs but in future versions will load external data before performing the calculations and figure generation. 
+
+```{r initialization,echo = FALSE,messages = FALSE,include=FALSE}
+# Clear workspace
+rm(list=ls()) 
+options(scipen=999)  # To get rid of scientific notation
+
+# Load libraries used
+require(ggplot2)
+require(reshape2)
+require(RColorBrewer)
+
+# Details of where to store outputs
+dataFolder <- "C:/Users/Rgray/Documents/Research/!Evaluation_Modelling/projects/Care_Cascade_Calculations/data/"
+outputFolder <- "C:/Users/Rgray/Documents/Research/!Evaluation_Modelling/projects/Care_Cascade_Calculations/output/"
+currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
+```
+
+###Definitions
+
+* Living with chlamydia - the number of people who had an infection of _Chlamydia trachomatis_ at some stage during the last calendar year (2014 in this example).
+* Remain infected excluding background treatment - the number of people who had an infection minus those expected to clear infection due to antibiotic treatment of another infection during the calendar year.
+* Remain infected excluding natural clearance - the number of people who had an infection minus those who clear infection through background treatment or naturally (possibly change to remain infected after three months) during the calendar year.
+* Notifications - the number of diagnoses of _Chlamydia trachomatis_ during the calendar year.
+* Received treatment - the number of people diagnosed who have received treatment for _Chlamydia trachomatis_.
+* Retested within 3 months - the number of people who are retested for infection within three months of receiving treatment (to see if treatment has been effective).
+
+```{r loaddata, echo=FALSE, messages = FALSE, include=FALSE}
+# Dummy data to produce the plot - Currently have some dummy data to create to produce the template plot. Need different values for males and females.
+
+numyears <- 2
+
+# Read in as csv file
+dataframe <- read.csv(paste(dataFolder,"Dummy_Chlamydia_data.csv",sep=""), sep = ",", nrows = 2*numyears)
+
+# Parameters for calculations
+naturalClearenceMales <- c(0.7,0.5,0.8)       # Best, lower, upper
+backgroundClearenceMales <- c(0.05,0.01,0.1)  # Best, lower, upper
+
+naturalClearenceFems <- c(0.2,0.1,0.3)       # Best, lower, upper
+backgroundClearenceFems <- c(0.1,0.01,0.15)  # Best, lower, upper
+
+```
+
+### Cascade calculations
+```{r plotcode, echo=FALSE,messages = FALSE,include=FALSE}
+# Perform the cascade calculations
+
+# Setup empty frame
+numrows <- 6
+numcols <- 9 
+cascadeframe <- data.frame(matrix(NA, nrow = numrows, ncol = numcols))
+names(cascadeframe) <- c("year","sex","limit","infections","background","natural","diagnoses","treatment","retest")
+
+# Enter data - highly likely to be inefficient R ...
+
+
+cascadeframe$year <- rep(2014,numrows)
+cascadeframe$sex <- c(rep("males",numrows/2),rep("females",numrows/2))
+cascadeframe$limit <- c(rep(c("best","lower","upper"),numrows/3))
+
+
+cascadeframe$infections <- c(dataframe$infects[dataframe$sex == "male"],
+                             dataframe$infectslower[dataframe$sex == "male"],
+                             dataframe$infectsupper[dataframe$sex == "male"],
+                             dataframe$infects[dataframe$sex == "female"],
+                             dataframe$infectslower[dataframe$sex == "female"],
+                             dataframe$infectsupper[dataframe$sex == "female"])
+
+cascadeframe$diagnoses <- c(dataframe$diags[dataframe$sex == "male"],
+                             dataframe$diagslower[dataframe$sex == "male"],
+                             dataframe$diagsupper[dataframe$sex == "male"],
+                             dataframe$diags[dataframe$sex == "female"],
+                             dataframe$diagslower[dataframe$sex == "female"],
+                             dataframe$diagsupper[dataframe$sex == "female"])
+
+cascadeframe$treatment <- c(dataframe$treatments[dataframe$sex == "male"],
+                             dataframe$treatslower[dataframe$sex == "male"],
+                             dataframe$treatsupper[dataframe$sex == "male"],
+                             dataframe$treatments[dataframe$sex == "female"],
+                             dataframe$treatslower[dataframe$sex == "female"],
+                             dataframe$treatsupper[dataframe$sex == "female"])
+
+cascadeframe$retest <- c(dataframe$retests[dataframe$sex == "male"],
+                             dataframe$retestslower[dataframe$sex == "male"],
+                             dataframe$retestsupper[dataframe$sex == "male"],
+                             dataframe$retests[dataframe$sex == "female"],
+                             dataframe$retestslower[dataframe$sex == "female"],
+                             dataframe$retestsupper[dataframe$sex == "female"])
+
+
+# Calculate the missing data
+cascadeframe$background <- cascadeframe$infections*(1-c(backgroundClearenceMales[1],
+                                                     backgroundClearenceMales[2],
+                                                     backgroundClearenceMales[3],
+                                                     backgroundClearenceFems[1],
+                                                     backgroundClearenceFems[2],
+                                                     backgroundClearenceFems[3]))
+
+cascadeframe$natural <- cascadeframe$background*(1-c(naturalClearenceMales[1],
+                                                     naturalClearenceMales[2],
+                                                     naturalClearenceMales[3],
+                                                     naturalClearenceFems[1],
+                                                     naturalClearenceFems[2],
+                                                     naturalClearenceFems[3]))
+
+```
+
+### Cascade diagram
+
+```{r plotcode, echo=FALSE,messages = FALSE,include=FALSE}
+# Create a cascade bar chart with error bars
+graphics.off()
+
+# Theme for plot variables
+opts <- theme(text = element_text(face = "bold",size=14,colour="black"),
+  axis.text.x = element_text(face = "plain",size=12,colour="black"),
+  axis.text.y = element_text(face = "plain",size=12,colour="black"),
+  axis.line = element_line(colour="black"),
+  axis.ticks = element_line(colour="black"),
+  legend.position = "bottom",
+  legend.background = element_rect(),
+  legend.key = element_blank(),
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(), 
+  panel.background = element_blank(), 
+  axis.line = element_line(colour = "black"),
+  plot.title=element_text(size=12, face="bold")
+)
+
+# Setup colours
+getPalette <- colorRampPalette(brewer.pal(3,"Set1"))
+barcolours <- brewer.pal(9,"Set1")
+barcolours <- barcolours[1:2] # Only need two colours for the bars
+
+# Organize our barchart data
+cascadedata <- melt(cascadeframe,id.vars=c("sex","limit"),measure.vars=c("infections","natural","diagnoses","treatment","retest"), variable.name="stage",value.name="number")
+
+# More rerranging to get the upper and lower bounds were we want them
+plotdata <- cascadedata[cascadedata$limit == "best",c("sex","stage","number")]
+plotdata$lower <- cascadedata[cascadedata$limit == "lower",]$number
+plotdata$upper <- cascadedata[cascadedata$limit == "upper",]$number
+
+# Now do the plotting - Basic plot
+dodge <- position_dodge(width=0.9) # For dodging bars and error bars
+cascadeplot <- ggplot(plotdata,aes(x=stage,y=number/1e3,fill = sex)) + opts
+cascadeplot <- cascadeplot + geom_bar(position=dodge,stat="identity") # Plot the bar chart
+cascadeplot <- cascadeplot + scale_fill_manual(values=barcolours,name="") # Use corrrect colours
+cascadeplot <- cascadeplot + xlab("") + ylab("Number of people (thousands)")
+cascadeplot <- cascadeplot + scale_x_discrete(labels=c("Living \n with \n chlamydia","Remain \n infected \n > 3 months",
+                                                       "Notifications","Received \n treatment",
+                                                       "Retested \n < 3 months")) # Add x labels
+
+# Now add error bars
+cascadeplot <- cascadeplot + geom_errorbar(aes(ymin = lower/1e3, ymax = upper/1e3),position=dodge,width=0.33,size=1)
+
+# Now add lines for where we want to reach
+cascadeplot <- cascadeplot + geom_hline(yintercept= plotdata[with(plotdata,sex == "males" & stage == "natural"),]$number/1e3,colour=barcolours[2],size=1,linetype="longdash")
+cascadeplot <- cascadeplot + geom_hline(yintercept= plotdata[with(plotdata,sex == "females" & stage == "natural"),]$number/1e3,colour=barcolours[1],size=1,linetype="longdash")
+
+# Print plot in separate window and save
+windows(width=7,height=5)
+print(cascadeplot)
+ggsave(paste(outputFolder,"sticascade.png"),width=7,height=5)
+
+
+```
