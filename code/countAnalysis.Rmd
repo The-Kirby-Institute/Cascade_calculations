@@ -7,29 +7,121 @@ output: word_document
 
 This Rmarkdown document describes an analysis of the HIV care and treatment cascade to estimate the proportion of new HIV infections in the overall population due to each stage of the cascade. The stages we are considering are people living with undiagnosed HIV (PLUHIV), people living with diagnosed HIV (PLDHIV), people receiving ART with detectable viral load, and people recieving ART with undetectable viral load. The analysis uses annual estimates for new infections and HIV notifications. 
 
+The results are written in an abstract format at the end of the document for submission to ASHM.....
 
-```{r initialization,echo = FALSE,messages = FALSE,include=FALSE}
+
+```{r initialization, echo = FALSE, messages = FALSE, include=FALSE}
 # Clear workspace
 rm(list=ls()) 
 options(scipen=999)  # To get rid of scientific notation
 
-# Load libraries used
+# Load libraries used and that nice for data manipulation
 require(ggplot2)
 require(reshape2)
 require(RColorBrewer)
 require(readxl)
+require(dplyr)
+require(tidyr)
+require(utils)
+# require(GGally)
+```
 
-
+```{r inputdetails, echo = FALSE, messages = FALSE, include=FALSE}
 # Details of where to store outputs
 dataFolder <- "../data/"
 outputFolder <- "../output/"
-currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
+inputFile <- "countdata2.xlsx"
+currTime <- format(Sys.time(), "%Y-%m-%d(%H-%M)") # to append to files
+
+# Options for running and saving things
+fullRun <- TRUE # Everytime we do a run from scratch save everything 
+folder <- paste("CountAbstractAnalysis_",currTime,sep="")
+if(fullRun){
+  dir.create(file.path(outputFolder,folder), showWarnings = FALSE)
+  outputFolder <- file.path(outputFolder,folder)
+}
+
 ```
 
-You can also embed plots, for example:
 
-```{r, echo=FALSE}
-plot(cars)
+
+```{r loaddata, echo=FALSE, messages = FALSE, include=FALSE}
+# Load data from the countdata.xlsx file 
+allData <- read_excel(paste(dataFolder,inputFile,sep =""), na = "NA")
+
+# Subset for this analysis remove unnecesary columns
+countData <- select(allData,-sex,-population,-region,-postcode)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r paramters, echo=FALSE, messages = FALSE, include=FALSE}
+# Parameters used for estimating additional variables and missing values
+
+countUndiagnosed <- c(0.3,0.25,0.2,0.2,0.18,0.15,0.15,0.14,0.12,0.1) # Temporary value should probably be a min and max
+propUndetectable <- c(0.5,0.5,0.5,0.7,0.75,0.8,0.89,0.92,0.89,0.87) # Temporary value for proportion undetectable
+                        # Should be min and max and maybe vary over time
+```
+
+```{r fillmissing, echo=FALSE, messages = FALSE, include=FALSE}
+#Using our input data and various assumptions fill in missing data
+
+# Create a new dataframe for clean data
+countClean <- countData[,c("year","diagnoses")]
+
+# For this abstract we are going to do a simple analysis using the average values of diagnosed and treated 
+# varaibles rather than sampling. So create approriate columns for diagnosed and treated.
+countClean$diagnosed <- rowMeans(countData[,c("diagnosedmin","diagnosedmax")])
+countClean$treated <- rowMeans(countData[,c("treatedmin","treatedmax")],na.rm = FALSE)
+
+# First fill in missing treated values using the 2013 estimates
+propTreat <- countClean[countClean$year == 2013,]$treated/countClean[countClean$year == 2013,]$diagnosed
+countClean$treated <- propTreat*runif(10,0.75,1.25)*countClean$diagnosed
+
+```
+
+```{r addcolumns, echo=FALSE, messages = FALSE, include=FALSE}
+# Using the input parameters add columns for number undiagnosed and number detectable and undetectable
+countFinal <- countClean[,c("year","diagnoses")]
+
+countFinal$undiagnosed <- countUndiagnosed*countClean$diagnosed
+countFinal$diagnosed <- (1-countUndiagnosed)*countClean$diagnosed
+countFinal$detectable <- (1-propUndetectable)*countClean$treated
+countFinal$undetectable <- propUndetectable*countClean$treated
+
+# Save count files as csv files for later 
+if (fullRun){
+  write.csv(countData, file = file.path(outputFolder, paste(currTime, "_countRaw.csv", sep ="")))
+  write.csv(countClean, file = file.path(outputFolder, paste(currTime, "_countClean.csv", sep ="")))
+  write.csv(countFinal, file = file.path(outputFolder, paste(currTime, "_countFinal.csv", sep ="")))
+}
+
+```
+
+```{r exploration, echo=FALSE, messages = FALSE, include=FALSE}
+# Before we get serious lets have a look at the data and what we are trying to do
+# ggpairs(countFinal[,3:6])
+
+# Melt data into a plotting data frame
+plotData <- gather(countFinal,"indicator","estimate",3:6)
+
+# Create a plot looking at the relationships
+countplot <- ggplot(data=plotData,aes(x=estimate,y=diagnoses)) + geom_point() + 
+  facet_wrap(~indicator,scales = "free_x") + theme_bw()
+
+# Plot and save
+windows(width=7,height=7)
+print(countplot)
+if (fullRun){
+  ggsave(file.path(outputFolder, paste(currTime, "_CountPlot.png", sep ="")),width=7,height=7)
+}
+
+```
+
+```{r analysis, echo=FALSE, messages = FALSE, include=FALSE}
+# Now perform analysis trying to estimate beta values using a simple linear model
+
+lm <- lm(diagnoses ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countFinal)
+# lm <- lm(diagnoses ~ 0 + diagnosed,data = countFinal)
+print(lm)
+
+```
