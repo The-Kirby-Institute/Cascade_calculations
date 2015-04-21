@@ -17,13 +17,13 @@ options(scipen=999)  # To get rid of scientific notation
 
 # Load libraries used and that nice for data manipulation
 require(ggplot2)
-require(reshape2)
-require(RColorBrewer)
+# require(reshape2)
+# require(RColorBrewer)
 require(readxl)
 require(dplyr)
 require(tidyr)
 require(utils)
-# require(GGally)
+require(nnls) # For optimization
 ```
 
 ```{r inputdetails, echo = FALSE, messages = FALSE, include=FALSE}
@@ -99,7 +99,7 @@ if (fullRun){
 
 ```{r exploration, echo=FALSE, messages = FALSE, include=FALSE}
 # Before we get serious lets have a look at the data and what we are trying to do
-# ggpairs(countFinal[,3:6])
+# pairs(countFinal[,3:6])
 
 # Melt data into a plotting data frame
 plotData <- gather(countFinal,"indicator","estimate",3:6)
@@ -120,8 +120,15 @@ if (fullRun){
 ```{r analysis, echo=FALSE, messages = FALSE, include=FALSE}
 # Now perform analysis trying to estimate beta values using a simple linear model
 
+# Try a standard linear regression first
 lm <- lm(diagnoses ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countFinal)
-# lm <- lm(diagnoses ~ 0 + diagnosed,data = countFinal)
 print(lm)
+
+# Use nnls package to force all coefficients to be positive
+vars <- as.matrix(countFinal[,c("undiagnosed", "diagnosed","detectable","undetectable")])
+nnlsDiags <- nnls(vars,countFinal$diagnoses)
+
+coefDiags <- coef(nnlsDiags)
+predDiags <- as.vector(coefDiags%*%t(vars))
 
 ```
