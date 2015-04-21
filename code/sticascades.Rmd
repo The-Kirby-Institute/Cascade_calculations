@@ -47,10 +47,13 @@ backgroundClearenceMales <- c(0.05,0.01,0.1)  # Best, lower, upper
 naturalClearenceFems <- c(0.2,0.1,0.3)       # Best, lower, upper
 backgroundClearenceFems <- c(0.1,0.01,0.15)  # Best, lower, upper
 
+consultRates <- c(0.266,0.15,0.35) # Best, lower, upper
+
+
 ```
 
 ### Cascade calculations
-```{r plotcode, echo=FALSE,messages = FALSE,include=FALSE}
+```{r calculations, echo=FALSE,messages = FALSE,include=FALSE}
 # Perform the cascade calculations
 
 # Setup empty frame
@@ -97,19 +100,31 @@ cascadeframe$retest <- c(dataframe$retests[dataframe$sex == "male"],
 
 
 # Calculate the missing data
-cascadeframe$background <- cascadeframe$infections*(1-c(backgroundClearenceMales[1],
+cascadeframe$consult <- cascadeframe$infections*c(consultRates[1],
+                                                     consultRates[2],
+                                                     consultRates[3],
+                                                     consultRates[1],
+                                                     consultRates[2],
+                                                     consultRates[3])
+
+cascadeframe$nonconsult <- cascadeframe$infections - cascadeframe$consult
+
+
+cascadeframe$background <- cascadeframe$nonconsult*(1-c(backgroundClearenceMales[1],
                                                      backgroundClearenceMales[2],
                                                      backgroundClearenceMales[3],
                                                      backgroundClearenceFems[1],
                                                      backgroundClearenceFems[2],
                                                      backgroundClearenceFems[3]))
 
-cascadeframe$natural <- cascadeframe$background*(1-c(naturalClearenceMales[1],
+cascadeframe$remain <- cascadeframe$background*(1-c(naturalClearenceMales[1],
                                                      naturalClearenceMales[2],
                                                      naturalClearenceMales[3],
                                                      naturalClearenceFems[1],
                                                      naturalClearenceFems[2],
                                                      naturalClearenceFems[3]))
+
+cascadeframe$remain <- cascadeframe$remain + cascadeframe$consult
 
 ```
 
@@ -141,7 +156,7 @@ barcolours <- brewer.pal(9,"Set1")
 barcolours <- barcolours[1:2] # Only need two colours for the bars
 
 # Organize our barchart data
-cascadedata <- melt(cascadeframe,id.vars=c("sex","limit"),measure.vars=c("infections","natural","diagnoses","treatment","retest"), variable.name="stage",value.name="number")
+cascadedata <- melt(cascadeframe,id.vars=c("sex","limit"),measure.vars=c("infections","remain","diagnoses","treatment","retest"), variable.name="stage",value.name="number")
 
 # More rerranging to get the upper and lower bounds were we want them
 plotdata <- cascadedata[cascadedata$limit == "best",c("sex","stage","number")]
@@ -154,16 +169,16 @@ cascadeplot <- ggplot(plotdata,aes(x=stage,y=number/1e3,fill = sex)) + opts
 cascadeplot <- cascadeplot + geom_bar(position=dodge,stat="identity") # Plot the bar chart
 cascadeplot <- cascadeplot + scale_fill_manual(values=barcolours,name="") # Use corrrect colours
 cascadeplot <- cascadeplot + xlab("") + ylab("Number of people (thousands)")
-cascadeplot <- cascadeplot + scale_x_discrete(labels=c("Had an \n infection","Remain \n infected \n > 3 months",
-                                                       "Notifications","Received \n treatment",
-                                                       "Retested \n < 3 months")) # Add x labels
+cascadeplot <- cascadeplot + scale_x_discrete(labels=c("Had an \n infection","Remain \n infected",
+                                                       "Diagnoses","Received \n treatment",
+                                                       "Remain \n uninfected")) # Add x labels
 
 # Now add error bars
 cascadeplot <- cascadeplot + geom_errorbar(aes(ymin = lower/1e3, ymax = upper/1e3),position=dodge,width=0.33,size=1)
 
 # Now add lines for where we want to reach
-cascadeplot <- cascadeplot + geom_hline(yintercept= plotdata[with(plotdata,sex == "males" & stage == "natural"),]$number/1e3,colour=barcolours[2],size=1,linetype="longdash")
-cascadeplot <- cascadeplot + geom_hline(yintercept= plotdata[with(plotdata,sex == "females" & stage == "natural"),]$number/1e3,colour=barcolours[1],size=1,linetype="longdash")
+cascadeplot <- cascadeplot + geom_hline(yintercept= plotdata[with(plotdata,sex == "males" & stage == "remain"),]$number/1e3,colour=barcolours[2],size=1,linetype="longdash")
+cascadeplot <- cascadeplot + geom_hline(yintercept= plotdata[with(plotdata,sex == "females" & stage == "remain"),]$number/1e3,colour=barcolours[1],size=1,linetype="longdash")
 
 # Print plot in separate window and save
 windows(width=7,height=5)
