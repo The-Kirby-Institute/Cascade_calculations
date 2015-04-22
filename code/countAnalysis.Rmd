@@ -24,6 +24,12 @@ require(dplyr)
 require(tidyr)
 require(utils)
 require(nnls) # For optimization
+require(knitr)
+require(gridExtra)
+
+# Set workin directory
+setwd("C:/Users/Rgray/Documents/Research/!Evaluation_Modelling/projects/Care_Cascade_Calculations/code")
+
 ```
 
 ```{r inputdetails, echo = FALSE, messages = FALSE, include=FALSE}
@@ -57,9 +63,7 @@ countData <- select(allData,-sex,-population,-region,-postcode)
 ```{r paramters, echo=FALSE, messages = FALSE, include=FALSE}
 # Parameters used for estimating additional variables and missing values
 
-countUndiagnosed <- c(0.3,0.25,0.2,0.2,0.18,0.15,0.15,0.14,0.12,0.1) # Temporary value should probably be a min and max
-propUndetectable <- c(0.5,0.5,0.5,0.7,0.75,0.8,0.89,0.92,0.89,0.87) # Temporary value for proportion undetectable
-                        # Should be min and max and maybe vary over time
+countUndiagnosed <- c(0.3,0.25,0.2,0.2,0.18,0.15,0.15,0.14,0.12,0.1) # Temporary value should probably be a min and 
 ```
 
 ```{r fillmissing, echo=FALSE, messages = FALSE, include=FALSE}
@@ -72,10 +76,18 @@ countClean <- countData[,c("year","diagnoses")]
 # varaibles rather than sampling. So create approriate columns for diagnosed and treated.
 countClean$diagnosed <- rowMeans(countData[,c("diagnosedmin","diagnosedmax")])
 countClean$treated <- rowMeans(countData[,c("treatedmin","treatedmax")],na.rm = FALSE)
+countClean$suppressed <- rowMeans(countData[,c("suppressedmin","suppressedmax")],na.rm = FALSE)
 
-# First fill in missing treated values using the 2013 estimates
-propTreat <- countClean[countClean$year == 2013,]$treated/countClean[countClean$year == 2013,]$diagnosed
-countClean$treated <- propTreat*runif(10,0.75,1.25)*countClean$diagnosed
+# First fill in missing treated values using the available data
+propTreat <- mean(countClean$treated/countClean$diagnosed,na.rm = TRUE)
+propSuppressed <- mean(countClean$suppressed/countClean$diagnosed,na.rm = TRUE)
+
+countClean[is.na(countClean$treated),]$treated <- propTreat*countClean[is.na(countClean$treated),]$diagnosed
+countClean[is.na(countClean$suppressed),]$suppressed <- propSuppressed*countClean[is.na(countClean$suppressed),]$diagnosed
+
+```
+
+```{r sampling, echo=FALSE, messages = FALSE, include=FALSE}
 
 ```
 
@@ -84,9 +96,9 @@ countClean$treated <- propTreat*runif(10,0.75,1.25)*countClean$diagnosed
 countFinal <- countClean[,c("year","diagnoses")]
 
 countFinal$undiagnosed <- countUndiagnosed*countClean$diagnosed
-countFinal$diagnosed <- (1-countUndiagnosed)*countClean$diagnosed
-countFinal$detectable <- (1-propUndetectable)*countClean$treated
-countFinal$undetectable <- propUndetectable*countClean$treated
+countFinal$diagnosed <- (1-countUndiagnosed)*countClean$diagnosed-countClean$treated
+countFinal$undetectable <- countClean$suppressed
+countFinal$detectable <- countClean$treated-countClean$suppressed
 
 # Save count files as csv files for later 
 if (fullRun){
@@ -130,5 +142,59 @@ nnlsDiags <- nnls(vars,countFinal$diagnoses)
 
 coefDiags <- coef(nnlsDiags)
 predDiags <- as.vector(coefDiags%*%t(vars))
+
+
+
+# Incidence result data frames
+pldhivFrame <- countFinal[,c("year","undiagnosed","diagnosed","undetectable","detectable")] # For plotting
+infectsFrame <- pldhivFrame
+infectsFrame$undiagnosed <- coefDiags[1]*countFinal$undiagnosed
+infectsFrame$diagnosed <- coefDiags[2]*countFinal$diagnosed
+infectsFrame$detectable <- coefDiags[3]*countFinal$detectable
+infectsFrame$undetectable<- coefDiags[4]*countFinal$undetectable
+
+# Normalise and calculate propvector
+# for(ii in 1:numyears){ 
+#   
+#   
+#   
+# }
+
+# Final year data
+propInfects <- infectsFrame[infectsFrame$year == 2013,2:5]/countFinal$diagnoses
+
+# Prepare to print out some results 
+# propFrame <-data.frame(x=c("Undiagnosed","Diagnosed","On ART (detectable)","On ART (undetectable)"),y = 100*propInfects[1,])
+# colnames(propFrame) <- c("Stage","Percentage")
+
+
+```
+
+```{r prettyplots, echo=FALSE, messages = FALSE, include=FALSE}
+# Melt data into right format 
+# plhivResults <- gather(pldhivFrame,"stage","number",2:5)
+plhivResults <- gather(pldhivFrame,"stage","number",2:5) %>%
+                  dplyr::group_by(year) %>%
+                    mutate(cumsum=cumsum(number))
+infectsResults <- gather(infectsFrame,"stage","number",2:5) %>%
+                    dplyr::group_by(year) %>%
+                      mutate(cumsum=cumsum(number))
+
+# Now create plots 
+
+plhivPlotBase <- ggplot(data = plhivResults, aes(x=year,y=number, fill = stage)) +
+  theme_bw() + xlab("Year") + labs(fill='Cascade stage') 
+plhivPlot1 <- plhivPlotBase + geom_bar(stat="identity") + ylab("Number PLDHIV") 
+plhivPlot2 <- plhivPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion PLDHIV") 
+
+infectsPlotBase <- ggplot(data = infectsResults, aes(x=year,y=number, fill = stage))+
+  theme_bw() + xlab("Year") +  labs(fill='Cascade stage')
+infectsPlot1 <- infectsPlotBase + geom_bar(stat="identity") + ylab("Number Diagnoses")
+infectsPlot2 <- infectsPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion Diagnoses")
+
+# Print plots
+windows(width=12,height=5)
+print(grid.arrange(plhivPlot1,infectsPlot1,plhivPlot2,infectsPlot2,ncol = 2))
+
 
 ```
