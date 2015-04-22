@@ -36,7 +36,7 @@ setwd("C:/Users/Rgray/Documents/Research/!Evaluation_Modelling/projects/Care_Cas
 # Details of where to store outputs
 dataFolder <- "../data/"
 outputFolder <- "../output/"
-inputFile <- "countdata2.xlsx"
+inputFile <- "countAbstractData.xlsx"
 currTime <- format(Sys.time(), "%Y-%m-%d(%H-%M)") # to append to files
 
 # Options for running and saving things
@@ -50,62 +50,31 @@ if(fullRun){
 ```
 
 
-
 ```{r loaddata, echo=FALSE, messages = FALSE, include=FALSE}
 # Load data from the countdata.xlsx file 
-allData <- read_excel(paste(dataFolder,inputFile,sep =""), na = "NA")
+countData <- read_excel(paste(dataFolder,inputFile,sep =""), na = "NA")
 
-# Subset for this analysis remove unnecesary columns
-countData <- select(allData,-sex,-population,-region,-postcode)
-
-```
-
-```{r paramters, echo=FALSE, messages = FALSE, include=FALSE}
-# Parameters used for estimating additional variables and missing values
-
-countUndiagnosed <- c(0.3,0.25,0.2,0.2,0.18,0.15,0.15,0.14,0.12,0.1) # Temporary value should probably be a min and 
-```
-
-```{r fillmissing, echo=FALSE, messages = FALSE, include=FALSE}
-#Using our input data and various assumptions fill in missing data
-
-# Create a new dataframe for clean data
+# Using the input data calculate numbers in each column
 countClean <- countData[,c("year","diagnoses")]
 
-# For this abstract we are going to do a simple analysis using the average values of diagnosed and treated 
-# varaibles rather than sampling. So create approriate columns for diagnosed and treated.
-countClean$diagnosed <- rowMeans(countData[,c("diagnosedmin","diagnosedmax")])
-countClean$treated <- rowMeans(countData[,c("treatedmin","treatedmax")],na.rm = FALSE)
-countClean$suppressed <- rowMeans(countData[,c("suppressedmin","suppressedmax")],na.rm = FALSE)
-
-# First fill in missing treated values using the available data
-propTreat <- mean(countClean$treated/countClean$diagnosed,na.rm = TRUE)
-propSuppressed <- mean(countClean$suppressed/countClean$diagnosed,na.rm = TRUE)
-
-countClean[is.na(countClean$treated),]$treated <- propTreat*countClean[is.na(countClean$treated),]$diagnosed
-countClean[is.na(countClean$suppressed),]$suppressed <- propSuppressed*countClean[is.na(countClean$suppressed),]$diagnosed
-
-```
-
-```{r sampling, echo=FALSE, messages = FALSE, include=FALSE}
-
-```
-
-```{r addcolumns, echo=FALSE, messages = FALSE, include=FALSE}
-# Using the input parameters add columns for number undiagnosed and number detectable and undetectable
-countFinal <- countClean[,c("year","diagnoses")]
-
-countFinal$undiagnosed <- countUndiagnosed*countClean$diagnosed
-countFinal$diagnosed <- (1-countUndiagnosed)*countClean$diagnosed-countClean$treated
-countFinal$undetectable <- countClean$suppressed
-countFinal$detectable <- countClean$treated-countClean$suppressed
+countClean$undiagmin <- countData$diagnosedmin/(1-countData$undiagmin)
+countClean$undiagmax <- countData$diagnosedmax/(1-countData$undiagmax)
+countClean$diagnosedmin <- countData$diagnosedmin-countData$treatedmin
+countClean$diagnosedmax <- countData$diagnosedmax-countData$treatedmax
+countClean$detectablemin <- countData$treatedmin-countData$suppressedmin*countData$treatedmin
+countClean$detectablemax <- countData$treatedmax-countData$suppressedmax*countData$treatedma
+countClean$undetectablemin <- countData$suppressedmin*countData$treatedmin
+countClean$undetectablemax <- countData$suppressedmax*countData$treatedmax
 
 # Save count files as csv files for later 
 if (fullRun){
   write.csv(countData, file = file.path(outputFolder, paste(currTime, "_countRaw.csv", sep ="")))
-  write.csv(countClean, file = file.path(outputFolder, paste(currTime, "_countClean.csv", sep ="")))
-  write.csv(countFinal, file = file.path(outputFolder, paste(currTime, "_countFinal.csv", sep ="")))
+  write.csv(countClean, file = file.path(outputFolder, paste(currTime, "_countFinal.csv", sep ="")))
 }
+
+```
+
+```{r sampling, echo=FALSE, messages = FALSE, include=FALSE}
 
 ```
 
