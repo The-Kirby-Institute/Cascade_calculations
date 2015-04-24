@@ -150,21 +150,45 @@ if (fullRun){
 ```{r analysis, echo=FALSE, messages = FALSE, include=FALSE}
 # Now perform analysis trying to estimate beta values using a simple linear model
 
-# Try a standard linear regression first
+# Unadjusted analysis
+#====================
+
+# Try a standard linear regression first on everything without adjusting for known reductions when undetectable
 lm <- lm(diagnoses ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
 print(lm)
+coefUnadjustedOverall <- unname(coef(lm))
 
-# Use nnls package to force all coefficients to be positive
-vars <- as.matrix(countSample[,c("undiagnosed", "diagnosed","detectable","undetectable")])
-nnlsDiags <- nnls(vars,countSample$diagnoses)
+# Do the calculations for individual years
+coefUnadjustedYear <- matrix(nrow = nrow(countClean),ncol = 4)
+dataYears <- min(countSample$year):max(countSample$year)
+for(ii in 1:length(dataYears)){
+  lmYear <- lm(diagnoses ~ 0 + undiagnosed + diagnosed + detectable + undetectable, 
+               data = filter(countSample,year == dataYears[ii]))
+  coefUnadjustedYear[ii,] <- unname(coef(lmYear))
+}
+print(coefUnadjustedYear)
 
-coefDiags <- coef(nnlsDiags)
-predDiags <- as.vector(coefDiags%*%t(vars))
+# Adjusted analysis
+# ================
+
+# Bioogically we know ....
 
 # Test forcing a constraint
-CountTemp <- countSample
-CountTemp$new <- countSample$undiagnosed + 0.05*countSample$undetectable
-lm2 <- lm(diagnoses ~ 0 + new + diagnosed + detectable, data = CountTemp)
+countTemp <- countSample
+# CountTemp$new <- countSample$undiagnosed + 0.05*countSample$undetectable
+countTemp$adjusted <- (countSample$diagnosed + 0.05*countSample$undetectable)
+
+# lm2 <- lm(diagnoses ~ 0 + undiagnosed + new + detectable, data = CountTemp)
+lm2 <- lm(diagnoses ~ 0  + undiagnosed + adjusted + detectable, filter(countTemp,year == 2013))
+print(lm2)
+
+# Use nnls package to force all coefficients to be positive
+# vars <- as.matrix(countSample[,c("undiagnosed", "diagnosed","detectable","undetectable")])
+# nnlsDiags <- nnls(vars,countSample$diagnoses)
+# 
+# coefDiags <- coef(nnlsDiags)
+# predDiags <- as.vector(coefDiags%*%t(vars))
+
 
 # Incidence result data frames
 pldhivFrame <- countAverage[,c("year","undiagnosed","diagnosed","undetectable","detectable")] # For plotting
@@ -173,13 +197,6 @@ infectsFrame$undiagnosed <- coefDiags[1]*countAverage$undiagnosed
 infectsFrame$diagnosed <- coefDiags[2]*countAverage$diagnosed
 infectsFrame$detectable <- coefDiags[3]*countAverage$detectable
 infectsFrame$undetectable<- coefDiags[4]*countAverage$undetectable
-
-# Normalise and calculate propvector
-# for(ii in 1:numyears){ 
-#   
-#   
-#   
-# }
 
 # Final year data
 propInfects <- infectsFrame[infectsFrame$year == 2013,2:5]/countAverage$diagnoses
