@@ -42,6 +42,7 @@ currTime <- format(Sys.time(), "%Y-%m-%d(%H-%M)") # to append to files
 # Analysis parameters
 numSamples <- 1000  # Number of sampled parameter sets for each year
 numInits <- 1000    # Number of init starting points for optimization 
+useDiagnoses <- TRUE 
 
 # Options for running and saving things
 fullRun <- TRUE # Everytime we do a run from scratch save everything 
@@ -166,11 +167,15 @@ countAdjust <- countSample
 countAdjust$beta4 <- runif(numSamples,0.01,0.29)
 countAdjust$adjusted <- (countSample$diagnosed + countAdjust$beta4*countSample$undetectable)
 
-# Overall
-# lmAdjust <- lm(diagnoses ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
-lmAdjust <- lm(newinfects ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
+if(useDiagnoses){
+  lmAdjust <- lm(diagnoses ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
+else {  
+  lmAdjust <- lm(newinfects ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
+}
 print(lmAdjust)
 coefAdjustedOverall <- unname(coef(lmAdjust))
+
+# Sample from coefficents to create uncertainty in the estimates.
 confintTemp <- confint(lmAdjust)
 coefLower <- c(confint(lmAdjust)[1,1],confint(lmAdjust)[2,1],confint(lmAdjust)[3,1])
 coefUpper <- c(confint(lmAdjust)[1,2],confint(lmAdjust)[2,2],confint(lmAdjust)[3,2])
@@ -181,18 +186,19 @@ sampleDetect <- runif(numSamples,coefLower[3],coefUpper[3])
 sampleUndetect <- countAdjust$beta4*sampleUndiag
 
 aveCoeffs <- colMeans(matrix(c(sampleUndiag,sampleDiag,sampleDetect,sampleUndetect),nrow = numSamples, ncol = 4))
+print(aveCoeffs)
 
+# Now estimate the uncertainty and proportion of infections caused by each stage
 numUndiag <- sampleUndiag*countSample$undiagnosed
 numDiag <- sampleDiag*countSample$diagnosed
 numDetect <- sampleDetect*countSample$detectable
 numUndetect <- sampleUndetect*countSample$undetectable
 numSum <- numUndiag + numDiag + numDetect + numUndetect
 
-mean(numUndiag/numSum)
-mean(numDiag/numSum)
-mean(numDetect/numSum)
-mean(numUndetect/numSum)
+# Put things in a data frame so we can extract results
+stageInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag, diagnosed = numDiag, detectable = numDetect, undetectable = numUndetect)
 
+propInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag/numSum, diagnosed = numDiag/numSum, detectable = numDetect/numSum, undetectable = numUndetect/numSum)
 ```
 
 ```{r}
@@ -254,9 +260,6 @@ print(coefFinal)
 # Incidence result data frames
 # =============================
 coefUsed <- coefAdjustedOverall
-# coefUsed <- coefFinal
-# coefUsed <- tail(coefAdjustedYear, n = 1)
-# coefUsed <- head(coefAdjustedYear, n = 1)
 
 pldhivFrame <- countAverage[,c("year","undiagnosed","diagnosed","undetectable","detectable")] # For plotting
 infectsFrame <- pldhivFrame
