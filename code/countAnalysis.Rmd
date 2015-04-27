@@ -202,61 +202,6 @@ propInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag/numSu
 ```
 
 ```{r}
-
-# Constrained analysis
-# ====================
-
-countConstrain <- countAdjust
-countConstrain$z <- -countConstrain$undiagnosed-countConstrain$adjusted
-
-lmConstrain <- lm(z ~ 0 + undiagnosed + diagnoses + detectable, data = countConstrain)
-print(lmConstrain)
-coefs <- unname(coef(lmConstrain))
-
-# Adjust the parameters
-p2 <- -1/coefs[2]
-p3 <- p2*coefs[3]
-p1 <- (coefs[1] + 1)*p2
-
-print(c(p1,p2,p3))
-# Use Optim so we can add further constraints. Specifically that b is less than 0 and p2 < p1
-
-# dat <- countConstrain[,c("z","undiagnosed","diagnoses","detectable")]
-
-numInits <- 1000 #numSamples
-
-
-# for(jj in 1:numYears)
-dat <- tail(dat, n = numSamples) # Final year
-
-min.RSS <- function(data,par){
-  with(data,sum(par[1]*undiagnosed + par[2]*diagnoses + par[3]*detectable - z)^2)
-}
-
-results <- list()
-values <- rep(numSamples,0)
-
-initpars <- matrix(c(runif(numInits,0,10),runif(numInits,-50,0),runif(numInits,0,1)),nrow=numInits,ncol = 3)
-for (ii in 1:numInits) {
-  results[[ii]] <- optim(par = initpars[ii,], min.RSS, data = dat,lower=c(0,-50,0),
-                         upper=c(10,0,1),method="L-BFGS-B")
-  values[ii] <- results[[ii]]$value
-}
-
-# Convert parameters
-# ==================
-
-pars <- results[[which.min(values)]]$par
-p2 <- -1/pars[2]
-p3 <- p2*pars[3]
-p1 <- (pars[1] + 1)*p2
-
-# Final parameters
-coefFinal <- c(p1,p2,p3,0.05*p2)
-print(coefFinal)
-```
-
-```{r}
 # Incidence result data frames
 # =============================
 coefUsed <- coefAdjustedOverall
