@@ -201,30 +201,6 @@ stageInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag, dia
 propInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag/numSum, diagnosed = numDiag/numSum, detectable = numDetect/numSum, undetectable = numUndetect/numSum)
 ```
 
-```{r}
-# Incidence result data frames
-# =============================
-coefUsed <- coefAdjustedOverall
-
-pldhivFrame <- countAverage[,c("year","undiagnosed","diagnosed","undetectable","detectable")] # For plotting
-infectsFrame <- pldhivFrame
-infectsFrame$undiagnosed <- coefUsed[1]*countAverage$undiagnosed
-infectsFrame$diagnosed <- coefUsed[2]*countAverage$diagnosed
-infectsFrame$detectable <- coefUsed[3]*countAverage$detectable
-infectsFrame$undetectable<- coefUsed[4]*countAverage$undetectable
-
-# Final year data
-# propInfects <- infectsFrame[infectsFrame$year == 2013,2:5]/countAverage$diagnoses
-propInfects <- infectsFrame[infectsFrame$year == 2013,2:5]/sum(infectsFrame[infectsFrame$year == 2013,2:5])
-print(propInfects)
-
-# Prepare to print out some results 
-# propFrame <-data.frame(x=c("Undiagnosed","Diagnosed","On ART (detectable)","On ART (undetectable)"),y = 100*propInfects[1,])
-# colnames(propFrame) <- c("Stage","Percentage")
-
-
-```
-
 ```{r prettyplots, echo=FALSE, messages = FALSE, include=FALSE}
 graphics.off()
 # Melt data into right format 
