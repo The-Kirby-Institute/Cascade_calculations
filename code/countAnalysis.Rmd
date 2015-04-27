@@ -129,14 +129,9 @@ print(countAverage)
 # Before we get serious lets have a look at the data and what we are trying to do
 
 # Melt data into a plotting data frame
-datayear <- 2013
-plotDataYear <- gather(filter(countSample, year == datayear),"indicator","estimate",4:7)
 plotDataAve <- gather(countAverage,"indicator","estimate",4:7)
 
 # Create a plot looking at the relationships
-countplotYear <- ggplot(data=plotDataYear,aes(x=estimate,y=newinfects)) + geom_point() + 
-  facet_wrap(~indicator,scales = "free_x") + theme_bw()
-
 countplotAve <- ggplot(data=plotDataAve,aes(x=estimate,y=newinfects)) + geom_point() + 
   facet_wrap(~indicator,scales = "free_x") + theme_bw()
 
@@ -160,16 +155,6 @@ if (fullRun){
 lm <- lm(newinfects ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
 print(lm)
 coefUnadjustedOverall <- unname(coef(lm))
-
-# Do the calculations for individual years
-coefUnadjustedYear <- matrix(nrow = nrow(countClean),ncol = 4)
-dataYears <- min(countSample$year):max(countSample$year)
-for(ii in 1:length(dataYears)){
-  lmYear <- lm(diagnoses ~ 0 + undiagnosed + diagnosed + detectable + undetectable, 
-               data = filter(countSample,year == dataYears[ii]))
-  coefUnadjustedYear[ii,] <- unname(coef(lmYear))
-}
-print(coefUnadjustedYear)
 
 # Adjusted analysis
 # ================
@@ -207,20 +192,6 @@ mean(numUndiag/numSum)
 mean(numDiag/numSum)
 mean(numDetect/numSum)
 mean(numUndetect/numSum)
-
-# Do the calculations for individual years
-coefTemp <- matrix(nrow = nrow(countClean),ncol = 3)
-coefAdjustedYear <- matrix(nrow = nrow(countClean),ncol = 4)
-
-for(ii in 1:length(dataYears)){
-  lmYearAdjusted <- lm(diagnoses ~ 0  + undiagnosed + adjusted + detectable, 
-                       data = filter(countAdjust,year == dataYears[ii]))
-  coefTemp[ii,] <- unname(coef(lmYearAdjusted))
-}
-coefAdjustedYear[,c(1,2,3)] <- coefTemp
-coefAdjustedYear[,4] <- 0.05*coefTemp[,2]
-
-print(coefAdjustedYear)
 
 ```
 
