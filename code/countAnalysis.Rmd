@@ -42,7 +42,7 @@ currTime <- format(Sys.time(), "%Y-%m-%d(%H-%M)") # to append to files
 # Analysis parameters
 numSamples <- 1000  # Number of sampled parameter sets for each year
 numInits <- 1000    # Number of init starting points for optimization 
-useDiagnoses <- TRUE 
+useDiagnoses <- FALSE 
 
 # Options for running and saving things
 fullRun <- TRUE # Everytime we do a run from scratch save everything 
@@ -169,10 +169,10 @@ countAdjust$adjusted <- (countSample$diagnosed + countAdjust$beta4*countSample$u
 
 if(useDiagnoses){
   lmAdjust <- lm(diagnoses ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
-else {  
+} else {  
   lmAdjust <- lm(newinfects ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
 }
-print(lmAdjust)
+# print(lmAdjust)
 coefAdjustedOverall <- unname(coef(lmAdjust))
 
 # Sample from coefficents to create uncertainty in the estimates.
@@ -199,12 +199,17 @@ numSum <- numUndiag + numDiag + numDetect + numUndetect
 stageInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag, diagnosed = numDiag, detectable = numDetect, undetectable = numUndetect)
 
 propInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag/numSum, diagnosed = numDiag/numSum, detectable = numDetect/numSum, undetectable = numUndetect/numSum)
+
+
 ```
 
 ```{r prettyplots, echo=FALSE, messages = FALSE, include=FALSE}
 graphics.off()
+
+pldhivFrame <- countSample[c(1,4:7)]  %>% dplyr::group_by(year) %>% summarise_each(funs(mean))
+infectsFrame <- stageInfects %>% dplyr::group_by(year) %>% summarise_each(funs(mean)) 
+
 # Melt data into right format 
-# plhivResults <- gather(pldhivFrame,"stage","number",2:5)
 plhivResults <- gather(pldhivFrame,"stage","number",2:5) %>%
                   dplyr::group_by(year) %>%
                     mutate(cumsum=cumsum(number))
@@ -221,8 +226,13 @@ plhivPlot2 <- plhivPlotBase + geom_bar(stat="identity",position="fill") + ylab("
 
 infectsPlotBase <- ggplot(data = infectsResults, aes(x=year,y=number, fill = stage))+
   theme_bw() + xlab("Year") +  labs(fill='Cascade stage')
-infectsPlot1 <- infectsPlotBase + geom_bar(stat="identity") + ylab("Number Diagnoses")
-infectsPlot2 <- infectsPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion Diagnoses")
+if(useDiagnoses){
+  infectsPlot1 <- infectsPlotBase + geom_bar(stat="identity") + ylab("Number Diagnoses")
+  infectsPlot2 <- infectsPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion Diagnoses")
+} else {
+  infectsPlot1 <- infectsPlotBase + geom_bar(stat="identity") + ylab("Number Diagnoses")
+  infectsPlot2 <- infectsPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion Diagnoses") 
+}
 
 # Print plots
 windows(width=12,height=5)
