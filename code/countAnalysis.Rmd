@@ -41,6 +41,7 @@ currTime <- format(Sys.time(), "%Y-%m-%d(%H-%M)") # to append to files
 
 # Analysis parameters
 numSamples <- 1000  # Number of sampled parameter sets for each year
+numInits <- 1000    # Number of init starting points for optimization 
 
 # Options for running and saving things
 fullRun <- TRUE # Everytime we do a run from scratch save everything 
@@ -58,23 +59,18 @@ if(fullRun){
 countData <- read_excel(paste(dataFolder,inputFile,sep =""), na = "NA")
 
 # Using the input data calculate numbers in each column
-countClean <- countData[,c("year","diagnoses")]
+countClean <- countData[,c("year","diagnoses","infectsmin","infectsmax")]
 
 countClean$undiagmin <- countData$diagnosedmin/(1-countData$undiagmin)-countData$diagnosedmin
 countClean$undiagmax <- countData$diagnosedmax/(1-countData$undiagmax)-countData$diagnosedmax
 countClean$diagnosedmin <- countData$diagnosedmin-countData$treatedmin
 countClean$diagnosedmax <- countData$diagnosedmax-countData$treatedmax
 
-# Number detectables is a little tricker
-tempdf <- data.frame(x = countData$treatedmin-countData$suppressedmin*countData$treatedmin,
-                     y = countData$treatedmax -countData$suppressedmax*countData$treatedmax)
-countClean$detectablemin <- apply(tempdf,1,min) # Find minimum
-countClean$detectablemax <- apply(tempdf,1,max) # Find maximum
-
+# Number detectables is a little tricker to get the max and min right
+countClean$detectablemin <- countData$treatedmin-countData$suppressedmax*countData$treatedmax
+countClean$detectablemax <- countData$treatedmax-countData$suppressedmin*countData$treatedmin
 countClean$undetectablemin <- countData$suppressedmin*countData$treatedmin
 countClean$undetectablemax <- countData$suppressedmax*countData$treatedmax
-# countClean$undetectablemin <- countData$treatedmin-countClean$detectablemin
-# countClean$undetectablemax <- countData$treatedmax-countClean$detectablemax
 
 # Save count files as csv files for later 
 if (fullRun){
@@ -82,10 +78,8 @@ if (fullRun){
   write.csv(countClean, file = file.path(outputFolder, paste(currTime, "_countFinal.csv", sep ="")))
 }
 
-```
-
-```{r countaverage}
-# Create a count average date frame
+# Display some output
+print(head(countClean,n=2))
 
 ```
 
@@ -95,13 +89,13 @@ if (fullRun){
 nyears <- nrow(countClean)
 numRows <- nyears*numSamples # For preallocation
 
-countSample <- data.frame(year = numeric(numRows),diagnoses = numeric(numRows), undiagnosed = numeric(numRows),
-                         diagnosed = numeric(numRows), detectable = numeric(numRows), 
-                         undetectable = numeric(numRows))
+countSample <- data.frame(year = numeric(numRows),diagnoses = numeric(numRows), newinfects = numeric(numRows), 
+                          undiagnosed = numeric(numRows), diagnosed = numeric(numRows),  detectable = numeric(numRows),
+                          undetectable = numeric(numRows))
 
-countAverage <- data.frame(year = numeric(nyears),diagnoses = numeric(nyears), undiagnosed = numeric(nyears),
-                         diagnosed = numeric(nyears), detectable = numeric(nyears), 
-                         undetectable = numeric(nyears))
+countAverage <- data.frame(year = numeric(nyears),diagnoses = numeric(nyears), newinfects = numeric(nyears),
+                           undiagnosed = numeric(nyears), diagnosed = numeric(nyears), detectable = numeric(nyears),
+                           undetectable = numeric(nyears))
 
 for (ii in 1:nyears){
   startIndex <- (ii-1)*numSamples+1
@@ -110,10 +104,11 @@ for (ii in 1:nyears){
   countSample[startIndex:endIndex,]$year <- countClean$year[ii]*rep(1,numSamples)
   countSample[startIndex:endIndex,]$diagnoses <- countClean$diagnoses[ii]*rep(1,numSamples)
   # Random sampling
-  countSample[startIndex:endIndex,]$undiagnosed <- runif(1000,countClean$undiagmin[ii],countClean$undiagmax[ii])
-  countSample[startIndex:endIndex,]$diagnosed <- runif(1000,countClean$diagnosedmin[ii],countClean$diagnosedmax[ii])
-  countSample[startIndex:endIndex,]$detectable <- runif(1000,countClean$detectablemin[ii],countClean$detectablemax[ii])
-  countSample[startIndex:endIndex,]$undetectable <- runif(1000,countClean$undetectablemin[ii],countClean$undetectablemax[ii]) 
+  countSample[startIndex:endIndex,]$newinfects <- runif(numSamples,countClean$infectsmin[ii], countClean$infectsmax[ii])
+  countSample[startIndex:endIndex,]$undiagnosed <- runif(numSamples,countClean$undiagmin[ii],countClean$undiagmax[ii])
+  countSample[startIndex:endIndex,]$diagnosed <- runif(numSamples,countClean$diagnosedmin[ii],countClean$diagnosedmax[ii])
+  countSample[startIndex:endIndex,]$detectable <- runif(numSamples,countClean$detectablemin[ii],countClean$detectablemax[ii])
+  countSample[startIndex:endIndex,]$undetectable <- runif(numSamples,countClean$undetectablemin[ii],countClean$undetectablemax[ii]) 
   
   countAverage[ii,] <- colMeans(countSample[startIndex:endIndex,])
 }
@@ -124,23 +119,30 @@ if (fullRun){
   write.csv(countAverage, file = file.path(outputFolder, paste(currTime, "_countAverage.csv", sep ="")))
 }
 
+# Display some output
+print(head(countSample))
+print(countAverage)
 
 ```
 
 ```{r exploration, echo=FALSE, messages = FALSE, include=FALSE}
 # Before we get serious lets have a look at the data and what we are trying to do
-# pairs(countFinal[,3:6])
 
 # Melt data into a plotting data frame
-plotData <- gather(countAverage,"indicator","estimate",3:6)
+datayear <- 2013
+plotDataYear <- gather(filter(countSample, year == datayear),"indicator","estimate",4:7)
+plotDataAve <- gather(countAverage,"indicator","estimate",4:7)
 
 # Create a plot looking at the relationships
-countplot <- ggplot(data=plotData,aes(x=estimate,y=diagnoses)) + geom_point() + 
+countplotYear <- ggplot(data=plotDataYear,aes(x=estimate,y=newinfects)) + geom_point() + 
+  facet_wrap(~indicator,scales = "free_x") + theme_bw()
+
+countplotAve <- ggplot(data=plotDataAve,aes(x=estimate,y=newinfects)) + geom_point() + 
   facet_wrap(~indicator,scales = "free_x") + theme_bw()
 
 # Plot and save
 windows(width=7,height=7)
-print(countplot)
+print(countplotAve)
 if (fullRun){
   ggsave(file.path(outputFolder, paste(currTime, "_CountPlot.png", sep ="")),width=7,height=7)
 }
@@ -154,7 +156,8 @@ if (fullRun){
 #====================
 
 # Try a standard linear regression first on everything without adjusting for known reductions when undetectable
-lm <- lm(diagnoses ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
+# lm <- lm(diagnoses ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
+lm <- lm(newinfects ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
 print(lm)
 coefUnadjustedOverall <- unname(coef(lm))
 
@@ -171,35 +174,130 @@ print(coefUnadjustedYear)
 # Adjusted analysis
 # ================
 
-# Bioogically we know ....
+# Biogically we know undiagnosed people are more infectious due to acute infection or at least as infectious as diagnosed people. We also know undetectable PLHIV are 71 to 99% less infectious than diagnosed people. 
 
 # Test forcing a constraint
-countTemp <- countSample
-# CountTemp$new <- countSample$undiagnosed + 0.05*countSample$undetectable
-countTemp$adjusted <- (countSample$diagnosed + 0.05*countSample$undetectable)
+countAdjust <- countSample
+countAdjust$beta4 <- runif(numSamples,0.01,0.29)
+countAdjust$adjusted <- (countSample$diagnosed + countAdjust$beta4*countSample$undetectable)
 
-# lm2 <- lm(diagnoses ~ 0 + undiagnosed + new + detectable, data = CountTemp)
-lm2 <- lm(diagnoses ~ 0  + undiagnosed + adjusted + detectable, filter(countTemp,year == 2013))
-print(lm2)
+# Overall
+# lmAdjust <- lm(diagnoses ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
+lmAdjust <- lm(newinfects ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
+print(lmAdjust)
+coefAdjustedOverall <- unname(coef(lmAdjust))
+confintTemp <- confint(lmAdjust)
+coefLower <- c(confint(lmAdjust)[1,1],confint(lmAdjust)[2,1],confint(lmAdjust)[3,1])
+coefUpper <- c(confint(lmAdjust)[1,2],confint(lmAdjust)[2,2],confint(lmAdjust)[3,2])
 
-# Use nnls package to force all coefficients to be positive
-# vars <- as.matrix(countSample[,c("undiagnosed", "diagnosed","detectable","undetectable")])
-# nnlsDiags <- nnls(vars,countSample$diagnoses)
-# 
-# coefDiags <- coef(nnlsDiags)
-# predDiags <- as.vector(coefDiags%*%t(vars))
+sampleUndiag <- runif(numSamples,coefLower[1],coefUpper[1])
+sampleDiag <- runif(numSamples,coefLower[2],coefUpper[2])
+sampleDetect <- runif(numSamples,coefLower[3],coefUpper[3])
+sampleUndetect <- countAdjust$beta4*sampleUndiag
+
+aveCoeffs <- colMeans(matrix(c(sampleUndiag,sampleDiag,sampleDetect,sampleUndetect),nrow = numSamples, ncol = 4))
+
+numUndiag <- sampleUndiag*countSample$undiagnosed
+numDiag <- sampleDiag*countSample$diagnosed
+numDetect <- sampleDetect*countSample$detectable
+numUndetect <- sampleUndetect*countSample$undetectable
+numSum <- numUndiag + numDiag + numDetect + numUndetect
+
+mean(numUndiag/numSum)
+mean(numDiag/numSum)
+mean(numDetect/numSum)
+mean(numUndetect/numSum)
+
+# Do the calculations for individual years
+coefTemp <- matrix(nrow = nrow(countClean),ncol = 3)
+coefAdjustedYear <- matrix(nrow = nrow(countClean),ncol = 4)
+
+for(ii in 1:length(dataYears)){
+  lmYearAdjusted <- lm(diagnoses ~ 0  + undiagnosed + adjusted + detectable, 
+                       data = filter(countAdjust,year == dataYears[ii]))
+  coefTemp[ii,] <- unname(coef(lmYearAdjusted))
+}
+coefAdjustedYear[,c(1,2,3)] <- coefTemp
+coefAdjustedYear[,4] <- 0.05*coefTemp[,2]
+
+print(coefAdjustedYear)
+
+```
+
+```{r}
+
+# Constrained analysis
+# ====================
+
+countConstrain <- countAdjust
+countConstrain$z <- -countConstrain$undiagnosed-countConstrain$adjusted
+
+lmConstrain <- lm(z ~ 0 + undiagnosed + diagnoses + detectable, data = countConstrain)
+print(lmConstrain)
+coefs <- unname(coef(lmConstrain))
+
+# Adjust the parameters
+p2 <- -1/coefs[2]
+p3 <- p2*coefs[3]
+p1 <- (coefs[1] + 1)*p2
+
+print(c(p1,p2,p3))
+# Use Optim so we can add further constraints. Specifically that b is less than 0 and p2 < p1
+
+# dat <- countConstrain[,c("z","undiagnosed","diagnoses","detectable")]
+
+numInits <- 1000 #numSamples
 
 
+# for(jj in 1:numYears)
+dat <- tail(dat, n = numSamples) # Final year
+
+min.RSS <- function(data,par){
+  with(data,sum(par[1]*undiagnosed + par[2]*diagnoses + par[3]*detectable - z)^2)
+}
+
+results <- list()
+values <- rep(numSamples,0)
+
+initpars <- matrix(c(runif(numInits,0,10),runif(numInits,-50,0),runif(numInits,0,1)),nrow=numInits,ncol = 3)
+for (ii in 1:numInits) {
+  results[[ii]] <- optim(par = initpars[ii,], min.RSS, data = dat,lower=c(0,-50,0),
+                         upper=c(10,0,1),method="L-BFGS-B")
+  values[ii] <- results[[ii]]$value
+}
+
+# Convert parameters
+# ==================
+
+pars <- results[[which.min(values)]]$par
+p2 <- -1/pars[2]
+p3 <- p2*pars[3]
+p1 <- (pars[1] + 1)*p2
+
+# Final parameters
+coefFinal <- c(p1,p2,p3,0.05*p2)
+print(coefFinal)
+```
+
+```{r}
 # Incidence result data frames
+# =============================
+coefUsed <- coefAdjustedOverall
+# coefUsed <- coefFinal
+# coefUsed <- tail(coefAdjustedYear, n = 1)
+# coefUsed <- head(coefAdjustedYear, n = 1)
+
 pldhivFrame <- countAverage[,c("year","undiagnosed","diagnosed","undetectable","detectable")] # For plotting
 infectsFrame <- pldhivFrame
-infectsFrame$undiagnosed <- coefDiags[1]*countAverage$undiagnosed
-infectsFrame$diagnosed <- coefDiags[2]*countAverage$diagnosed
-infectsFrame$detectable <- coefDiags[3]*countAverage$detectable
-infectsFrame$undetectable<- coefDiags[4]*countAverage$undetectable
+infectsFrame$undiagnosed <- coefUsed[1]*countAverage$undiagnosed
+infectsFrame$diagnosed <- coefUsed[2]*countAverage$diagnosed
+infectsFrame$detectable <- coefUsed[3]*countAverage$detectable
+infectsFrame$undetectable<- coefUsed[4]*countAverage$undetectable
 
 # Final year data
-propInfects <- infectsFrame[infectsFrame$year == 2013,2:5]/countAverage$diagnoses
+# propInfects <- infectsFrame[infectsFrame$year == 2013,2:5]/countAverage$diagnoses
+propInfects <- infectsFrame[infectsFrame$year == 2013,2:5]/sum(infectsFrame[infectsFrame$year == 2013,2:5])
+print(propInfects)
 
 # Prepare to print out some results 
 # propFrame <-data.frame(x=c("Undiagnosed","Diagnosed","On ART (detectable)","On ART (undetectable)"),y = 100*propInfects[1,])
@@ -209,6 +307,7 @@ propInfects <- infectsFrame[infectsFrame$year == 2013,2:5]/countAverage$diagnose
 ```
 
 ```{r prettyplots, echo=FALSE, messages = FALSE, include=FALSE}
+graphics.off()
 # Melt data into right format 
 # plhivResults <- gather(pldhivFrame,"stage","number",2:5)
 plhivResults <- gather(pldhivFrame,"stage","number",2:5) %>%
@@ -234,5 +333,8 @@ infectsPlot2 <- infectsPlotBase + geom_bar(stat="identity",position="fill") + yl
 windows(width=12,height=5)
 print(grid.arrange(plhivPlot1,infectsPlot1,plhivPlot2,infectsPlot2,ncol = 2))
 
+```
 
+```{r tidyup,echo = FALSE}
+options(scipen=0)  # Set back to default
 ```
