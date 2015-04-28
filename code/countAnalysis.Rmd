@@ -164,15 +164,18 @@ coefUnadjustedOverall <- unname(coef(lm))
 
 # Test forcing a constraint
 countAdjust <- countSample
-countAdjust$beta4 <- runif(numSamples,0.01,0.29)
-countAdjust$adjusted <- (countSample$diagnosed + countAdjust$beta4*countSample$undetectable)
+numRows <- nrow(countAdjust)
+countAdjust$beta4 <- runif(numRows,0.01,0.29)
+# countAdjust$beta4 <- 1-rtriangle(numSamples,0.71,0.99,0.96)
+countAdjust$adjusted <- (countAdjust$diagnosed + countAdjust$beta4*countAdjust$undetectable)
 
-if(useDiagnoses){
-  lmAdjust <- lm(diagnoses ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
-} else {  
+
+# if(useDiagnoses){
+#   lmAdjust <- lm(diagnoses ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
+# } else {  
   lmAdjust <- lm(newinfects ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
-}
-# print(lmAdjust)
+# }
+print(lmAdjust)
 coefAdjustedOverall <- unname(coef(lmAdjust))
 
 # Sample from coefficents to create uncertainty in the estimates.
@@ -180,13 +183,33 @@ confintTemp <- confint(lmAdjust)
 coefLower <- c(confint(lmAdjust)[1,1],confint(lmAdjust)[2,1],confint(lmAdjust)[3,1])
 coefUpper <- c(confint(lmAdjust)[1,2],confint(lmAdjust)[2,2],confint(lmAdjust)[3,2])
 
-sampleUndiag <- runif(numSamples,coefLower[1],coefUpper[1])
-sampleDiag <- runif(numSamples,coefLower[2],coefUpper[2])
-sampleDetect <- runif(numSamples,coefLower[3],coefUpper[3])
-sampleUndetect <- countAdjust$beta4*sampleUndiag
+sampleUndiag <- runif(numRows,coefLower[1],coefUpper[1])
+sampleDiag <- runif(numRows,coefLower[2],coefUpper[2])
+sampleDetect <- runif(numRows,coefLower[3],coefUpper[3])
+sampleUndetect <- countAdjust$beta4*sampleDiag
 
-aveCoeffs <- colMeans(matrix(c(sampleUndiag,sampleDiag,sampleDetect,sampleUndetect),nrow = numSamples, ncol = 4))
+# Extra constraint
+countAdjust$beta2 <- runif(numRows,1,1)
+countAdjust$adjusted2 <- (countAdjust$diagnosed + countAdjust$beta2*countAdjust$detectable + countAdjust$beta4*countAdjust$undetectable)
+lmAdjust2 <- lm(newinfects ~ 0 + undiagnosed + adjusted2, data = countAdjust)
+print(lmAdjust2)
+coefAdjustedOverall2 <- unname(coef(lmAdjust2))
+coefLower2 <- c(confint(lmAdjust2)[1,1],confint(lmAdjust2)[2,1])
+coefUpper2 <- c(confint(lmAdjust2)[1,2],confint(lmAdjust2)[2,2])
+
+sampleUndiag2 <- runif(numRows,coefLower2[1],coefUpper2[1])
+sampleDiag2 <- runif(numRows,coefLower2[2],coefUpper2[2])
+sampleDetect2 <- countAdjust$beta2*sampleDiag2
+sampleUndetect2 <- countAdjust$beta4*sampleDiag2
+
+# Extract results
+adjustedCoefs <- matrix(c(sampleUndiag,sampleDiag,sampleDetect,sampleUndetect),nrow = numRows, ncol = 4)
+aveCoeffs <- colMeans(adjustedCoefs)
 print(aveCoeffs)
+
+adjustedCoefs2 <- matrix(c(sampleUndiag2,sampleDiag2,sampleDetect2,sampleUndetect2),nrow = numRows, ncol = 4)
+aveCoeffs2 <- colMeans(adjustedCoefs2)
+print(aveCoeffs2)
 
 # Now estimate the uncertainty and proportion of infections caused by each stage
 numUndiag <- sampleUndiag*countSample$undiagnosed
@@ -195,11 +218,20 @@ numDetect <- sampleDetect*countSample$detectable
 numUndetect <- sampleUndetect*countSample$undetectable
 numSum <- numUndiag + numDiag + numDetect + numUndetect
 
+numUndiag2 <- sampleUndiag2*countSample$undiagnosed
+numDiag2 <- sampleDiag2*countSample$diagnosed
+numDetect2 <- sampleDetect2*countSample$detectable
+numUndetect2 <- sampleUndetect2*countSample$undetectable
+numSum2 <- numUndiag2 + numDiag2 + numDetect2 + numUndetect2
+
 # Put things in a data frame so we can extract results
 stageInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag, diagnosed = numDiag, detectable = numDetect, undetectable = numUndetect)
 
 propInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag/numSum, diagnosed = numDiag/numSum, detectable = numDetect/numSum, undetectable = numUndetect/numSum)
 
+stageInfects2 <- data.frame(year = countAdjust$year, undiagnosed = numUndiag2, diagnosed = numDiag2, detectable = numDetect2, undetectable = numUndetect2)
+
+propInfects2 <- data.frame(year = countAdjust$year, undiagnosed = numUndiag2/numSum2, diagnosed = numDiag2/numSum2, detectable = numDetect2/numSum2, undetectable = numUndetect2/numSum2)
 
 ```
 
@@ -207,7 +239,7 @@ propInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag/numSu
 graphics.off()
 
 pldhivFrame <- countSample[c(1,4:7)]  %>% dplyr::group_by(year) %>% summarise_each(funs(mean))
-infectsFrame <- stageInfects %>% dplyr::group_by(year) %>% summarise_each(funs(mean)) 
+infectsFrame <- stageInfects2 %>% dplyr::group_by(year) %>% summarise_each(funs(mean)) 
 
 # Melt data into right format 
 plhivResults <- gather(pldhivFrame,"stage","number",2:5) %>%
