@@ -1,0 +1,117 @@
+---
+title: "HIV Cascades Calculations"
+author: "Richard T. Gray"
+date: Date - `r format(Sys.Date(), format="%B %d %Y")`
+output: 
+  word_document:
+    reference_docx: mystyles.docx
+---
+
+This document describes and contains the code for producing the HIV care cascade estimates for Australia. It is written in dynamic format using R markdown v2 within Rstudio (version 0.98.1091 with R version`r substr(R.Version()$version.string,1,15)`) to produce a Word (.docx) document (see <http://rmarkdown.rstudio.com>). All the R code to clean the data and produce the figures and tables is contained in this file but suppressed in the final output document. 
+
+```{r initialization, echo = FALSE, messages = FALSE, include=FALSE}
+# Clear workspace
+rm(list=ls()) 
+
+# Libraries for data manipulation
+require(readxl)
+require(dplyr)
+require(tidyr)
+require(utils)
+
+# Libraries for output
+require(ggplot2)    
+require(knitr)      
+require(gridExtra)  
+
+# Set working directory
+setwd(file.path(path.expand("~/"),"Research","!Evaluation_Modelling","projects","Care_Cascade_Calculations","code"))
+
+# Primary script parameters
+currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
+analysisYear <- 2014
+reclean <- TRUE  # Rerun data cleaning if true otherwise load already cleaned file.
+
+# Population and state
+# pop <- "MSM
+# state <- "all"
+```
+
+```{r loaddata, echo = FALSE, messages = FALSE, include=FALSE}
+# If requested load the raw notifications file and reclean the data
+if(reClean){
+  # Data directories and files
+  rawdata <- file.path(path.expand("~/"),"Research","!Evaluation_Modelling","data",
+                       paste("rawHIVnotifications-", toString(analysisYear), ".xls",sep=""))
+  # rawdata <-   
+  cleanDataFolder <- file.path("..","data")
+  
+  # Load the raw HIV notifications file and clean it up
+  hivdata <- read_excel(rawdata, na = "NA")
+  
+  # Extract what we wnat and clean it up
+  
+  colnames(hivdata)[4] <- "dob"
+  colnames(hivdata)[5] <- "datediagnosis"
+  colnames(hivdata)[7] <- "exposure"
+  
+  # Replace codes with easier to use strings - so we don't have to look up what thing mean
+  hivdata[hivdata$sex ==1,]$sex <- "male" 
+  hivdata[hivdata$sex ==2,]$sex <- "female" 
+  hivdata[hivdata$sex ==3,]$sex <- "transgender" 
+  hivdata[hivdata$sex ==0,]$sex <- "unknown" 
+  
+  states <- c("act","nsw","nt","qld","sa","tas","vic","wa")
+  for(ii in 1:8){
+    hivdata[hivdata$state == ii,]$state <- states[ii]
+  }
+  
+  # Reclassification of exposure to the broad surveillance categories - may need to change manually
+  hivdata[hivdata$exposure == "1A",]$exposure <- "msm"
+  hivdata[hivdata$exposure == "1A3A",]$exposure <- "msm-idu"
+  hivdata[hivdata$exposure == "1A3C",]$exposure <- "msm"
+  hivdata[hivdata$exposure == "1B",]$exposure <- "bisex-male"
+  hivdata[hivdata$exposure == "1B3A",]$exposure <- "bisex-male-idu"
+  hivdata[hivdata$exposure == "1B3B",]$exposure <- "bisexual-male"
+  hivdata[hivdata$exposure == "1C2A",]$exposure <- "hetero"
+  hivdata[hivdata$exposure == "1C2A2B",]$exposure <- "hetero"
+  hivdata[hivdata$exposure == "1C2B",]$exposure <- "hetero"
+  hivdata[hivdata$exposure == "1C2C",]$exposure <- "hetero"
+  hivdata[hivdata$exposure == "1C2D",]$exposure <- "hetero"
+  hivdata[hivdata$exposure == "1C2E",]$exposure <- "hetero"
+  hivdata[hivdata$exposure == "1C2F",]$exposure <- "hetero"
+  hivdata[hivdata$exposure == "1C2G",]$exposure <- "hetero"
+  hivdata[hivdata$exposure == "1C2H",]$exposure <- "hetero-unspecified"
+  hivdata[hivdata$exposure == "1C3A",]$exposure <- "hetero-idu"
+  hivdata[hivdata$exposure == "1C3A2B",]$exposure <- "hetero-idu"
+  hivdata[hivdata$exposure == "1C3A2E",]$exposure <- "hetero-idu"
+  hivdata[hivdata$exposure == "1C3B",]$exposure <- "hetero"
+  hivdata[hivdata$exposure == "1C3C",]$exposure <- "hetero"
+  hivdata[hivdata$exposure == "1D",]$exposure <- "high-prev-country"
+  hivdata[hivdata$exposure == "1E",]$exposure <- "unknown"
+  hivdata[hivdata$exposure == "1E3A",]$exposure <- "idu"
+  hivdata[hivdata$exposure == "1E3B",]$exposure <- "blood-recipient"
+  hivdata[hivdata$exposure == "1E3C",]$exposure <- "blood-recipient"
+  hivdata[hivdata$exposure == "1F",]$exposure <- "unknown"
+  hivdata[hivdata$exposure == "1F3A",]$exposure <- "unknown"
+  hivdata[hivdata$exposure == "1F3B",]$exposure <- "unknown"
+  hivdata[hivdata$exposure == "1F3C",]$exposure <- "unknown"
+  hivdata[hivdata$exposure == "4A",]$exposure <- "mtct"
+  hivdata[hivdata$exposure == "4B",]$exposure <- "mtct"
+  hivdata[hivdata$exposure == "4C",]$exposure <- "mtct"
+  hivdata[hivdata$exposure == "4D",]$exposure <- "mtct"
+  hivdata[hivdata$exposure == "4E",]$exposure <- "mtct"
+  hivdata[hivdata$exposure == "4F",]$exposure <- "mtct"
+  hivdata[hivdata$exposure == "4G",]$exposure <- "mtct"
+  hivdata[hivdata$exposure == "4J",]$exposure <- "mtct"
+  hivdata[hivdata$exposure == "4K",]$exposure <- "mtct"
+  hivdata[hivdata$exposure == "5A1",]$exposure <- "unknown"
+  hivdata[hivdata$exposure == "5A2",]$exposure <- "unknown"
+  hivdata[hivdata$exposure == "5A3",]$exposure <- "unknown"
+  hivdata[hivdata$exposure == "5A4",]$exposure <- "unknown"
+  hivdata[hivdata$exposure == "5B",]$exposure <- "unknown"
+  
+  # Save hivdata for later
+  write.csv(hivdata, file = file.path(cleanDataFolder, paste("hivnotifications",toString(analysisYear),".csv", sep ="")))
+}
+```
