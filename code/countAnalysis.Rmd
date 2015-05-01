@@ -163,12 +163,12 @@ coefUnadjustedOverall <- unname(coef(lm))
 # Biogically we know undiagnosed people are more infectious due to acute infection or at least as infectious as diagnosed people. We also know undetectable PLHIV are 71 to 99% less infectious than diagnosed people. 
 
 # Test forcing a constraint
-countAdjust <- countSample
+
+countAdjust <- countSample # [5001:nrow(countSample)]
 numRows <- nrow(countAdjust)
 countAdjust$beta4 <- runif(numRows,0.01,0.29)
 # countAdjust$beta4 <- 1-rtriangle(numSamples,0.71,0.99,0.96)
 countAdjust$adjusted <- (countAdjust$diagnosed + countAdjust$beta4*countAdjust$undetectable)
-
 
 # if(useDiagnoses){
 #   lmAdjust <- lm(diagnoses ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
@@ -189,9 +189,9 @@ sampleDetect <- runif(numRows,coefLower[3],coefUpper[3])
 sampleUndetect <- countAdjust$beta4*sampleDiag
 
 # Extra constraint
-countAdjust$beta2 <- runif(numRows,1,1)
+countAdjust$beta2 <- runif(numRows,0.5,1)
 countAdjust$adjusted2 <- (countAdjust$diagnosed + countAdjust$beta2*countAdjust$detectable + countAdjust$beta4*countAdjust$undetectable)
-lmAdjust2 <- lm(newinfects ~ 0 + undiagnosed + adjusted2, data = countAdjust)
+lmAdjust2 <- lm(diagnoses ~ 0 + undiagnosed + adjusted2, data = countAdjust)
 print(lmAdjust2)
 coefAdjustedOverall2 <- unname(coef(lmAdjust2))
 coefLower2 <- c(confint(lmAdjust2)[1,1],confint(lmAdjust2)[2,1])
@@ -202,27 +202,104 @@ sampleDiag2 <- runif(numRows,coefLower2[2],coefUpper2[2])
 sampleDetect2 <- countAdjust$beta2*sampleDiag2
 sampleUndetect2 <- countAdjust$beta4*sampleDiag2
 
+```
+
+```{r}
+# Constrained constrain analysis
+countConstrain <- countAdjust
+countConstrain$z <- -countConstrain$adjusted
+dat <- countConstrain #tail(dat, n = numSamples) 
+
+min.RSS <- function(data,par){
+  with(data,sum((par[1]*undiagnosed + par[2]*newinfects + par[3]*detectable - z)^2))
+}
+
+results <- list()
+numInits <- 1000 #numSamples
+values <- rep(numInits,0)
+
+initpars <- matrix(c(runif(numInits,1,50),runif(numInits,-50,0),runif(numInits,0,1)),nrow=numInits,ncol = 3)
+for (ii in 1:numInits) {
+  results[[ii]] <- optim(par = initpars[ii,], min.RSS, data = dat,lower=c(1,-50,0),
+                         upper=c(50,0,1),method="L-BFGS-B")
+  values[ii] <- results[[ii]]$value
+}
+
+pars <- results[[which.min(values)]]$par
+p2 <- -1/pars[2]
+p3 <- p2*pars[3]
+p1 <- p2*pars[1]
+
+sampleUndiag3 <- runif(numRows,p1,p1)
+sampleDiag3 <- runif(numRows,p2,p2)
+sampleDetect3 <- runif(numRows,p3,p3)
+sampleUndetect3 <- countConstrain$beta4*sampleDiag3
+```
+
+
+```{r constrain2}
+# Constrained constrain analysis
+dat <- countAverage #tail(dat, n = numSamples) 
+
+min.RSS <- function(data,par){
+  if((par[2] < par[1] || par[3] > par[2]) || par[4] > par[3]){
+    output <- 1e10
+  } else {
+    output <- with(data,sum((par[1]*undiagnosed + par[2]*diagnosed + par[3]*detectable + par[4]*undetectable - newinfects)^2))
+  }
+ output
+}
+
+results <- list()
+
+numInits <- 100 #numSamples
+values <- rep(numInits,0)
+
+initpars <- matrix(c(runif(numInits,0.8,1),runif(numInits,0.5,0.8),runif(numInits,0.4,0.5),runif(numInits,0,0.4)),nrow=numInits,ncol = 4)
+for (ii in 1:numInits) {
+  results[[ii]] <- optim(par = initpars[ii,], min.RSS, data = dat,lower=c(0,0,0,0),
+                         upper=c(1,1,1,1),method="L-BFGS-B")
+  values[ii] <- results[[ii]]$value
+}
+
+pars <- results[[which.min(values)]]$par
+
+
+
+```
+
+```{r}
 # Extract results
 adjustedCoefs <- matrix(c(sampleUndiag,sampleDiag,sampleDetect,sampleUndetect),nrow = numRows, ncol = 4)
 aveCoeffs <- colMeans(adjustedCoefs)
 print(aveCoeffs)
-
+ 
 adjustedCoefs2 <- matrix(c(sampleUndiag2,sampleDiag2,sampleDetect2,sampleUndetect2),nrow = numRows, ncol = 4)
 aveCoeffs2 <- colMeans(adjustedCoefs2)
 print(aveCoeffs2)
+
+adjustedCoefs3 <- matrix(c(sampleUndiag3,sampleDiag3,sampleDetect3,sampleUndetect3),nrow = numRows, ncol = 4)
+aveCoeffs3 <- colMeans(adjustedCoefs3)
+print(aveCoeffs3)
 
 # Now estimate the uncertainty and proportion of infections caused by each stage
 numUndiag <- sampleUndiag*countSample$undiagnosed
 numDiag <- sampleDiag*countSample$diagnosed
 numDetect <- sampleDetect*countSample$detectable
-numUndetect <- sampleUndetect*countSample$undetectable
+numUndetect <- sampleUndetect*countSample$undetectable     
 numSum <- numUndiag + numDiag + numDetect + numUndetect
-
+                                                                                                                                                                                                                                                                                                                                 
 numUndiag2 <- sampleUndiag2*countSample$undiagnosed
 numDiag2 <- sampleDiag2*countSample$diagnosed
 numDetect2 <- sampleDetect2*countSample$detectable
 numUndetect2 <- sampleUndetect2*countSample$undetectable
 numSum2 <- numUndiag2 + numDiag2 + numDetect2 + numUndetect2
+
+numUndiag3 <- sampleUndiag3*countSample$undiagnosed
+numDiag3 <- sampleDiag3*countSample$diagnosed
+numDetect3 <- sampleDetect3*countSample$detectable
+numUndetect3 <- sampleUndetect3*countSample$undetectable
+numSum3 <- numUndiag3 + numDiag3 + numDetect3 + numUndetect3
 
 # Put things in a data frame so we can extract results
 stageInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag, diagnosed = numDiag, detectable = numDetect, undetectable = numUndetect)
@@ -232,6 +309,10 @@ propInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag/numSu
 stageInfects2 <- data.frame(year = countAdjust$year, undiagnosed = numUndiag2, diagnosed = numDiag2, detectable = numDetect2, undetectable = numUndetect2)
 
 propInfects2 <- data.frame(year = countAdjust$year, undiagnosed = numUndiag2/numSum2, diagnosed = numDiag2/numSum2, detectable = numDetect2/numSum2, undetectable = numUndetect2/numSum2)
+
+stageInfects3 <- data.frame(year = countAdjust$year, undiagnosed = numUndiag3, diagnosed = numDiag3, detectable = numDetect3, undetectable = numUndetect3)
+
+propInfects3 <- data.frame(year = countAdjust$year, undiagnosed = numUndiag3/numSum3, diagnosed = numDiag3/numSum3, detectable = numDetect3/numSum3, undetectable = numUndetect3/numSum3)
 
 ```
 
