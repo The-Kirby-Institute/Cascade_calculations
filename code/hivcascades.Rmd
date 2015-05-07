@@ -25,27 +25,31 @@ require(knitr)
 require(gridExtra)  
 
 # Set working directory
-setwd(file.path(path.expand("~/"),"Research","!Evaluation_Modelling","projects","Care_Cascade_Calculations","code"))
+setwd(file.path(path.expand("~/"),"Documents","Research","!Evaluation_Modelling","project_care_cascades","code"))
+
+# Base directory
+basePath <- "~/Documents/Research/!Evaluation_Modelling/project_care_cascades/"
+cleanDataFolder <- file.path("..","data")
 
 # Primary script parameters
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
-analysisYear <- 2014
-reclean <- TRUE  # Rerun data cleaning if true otherwise load already cleaned file.
+analysisYear <- 2013
+startYear <- 1990
+reclean <- FALSE  # Rerun data cleaning if true otherwise load already cleaned file.
+pop <- "all"  # Population exposure category
+region <- "all" # State for analysis
 
-# Population and state
-# pop <- "MSM
-# state <- "all"
+# TODO: Need to define populations more carefully to match what we want
+# E.g. msm = msm + msm-idu + bisexual + ...
 ```
 
 ```{r loaddata, echo = FALSE, messages = FALSE, include=FALSE}
 # If requested load the raw notifications file and reclean the data
-if(reClean){
+if(reclean){
   # Data directories and files
-  rawdata <- file.path(path.expand("~/"),"Research","!Evaluation_Modelling","data",
+  rawdata <- file.path(path.expand("~/"),"Documents","Research","!Evaluation_Modelling","data",
                        paste("rawHIVnotifications-", toString(analysisYear), ".xls",sep=""))
-  # rawdata <-   
-  cleanDataFolder <- file.path("..","data")
-  
+ 
   # Load the raw HIV notifications file and clean it up
   hivdata <- read_excel(rawdata, na = "NA")
   
@@ -54,6 +58,11 @@ if(reClean){
   colnames(hivdata)[4] <- "dob"
   colnames(hivdata)[5] <- "datediagnosis"
   colnames(hivdata)[7] <- "exposure"
+  
+  # Convert date format columns to date strings
+  hivdata$dob <- as.Date(hivdata$dob)
+  hivdata$datediagnosis <- as.Date(hivdata$datediagnosis)
+  hivdata$datedeath <- as.Date(hivdata$datedeath)
   
   # Replace codes with easier to use strings - so we don't have to look up what thing mean
   hivdata[hivdata$sex ==1,]$sex <- "male" 
@@ -69,10 +78,11 @@ if(reClean){
   # Reclassification of exposure to the broad surveillance categories - may need to change manually
   hivdata[hivdata$exposure == "1A",]$exposure <- "msm"
   hivdata[hivdata$exposure == "1A3A",]$exposure <- "msm-idu"
+  hivdata[hivdata$exposure == "1A3B",]$exposure <- "msm"
   hivdata[hivdata$exposure == "1A3C",]$exposure <- "msm"
   hivdata[hivdata$exposure == "1B",]$exposure <- "bisex-male"
   hivdata[hivdata$exposure == "1B3A",]$exposure <- "bisex-male-idu"
-  hivdata[hivdata$exposure == "1B3B",]$exposure <- "bisexual-male"
+  hivdata[hivdata$exposure == "1B3B",]$exposure <- "bisex-male"
   hivdata[hivdata$exposure == "1C2A",]$exposure <- "hetero"
   hivdata[hivdata$exposure == "1C2A2B",]$exposure <- "hetero"
   hivdata[hivdata$exposure == "1C2B",]$exposure <- "hetero"
@@ -115,3 +125,95 @@ if(reClean){
   write.csv(hivdata, file = file.path(cleanDataFolder, paste("hivnotifications",toString(analysisYear),".csv", sep ="")))
 }
 ```
+
+```{r startAnalysis}
+# Load clean file
+hivdata <- read.csv(file.path(cleanDataFolder, paste("hivnotifications",toString(analysisYear),".csv", sep ="")))
+
+# Setup overarching analysis                   
+years <- startYear:analysisYear # Years to calculate
+
+# Setup extra columns for analysis
+hivdata$yeardiagnosis <- as.numeric(substr(hivdata$datediagnosis,1,4))
+hivdata$yeardeath <- as.numeric(substr(hivdata$datedeath,1,4))
+
+# Quick checks that we are not doing analysis outside of the data.
+if (max(hivdata$yeardiagnosis) < analysisYear) {
+  stop("No data for specified for final year of analysis.")
+}
+
+if (min(hivdata$yeardiagnosis) > startYear) {
+  stop("No data for specified for first year of analysis.")
+}
+
+# Subset by population and state
+if (pop == "all"){
+  hivset <- hivdata
+} else {
+  hivset <- filter(hivdata, exposure == pop)
+}
+
+if (region != "all") {
+    hivset <- filter(hivset, state == region)
+}
+```
+
+Sort out diagnoses ...
+
+```{r diagnoses}
+# Setup dataframe for overall results by first calculating annual diagnoses
+numdiagnoses <- hivset %>%
+                  count(yeardiagnosis) 
+cumdiagnoses <- cumsum(numdiagnoses$n)
+
+# Enter into a results dataframe
+hivresults <- data_frame(year = years, notifications = numdiagnoses[numdiagnoses$yeardiagnosis %in% years,]$n)
+hivresults$totalnotifications <- cumdiagnoses[numdiagnoses$yeardiagnosis %in% years]             
+                  
+```
+
+Removal of duplicates .....
+
+```{r removeduplicates}
+# This chuck takes defines a function to calulate the number of unique birthdates 
+# in a vector of birthdates. It is used to estimate the number of duplicates or 
+# unique diagnoses. 
+
+# Load function to remove duplicates
+source('~/Documents/Research/!Evaluation_Modelling/code/removeDuplicates.R', 
+       echo=TRUE)
+
+# Setup
+ignore <- c(1,15) # Days to ignore in duplicate calculations
+filename <- paste(basePath, "output/uniquehiv-",pop,"_",region,"_",
+                  toString(tail(years,1)),sep="")
+
+# Set up dob frame
+dobframe <- select(hivset,dob,yeardiagnosis)
+
+# Now loop through years and calculate cumulative number of unique cases 
+numUniques <- rep(0,length(years))
+for (ii in seq(along=years)) {
+  dobvector <- filter(dobframe,yeardiagnosis <= years[ii])$dob
+  if (years[ii] == analysisYear) {
+    numUniques[ii] <- removeDuplicates(dobvector,ignore,write=filename)
+  } else {
+    numUniques[ii] <- removeDuplicates(dobvector,ignore)
+  }
+}
+
+# Store number unique diagnoses
+hivresults$uniquecases <- numUniques
+
+```
+
+Sort out deaths ....
+
+```{r deaths}
+# Now calculate the number of deaths each year to work out the number of people
+# diagnosed with HIV 
+
+
+```
+
+Sort out treatment .....
