@@ -29,101 +29,18 @@ setwd(file.path(path.expand("~/"),"Documents","Research","!Evaluation_Modelling"
 
 # Base directory
 basePath <- "~/Documents/Research/!Evaluation_Modelling/project_care_cascades/"
-cleanDataFolder <- file.path("..","data")
+# cleanDataFolder <- file.path("..","data")
 
 # Primary script parameters
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 analysisYear <- 2013
 startYear <- 1990
-reclean <- FALSE  # Rerun data cleaning if true otherwise load already cleaned file.
+# reclean <- FALSE  # Rerun data cleaning if true otherwise load already cleaned file.
 pop <- "all"  # Population exposure category
 region <- "all" # State for analysis
 
 # TODO: Need to define populations more carefully to match what we want
 # E.g. msm = msm + msm-idu + bisexual + ...
-```
-
-```{r loaddata, echo = FALSE, messages = FALSE, include=FALSE}
-# If requested load the raw notifications file and reclean the data
-if(reclean){
-  # Data directories and files
-  rawdata <- file.path(path.expand("~/"),"Documents","Research","!Evaluation_Modelling","data",
-                       paste("rawHIVnotifications-", toString(analysisYear), ".xls",sep=""))
- 
-  # Load the raw HIV notifications file and clean it up
-  hivdata <- read_excel(rawdata, na = "NA")
-  
-  # Extract what we wnat and clean it up
-  
-  colnames(hivdata)[4] <- "dob"
-  colnames(hivdata)[5] <- "datediagnosis"
-  colnames(hivdata)[7] <- "exposure"
-  
-  # Convert date format columns to date strings
-  hivdata$dob <- as.Date(hivdata$dob)
-  hivdata$datediagnosis <- as.Date(hivdata$datediagnosis)
-  hivdata$datedeath <- as.Date(hivdata$datedeath)
-  
-  # Replace codes with easier to use strings - so we don't have to look up what thing mean
-  hivdata[hivdata$sex ==1,]$sex <- "male" 
-  hivdata[hivdata$sex ==2,]$sex <- "female" 
-  hivdata[hivdata$sex ==3,]$sex <- "transgender" 
-  hivdata[hivdata$sex ==0,]$sex <- "unknown" 
-  
-  states <- c("act","nsw","nt","qld","sa","tas","vic","wa")
-  for(ii in 1:8){
-    hivdata[hivdata$state == ii,]$state <- states[ii]
-  }
-  
-  # Reclassification of exposure to the broad surveillance categories - may need to change manually
-  hivdata[hivdata$exposure == "1A",]$exposure <- "msm"
-  hivdata[hivdata$exposure == "1A3A",]$exposure <- "msm-idu"
-  hivdata[hivdata$exposure == "1A3B",]$exposure <- "msm"
-  hivdata[hivdata$exposure == "1A3C",]$exposure <- "msm"
-  hivdata[hivdata$exposure == "1B",]$exposure <- "bisex-male"
-  hivdata[hivdata$exposure == "1B3A",]$exposure <- "bisex-male-idu"
-  hivdata[hivdata$exposure == "1B3B",]$exposure <- "bisex-male"
-  hivdata[hivdata$exposure == "1C2A",]$exposure <- "hetero"
-  hivdata[hivdata$exposure == "1C2A2B",]$exposure <- "hetero"
-  hivdata[hivdata$exposure == "1C2B",]$exposure <- "hetero"
-  hivdata[hivdata$exposure == "1C2C",]$exposure <- "hetero"
-  hivdata[hivdata$exposure == "1C2D",]$exposure <- "hetero"
-  hivdata[hivdata$exposure == "1C2E",]$exposure <- "hetero"
-  hivdata[hivdata$exposure == "1C2F",]$exposure <- "hetero"
-  hivdata[hivdata$exposure == "1C2G",]$exposure <- "hetero"
-  hivdata[hivdata$exposure == "1C2H",]$exposure <- "hetero-unspecified"
-  hivdata[hivdata$exposure == "1C3A",]$exposure <- "hetero-idu"
-  hivdata[hivdata$exposure == "1C3A2B",]$exposure <- "hetero-idu"
-  hivdata[hivdata$exposure == "1C3A2E",]$exposure <- "hetero-idu"
-  hivdata[hivdata$exposure == "1C3B",]$exposure <- "hetero"
-  hivdata[hivdata$exposure == "1C3C",]$exposure <- "hetero"
-  hivdata[hivdata$exposure == "1D",]$exposure <- "high-prev-country"
-  hivdata[hivdata$exposure == "1E",]$exposure <- "unknown"
-  hivdata[hivdata$exposure == "1E3A",]$exposure <- "idu"
-  hivdata[hivdata$exposure == "1E3B",]$exposure <- "blood-recipient"
-  hivdata[hivdata$exposure == "1E3C",]$exposure <- "blood-recipient"
-  hivdata[hivdata$exposure == "1F",]$exposure <- "unknown"
-  hivdata[hivdata$exposure == "1F3A",]$exposure <- "unknown"
-  hivdata[hivdata$exposure == "1F3B",]$exposure <- "unknown"
-  hivdata[hivdata$exposure == "1F3C",]$exposure <- "unknown"
-  hivdata[hivdata$exposure == "4A",]$exposure <- "mtct"
-  hivdata[hivdata$exposure == "4B",]$exposure <- "mtct"
-  hivdata[hivdata$exposure == "4C",]$exposure <- "mtct"
-  hivdata[hivdata$exposure == "4D",]$exposure <- "mtct"
-  hivdata[hivdata$exposure == "4E",]$exposure <- "mtct"
-  hivdata[hivdata$exposure == "4F",]$exposure <- "mtct"
-  hivdata[hivdata$exposure == "4G",]$exposure <- "mtct"
-  hivdata[hivdata$exposure == "4J",]$exposure <- "mtct"
-  hivdata[hivdata$exposure == "4K",]$exposure <- "mtct"
-  hivdata[hivdata$exposure == "5A1",]$exposure <- "unknown"
-  hivdata[hivdata$exposure == "5A2",]$exposure <- "unknown"
-  hivdata[hivdata$exposure == "5A3",]$exposure <- "unknown"
-  hivdata[hivdata$exposure == "5A4",]$exposure <- "unknown"
-  hivdata[hivdata$exposure == "5B",]$exposure <- "unknown"
-  
-  # Save hivdata for later
-  write.csv(hivdata, file = file.path(cleanDataFolder, paste("hivnotifications",toString(analysisYear),".csv", sep ="")))
-}
 ```
 
 ```{r startAnalysis}
@@ -161,15 +78,14 @@ if (region != "all") {
 Sort out diagnoses ...
 
 ```{r diagnoses}
-# Setup dataframe for overall results by first calculating annual diagnoses
-numdiagnoses <- hivset %>%
-                  count(yeardiagnosis) 
-cumdiagnoses <- cumsum(numdiagnoses$n)
+# Setup dataframe for overall results by first extracting diagnoses details
 
-# Enter into a results dataframe
-hivresults <- data_frame(year = years, notifications = numdiagnoses[numdiagnoses$yeardiagnosis %in% years,]$n)
-hivresults$totalnotifications <- cumdiagnoses[numdiagnoses$yeardiagnosis %in% years]             
-                  
+hivresults <- hivset %>% 
+  group_by(yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  mutate(totalnotifications  = cumsum(notifications)) %>% 
+  filter(yeardiagnosis %in% years)
+               
 ```
 
 Removal of duplicates .....
@@ -215,5 +131,7 @@ Sort out deaths ....
 
 
 ```
+
+Sort out treatment ....
 
 Sort out treatment .....
