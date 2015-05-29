@@ -23,13 +23,14 @@ require(utils)
 require(ggplot2)    
 require(knitr)      
 require(gridExtra)  
+require(RColorBrewer)
 
 # Set working directory
-setwd(file.path(path.expand("~/"),"Documents","Research","!Evaluation_Modelling","project_care_cascades","code"))
+setwd(file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades","code"))
 
 # Base directory
-basePath <- "~/Documents/Research/!Evaluation_Modelling/project_care_cascades/"
-# cleanDataFolder <- file.path("..","data")
+basePath <- file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades")
+cleanDataFolder <- file.path(basePath,"data")
 
 # Primary script parameters
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
@@ -39,9 +40,11 @@ startYear <- 1990
 pop <- "all"  # Population exposure category
 region <- "all" # State for analysis
 
-# TODO: Need to define populations more carefully to match what we want
-# E.g. msm = msm + msm-idu + bisexual + ...
+# TODO: Think about doing cumulative diagnoses for each state and population everytime
+
 ```
+
+## Estimate cumulative HIV notifications 
 
 ```{r startAnalysis}
 # Load clean file
@@ -67,12 +70,52 @@ if (min(hivdata$yeardiagnosis) > startYear) {
 if (pop == "all"){
   hivset <- hivdata
 } else {
-  hivset <- filter(hivdata, exposure == pop)
+  hivset <- filter(hivdata, expgroup == pop)
 }
 
 if (region != "all") {
     hivset <- filter(hivset, state == region)
 }
+```
+
+```{r plotcode, echo=FALSE,messages = FALSE,include=FALSE}
+# Default plot specifications
+graphics.off()
+
+# Baseline theme for plot variables
+opts <- theme(text = element_text(face = "bold",size=12,colour="black"),
+  axis.text.x = element_text(face = "plain",size=10,colour="black"),
+  axis.text.y = element_text(face = "plain",size=10,colour="black"),
+  axis.line = element_line(colour="black"),
+  axis.ticks = element_line(colour="black"),
+  legend.position = "top",
+  legend.background = element_rect(),
+  legend.key = element_blank(),
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(), 
+  panel.background = element_blank(), 
+  axis.line = element_line(colour = "black"),
+  plot.title=element_text(size=12, face="bold")
+)
+
+# Theme for pie chart
+blank_theme <- theme_minimal()+
+  theme(
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.border = element_blank(),
+  panel.grid=element_blank(),
+  axis.ticks = element_blank(),
+  axis.text.y=element_blank(),
+  plot.title=element_text(size=12, face="bold")
+  )
+
+# Setup colours
+getPalette <- colorRampPalette(brewer.pal(12,"Set3"))
+piecolours1 <- getPalette(12)
+piecolours2 <- gray.colors(3)
+piecolours <- c(piecolours2,piecolours1)
+linecolours <- brewer.pal(4,"Set1")
 ```
 
 Sort out diagnoses ...
@@ -84,8 +127,40 @@ hivresults <- hivset %>%
   group_by(yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
   mutate(totalnotifications  = cumsum(notifications)) %>% 
+  filter(yeardiagnosis %in% years)   
+
+# Calculate the proportion by state, exposure, and population category by state and 
+# nationally
+
+hivstate <- hivset %>% group_by(state,yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  mutate(cumnotifications = cumsum(notifications)) %>%
+  ungroup() %>% 
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = notifications/sum(notifications)) %>%
+  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>%
   filter(yeardiagnosis %in% years)
-               
+
+hivexpnat <- hivset %>% group_by(expgroup,yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  mutate(cumnotifications = cumsum(notifications)) %>%
+  ungroup() %>% 
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = notifications/sum(notifications)) %>%
+  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>%
+  filter(yeardiagnosis %in% years)
+
+hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  mutate(cumnotifications = cumsum(notifications)) %>%
+  ungroup() %>% 
+  group_by(state,yeardiagnosis) %>% 
+  mutate(propnotifications = notifications/sum(notifications)) %>%
+  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>%
+  filter(yeardiagnosis %in% years)
+
+# TODO: Will have to do the same by state
+
 ```
 
 Removal of duplicates .....
@@ -96,12 +171,12 @@ Removal of duplicates .....
 # unique diagnoses. 
 
 # Load function to remove duplicates
-source('~/Documents/Research/!Evaluation_Modelling/code/removeDuplicates.R', 
+source('~/Research/!Evaluation_Modelling/code/removeDuplicates.R', 
        echo=TRUE)
 
 # Setup
 ignore <- c(1,15) # Days to ignore in duplicate calculations
-filename <- paste(basePath, "output/uniquehiv-",pop,"_",region,"_",
+filename <- paste(basePath, "/output/uniquehiv-",pop,"_",region,"_",
                   toString(tail(years,1)),sep="")
 
 # Set up dob frame
@@ -121,6 +196,34 @@ for (ii in seq(along=years)) {
 # Store number unique diagnoses
 hivresults$uniquecases <- numUniques
 
+# Plot notifications data raw and deduplicated
+diagsplot1 <- ggplot(hivresults,aes(yeardiagnosis)) + theme_bw() +
+  opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
+  ylab("Number of notifications")
+diagsplot1 <- diagsplot1 + geom_line(aes(y = totalnotifications,color="All notifications")) + 
+  geom_line(aes(y = uniquecases,color="Unique notifications")) + 
+  theme(legend.direction="vertical") + theme(legend.title=element_blank())
+
+diagsplot2 <- ggplot(hivexpnat,aes(yeardiagnosis,cumnotifications,fill = expgroup)) + theme_bw() + 
+  opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
+  ylab("Number of notifications") + geom_area()
+
+diagsplot3 <- ggplot(hivstate,aes(yeardiagnosis,cumnotifications,fill = state)) + theme_bw() + 
+  opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
+  ylab("Number of notifications") + geom_area()
+
+# Test by state
+test <- filter(hivexpstate,state == "nsw")
+
+testplot <- ggplot(test,aes(yeardiagnosis,cumnotifications,fill = expgroup)) + theme_bw() + 
+  opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
+  ylab("Number of notifications") + geom_area()
+
+# Print figures
+windows(width=6,height=5)
+print(diagsplot1)
+# dev.print(pdf,paste(outputFolder, "/figures/current_pie.pdf",sep =""))
+
 ```
 
 Sort out deaths ....
@@ -128,6 +231,14 @@ Sort out deaths ....
 ```{r deaths}
 # Now calculate the number of deaths each year to work out the number of people
 # diagnosed with HIV 
+
+# Load all the data sets we use for this estimate
+hivparams <- read.csv(file.path(cleanDataFolder, "individualHIVparameters.csv", sep =""))
+hivparams <- select(hivparams,parameter,value)
+
+# James's death file
+# AHOD death rates
+
 
 
 ```
