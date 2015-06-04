@@ -51,7 +51,8 @@ region <- "all" # State for analysis
 hivdata <- read.csv(file.path(cleanDataFolder, paste("hivnotifications",toString(analysisYear),".csv", sep ="")))
 
 # Setup overarching analysis                   
-years <- startYear:analysisYear # Years to calculate
+years <- startYear:analysisYear # Years to calculate and plot 
+allyears <- min(hivdata$yeardiagnosis):analysisYear # All years of data
 
 # Setup extra columns for analysis
 hivdata$yeardiagnosis <- as.numeric(substr(hivdata$datediagnosis,1,4))
@@ -123,14 +124,15 @@ Sort out diagnoses ...
 ```{r diagnoses}
 # Setup dataframe for overall results by first extracting diagnoses details
 
+# Overall annual results
 hivresults <- hivset %>% 
   group_by(yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
-  mutate(totalnotifications  = cumsum(notifications)) %>% 
-  filter(yeardiagnosis %in% years)   
+  mutate(totalnotifications  = cumsum(notifications)) #%>% 
+  #filter(yeardiagnosis %in% years)   
 
-# Calculate the proportion by state, exposure, and population category by state and 
-# nationally
+# Calculate the proportion of diagnoses by exposure and population category by 
+# state and nationally. Theses data frames are used for further calculations
 
 hivstate <- hivset %>% group_by(state,yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
@@ -138,8 +140,8 @@ hivstate <- hivset %>% group_by(state,yeardiagnosis) %>%
   ungroup() %>% 
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>%
-  filter(yeardiagnosis %in% years)
+  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) #%>%
+  #filter(yeardiagnosis %in% years)
 
 hivexpnat <- hivset %>% group_by(expgroup,yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
@@ -147,8 +149,8 @@ hivexpnat <- hivset %>% group_by(expgroup,yeardiagnosis) %>%
   ungroup() %>% 
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>%
-  filter(yeardiagnosis %in% years)
+  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) #%>%
+  #filter(yeardiagnosis %in% years)
 
 hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
@@ -156,8 +158,8 @@ hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>%
   ungroup() %>% 
   group_by(state,yeardiagnosis) %>% 
   mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>%
-  filter(yeardiagnosis %in% years)
+  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) #%>%
+  #filter(yeardiagnosis %in% years)
 
 # TODO: Will have to do the same by state
 
@@ -166,10 +168,6 @@ hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>%
 Removal of duplicates .....
 
 ```{r removeduplicates}
-# This chuck takes defines a function to calulate the number of unique birthdates 
-# in a vector of birthdates. It is used to estimate the number of duplicates or 
-# unique diagnoses. 
-
 # Load function to remove duplicates
 source('~/Research/!Evaluation_Modelling/code/removeDuplicates.R', 
        echo=TRUE)
@@ -183,20 +181,22 @@ filename <- paste(basePath, "/output/uniquehiv-",pop,"_",region,"_",
 dobframe <- select(hivset,dob,yeardiagnosis)
 
 # Now loop through years and calculate cumulative number of unique cases 
-numUniques <- rep(0,length(years))
-for (ii in seq(along=years)) {
-  dobvector <- filter(dobframe,yeardiagnosis <= years[ii])$dob
-  if (years[ii] == analysisYear) {
+numUniques <- rep(0,length(allyears))
+for (ii in seq(along=allyears)) {
+  dobvector <- filter(dobframe,yeardiagnosis <= allyears[ii])$dob
+  if (allyears[ii] == analysisYear) {
     numUniques[ii] <- removeDuplicates(dobvector,ignore,write=filename)
   } else {
     numUniques[ii] <- removeDuplicates(dobvector,ignore)
   }
 }
 
-# Store number unique diagnoses
+# Store number unique diagnoses cumulatively and annually. For annual unique 
+# cases assume all the first years of disgnoses are unique. 
 hivresults$uniquecases <- numUniques
+hivresults$annualcases <- c(numUniques[1],diff(numUniques))
 
-# Plot notifications data raw and deduplicated
+# Plot national notifications data raw and deduplicated
 diagsplot1 <- ggplot(hivresults,aes(yeardiagnosis)) + theme_bw() +
   opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
   ylab("Number of notifications")
@@ -204,20 +204,20 @@ diagsplot1 <- diagsplot1 + geom_line(aes(y = totalnotifications,color="All notif
   geom_line(aes(y = uniquecases,color="Unique notifications")) + 
   theme(legend.direction="vertical") + theme(legend.title=element_blank())
 
-diagsplot2 <- ggplot(hivexpnat,aes(yeardiagnosis,cumnotifications,fill = expgroup)) + theme_bw() + 
-  opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
-  ylab("Number of notifications") + geom_area()
-
-diagsplot3 <- ggplot(hivstate,aes(yeardiagnosis,cumnotifications,fill = state)) + theme_bw() + 
-  opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
-  ylab("Number of notifications") + geom_area()
-
-# Test by state
-test <- filter(hivexpstate,state == "nsw")
-
-testplot <- ggplot(test,aes(yeardiagnosis,cumnotifications,fill = expgroup)) + theme_bw() + 
-  opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
-  ylab("Number of notifications") + geom_area()
+# diagsplot2 <- ggplot(hivexpnat,aes(yeardiagnosis,cumnotifications,fill = expgroup)) + theme_bw() + 
+#   opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
+#   ylab("Number of notifications") + geom_area()
+# 
+# diagsplot3 <- ggplot(hivstate,aes(yeardiagnosis,cumnotifications,fill = state)) + theme_bw() + 
+#   opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
+#   ylab("Number of notifications") + geom_area()
+# 
+# # Test by state
+# test <- filter(hivexpstate,state == "nsw")
+# 
+# testplot <- ggplot(test,aes(yeardiagnosis,cumnotifications,fill = expgroup)) + theme_bw() + 
+#   opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
+#   ylab("Number of notifications") + geom_area()
 
 # Print figures
 windows(width=6,height=5)
