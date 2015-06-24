@@ -18,8 +18,8 @@ require(reshape2)
 require(RColorBrewer)
 
 # Details of where to store outputs
-dataFolder <- "C:/Users/Rgray/Documents/Research/!Evaluation_Modelling/projects/Care_Cascade_Calculations/data/"
-outputFolder <- "C:/Users/Rgray/Documents/Research/!Evaluation_Modelling/projects/Care_Cascade_Calculations/output/"
+dataFolder <- "C:/Users/Rgray/Documents/Research/!Evaluation_Modelling/project_care_cascades/data/"
+outputFolder <- "C:/Users/Rgray/Documents/Research/!Evaluation_Modelling/project_care_cascades/output/"
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 ```
 
@@ -169,7 +169,7 @@ cascadeplot <- ggplot(plotdata,aes(x=stage,y=number/1e3,fill = sex)) + opts
 cascadeplot <- cascadeplot + geom_bar(position=dodge,stat="identity") # Plot the bar chart
 cascadeplot <- cascadeplot + scale_fill_manual(values=barcolours,name="") # Use corrrect colours
 cascadeplot <- cascadeplot + xlab("") + ylab("Number of people (thousands)")
-cascadeplot <- cascadeplot + scale_x_discrete(labels=c("Had an \n infection","Remain \n infected",
+cascadeplot <- cascadeplot + scale_x_discrete(labels=c("Had an \n infection","Require \n care",
                                                        "Diagnoses","Received \n treatment",
                                                        "Remain \n uninfected")) # Add x labels
 
@@ -177,8 +177,8 @@ cascadeplot <- cascadeplot + scale_x_discrete(labels=c("Had an \n infection","Re
 cascadeplot <- cascadeplot + geom_errorbar(aes(ymin = lower/1e3, ymax = upper/1e3),position=dodge,width=0.33,size=1)
 
 # Now add lines for where we want to reach
-cascadeplot <- cascadeplot + geom_hline(yintercept= plotdata[with(plotdata,sex == "males" & stage == "remain"),]$number/1e3,colour=barcolours[2],size=1,linetype="longdash")
-cascadeplot <- cascadeplot + geom_hline(yintercept= plotdata[with(plotdata,sex == "females" & stage == "remain"),]$number/1e3,colour=barcolours[1],size=1,linetype="longdash")
+# cascadeplot <- cascadeplot + geom_hline(yintercept= plotdata[with(plotdata,sex == "males" & stage == "remain"),]$number/1e3,colour=barcolours[2],size=1,linetype="longdash")
+# cascadeplot <- cascadeplot + geom_hline(yintercept= plotdata[with(plotdata,sex == "females" & stage == "remain"),]$number/1e3,colour=barcolours[1],size=1,linetype="longdash")
 
 # Print plot in separate window and save
 windows(width=7,height=5)
