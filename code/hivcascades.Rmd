@@ -32,6 +32,9 @@ setwd(file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_car
 basePath <- file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades")
 cleanDataFolder <- file.path(basePath,"data")
 
+# Folder for plots 
+outputFolder <- file.path(basePath,"output")
+
 # Primary script parameters
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 analysisYear <- 2013
@@ -52,11 +55,12 @@ hivdata <- read.csv(file.path(cleanDataFolder, paste("hivnotifications",toString
 
 # Setup overarching analysis                   
 years <- startYear:analysisYear # Years to calculate and plot 
-allyears <- min(hivdata$yeardiagnosis):analysisYear # All years of data
 
 # Setup extra columns for analysis
 hivdata$yeardiagnosis <- as.numeric(substr(hivdata$datediagnosis,1,4))
 hivdata$yeardeath <- as.numeric(substr(hivdata$datedeath,1,4))
+
+allyears <- min(hivdata$yeardiagnosis):analysisYear # All years of data
 
 # Quick checks that we are not doing analysis outside of the data.
 if (max(hivdata$yeardiagnosis) < analysisYear) {
@@ -67,16 +71,6 @@ if (min(hivdata$yeardiagnosis) > startYear) {
   stop("No data for specified for first year of analysis.")
 }
 
-# Subset by population and state
-if (pop == "all"){
-  hivset <- hivdata
-} else {
-  hivset <- filter(hivdata, expgroup == pop)
-}
-
-if (region != "all") {
-    hivset <- filter(hivset, state == region)
-}
 ```
 
 ```{r plotcode, echo=FALSE,messages = FALSE,include=FALSE}
@@ -128,8 +122,8 @@ Sort out diagnoses ...
 hivresults <- hivset %>% 
   group_by(yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
-  mutate(totalnotifications  = cumsum(notifications)) #%>% 
-  #filter(yeardiagnosis %in% years)   
+  mutate(totalnotifications  = cumsum(notifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)   
 
 # Calculate the proportion of diagnoses by exposure and population category by 
 # state and nationally. Theses data frames are used for further calculations
@@ -140,8 +134,8 @@ hivstate <- hivset %>% group_by(state,yeardiagnosis) %>%
   ungroup() %>% 
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) #%>%
-  #filter(yeardiagnosis %in% years)
+  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)   
 
 hivexpnat <- hivset %>% group_by(expgroup,yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
@@ -149,8 +143,8 @@ hivexpnat <- hivset %>% group_by(expgroup,yeardiagnosis) %>%
   ungroup() %>% 
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) #%>%
-  #filter(yeardiagnosis %in% years)
+  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)   
 
 hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
@@ -158,10 +152,10 @@ hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>%
   ungroup() %>% 
   group_by(state,yeardiagnosis) %>% 
   mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) #%>%
-  #filter(yeardiagnosis %in% years)
+  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)   
 
-# TODO: Will have to do the same by state
+# TODO: Will have to do the same by population group
 
 ```
 
@@ -222,24 +216,160 @@ diagsplot1 <- diagsplot1 + geom_line(aes(y = totalnotifications,color="All notif
 # Print figures
 windows(width=6,height=5)
 print(diagsplot1)
-# dev.print(pdf,paste(outputFolder, "/figures/current_pie.pdf",sep =""))
+dev.print(png,paste(outputFolder, "/figures/unique_diagnoses.png",sep =""))
 
 ```
 
-Sort out deaths ....
+Sort out deaths and number living with HIV
 
 ```{r deaths}
 # Now calculate the number of deaths each year to work out the number of people
-# diagnosed with HIV 
+# diagnosed with HIV. 
 
-# Load all the data sets we use for this estimate
-hivparams <- read.csv(file.path(cleanDataFolder, "individualHIVparameters.csv", sep =""))
+# This calculation uses the number of annual unique cases and available deaths data
+# to calculate the number of deaths and hence number of people living with diagnosed HIV. 
+
+# Load all the data sets we use for this estimate - use the parameter column as 
+# row names for easier subsetting
+hivparams <- read.csv(file.path(cleanDataFolder, "individualHIVparameters.csv", 
+                                sep =""),as.is = 1)
 hivparams <- select(hivparams,parameter,value)
+for (ii in 1:nrow(hivparams)) {
+  assign(hivparams$parameter[ii],hivparams$value[ii])
+}
+
+# Calculate sensitivity of recorded deaths based on linkage results
+linkageFactor <- (linkedDeaths+notifiedDeaths)/notifiedDeaths
+linkageFactorLower <- linkageFactor*(1-linkageSensitivity)
+linkageFactorUpper <- linkageFactor*(1+linkageSensitivity)  
+
+# Extract number of known deaths and store in a central data frame
+hivdeaths <- hivdata %>% 
+  filter(! is.na(yeardeath)) %>%
+  group_by(yeardeath) %>% 
+  summarise(number_deaths = n()) %>% 
+  filter(yeardeath <= analysisYear)   
+
+# Adjust deaths for number of unique diagnoses??
+# I don't think we need to as too different dates of death should result in 
+# different people
+
+# Set up linked deaths
+hivdeaths$inflated_deaths <- hivdeaths$number_deaths * linkageFactor
+hivdeaths$inflated_deaths_lower <- hivdeaths$number_deaths * linkageFactorLower
+hivdeaths$inflated_deaths_upper <- hivdeaths$number_deaths * linkageFactorUpper
+
+# No deaths in 1980 and 1982 as add this data manually to ensure everything lines up
+hivdeaths <- rbind(hivdeaths,c(1980,0,0,0,0))
+hivdeaths <- rbind(hivdeaths,c(1982,0,0,0,0))
+hivdeaths <- arrange(hivdeaths,yeardeath)
+
+# Now loop through the years to claculate the number living with diagnosed HIV
+# using the linkage estimates and after the end of teh linkage study the AHOD death rates
+
+# Intialize results vectors
+livingLinkage <- rep(0,length(allyears))
+livingLinkageLower <- rep(0,length(allyears))
+livingLinkageUpper <- rep(0,length(allyears))
+
+livingAhod <- rep(0,length(allyears))
+livingAhodLower <- rep(0,length(allyears))
+livingAhodUpper <- rep(0,length(allyears))
+
+deathsAhod <- rep(0,length(allyears))
+deathsAhodLower <- rep(0,length(allyears))
+deathsAhodUpper <- rep(0,length(allyears))
+
+drateLinkage <- rep(0,length(allyears))
+drateLinkageLower <- rep(0,length(allyears))
+drateLinkageUpper <- rep(0,length(allyears))
+
+# Set initial value
+livingLinkage[1] <- hivresults$uniquecases[1]
+livingLinkageLower[1] <- hivresults$uniquecases[1]
+livingLinkageUpper[1] <- hivresults$uniquecases[1]
+
+livingAhod[1] <- hivresults$uniquecases[1]
+livingAhodLower[1] <- hivresults$uniquecases[1]
+livingAhodUpper[1] <- hivresults$uniquecases[1]
+
+# Loop through and produce all the calculations
+for (ii in 1:(length(allyears)-1)){
+  
+  # Number living based on linkage 
+  livingLinkage[ii + 1] <- livingLinkage[ii] + 
+    hivresults$annualcases[ii] - 
+    hivdeaths$inflated_deaths[ii] 
+  livingLinkageLower[ii + 1] <- livingLinkageLower[ii] + 
+    hivresults$annualcases[ii] - 
+    hivdeaths$inflated_deaths_upper[ii] 
+  livingLinkageUpper[ii + 1] <- livingLinkageUpper[ii] + 
+    hivresults$annualcases[ii] - 
+    hivdeaths$inflated_deaths_lower[ii] 
+  
+  # Calculate corresponding death rate
+  drateLinkageLower[ii] <- hivdeaths$inflated_deaths_upper[ii]/
+    livingLinkageLower[ii]
+  drateLinkageUpper[ii] <- hivdeaths$inflated_deaths_lower[ii]/
+    livingLinkageUpper[ii]
+  
+  # Calculate deaths for AHOD mortality rates
+  if (allyears[ii] <= 2003) {
+    deathsAhod[ii] <- hivdeaths$inflated_deaths[ii]
+    deathsAhodLower[ii] <- hivdeaths$inflated_deaths_lower[ii]
+    deathsAhodUpper[ii] <- hivdeaths$inflated_deaths_upper[ii]
+  } else {
+    deathsAhod[ii] <- ahodMortality * livingLinkage[ii]
+    deathsAhodLower[ii] <- ahodMortalityLower * livingLinkageLower[ii]
+    deathsAhodUpper[ii] <- ahodMortalityUpper * livingLinkageUpper[ii]
+  }
+  
+  # Calculate living based on AHOD mortality
+  livingAhod[ii + 1] <- livingAhod[ii] + hivresults$annualcases[ii] - 
+    deathsAhod[ii] 
+  livingAhodLower[ii + 1] <- livingAhodLower[ii] + hivresults$annualcases[ii] - 
+    deathsAhodUpper[ii] 
+  livingAhodUpper[ii + 1] <- livingAhodUpper[ii] + hivresults$annualcases[ii] - 
+    deathsAhodLower[ii] 
+}
+
+# Insert final death values
+finalIndex <- ii +1
+drateLinkage[finalIndex] <- hivdeaths$inflated_deaths[finalIndex]/
+  livingLinkage[finalIndex]
+drateLinkageLower[finalIndex] <- hivdeaths$inflated_deaths_upper[finalIndex]/
+  livingLinkageLower[finalIndex]
+drateLinkageUpper[finalIndex] <- hivdeaths$inflated_deaths_lower[finalIndex]/
+  livingLinkageUpper[finalIndex]
+if (allyears[finalIndex] <= 2003) {
+  deathsAhod[finalIndex] <- hivdeaths$inflated_deaths[finalIndex]
+  deathsAhodLower[finalIndex] <- hivdeaths$inflated_deaths_lower[finalIndex]
+  deathsAhodUpper[finalIndex] <- hivdeaths$inflated_deaths_upper[finalIndex]
+} else {
+  deathsAhod[finalIndex] <- ahodMortality * livingLinkage[finalIndex]
+  deathsAhodLower[finalIndex] <- ahodMortalityLower * 
+    livingLinkageLower[finalIndex]
+  deathsAhodUpper[finalIndex] <- ahodMortalityUpper * 
+    livingLinkageUpper[finalIndex]
+}
+
+# Store all the final death results
+hivdeaths$deathsAhod <- deathsAhod
+hivdeaths$deathsAhodLower <- deathsAhodLower
+hivdeaths$deathsAhodUpper <- deathsAhodUpper
+
+hivdeaths$drateLinkage <- drateLinkage
+hivdeaths$drateLinkageLower <- drateLinkageLower
+hivdeaths$drateLinkageUpper <- drateLinkageUpper
+
+# Store all the number living with diagnosed HIV results 
+pldhiv <- data.frame(hivresults$yeardiagnosis,livingLinkage,livingLinkageLower,livingLinkageUpper,livingAhod,livingAhodLower,livingAhodUpper)
+names(pldhiv) <-c("year","livingLinkage","livingLinkageLower","livingLinkageUpper","livingAhod","livingAhodLower","livingAhodUpper")
 
 # James's death file
-# AHOD death rates
 
-
+# Plot deaths results for comparison
+# deathsplot <- ggplot(hivdeaths,aes(x = yeardeath,y = inflated_deaths)) + geom_line()
 
 ```
 
