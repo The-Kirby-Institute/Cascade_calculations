@@ -71,6 +71,9 @@ if (min(hivdata$yeardiagnosis) > startYear) {
   stop("No data for specified for first year of analysis.")
 }
 
+# Setup our working data frame
+hivset <- hivdata
+
 ```
 
 ```{r plotcode, echo=FALSE,messages = FALSE,include=FALSE}
@@ -156,7 +159,33 @@ hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>%
   filter(yeardiagnosis <= analysisYear)   
 
 # TODO: Will have to do the same by population group
+```
 
+```{r functions}
+# Useful functions for analysis
+
+# Create a function to easily extract sub-populations of interest
+subhivset <- function(hivdataframe, born = 'all', 
+                      region = 'all', mode = 'all' ) {
+  # Options
+  # pop - all, seasia, ssafrica, indigenous, nonindigenous
+  # state - nsw, vic, qld, wa, nt, tas, sa, act
+  # expgroup - msm, pwid, hetero, other
+  
+  subframe <- hivdataframe
+#   if (born ~= 'all')
+#     subframe <- filter(subframe, state == born)
+  if (region != 'all') {
+    subframe <- filter(subframe, state == region)
+  }
+
+  if (mode != 'all') {
+    subframe <- filter(subframe, expgroup == mode)            
+  }
+
+  # Return final subframe
+  return(subframe)
+}
 ```
 
 Removal of duplicates .....
