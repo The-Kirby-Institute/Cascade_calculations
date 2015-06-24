@@ -162,9 +162,13 @@ hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>%
 ```
 
 ```{r functions}
-# Useful functions for analysis
+# Load and define useful functions for analysis
 
-# Create a function to easily extract sub-populations of interest
+# Load function to remove duplicates
+source('~/Research/!Evaluation_Modelling/code/removeDuplicates.R', 
+       echo=TRUE)
+
+# Function to easily extract sub-populations of interest
 subhivset <- function(hivdataframe, born = 'all', 
                       region = 'all', mode = 'all' ) {
   # Options
@@ -186,38 +190,96 @@ subhivset <- function(hivdataframe, born = 'all',
   # Return final subframe
   return(subframe)
 }
+
+# Function for removing duplicates annually
+numUnique <- function(dobframe, years,ignore, file = NA) {
+  # Loop through years and calculate cumulative number of unique cases 
+  numcases <- rep(0,length(years))
+  for (ii in seq(along=years)) {
+    dobvector <- filter(dobframe,yeardiagnosis <= years[ii])$dob
+    if (length(dobvector) != 0) {
+      # Make sure our dobvector isn't empty
+      numcases[ii] <- removeDuplicates(dobvector,ignore)
+    }
+  }
+  
+  # If selected write final output to file
+  if (!is.na(file)) {
+    numcases[ii] <- removeDuplicates(dobvector,ignore, write = file)
+  }
+  
+  # Return vector of unique cases
+  return(numcases)
+}
+
+# Function to create file name for deduplicted output
+deduplicateFile <- function(pop, state, mode, years) {
+  filename <- paste(basePath, "/output/uniquehiv-", state, "_", mode, "_",
+                    toString(tail(years,1)),sep="")
+}
+
 ```
 
 Removal of duplicates .....
 
 ```{r removeduplicates}
-# Load function to remove duplicates
-source('~/Research/!Evaluation_Modelling/code/removeDuplicates.R', 
-       echo=TRUE)
 
-# Setup
-ignore <- c(1,15) # Days to ignore in duplicate calculations
-filename <- paste(basePath, "/output/uniquehiv-",pop,"_",region,"_",
-                  toString(tail(years,1)),sep="")
+# Days to ignore in duplicate calculations
+ignore <- c(1,15) 
 
-# Set up dob frame
-dobframe <- select(hivset,dob,yeardiagnosis)
+# Set up dob frames
+doball <- select(hivset,dob,yeardiagnosis) # Overall
 
-# Now loop through years and calculate cumulative number of unique cases 
-numUniques <- rep(0,length(allyears))
-for (ii in seq(along=allyears)) {
-  dobvector <- filter(dobframe,yeardiagnosis <= allyears[ii])$dob
-  if (allyears[ii] == analysisYear) {
-    numUniques[ii] <- removeDuplicates(dobvector,ignore,write=filename)
-  } else {
-    numUniques[ii] <- removeDuplicates(dobvector,ignore)
-  }
-}
+# States and territies
+dobact<- select(subhivset(hivset, region = 'act'), dob, yeardiagnosis)
+dobnsw <- select(subhivset(hivset, region = 'nsw'), dob, yeardiagnosis)
+dobvic <- select(subhivset(hivset, region = 'vic'), dob, yeardiagnosis)
+dobqld <- select(subhivset(hivset, region = 'qld'), dob, yeardiagnosis)
+dobnt <- select(subhivset(hivset, region = 'nt'), dob, yeardiagnosis)
+dobwa <- select(subhivset(hivset, region = 'wa'), dob, yeardiagnosis)
+dobsa <- select(subhivset(hivset, region = 'sa'), dob, yeardiagnosis)
+dobtas <- select(subhivset(hivset, region = 'tas'), dob, yeardiagnosis)
+
+# Mode of exposure
+dobmsm <- select(subhivset(hivset, mode = 'msm'), dob, yeardiagnosis)
+dobpwid <- select(subhivset(hivset, mode = 'pwid'), dob, yeardiagnosis)
+dobhetero <- select(subhivset(hivset, mode = 'hetero'), dob, yeardiagnosis)
+dobother <- select(subhivset(hivset, mode = 'other'), dob, yeardiagnosis)
+
+# TODO: Country of births
 
 # Store number unique diagnoses cumulatively and annually. For annual unique 
 # cases assume all the first years of disgnoses are unique. 
-hivresults$uniquecases <- numUniques
-hivresults$annualcases <- c(numUniques[1],diff(numUniques))
+numberUniqueAll <- numUnique(doball, allyears, ignore)
+
+# By state
+numberUniqueAct <- numUnique(dobact, allyears, ignore)
+numberUniqueNsw <- numUnique(dobnsw, allyears, ignore)
+numberUniqueVic <- numUnique(dobvic, allyears, ignore)
+numberUniqueQld <- numUnique(dobqld, allyears, ignore)
+numberUniqueNt <- numUnique(dobnt, allyears, ignore)
+numberUniqueWa <- numUnique(dobwa, allyears, ignore)
+numberUniqueSa <- numUnique(dobsa, allyears, ignore)
+numberUniqueTas <- numUnique(dobtas, allyears, ignore)
+
+# By mode
+numberUniqueMsm <- numUnique(dobmsm, allyears, ignore)
+numberUniquePwid <- numUnique(dobpwid, allyears, ignore)
+numberUniqueHetero <- numUnique(dobhetero, allyears, ignore)
+numberUniqueOther <- numUnique(dobother, allyears, ignore)
+
+# Store national results
+hivresults$uniquecases <- numberUnique
+hivresults$annualcases <- c(numberUnique[1],diff(numberUnique))
+
+propUniqueAll <- (hivresults$totalnotifications-numberUnique) / 
+                      hivresults$totalnotifications 
+
+
+```
+
+```{r plotuniques}
+graphics.off()
 
 # Plot national notifications data raw and deduplicated
 diagsplot1 <- ggplot(hivresults,aes(yeardiagnosis)) + theme_bw() +
