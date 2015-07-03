@@ -1,0 +1,230 @@
+HIV data cleaning 
+=================
+
+This script is used to load and clean the raw HIV related data from various sources.
+These data are primarily used for the HIV cascade calculations. The resulting cleaned 
+data sets are saved as dataframes in csv files in the
+~/Evaluation\_Modelling/project\_care\_cascades/data/
+folder. 
+
+
+```{r initialization}
+# Clear workspace
+rm(list=ls()) 
+
+# Libraries for data manipulation
+require(readxl)
+require(dplyr)
+require(tidyr)
+require(utils)
+
+# Set working directory
+setwd(file.path(path.expand("~/"),"Documents","Research","!Evaluation_Modelling","project_care_cascades","code"))
+
+# Base directory
+dataPath <- file.path(path.expand("~"),"Research","!Evaluation_Modelling","data")
+basePath <- "~/Research/!Evaluation_Modelling/project_care_cascades/"
+cleanDataFolder <- file.path(basePath,"data")
+
+# Primary script parameters
+dataYear <- 2013
+
+```
+
+## HIV Notifications
+
+For the purposes of the HIV cascade calculations and Annual Surviellance Report 
+we group notifications into broad exposure categories. The following modes of 
+exposure are used:
+* msm - includes msm, msm-idu, bisexual males, bisexual male IDU
+* pwid -  idu, heterosexual-idu
+* hetero - hetero, hetero-unspecified
+* other - everything else
+
+We also use broad population categories:
+* non-indigenous - Austrlian born
+* indigenous - Australian born
+* seasia - South East Asia
+* ssafrica - Sub-sharan Africa
+
+
+```{r notifications}
+# Raw HIV notifications file
+rawdata <- file.path(dataPath,paste("rawHIVnotifications-", toString(dataYear), ".xls",sep=""))
+
+# Load the raw HIV notifications file and clean it up
+hivdata <- read_excel(rawdata, na = "NA")
+
+# Extract what we wnat and clean it up
+
+colnames(hivdata)[4] <- "dob"
+colnames(hivdata)[5] <- "datediagnosis"
+colnames(hivdata)[7] <- "exposure"
+
+# Convert date format columns to date strings
+hivdata$dob <- as.Date(hivdata$dob)
+hivdata$datediagnosis <- as.Date(hivdata$datediagnosis)
+hivdata$datedeath <- as.Date(hivdata$datedeath)
+
+# Replace codes with easier to use strings - so we don't have to look up what thing mean
+hivdata[hivdata$sex ==1,]$sex <- "male" 
+hivdata[hivdata$sex ==2,]$sex <- "female" 
+hivdata[hivdata$sex ==3,]$sex <- "transgender" 
+hivdata[hivdata$sex ==0,]$sex <- "unknown" 
+
+states <- c("act","nsw","nt","qld","sa","tas","vic","wa")
+for(ii in 1:8){
+  hivdata[hivdata$state == ii,]$state <- states[ii]
+}
+
+# Reclassification of exposure to the broad surveillance categories - may need to change manually
+hivdata[hivdata$exposure == "1A",]$exposure <- "msm"
+hivdata[hivdata$exposure == "1A3A",]$exposure <- "msm-idu"
+hivdata[hivdata$exposure == "1A3B",]$exposure <- "msm"
+hivdata[hivdata$exposure == "1A3C",]$exposure <- "msm"
+hivdata[hivdata$exposure == "1B",]$exposure <- "bisex-male"
+hivdata[hivdata$exposure == "1B3A",]$exposure <- "bisex-male-idu"
+hivdata[hivdata$exposure == "1B3B",]$exposure <- "bisex-male"
+hivdata[hivdata$exposure == "1C2A",]$exposure <- "hetero"
+hivdata[hivdata$exposure == "1C2A2B",]$exposure <- "hetero"
+hivdata[hivdata$exposure == "1C2B",]$exposure <- "hetero"
+hivdata[hivdata$exposure == "1C2C",]$exposure <- "hetero"
+hivdata[hivdata$exposure == "1C2D",]$exposure <- "hetero"
+hivdata[hivdata$exposure == "1C2E",]$exposure <- "hetero"
+hivdata[hivdata$exposure == "1C2F",]$exposure <- "hetero"
+hivdata[hivdata$exposure == "1C2G",]$exposure <- "hetero"
+hivdata[hivdata$exposure == "1C2H",]$exposure <- "hetero-unspecified"
+hivdata[hivdata$exposure == "1C3A",]$exposure <- "hetero-idu"
+hivdata[hivdata$exposure == "1C3A2B",]$exposure <- "hetero-idu"
+hivdata[hivdata$exposure == "1C3A2E",]$exposure <- "hetero-idu"
+hivdata[hivdata$exposure == "1C3B",]$exposure <- "hetero"
+hivdata[hivdata$exposure == "1C3C",]$exposure <- "hetero"
+hivdata[hivdata$exposure == "1D",]$exposure <- "high-prev-country"
+hivdata[hivdata$exposure == "1E",]$exposure <- "unknown"
+hivdata[hivdata$exposure == "1E3A",]$exposure <- "idu"
+hivdata[hivdata$exposure == "1E3B",]$exposure <- "blood-recipient"
+hivdata[hivdata$exposure == "1E3C",]$exposure <- "blood-recipient"
+hivdata[hivdata$exposure == "1F",]$exposure <- "unknown"
+hivdata[hivdata$exposure == "1F3A",]$exposure <- "unknown"
+hivdata[hivdata$exposure == "1F3B",]$exposure <- "unknown"
+hivdata[hivdata$exposure == "1F3C",]$exposure <- "unknown"
+hivdata[hivdata$exposure == "4A",]$exposure <- "mtct"
+hivdata[hivdata$exposure == "4B",]$exposure <- "mtct"
+hivdata[hivdata$exposure == "4C",]$exposure <- "mtct"
+hivdata[hivdata$exposure == "4D",]$exposure <- "mtct"
+hivdata[hivdata$exposure == "4E",]$exposure <- "mtct"
+hivdata[hivdata$exposure == "4F",]$exposure <- "mtct"
+hivdata[hivdata$exposure == "4G",]$exposure <- "mtct"
+hivdata[hivdata$exposure == "4J",]$exposure <- "mtct"
+hivdata[hivdata$exposure == "4K",]$exposure <- "mtct"
+hivdata[hivdata$exposure == "5A1",]$exposure <- "unknown"
+hivdata[hivdata$exposure == "5A2",]$exposure <- "unknown"
+hivdata[hivdata$exposure == "5A3",]$exposure <- "unknown"
+hivdata[hivdata$exposure == "5A4",]$exposure <- "unknown"
+hivdata[hivdata$exposure == "5B",]$exposure <- "unknown"
+
+# Add a broad exposure category indicator. 
+msmgroup <- c("msm","bisex-male","bisex-male-idu","msm-idu")
+pwidgroup <- c("idu","hetero-idu")
+heterogroup <- c("hetero","hetero-unspecified")
+othergroup <- c("unknown","high-prev-country","mtct","blood-recipient")
+
+hivdata$expgroup <- rep(NA,nrow(hivdata))
+hivdata[hivdata$exposure %in% msmgroup,]$expgroup <- "msm"
+hivdata[hivdata$exposure %in% pwidgroup,]$expgroup <- "pwid"
+hivdata[hivdata$exposure %in% heterogroup,]$expgroup <- "hetero"
+hivdata[hivdata$exposure %in% othergroup,]$expgroup <- "other"
+
+# Add a broad population code and indigenous code
+
+# TODO: Add population grouping
+
+
+# Save cleaned hivdata
+write.csv(hivdata, file = file.path(cleanDataFolder, paste("hivnotifications",toString(analysisYear),".csv", sep ="")), row.names = FALSE)
+```
+
+## Prospection PharmDash HIV Treatment Data
+
+Description of the output from Prospection and the cleaning process.
+
+```{r prospection}
+# Raw prospection file
+rawPharmDash <- file.path(dataPath,paste("PharmDash_HIV_Patients_Treatment-", toString(dataYear+1), ".csv",sep=""))
+
+# Data only reliable from 2013
+startyear <- 2013
+
+# Load the raw HIV notifications file and clean it up. The exported data from 
+# PharmDash is a little messy. Need to skip the first 3 rows. Then tidy up and 
+# extract the data we want. Only valuable from the year 2013
+pharmData <- read.csv(rawPharmDash,skip = 3,na.strings = c("NA", ""))
+pharmData <- pharmData[!apply(is.na(pharmData) | pharmData == "", 1, all), ] # Remove empty rows
+pharmData$X <- as.character(pharmData$X) # Make sure first column is a character string
+
+# Filter and select rows and columns we need. Filter removes the rows with "Growth"
+# in the category. Select uses a regular expression that 
+# matches the years 2013 to 2099 which should be enough :-)
+pharmData <- pharmData %>%
+  filter(!(c(1:nrow(pharmData)) %in% grep("Growth",pharmData$X))) %>%
+  select(matches("X$|^X20[1-9][3-9].Dec"))
+
+# Tidy up column names
+nyears <- ncol(pharmData)-1
+years <- c(startyear:((startyear-1)+nyears))
+charyears <- paste("X", as.character(years),sep = "")
+colnames(pharmData) <- c("category",charyears)
+
+# Convert everything to character class for the next step of manipulation
+pharmData <- data.frame(lapply(pharmData, as.character), stringsAsFactors = FALSE)
+
+# Add new columns for state and gender
+pharmData$gender <- rep(NA,nrow(pharmData))
+pharmData$state <- rep(NA,nrow(pharmData))
+
+pharmData$gender[grep("^M,",pharmData$category)] <- "m"
+pharmData$gender[grep("^F,",pharmData$category)] <- "f"
+pharmData$gender[grep("^All Genders,",pharmData$category)] <- "all"
+
+states <- c("WA","VIC","TAS","SA","QLD","NT","NSW","ACT")
+for (ii in seq(along = states)){
+  pharmData$state[grep(paste(states[ii],"$",sep = ""),pharmData$category)] <- tolower(states[ii])
+}
+
+pharmData$state[grep("All States",pharmData$category)] <- "all"
+
+# Replace less than equals with equals and convert to numeric
+for (ii in seq(along = charyears)){
+  pharmData[,charyears[ii]] <- as.numeric(gsub("^<= ","",pharmData[,charyears[ii]]))
+}
+
+# Remove category variable and reorder
+pharmData <- pharmData %>%
+  select(-category) %>%
+  select(gender, state, num_range("X",years))
+
+# Finally have it a relatively tidy format so save to output file
+write.csv(pharmData, file = file.path(cleanDataFolder, paste("pharmdash_HIVpatients",toString(years[length(years)]),".csv", sep ="")), row.names = FALSE)
+
+```
+
+## Old Treament Spending Data
+
+To get trends in number on treatment I use the total spending data from a PBS spending data set provided by Hamish McManus
+
+```{r s100}
+# Raw s100 spending file
+rawS100 <- file.path(dataPath,"S100_2015.xls",sep="")
+
+#Load the raw HIV notifications file and clean it up
+s100data <- read_excel(rawS100, na = "NA")
+
+# Calculate total cost for drugs in each financial year
+artCost <- s100data %>% 
+  group_by(financialyear) %>% 
+  summarise(totalspend = sum(totalcost))
+
+# Save cleaned hivdata
+write.csv(artCost, file = file.path(cleanDataFolder, paste("s100_treatment_costs.csv", sep ="")), row.names = FALSE)
+
+```
