@@ -18,13 +18,14 @@ require(dplyr)
 require(tidyr)
 require(utils)
 
-# Set working directory
-setwd(file.path(path.expand("~/"),"Documents","Research","!Evaluation_Modelling","project_care_cascades","code"))
+# Key folder paths
+basePath <- file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades")
+dataPath <- file.path(basePath,"data","raw")
 
-# Base directory
-dataPath <- file.path(path.expand("~"),"Research","!Evaluation_Modelling","data")
-basePath <- "~/Research/!Evaluation_Modelling/project_care_cascades/"
 cleanDataFolder <- file.path(basePath,"data")
+
+# Set working directory
+setwd(file.path(basePath,"code"))
 
 # Primary script parameters
 dataYear <- 2013
@@ -50,27 +51,26 @@ We also use broad population categories:
 
 ```{r notifications}
 # Raw HIV notifications file
-rawdata <- file.path(dataPath,paste("rawHIVnotifications-", toString(dataYear), ".xls",sep=""))
+rawdata <- file.path(dataPath,paste("cascadeHIVnotifications-", toString(dataYear), ".csv",sep=""))
 
 # Load the raw HIV notifications file and clean it up
-hivdata <- read_excel(rawdata, na = "NA")
+hivdata <- read.csv(rawdata, colClasses = c("numeric", "numeric", "Date",
+                    "numeric", "numeric", "Date", "numeric", "numeric", 
+                    "character", "numeric", "Date", "numeric", "numeric",
+                    "numeric", "numeric"))
 
-# Extract what we wnat and clean it up
+# Rename variable for ease of ues
+colnames(hivdata)[3] <- "dob"
+colnames(hivdata)[6] <- "datediagnosis"
+colnames(hivdata)[7] <- "agehiv"
+colnames(hivdata)[9] <- "exposure"
 
-colnames(hivdata)[4] <- "dob"
-colnames(hivdata)[5] <- "datediagnosis"
-colnames(hivdata)[7] <- "exposure"
-
-# Convert date format columns to date strings
-hivdata$dob <- as.Date(hivdata$dob)
-hivdata$datediagnosis <- as.Date(hivdata$datediagnosis)
-hivdata$datedeath <- as.Date(hivdata$datedeath)
-
-# Replace codes with easier to use strings - so we don't have to look up what thing mean
-hivdata[hivdata$sex ==1,]$sex <- "male" 
-hivdata[hivdata$sex ==2,]$sex <- "female" 
-hivdata[hivdata$sex ==3,]$sex <- "transgender" 
-hivdata[hivdata$sex ==0,]$sex <- "unknown" 
+# Replace codes with easier to use strings - so we don't have to look up 
+# what they mean
+hivdata[hivdata$sex == 1,]$sex <- "male" 
+hivdata[hivdata$sex == 2,]$sex <- "female" 
+hivdata[hivdata$sex == 3,]$sex <- "transgender" 
+hivdata[hivdata$sex == 0,]$sex <- "unknown" 
 
 states <- c("act","nsw","nt","qld","sa","tas","vic","wa")
 for(ii in 1:8){
@@ -135,13 +135,26 @@ hivdata[hivdata$exposure %in% pwidgroup,]$expgroup <- "pwid"
 hivdata[hivdata$exposure %in% heterogroup,]$expgroup <- "hetero"
 hivdata[hivdata$exposure %in% othergroup,]$expgroup <- "other"
 
-# Add a broad population code and indigenous code
+# Add broad population codes from region of birth (rob) and 
+# aboriginal variables - keep unknowns as NAs for imputation during the 
+# analysis. 
 
-# TODO: Add population grouping
+hivdata$countrygroup <- rep(NA,nrow(hivdata))
+hivdata[which(hivdata$cob == 1100),]$countrygroup <- "australia"
+hivdata[which(hivdata$rob == 9),]$countrygroup <- "bornsea"
+hivdata[which(hivdata$rob == 12),]$countrygroup <- "bornssa"
+hivdata[which(hivdata$rob %in% c(1,2,3,4,5,6,8,10,11)),]$countrygroup <- "other"
+hivdata[which(hivdata$rob == 7 & hivdata$cob != 1100),]$countrygroup <- "other"
 
-
+hivdata$aboriggroup <- rep(NA,nrow(hivdata))
+hivdata[which(hivdata$cob != 1100 | hivdata$rob != 7),]$aboriggroup <- "other"
+hivdata[which(hivdata$cob == 0),]$aboriggroup <- NA
+hivdata[which(hivdata$cob == 1100 & hivdata$aborig == 2),]$aboriggroup <- "indigenous"
+hivdata[which(hivdata$cob == 1100 & hivdata$aborig == 1),]$aboriggroup <- "non-indigenous"
+  
 # Save cleaned hivdata
-write.csv(hivdata, file = file.path(cleanDataFolder, paste("hivnotifications",toString(analysisYear),".csv", sep ="")), row.names = FALSE)
+write.csv(hivdata, file = file.path(cleanDataFolder, paste("hivnotifications",toString(dataYear),".csv", sep ="")), row.names = FALSE)
+
 ```
 
 ## Prospection PharmDash HIV Treatment Data
