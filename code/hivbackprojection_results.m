@@ -39,7 +39,11 @@ msmUndiagnosed = msmResults.Undiagnosed;
 
 % Number of years run and index of data we want — common across indicators
 numyears = length(msmUndiagnosed.Time)*timestep;
-startyear = min(msmUndiagnosed.Time)+1; % effectively 1965 to 2014
+startyear = min(msmUndiagnosed.Time); % effectively start 1965 to start of 2014
+                                      % Year specified is for the 1st of
+                                      % Jan. I am going to assume this is
+                                      % equal to 31st Dec.
+                                      
 
 years = startyear:(startyear+numyears-1);
 
