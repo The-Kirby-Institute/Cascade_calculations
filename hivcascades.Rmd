@@ -29,7 +29,7 @@ require(RColorBrewer)
 setwd(file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades"))
 
 # Base directory
-basePath <- file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades")
+basePath <- getwd()
 dataFolder <- file.path(basePath,"data")
 
 # Folder for plots 
