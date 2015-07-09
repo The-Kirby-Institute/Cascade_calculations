@@ -241,3 +241,117 @@ artCost <- s100data %>%
 write.csv(artCost, file = file.path(cleanDataFolder, paste("s100_treatment_costs.csv", sep ="")), row.names = FALSE)
 
 ```
+
+## Proportion/Number of MSM and non-MSM undiagnosed
+
+To estimate the total number of people living with HIV I need to know the 
+estimated number living with undiagnosed infection. This is provided by 
+James Jansson using his back-projection model. 
+
+```{r undiagnosed}
+# Clean up the results from the back projection analysis and store proportion 
+# undiagnosed and proportion who die each year from MSM and non-MSM
+
+projDataPath <- file.path(cleanDataFolder,"backprojection-clean",toString(dataYear))
+
+# Read in the files we want
+undiagMSM <- read_excel(file.path(projDataPath,"undiagnosedmsm.xlsx"))
+undiagNonMSM <- read_excel(file.path(projDataPath,"undiagnosednon-msm.xlsx"))
+diagMSM <- read_excel(file.path(projDataPath,"diagnosesmsm.xlsx"))
+diagNonMSM <- read_excel(file.path(projDataPath,"diagnosesnon-msm.xlsx"))
+
+# Calculate proportion MSM undiagnosed - This will produce NaNs do to division 
+# by zero. Replace with NA
+propMSMUndiag <- undiagMSM$median/(undiagMSM$median + diagMSM$median)
+propMSMUndiag[is.nan(propMSMUndiag)] <- NA
+propNonMSMUndiag <- undiagNonMSM$median/(undiagNonMSM$median + diagNonMSM$median)
+propNonMSMUndiag[is.nan(propNonMSMUndiag)] <- NA
+
+# Calculate the range in the proportion for MSM
+propMSMUndiagMin <- undiagMSM$lowerCI/(undiagMSM$lowerCI + diagMSM$UpperCI)
+propMSMUndiagMin[is.nan(propMSMUndiagMin)] <- NA
+propMSMUndiagMax <- undiagMSM$UpperCI/(undiagMSM$UpperCI + diagMSM$lowerCI)
+propMSMUndiagMax[is.nan(propMSMUndiagMax)] <- NA
+
+# Calculate the range in the proportion for Non-MSM
+propNonMSMUndiagMin <- undiagNonMSM$lowerCI/(undiagNonMSM$lowerCI + diagNonMSM$UpperCI)
+propNonMSMUndiagMin[is.nan(propNonMSMUndiagMin)] <- NA
+propNonMSMUndiagMax <- undiagNonMSM$UpperCI/(undiagNonMSM$UpperCI + diagNonMSM$lowerCI)
+propNonMSMUndiagMax[is.nan(propNonMSMUndiagMax)] <- NA
+
+# Put everything in a data frame
+
+projectUndiag <- data.frame(year = undiagMSM$year, 
+                             msm_best = propMSMUndiag, 
+                             msm_lower = propMSMUndiagMin, 
+                             msm_upper = propMSMUndiagMax, 
+                             non_msm_best = propNonMSMUndiag,
+                             non_msm_lower = propNonMSMUndiagMin,
+                             non_msm_upper = propNonMSMUndiagMax)
+
+
+# Write data frame to file 
+write.csv(projectUndiag, file = file.path(cleanDataFolder, "projectedUndiagnosed.csv"), row.names = FALSE)
+
+```
+
+## Proportion/Number of diagnosed MSM and non-MSM who die  
+
+To estimate the total number of people living with HIV I need to know the 
+estimated mortality rate. James Jansson's back-projection model provides an 
+estimate. 
+
+```{r projectedDeaths}
+# Clean up the results from the back projection analysis and store proportion 
+# who die each year from MSM and non-MSM
+
+projDataPath <- file.path(cleanDataFolder,"backprojection-clean",toString(dataYear))
+
+# Read in the files we want
+deathsMSM <- read_excel(file.path(projDataPath,"deathsmsm.xlsx"))
+deathsNonMSM <- read_excel(file.path(projDataPath,"deathsnon-msm.xlsx"))
+diagMSM <- read_excel(file.path(projDataPath,"diagnosesmsm.xlsx"))
+diagNonMSM <- read_excel(file.path(projDataPath,"diagnosesnon-msm.xlsx"))
+
+# Calculate proportion MSM undiagnosed - This will produce NaNs do to division 
+# by zero. Replace with NA
+propMSMdeaths <- deathsMSM$median/(deathsMSM$median + diagMSM$median)
+propMSMUndiag[is.nan(propMSMUndiag)] <- NA
+propNonMSMdeaths <- deathsNonMSM$median/(deathsNonMSM$median + diagNonMSM$median)
+propNonMSMdeaths[is.nan(propNonMSMdeaths)] <- NA
+
+# Calculate the range in the proportion for MSM
+propMSMdeathsMin <- deathsMSM$lowerCI/(deathsMSM$lowerCI + diagMSM$UpperCI)
+propMSMdeathsMin[is.nan(propMSMUndiagMin)] <- NA
+propMSMdeathsMax <- deathsMSM$UpperCI/(deathsMSM$UpperCI + diagMSM$lowerCI)
+propMSMdeathsMax[is.nan(propMSMdeathsMax)] <- NA
+
+# Calculate the range in the proportion for Non-MSM
+propNonMSMdeathsMin <- deathsNonMSM$lowerCI/(deathsNonMSM$lowerCI + deathsMSM$UpperCI)
+propNonMSMdeathsMin[is.nan(propNonMSMUndiagMin)] <- NA
+propNonMSMdeathsMax <- deathsNonMSM$UpperCI/(deathsNonMSM$UpperCI + deathsMSM$lowerCI)
+propNonMSMdeathsMax[is.nan(propNonMSMdeathsMax)] <- NA
+
+# Put everything in a data frame
+
+projectDeaths <- data.frame(year = deathsMSM$year, 
+                             msm_best = propMSMdeaths, 
+                             msm_lower = propMSMdeathsMin, 
+                             msm_upper = propMSMdeathsMax, 
+                             non_msm_best = propNonMSMdeaths,
+                             non_msm_lower = propNonMSMdeathsMin,
+                             non_msm_upper = propNonMSMdeathsMax)
+
+
+# Write data frame to file 
+write.csv(projectDeaths, file = file.path(cleanDataFolder, "projectedDeaths.csv"), row.names = FALSE)
+
+```
+
+
+
+## Proportion of people who leave Australia
+
+```{r migration}
+
+```
