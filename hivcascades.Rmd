@@ -51,7 +51,8 @@ region <- "all" # State for analysis
 
 ```{r startAnalysis}
 # Load clean file
-hivdata <- read.csv(file.path(cleanDataFolder, paste("hivnotifications",toString(analysisYear),".csv", sep ="")))
+hivdata <- read.csv(file.path(dataFolder, paste("hivnotifications",
+                    toString(analysisYear),".csv", sep ="")))
 
 # Setup overarching analysis                   
 years <- startYear:analysisYear # Years to calculate and plot 
