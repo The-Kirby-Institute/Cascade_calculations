@@ -81,7 +81,7 @@ removeDuplicates <- function(dobvector, days.ignore,
     year.days[match(leap.years,years)] <- 366
   }
   year.days.ignore <- year.days-days.remove
-  
+   
   # Tally up total dates and unique dates overall.
   # Set up cases dataframe to make it easy to count unique dates
   cases <- data.frame(dob = dob.data,birthyear = birth.year, birthday = birth.day)
@@ -113,7 +113,13 @@ removeDuplicates <- function(dobvector, days.ignore,
   
   num.sub.cases <- sum(sub.total.cases$n)
   sub.duplicates <- num.sub.cases - sum(unique.sub.cases)
-  prop.sub.duplicates <- sub.duplicates/num.sub.cases
+
+  if (num.sub.cases != 0) {
+    # Just in case there are no num.sub.cases
+    prop.sub.duplicates <- sub.duplicates/num.sub.cases
+  } else {
+    prop.sub.duplicates <- 0
+  }
   
   total.duplicates <- sub.duplicates + (num.cases-num.sub.cases)*
     prop.sub.duplicates 
@@ -153,5 +159,5 @@ removeDuplicates <- function(dobvector, days.ignore,
   }
   
   # Return what we want
-  total
+  return(total)
 }
