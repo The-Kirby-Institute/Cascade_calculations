@@ -134,29 +134,29 @@ hivresults <- hivset %>%
 
 hivstate <- hivset %>% group_by(state,yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
-  mutate(cumnotifications = cumsum(notifications)) %>%
+  mutate(totalnotifications = cumsum(notifications)) %>%
   ungroup() %>% 
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>% 
+  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) %>% 
   filter(yeardiagnosis <= analysisYear)   
 
 hivexpnat <- hivset %>% group_by(expgroup,yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
-  mutate(cumnotifications = cumsum(notifications)) %>%
+  mutate(totalnotifications = cumsum(notifications)) %>%
   ungroup() %>% 
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>% 
+  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) %>% 
   filter(yeardiagnosis <= analysisYear)   
 
 hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
-  mutate(cumnotifications = cumsum(notifications)) %>%
+  mutate(totalnotifications = cumsum(notifications)) %>%
   ungroup() %>% 
   group_by(state,yeardiagnosis) %>% 
   mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(propcumnotifications = cumnotifications/sum(cumnotifications)) %>% 
+  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) %>% 
   filter(yeardiagnosis <= analysisYear)   
 
 # TODO: Will have to do the same by population group
@@ -166,8 +166,7 @@ hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>%
 # Load and define useful functions for analysis
 
 # Load function to remove duplicates
-source('~/Research/!Evaluation_Modelling/code/removeDuplicates.R', 
-       echo=TRUE)
+source('~/Research/!Evaluation_Modelling/project_care_cascades/code/removeDuplicates.R', echo=TRUE)
 
 # Function to easily extract sub-populations of interest
 subhivset <- function(hivdataframe, born = 'all', 
@@ -178,8 +177,8 @@ subhivset <- function(hivdataframe, born = 'all',
   # expgroup - msm, pwid, hetero, other
   
   subframe <- hivdataframe
-#   if (born ~= 'all')
-#     subframe <- filter(subframe, state == born)
+  #   if (born ~= 'all')
+  #     subframe <- filter(subframe, state == born)
   if (region != 'all') {
     subframe <- filter(subframe, state == region)
   }
@@ -195,7 +194,7 @@ subhivset <- function(hivdataframe, born = 'all',
 # Function for removing duplicates annually
 numUnique <- function(dobframe, years,ignore, file = NA) {
   # Loop through years and calculate cumulative number of unique cases 
-  numcases <- rep(0,length(years))
+  numcases <- rep(NA,length(years))
   for (ii in seq(along=years)) {
     dobvector <- filter(dobframe,yeardiagnosis <= years[ii])$dob
     if (length(dobvector) != 0) {
@@ -270,11 +269,15 @@ numberUniqueHetero <- numUnique(dobhetero, allyears, ignore)
 numberUniqueOther <- numUnique(dobother, allyears, ignore)
 
 # Store national results
-hivresults$uniquecases <- numberUnique
-hivresults$annualcases <- c(numberUnique[1],diff(numberUnique))
+hivresults$uniquecases <- numberUniqueAll
+hivresults$annualcases <- c(numberUniqueAll[1],diff(numberUniqueAll))
 
-propUniqueAll <- (hivresults$totalnotifications-numberUnique) / 
-                      hivresults$totalnotifications 
+# Store state results
+
+
+
+# propUniqueAll <- (hivresults$totalnotifications-numberUniqueAll) / 
+#                       hivresults$totalnotifications 
 
 
 ```
