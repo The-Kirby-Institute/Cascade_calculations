@@ -73,7 +73,7 @@ if (min(hivdata$yeardiagnosis) > startYear) {
 }
 
 # Setup our working data frame
-hivset <- hivdata
+hivset <- filter(hivdata,yeardiagnosis <= analysisYear)
 
 ```
 
@@ -168,6 +168,9 @@ hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>%
 # Load function to remove duplicates
 source('~/Research/!Evaluation_Modelling/project_care_cascades/code/removeDuplicates.R', echo=TRUE)
 
+# Load function to calculate number living with diagnosed HIV
+source('~/Research/!Evaluation_Modelling/project_care_cascades/code/livingDiagnosed.R', echo=TRUE)
+
 # Function to easily extract sub-populations of interest
 subhivset <- function(hivdataframe, born = 'all', 
                       region = 'all', mode = 'all' ) {
@@ -253,31 +256,51 @@ dobother <- select(subhivset(hivset, mode = 'other'), dob, yeardiagnosis)
 numberUniqueAll <- numUnique(doball, allyears, ignore)
 
 # By state
-numberUniqueAct <- numUnique(dobact, allyears, ignore)
-numberUniqueNsw <- numUnique(dobnsw, allyears, ignore)
-numberUniqueVic <- numUnique(dobvic, allyears, ignore)
-numberUniqueQld <- numUnique(dobqld, allyears, ignore)
-numberUniqueNt <- numUnique(dobnt, allyears, ignore)
-numberUniqueWa <- numUnique(dobwa, allyears, ignore)
-numberUniqueSa <- numUnique(dobsa, allyears, ignore)
-numberUniqueTas <- numUnique(dobtas, allyears, ignore)
+numberUniqueAct <- numUnique(dobact, unique(dobact$yeardiagnosis), ignore)
+numberUniqueNsw <- numUnique(dobnsw, unique(dobnsw$yeardiagnosis), ignore)
+numberUniqueVic <- numUnique(dobvic, unique(dobvic$yeardiagnosis), ignore)
+numberUniqueQld <- numUnique(dobqld, unique(dobqld$yeardiagnosis), ignore)
+numberUniqueNt <- numUnique(dobnt, unique(dobnt$yeardiagnosis), ignore)
+numberUniqueWa <- numUnique(dobwa, unique(dobwa$yeardiagnosis), ignore)
+numberUniqueSa <- numUnique(dobsa, unique(dobsa$yeardiagnosis), ignore)
+numberUniqueTas <- numUnique(dobtas, unique(dobtas$yeardiagnosis), ignore)
 
 # By mode
-numberUniqueMsm <- numUnique(dobmsm, allyears, ignore)
-numberUniquePwid <- numUnique(dobpwid, allyears, ignore)
-numberUniqueHetero <- numUnique(dobhetero, allyears, ignore)
-numberUniqueOther <- numUnique(dobother, allyears, ignore)
+numberUniqueMsm <- numUnique(dobmsm, unique(dobmsm$yeardiagnosis), ignore)
+numberUniquePwid <- numUnique(dobpwid, unique(dobpwid$yeardiagnosis), ignore)
+numberUniqueHetero <- numUnique(dobhetero, unique(dobhetero$yeardiagnosis), ignore)
+numberUniqueOther <- numUnique(dobother, unique(dobother$yeardiagnosis), ignore)
 
 # Store national results
 hivresults$uniquecases <- numberUniqueAll
-hivresults$annualcases <- c(numberUniqueAll[1],diff(numberUniqueAll))
+
+# Add variable for proportion unique - due to statistical calculations 
+# proportion mybe slightly higher than one. In those cases round down to 1.
+
+hivresults$propunique <- hivresults$uniquecases/hivresults$totalnotifications
+hivresults[hivresults$propunique > 1,]$propunique <- 1
 
 # Store state results
+hivstate$uniquecases <- rep(NA,nrow(hivstate))
+
+hivstate[hivstate$state == "act",]$uniquecases <- numberUniqueAct
+hivstate[hivstate$state == "nsw",]$uniquecases <- numberUniqueNsw
+hivstate[hivstate$state == "vic",]$uniquecases <- numberUniqueVic
+hivstate[hivstate$state == "qld",]$uniquecases <- numberUniqueQld
+hivstate[hivstate$state == "nt",]$uniquecases <- numberUniqueNt
+hivstate[hivstate$state == "wa",]$uniquecases <- numberUniqueWa
+hivstate[hivstate$state == "sa",]$uniquecases <- numberUniqueSa
+hivstate[hivstate$state == "tas",]$uniquecases <- numberUniqueTas
+
+# Store exposure results
+hivexpnat$uniquecases <- rep(NA,nrow(hivexpnat))
+
+hivexpnat[hivexpnat$expgroup == "hetero",]$uniquecases <- numberUniqueHetero
+hivexpnat[hivexpnat$expgroup == "msm",]$uniquecases <- numberUniqueMsm
+hivexpnat[hivexpnat$expgroup == "other",]$uniquecases <- numberUniqueOther
+hivexpnat[hivexpnat$expgroup == "pwid",]$uniquecases <- numberUniquePwid
 
 
-
-# propUniqueAll <- (hivresults$totalnotifications-numberUniqueAll) / 
-#                       hivresults$totalnotifications 
 
 
 ```
@@ -315,7 +338,7 @@ dev.print(png,paste(outputFolder, "/figures/unique_diagnoses.png",sep =""))
 
 ```
 
-Sort out deaths and number living with HIV
+Sort out deathrates
 
 ```{r deaths}
 # Now calculate the number of deaths each year to work out the number of people
@@ -326,7 +349,7 @@ Sort out deaths and number living with HIV
 
 # Load all the data sets we use for this estimate - use the parameter column as 
 # row names for easier subsetting
-hivparams <- read.csv(file.path(cleanDataFolder, "individualHIVparameters.csv", 
+hivparams <- read.csv(file.path(dataFolder, "individualHIVparameters.csv", 
                                 sep =""),as.is = 1)
 hivparams <- select(hivparams,parameter,value)
 for (ii in 1:nrow(hivparams)) {
@@ -358,6 +381,11 @@ hivdeaths$inflated_deaths_upper <- hivdeaths$number_deaths * linkageFactorUpper
 hivdeaths <- rbind(hivdeaths,c(1980,0,0,0,0))
 hivdeaths <- rbind(hivdeaths,c(1982,0,0,0,0))
 hivdeaths <- arrange(hivdeaths,yeardeath)
+
+
+```
+
+```{r livingdiags}
 
 # Now loop through the years to claculate the number living with diagnosed HIV
 # using the linkage estimates and after the end of teh linkage study the AHOD death rates
@@ -420,12 +448,12 @@ for (ii in 1:(length(allyears)-1)){
   }
   
   # Calculate living based on AHOD mortality
-  livingAhod[ii + 1] <- livingAhod[ii] + hivresults$annualcases[ii] - 
-    deathsAhod[ii] 
-  livingAhodLower[ii + 1] <- livingAhodLower[ii] + hivresults$annualcases[ii] - 
-    deathsAhodUpper[ii] 
-  livingAhodUpper[ii + 1] <- livingAhodUpper[ii] + hivresults$annualcases[ii] - 
-    deathsAhodLower[ii] 
+#   livingAhod[ii + 1] <- livingAhod[ii] + hivresults$annualcases[ii] - 
+#     deathsAhod[ii] 
+#   livingAhodLower[ii + 1] <- livingAhodLower[ii] + hivresults$annualcases[ii] - 
+#     deathsAhodUpper[ii] 
+#   livingAhodUpper[ii + 1] <- livingAhodUpper[ii] + hivresults$annualcases[ii] - 
+#     deathsAhodLower[ii] 
 }
 
 # Insert final death values
@@ -458,8 +486,8 @@ hivdeaths$drateLinkageLower <- drateLinkageLower
 hivdeaths$drateLinkageUpper <- drateLinkageUpper
 
 # Store all the number living with diagnosed HIV results 
-pldhiv <- data.frame(hivresults$yeardiagnosis,livingLinkage,livingLinkageLower,livingLinkageUpper,livingAhod,livingAhodLower,livingAhodUpper)
-names(pldhiv) <-c("year","livingLinkage","livingLinkageLower","livingLinkageUpper","livingAhod","livingAhodLower","livingAhodUpper")
+# pldhiv <- data.frame(hivresults$yeardiagnosis,livingLinkage,livingLinkageLower,livingLinkageUpper,livingAhod,livingAhodLower,livingAhodUpper)
+# names(pldhiv) <-c("year","livingLinkage","livingLinkageLower","livingLinkageUpper","livingAhod","livingAhodLower","livingAhodUpper")
 
 # James's death file
 
