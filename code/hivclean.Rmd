@@ -327,9 +327,9 @@ propMSMdeathsMax <- deathsMSM$UpperCI/(deathsMSM$UpperCI + diagMSM$lowerCI)
 propMSMdeathsMax[is.nan(propMSMdeathsMax)] <- NA
 
 # Calculate the range in the proportion for Non-MSM
-propNonMSMdeathsMin <- deathsNonMSM$lowerCI/(deathsNonMSM$lowerCI + deathsMSM$UpperCI)
+propNonMSMdeathsMin <- deathsNonMSM$lowerCI/(deathsNonMSM$lowerCI + diagNonMSM$UpperCI)
 propNonMSMdeathsMin[is.nan(propNonMSMUndiagMin)] <- NA
-propNonMSMdeathsMax <- deathsNonMSM$UpperCI/(deathsNonMSM$UpperCI + deathsMSM$lowerCI)
+propNonMSMdeathsMax <- deathsNonMSM$UpperCI/(deathsNonMSM$UpperCI + diagNonMSM$lowerCI)
 propNonMSMdeathsMax[is.nan(propNonMSMdeathsMax)] <- NA
 
 # Put everything in a data frame
