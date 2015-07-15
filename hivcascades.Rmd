@@ -22,7 +22,7 @@ require(utils)
 # Libraries for output
 require(ggplot2)    
 require(knitr)      
-require(gridExtra)  
+# require(gridExtra)  
 require(RColorBrewer)
 
 # Set working directory
@@ -341,11 +341,13 @@ dev.print(png,paste(outputFolder, "/figures/unique_diagnoses.png",sep =""))
 Sort out deathrates
 
 ```{r deaths}
-# Now calculate the number of deaths each year to work out the number of people
+# To calculate the number of deaths each year we calculate a deathrate with 
+# an uncertainty range. This is used to work out the number of people
 # diagnosed with HIV. 
 
-# This calculation uses the number of annual unique cases and available deaths data
-# to calculate the number of deaths and hence number of people living with diagnosed HIV. 
+# The estimate of the death rate uses a number of methods. Firstly uses the 
+# 2003 linkage results and the number of known deaths to estimate the
+# deathrate up to 2003. It then uses AHOD mortality rates from 2003 to  
 
 # Load all the data sets we use for this estimate - use the parameter column as 
 # row names for easier subsetting
@@ -356,39 +358,101 @@ for (ii in 1:nrow(hivparams)) {
   assign(hivparams$parameter[ii],hivparams$value[ii])
 }
 
-# Calculate sensitivity of recorded deaths based on linkage results
-linkageFactor <- (linkedDeaths+notifiedDeaths)/notifiedDeaths
-linkageFactorLower <- linkageFactor*(1-linkageSensitivity)
-linkageFactorUpper <- linkageFactor*(1+linkageSensitivity)  
+# Load backprojection estimates for comparison
+bpdeaths <- read.csv(file.path(dataFolder, "projectedDeaths.csv", 
+                                sep =""),as.is = 1)
 
 # Extract number of known deaths and store in a central data frame
 hivdeaths <- hivdata %>% 
   filter(! is.na(yeardeath)) %>%
   group_by(yeardeath) %>% 
   summarise(number_deaths = n()) %>% 
-  filter(yeardeath <= analysisYear)   
+  filter(yeardeath <= analysisYear)  
 
-# Adjust deaths for number of unique diagnoses??
-# I don't think we need to as too different dates of death should result in 
-# different people
+# Calculate sensitivity of recorded deaths based on linkage results
+linkageFactor <- (linkedDeaths+notifiedDeaths)/notifiedDeaths
+linkageFactorLower <- linkageFactor*(1-linkageSensitivity)
+linkageFactorUpper <- linkageFactor*(1+linkageSensitivity)  
+
+#  We don't need to adjust deaths for number of unique diagnoses as
+# different dates of death should result in different people
 
 # Set up linked deaths
 hivdeaths$inflated_deaths <- hivdeaths$number_deaths * linkageFactor
 hivdeaths$inflated_deaths_lower <- hivdeaths$number_deaths * linkageFactorLower
 hivdeaths$inflated_deaths_upper <- hivdeaths$number_deaths * linkageFactorUpper
 
-# No deaths in 1980 and 1982 as add this data manually to ensure everything lines up
+# No deaths in 1980 and 1982 so add this data manually to ensure everything lines up
 hivdeaths <- rbind(hivdeaths,c(1980,0,0,0,0))
 hivdeaths <- rbind(hivdeaths,c(1982,0,0,0,0))
 hivdeaths <- arrange(hivdeaths,yeardeath)
 
+### Now calculate mortality rate for linkage data ------------------------
+cumdiagnoses <- hivresults$totalnotifications
+deaths <- hivdeaths$inflated_deaths
+deaths_min <- hivdeaths$inflated_deaths_lower
+deaths_max <- hivdeaths$inflated_deaths_upper
+anndiags <- c(cumdiagnoses[1],diff(cumdiagnoses))  # Annual diagnoses
+
+# Calculate number living each year 
+numliving <- rep(NA,length(anndiags))
+numliving_min <- rep(NA,length(anndiags))
+numliving_max <- rep(NA,length(anndiags))
+
+numliving[1] <- anndiags[1]
+numliving_min[1] <- anndiags[1]
+numliving_max[1] <- anndiags[1]
+
+for (ii in 2:length(anndiags)) {
+  numliving[ii] <- numliving[ii-1] + anndiags[ii] - deaths[ii-1] 
+  numliving_min[ii] <- numliving_min[ii-1] + anndiags[ii] - deaths_max[ii-1] 
+  numliving_max[ii] <- numliving_max[ii-1] + anndiags[ii] - deaths_min[ii-1] 
+}
+
+# Calculate mortality
+linkageMortality <- deaths/numliving
+linkageMortalityMin <- deaths_min/numliving_max
+linkageMortalityMax <- deaths_max/numliving_min
+
+### Append AHOD mortality
+
+# First find index corresponding to year of linkage 
+indexLinkage <- max(seq(along = min(hivresults$yeardiagnosis):linkageYear))
+
+# Save in deathrate
+deathrate <- rep(NA,length(allyears))
+deathrate_min <- rep(NA,length(allyears))
+deathrate_max <- rep(NA,length(allyears))
+
+deathrate[1:indexLinkage] <- linkageMortality[1:indexLinkage]
+deathrate[(indexLinkage+1):length(deathrate)] <- ahodMortality
+
+deathrate_min[1:indexLinkage] <- linkageMortalityMin[1:indexLinkage]
+deathrate_min[(indexLinkage+1):length(deathrate)] <- ahodMortalityLower
+
+deathrate_max[1:indexLinkage] <- linkageMortalityMax[1:indexLinkage]
+deathrate_max[(indexLinkage+1):length(deathrate)] <- ahodMortalityUpper
+
+# Store final death rate
+hivdeathrate <- data.frame(year = allyears, deathrate = deathrate, 
+                           deathrate_min = deathrate_min, 
+                           deathrate_max = deathrate_max)
 
 ```
+
+```{r migration}
+
+
+
+
+```
+
+
 
 ```{r livingdiags}
 
 # Now loop through the years to claculate the number living with diagnosed HIV
-# using the linkage estimates and after the end of teh linkage study the AHOD death rates
+# using the linkage estimates and after the end of the linkage study the AHOD death rates
 
 # Intialize results vectors
 livingLinkage <- rep(0,length(allyears))
