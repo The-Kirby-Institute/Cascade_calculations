@@ -133,7 +133,7 @@ hivdata$expgroup <- rep(NA,nrow(hivdata))
 hivdata[hivdata$exposure %in% msmgroup,]$expgroup <- "msm"
 hivdata[hivdata$exposure %in% pwidgroup,]$expgroup <- "pwid"
 hivdata[hivdata$exposure %in% heterogroup,]$expgroup <- "hetero"
-hivdata[hivdata$exposure %in% othergroup,]$expgroup <- "other"
+hivdata[hivdata$exposure %in% othergroup,]$expgroup <- "otherexp"
 
 # Add broad population codes from region of birth (rob) and 
 # aboriginal variables - keep unknowns as NAs for imputation during the 
@@ -143,11 +143,11 @@ hivdata$countrygroup <- rep(NA,nrow(hivdata))
 hivdata[which(hivdata$cob == 1100),]$countrygroup <- "australia"
 hivdata[which(hivdata$rob == 9),]$countrygroup <- "bornsea"
 hivdata[which(hivdata$rob == 12),]$countrygroup <- "bornssa"
-hivdata[which(hivdata$rob %in% c(1,2,3,4,5,6,8,10,11)),]$countrygroup <- "other"
-hivdata[which(hivdata$rob == 7 & hivdata$cob != 1100),]$countrygroup <- "other"
+hivdata[which(hivdata$rob %in% c(1,2,3,4,5,6,8,10,11)),]$countrygroup <- "othercob"
+hivdata[which(hivdata$rob == 7 & hivdata$cob != 1100),]$countrygroup <- "othercob"
 
 hivdata$aboriggroup <- rep(NA,nrow(hivdata))
-hivdata[which(hivdata$cob != 1100 | hivdata$rob != 7),]$aboriggroup <- "other"
+hivdata[which(hivdata$cob != 1100 | hivdata$rob != 7),]$aboriggroup <- "othercob"
 hivdata[which(hivdata$cob == 0),]$aboriggroup <- NA
 hivdata[which(hivdata$cob == 1100 & hivdata$aborig == 2),]$aboriggroup <- "indigenous"
 hivdata[which(hivdata$cob == 1100 & hivdata$aborig == 1),]$aboriggroup <- "non-indigenous"
