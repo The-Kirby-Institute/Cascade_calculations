@@ -10,7 +10,7 @@ removeDuplicates <- function(dobvector, days.ignore,
   #   na.rm: If TRUE exclude missing dob from calculation. If FALSE use 
   #           missing values using the proportion calculated for the complete  
   #           data to estimate thenumber of unique people with missing dob. 
-  #           Deafult is FALSE.
+  #           Default is FALSE.
   #   write: String specifying file to save output dataframe as a csv file. 
   #           Default is NA meaning no file is written.         
   # Returns:
