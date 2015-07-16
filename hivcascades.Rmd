@@ -230,78 +230,64 @@ Removal of duplicates .....
 # Days to ignore in duplicate calculations
 ignore <- c(1,15) 
 
-# Set up dob frames
-doball <- select(hivset,dob,yeardiagnosis) # Overall
-
-# States and territies
-dobact<- select(subhivset(hivset, region = 'act'), dob, yeardiagnosis)
-dobnsw <- select(subhivset(hivset, region = 'nsw'), dob, yeardiagnosis)
-dobvic <- select(subhivset(hivset, region = 'vic'), dob, yeardiagnosis)
-dobqld <- select(subhivset(hivset, region = 'qld'), dob, yeardiagnosis)
-dobnt <- select(subhivset(hivset, region = 'nt'), dob, yeardiagnosis)
-dobwa <- select(subhivset(hivset, region = 'wa'), dob, yeardiagnosis)
-dobsa <- select(subhivset(hivset, region = 'sa'), dob, yeardiagnosis)
-dobtas <- select(subhivset(hivset, region = 'tas'), dob, yeardiagnosis)
-
-# Mode of exposure
-dobmsm <- select(subhivset(hivset, mode = 'msm'), dob, yeardiagnosis)
-dobpwid <- select(subhivset(hivset, mode = 'pwid'), dob, yeardiagnosis)
-dobhetero <- select(subhivset(hivset, mode = 'hetero'), dob, yeardiagnosis)
-dobother <- select(subhivset(hivset, mode = 'other'), dob, yeardiagnosis)
-
-# TODO: Country of births
-
 # Store number unique diagnoses cumulatively and annually. For annual unique 
 # cases assume all the first years of disgnoses are unique. 
+
+### Do calculations for all notifications first
+doball <- select(hivset,dob,yeardiagnosis) # Overall
 numberUniqueAll <- numUnique(doball, allyears, ignore)
-
-# By state
-numberUniqueAct <- numUnique(dobact, unique(dobact$yeardiagnosis), ignore)
-numberUniqueNsw <- numUnique(dobnsw, unique(dobnsw$yeardiagnosis), ignore)
-numberUniqueVic <- numUnique(dobvic, unique(dobvic$yeardiagnosis), ignore)
-numberUniqueQld <- numUnique(dobqld, unique(dobqld$yeardiagnosis), ignore)
-numberUniqueNt <- numUnique(dobnt, unique(dobnt$yeardiagnosis), ignore)
-numberUniqueWa <- numUnique(dobwa, unique(dobwa$yeardiagnosis), ignore)
-numberUniqueSa <- numUnique(dobsa, unique(dobsa$yeardiagnosis), ignore)
-numberUniqueTas <- numUnique(dobtas, unique(dobtas$yeardiagnosis), ignore)
-
-# By mode
-numberUniqueMsm <- numUnique(dobmsm, unique(dobmsm$yeardiagnosis), ignore)
-numberUniquePwid <- numUnique(dobpwid, unique(dobpwid$yeardiagnosis), ignore)
-numberUniqueHetero <- numUnique(dobhetero, unique(dobhetero$yeardiagnosis), ignore)
-numberUniqueOther <- numUnique(dobother, unique(dobother$yeardiagnosis), ignore)
 
 # Store national results
 hivresults$uniquecases <- numberUniqueAll
 
 # Add variable for proportion unique - due to statistical calculations 
 # proportion mybe slightly higher than one. In those cases round down to 1.
-
 hivresults$propunique <- hivresults$uniquecases/hivresults$totalnotifications
 hivresults[hivresults$propunique > 1,]$propunique <- 1
 
-# Store state results
+### Now do states and territories
+states <- c("act","nsw","vic","qld","nt","wa","sa","tas")
+
 hivstate$uniquecases <- rep(NA,nrow(hivstate))
+hivstate$propunique <- rep(NA,nrow(hivstate))
 
-hivstate[hivstate$state == "act",]$uniquecases <- numberUniqueAct
-hivstate[hivstate$state == "nsw",]$uniquecases <- numberUniqueNsw
-hivstate[hivstate$state == "vic",]$uniquecases <- numberUniqueVic
-hivstate[hivstate$state == "qld",]$uniquecases <- numberUniqueQld
-hivstate[hivstate$state == "nt",]$uniquecases <- numberUniqueNt
-hivstate[hivstate$state == "wa",]$uniquecases <- numberUniqueWa
-hivstate[hivstate$state == "sa",]$uniquecases <- numberUniqueSa
-hivstate[hivstate$state == "tas",]$uniquecases <- numberUniqueTas
+for (ii in 1:length(states)) {
+  # Dob vector
+  dobtemp <- select(subhivset(hivset, region = states[ii]), dob, yeardiagnosis)
+  
+  # Calculate number unique
+  numberUnique <- numUnique(dobtemp, unique(dobtemp$yeardiagnosis), ignore)
+  
+  # Store state results
+  hivstate[hivstate$state == states[ii],]$uniquecases <- numberUnique
+}
 
-# Store exposure results
+# Calculate proportion unique
+hivstate$propunique <- hivstate$uniquecases/hivstate$totalnotifications
+hivstate[hivstate$propunique > 1,]$propunique <- 1
+
+### Now do mode of exposure
+modes <- c("msm", "pwid", "hetero", "other")
+
 hivexpnat$uniquecases <- rep(NA,nrow(hivexpnat))
+hivexpnat$propunique <- rep(NA,nrow(hivexpnat))
 
-hivexpnat[hivexpnat$expgroup == "hetero",]$uniquecases <- numberUniqueHetero
-hivexpnat[hivexpnat$expgroup == "msm",]$uniquecases <- numberUniqueMsm
-hivexpnat[hivexpnat$expgroup == "other",]$uniquecases <- numberUniqueOther
-hivexpnat[hivexpnat$expgroup == "pwid",]$uniquecases <- numberUniquePwid
+for (ii in 1:length(modes)) {
+  # Dob vector
+  dobtemp <- select(subhivset(hivset, mode = modes[ii]), dob, yeardiagnosis)
+  
+  # Calculate number unique
+  numberUnique <- numUnique(dobtemp, unique(dobtemp$yeardiagnosis), ignore)
+  
+  # Store exposure results
+  hivexpnat[hivexpnat$expgroup == modes[ii],]$uniquecases <- numberUnique
+}
 
+# Calculate proportion unique
+hivexpnat$propunique <- hivexpnat$uniquecases/hivexpnat$totalnotifications
+hivexpnat[hivexpnat$propunique > 1,]$propunique <- 1
 
-
+# TODO: Country of births
 
 ```
 
@@ -440,10 +426,117 @@ hivdeathrate <- data.frame(year = allyears, deathrate = deathrate,
 
 ```
 
+Sort out population movement rates
+
 ```{r migration}
+# This chunk converts the ABS overseas and interste migration data into 
+# population movement rates
 
+# Load all the data sets we need - the ABS data is stored in a different folder
+absFolder <- file.path(path.expand("~"),"Research","!Evaluation_Modelling","data")
+ 
+absMigration <- read.csv(file.path(absFolder, "ABS_migration_clean.csv", 
+                                sep =""),as.is = 1)
+absInterstate <- read.csv(file.path(absFolder, "ABS_interstate_clean.csv", 
+                                sep =""),as.is = 1)
 
+# Calculate migration rate overall and for each state
+absMigration <- mutate(absMigration, migrate = departures/erp)
 
+states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act", "all")
+nstates <- length(states)
+
+allPredicts <- data.frame(year = allyears)
+
+for (ii in 1:nstates) {
+  mrate <- filter(absMigration, state == states[ii])
+  
+  # Now we need to fit and extrapolate for other years
+  lmrate <- lm(migrate ~ year, data = mrate)
+  expmrate <- predict(lmrate, data.frame(year = allyears))
+  
+  # Store extrapolated rate
+  allPredicts[[states[ii]]] <- expmrate
+}
+
+# Now work out mins and maxs and store in a final data frame.
+# Use state min and max as range for national migration rates.
+# Use the relative range of the national rates for each state rate
+allmrateMin <- apply(select(allPredicts,-year), 1, min)
+allmrateMax <- apply(select(allPredicts,-year), 1, max)
+
+# Calculate relative rates
+relmrateMin <- allmrateMin/allPredicts$all
+relmrateMax <- allmrateMax/allPredicts$all
+
+# Store everything in a dataframe
+hivmigrate <- gather(allPredicts, "state", "rate", 2:10)
+
+hivmigrate$lower <- NA
+hivmigrate$upper <- NA
+
+hivmigrate[hivmigrate$state == "all",]$lower <- allmrateMin
+hivmigrate[hivmigrate$state == "all",]$upper <- allmrateMax
+
+for (ii in 1:(nstates-1)) {
+  temprate <- filter(hivmigrate, state == states[ii])$rate
+  hivmigrate[hivmigrate$state == states[ii],]$lower <-  relmrateMin * temprate
+  hivmigrate[hivmigrate$state == states[ii],]$upper <-  relmrateMax * temprate
+}
+
+### Calculate interstate rates
+
+# First estimate erp for each state
+
+allinterstate <- data.frame(year = allyears)
+
+for (ii in 1:nstates) {
+  lmerp <- lm(erp ~ year, data = filter(absMigration, state == states[ii]))
+  erpstate <- predict(lmerp, data.frame(year = allyears))
+  
+  # Store extrapolated population
+  allinterstate[[states[ii]]] <- erpstate
+}
+
+hivinterstate <- gather(allinterstate, "state", "erp", 2:10)
+
+# Calculate interstate ERP simply overall population minus state population
+allerp <- filter(hivinterstate, state == "all")$erp
+
+hivinterstate <- hivinterstate %>% 
+  group_by(state) %>%
+  mutate(intererp = allerp-erp)
+
+# Calculate departure rate
+hivinterstate$departures <- NA
+
+for (ii in 1:nstates) {
+  lmdepart <- lm(departures ~ year, data = filter(absInterstate, state == states[ii]))
+  departstate <- predict(lmdepart, data.frame(year = allyears))
+  
+  # Store extrapolated population
+  hivinterstate[hivinterstate$state == states[ii],]$departures <- departstate
+}
+
+hivinterstate <- mutate(hivinterstate,departrate = departures/erp) 
+
+# Calculate arrival rate
+hivinterstate$arrivals <- NA
+
+for (ii in 1:nstates) {
+  lmarrive <- lm(arrivals ~ year, data = filter(absInterstate, state == states[ii]))
+  arrivestate <- predict(lmarrive, data.frame(year = allyears))
+  
+  # Store extrapolated population
+  hivinterstate[hivinterstate$state == states[ii],]$arrivals <- arrivestate
+}
+
+hivinterstate <- mutate(hivinterstate,arriverate = arrivals/intererp) 
+
+# As intererp is zero national set arriverate to departure rate for "all"
+# Gives indication of rate people move interstate nationally
+hivinterstate[hivinterstate$state == "all",]$arriverate <- 
+  hivinterstate[hivinterstate$state == "all",]$departrate
 
 ```
 
@@ -451,7 +544,7 @@ hivdeathrate <- data.frame(year = allyears, deathrate = deathrate,
 
 ```{r livingdiags}
 
-# Now loop through the years to claculate the number living with diagnosed HIV
+# Now loop through the years to calculate the number living with diagnosed HIV
 # using the linkage estimates and after the end of the linkage study the AHOD death rates
 
 # Intialize results vectors
