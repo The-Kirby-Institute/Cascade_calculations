@@ -47,6 +47,7 @@ startYear <- 1990
 
 # Script options
 plots <- FALSE # TRUE if we wnat to plot things
+bindCascade <- FALSE # TRUE if we want to store all the cascade results in one data frame
 
 ```
 
@@ -77,6 +78,17 @@ if (min(hivdata$yeardiagnosis) > startYear) {
 
 # Setup our working data frame
 hivset <- filter(hivdata,yeardiagnosis <= analysisYear)
+
+# Initialize final results data frame
+if (bindCascade) {
+  hivcascade <- data.frame(stage = character(), 
+                         year = double(),
+                         population = character(),
+                         estimate = double(),
+                         lower = double(),
+                         upper = double())
+}
+
 
 ```
 
@@ -553,7 +565,7 @@ hivinterstate[hivinterstate$state == "all",]$arriverate <-
 # This chuck now estimates the number of people living with diagnosed HIV. 
 
 # Initialize final results data frame
-hivcascade <- data.frame(stage = character(), 
+hivdiagnosed <- data.frame(stage = character(), 
                          year = double(),
                          population = character(),
                          estimate = double(),
@@ -587,7 +599,7 @@ pldhivAllMax <- livingDiagnosed(cumDiagnoses, deathRateMin, migrationRateMin)
 
 # Store results
 nyears <- length(allyears)
-hivcascade <- rbind(hivcascade,data_frame(stage = rep("pldhiv",nyears), 
+hivdiagnosed <- rbind(hivdiagnosed,data_frame(stage = rep("pldhiv",nyears), 
                             year = allyears, 
                             population = rep("all", nyears), 
                             value = pldhivAll,
@@ -625,7 +637,7 @@ for (ii in 1:(nstates-1)) {
                                  arrStateRate, depStateRate, pldhivAll)
   
   # Store the state results
-  hivcascade <- rbind(hivcascade, data_frame(stage = rep("pldhiv",nyears), 
+  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = rep("pldhiv",nyears), 
                             year = allyears, 
                             population = rep(states[ii], nyears), 
                             value = pldhivState,
@@ -654,7 +666,7 @@ for (ii in 1:nmodes) {
   pldhivExpMax <- livingDiagnosed(cumExpDiags, deathRateMin, migrationRateMin)
   
   # Store the state results
-  hivcascade <- rbind(hivcascade, data_frame(stage = rep("pldhiv",nyears), 
+  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = rep("pldhiv",nyears), 
                             year = allyears, 
                             population = rep(modes[ii], nyears), 
                             value = pldhivExp,
@@ -662,8 +674,12 @@ for (ii in 1:nmodes) {
                             upper = pldhivExpMax))
 }
 
-```
+# Finally bind to overall results
+if (bindCascade) {
+  hivcascade <- rbind(hivcascade,hivdiagnosed)
+}
 
+```
 
 ### Number undiagnosed
 
@@ -761,7 +777,9 @@ for (ii in 1:nmodes) {
 }               
 
 # Finally bind to overall results
-hivcascade <- rbind(hivcascade,hivundiag)
+if (bindCascade) {
+  hivcascade <- rbind(hivcascade,hivundiag)
+}
 
 ```
 
@@ -912,11 +930,17 @@ for (ii in 1:nmodes) {
 }
 
 # Finally bind to overall results
-# hivcascade <- rbind(hivcascade,hivundiag)
+if (bindCascade) {
+  hivcascade <- rbind(hivcascade,hivundiag)
+}
 
 ```
 
+### Number taking ART
+
+```{r treatment}
 
 
-Sort out treatment ....
+
+```
 
