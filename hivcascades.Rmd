@@ -988,13 +988,13 @@ if (bindCascade) {
 hivtreated <- data.frame(stage = character(), 
                          year = double(),
                          population = character(),
-                         estimate = double(),
+                         value = double(),
                          lower = double(),
                          upper = double())
 
 # Load all the data we need
-s100data <- read.csv(file.path(dataFolder, "s100_treatment_costs.csv"), as.is = 1)
-prospectionData <- read.csv(file.path(dataFolder, "pharmdash_HIVpatients2014.csv"), as.is = 1)
+s100data <- read.csv(file.path(dataFolder, "s100_treatment_costs.csv"))
+prospectionData <- read.csv(file.path(dataFolder, "pharmdash_HIVpatients2014.csv"), as.is = c(1,2))
 
 # Use the s100 data to estimate a trend for back projection
 
@@ -1002,14 +1002,86 @@ prospectionData <- read.csv(file.path(dataFolder, "pharmdash_HIVpatients2014.csv
 # to estimate trend
 s100data$year <- 2008:2013
 
+# Looking at the data 2013 seens to be a outlier. Create new varaible showing 
+# the relative change in ART costs versus 2012. 
+s100data$relative <- s100data$totalspend/s100data$totalspend[5]
 
-######
-
-s100data$relative <- s100data$totalspend/filter(s100data, year == 2012)$totalspend
-
+# Fit to the relative data ignoring the 2013 value
+treatyears <- (analysisYear - 10):2013
 lms100 <- lm(relative ~ year, data = filter(s100data, year < 2013)) 
-predict(lms100,data.frame(year = 2003:2013))
+relPredict <- predict(lms100, data.frame(year = treatyears), 
+                      level = 0.9, interval = "confidence")
 
+# Store relative results in a data frame
+nrows <- nrow(relPredict)
+relTreat <- data.frame(relPredict)
+relTreat$year <- treatyears
+
+### Now use the relative rates to calculate number om treatment
+treated <- prospectionData %>%
+  filter(gender == "all") %>%
+  select(-gender) 
+colnames(treated) <- c("population","2013","2014")
+treated <- gather(treated,"year","value",2:3)
+treated$year <- as.numeric(as.character(treated$year))
+
+treated$lower <- NA
+treated$upper <- NA
+
+states <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act", "all")
+nstates <- length(states)
+
+# Loop through all the states and populations and calculate number on treatment
+# since 2003
+for (ii in 1:nstates) {
+  # Extract 2013 data 
+  treat2013 <- filter(treated, year == 2013 & state == states[ii])$numART
+  
+  # Calculate estimates and ranges
+  tempfit <- (treat2013 * relTreat$fit)/tail(relTreat$fit,1)
+  templwr <- (treat2013 * relTreat$lwr)/tail(relTreat$lwr,1)
+  tempupr <- (treat2013 * relTreat$upr)/tail(relTreat$upr,1)
+  
+  # Create a data frame 
+  tempdf <- data_frame(state = states[ii], year = treatyears, numART = tempfit,
+                       lower = templwr, upper = tempupr)
+  
+  # Append data prior to 2013
+  treated <- rbind(treated,filter(tempdf, year < 2013))
+}
+
+# Arrange by state and year
+treated <- arrange(treated, state, year)
+treated$stage <- "numART"
+
+
+# Finally bind to overall results
+if (bindCascade) {
+  hivcascade <- rbind(hivcascade,treated)
+}
+
+# Do some plots if required
+if (plots) {
+  tplot1 <- ggplot(data = relTreat, aes(x = year, y = fit)) + 
+    geom_point(data = s100data, aes(x = year, y =  relative), color = "black", size = 4) + 
+    geom_line(color = "red") +
+    geom_line(aes(y = lwr), color = "blue", linetype = "dashed") +
+    geom_line(aes(y = upr), color = "blue", linetype = "dashed") +
+    ylim(c(0,1.5)) + xlim(c(2003,2013)) + 
+    ylab("Relative number on treatment") + xlab("Year") + 
+    ggtitle("Fitted number on ART relative to 2012") + 
+    theme_bw() + opts
+  
+  tplot2 <- ggplot(data = filter(treated, state == "all"), aes(x = year, y = numART)) +
+    geom_line(color = "red") + geom_line(aes(y = lower), color = "blue", linetype = "dashed") + 
+    geom_line(aes(y = upper), color = "blue", linetype = "dashed") + 
+    geom_point(data = filter(treated, state == "all" & year >= 2013), color = "black", size = 4) +
+    ylim(c(0,NA)) + 
+    ylab("Number on treatment") + xlab("Year") + 
+    ggtitle("National number on ART") + 
+    theme_bw() + opts
+  
+}
 
 ```
 
