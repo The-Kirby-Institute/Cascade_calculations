@@ -22,7 +22,7 @@ require(utils)
 # Libraries for output
 require(ggplot2)    
 require(knitr)      
-# require(gridExtra)  
+require(gridExtra)  
 require(RColorBrewer)
 
 # Set working directory
@@ -47,7 +47,7 @@ startYear <- 1990
 
 # Script options
 plots <- FALSE # TRUE if we wnat to plot things
-bindCascade <- FALSE # TRUE if we want to store all the cascade results in one data frame
+bindCascade <- TRUE # TRUE if we want to store all the cascade results in one data frame
 
 ```
 
@@ -308,38 +308,28 @@ hivexpnat[hivexpnat$propunique > 1,]$propunique <- 1
 
 # TODO: Country of births
 
-```
 
-```{r plotuniques}
-graphics.off()
+# Plot is required
 
-# Plot national notifications data raw and deduplicated
-diagsplot1 <- ggplot(hivresults,aes(yeardiagnosis)) + theme_bw() +
-  opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
-  ylab("Number of notifications")
-diagsplot1 <- diagsplot1 + geom_line(aes(y = totalnotifications,color="All notifications")) + 
-  geom_line(aes(y = uniquecases,color="Unique notifications")) + 
-  theme(legend.direction="vertical") + theme(legend.title=element_blank())
+if (plots) {
+  graphics.off()
+  
+  # Plot national notifications data raw and deduplicated
+  diagsplot1 <- ggplot(hivresults,aes(yeardiagnosis)) + theme_bw() +
+    opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
+    ylab("Number of notifications")
+  
+  diagsplot1 <- diagsplot1 + geom_line(aes(y = totalnotifications,color="All notifications")) + 
+    geom_line(aes(y = uniquecases,color="Unique notifications")) + 
+    theme(legend.direction="vertical") + theme(legend.title=element_blank())
+  
+  # Print figures
+  windows(width = 6,height = 5)
+  print(diagsplot1)
+  ggsave(png,paste(outputFolder, "/figures/unique_diagnoses.png",sep =""), 
+         width = 6, height = 5, res =300)
+}
 
-# diagsplot2 <- ggplot(hivexpnat,aes(yeardiagnosis,cumnotifications,fill = expgroup)) + theme_bw() + 
-#   opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
-#   ylab("Number of notifications") + geom_area()
-# 
-# diagsplot3 <- ggplot(hivstate,aes(yeardiagnosis,cumnotifications,fill = state)) + theme_bw() + 
-#   opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
-#   ylab("Number of notifications") + geom_area()
-# 
-# # Test by state
-# test <- filter(hivexpstate,state == "nsw")
-# 
-# testplot <- ggplot(test,aes(yeardiagnosis,cumnotifications,fill = expgroup)) + theme_bw() + 
-#   opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
-#   ylab("Number of notifications") + geom_area()
-
-# Print figures
-windows(width=6,height=5)
-print(diagsplot1)
-dev.print(png,paste(outputFolder, "/figures/unique_diagnoses.png",sep =""))
 
 ```
 
@@ -465,42 +455,91 @@ absMigration <- mutate(absMigration, migrate = departures/erp)
 states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act", "all")
 nstates <- length(states)
 
-allPredicts <- data.frame(year = allyears)
+allPredicts <- data.frame(year = numeric(), 
+                          state = character(),
+                          rate = numeric(),
+                          lower = numeric(),
+                          upper = numeric())
 
 for (ii in 1:nstates) {
   mrate <- filter(absMigration, state == states[ii])
   
   # Now we need to fit and extrapolate for other years
   lmrate <- lm(migrate ~ year, data = mrate)
-  expmrate <- predict(lmrate, data.frame(year = allyears))
-  
+#   expmrate1 <- predict(lmrate, data.frame(year = allyears))
+  expmrate <- predict(lmrate, data.frame(year = allyears),
+                       level = 0.9, interval = "confidence")
   # Store extrapolated rate
-  allPredicts[[states[ii]]] <- expmrate
+  allPredicts <- rbind(allPredicts, data.frame(year = allyears, 
+                                state = rep(states[ii],length(allyears)),
+                                rate = expmrate[, 1], 
+                                lower = expmrate[, 2],
+                                upper = expmrate[, 3]))
+  #   allPredicts[[states[ii]]] <- expmrate1
 }
 
 # Now work out mins and maxs and store in a final data frame.
 # Use state min and max as range for national migration rates.
 # Use the relative range of the national rates for each state rate
-allmrateMin <- apply(select(allPredicts,-year), 1, min)
-allmrateMax <- apply(select(allPredicts,-year), 1, max)
+# allmrateMin <- apply(select(allPredicts,-year), 1, min)
+# allmrateMax <- apply(select(allPredicts,-year), 1, max)
+# 
+# # Calculate relative rates
+# relmrateMin <- allmrateMin/allPredicts$all
+# relmrateMax <- allmrateMax/allPredicts$all
+# 
+# # Store everything in a dataframe
+# hivmigrate <- gather(allPredicts, "state", "rate", 2:10)
+# 
+# hivmigrate$lower <- NA
+# hivmigrate$upper <- NA
+# 
+# hivmigrate[hivmigrate$state == "all",]$lower <- allmrateMin
+# hivmigrate[hivmigrate$state == "all",]$upper <- allmrateMax
+# 
+# for (ii in 1:(nstates-1)) {
+#   temprate <- filter(hivmigrate, state == states[ii])$rate
+#   hivmigrate[hivmigrate$state == states[ii],]$lower <-  relmrateMin * temprate
+#   hivmigrate[hivmigrate$state == states[ii],]$upper <-  relmrateMax * temprate
+# }
 
-# Calculate relative rates
-relmrateMin <- allmrateMin/allPredicts$all
-relmrateMax <- allmrateMax/allPredicts$all
+hivmigrate <- allPredicts
 
-# Store everything in a dataframe
-hivmigrate <- gather(allPredicts, "state", "rate", 2:10)
-
-hivmigrate$lower <- NA
-hivmigrate$upper <- NA
-
-hivmigrate[hivmigrate$state == "all",]$lower <- allmrateMin
-hivmigrate[hivmigrate$state == "all",]$upper <- allmrateMax
-
-for (ii in 1:(nstates-1)) {
-  temprate <- filter(hivmigrate, state == states[ii])$rate
-  hivmigrate[hivmigrate$state == states[ii],]$lower <-  relmrateMin * temprate
-  hivmigrate[hivmigrate$state == states[ii],]$upper <-  relmrateMax * temprate
+# Plot what we have done if required
+if (plots) {
+  graphics.off()
+  
+  # Plot the overseas migration data for each state
+  mplot1 <- ggplot(data = absMigration, aes(x = year, y = migrate, colour = state)) +
+    geom_line(size = 2) + ylim(c(0,0.02)) + 
+    xlab("Year") + ylab("Overseas migration rate") + theme_bw() +
+    opts
+  
+  # Plot fitted overseas migration data for each state
+  mplot2 <- ggplot(data = hivmigrate, aes(x = year, y = rate, colour = state)) + 
+    geom_line(data = absMigration, aes(y = migrate), size = 0.5, linetype = "dashed") + 
+    geom_point(data = absMigration, aes(y = migrate), size = 3, shape = 18) + 
+    geom_line(size = 1.2) + ylim(c(0,0.02)) +
+    xlab("Year") + ylab("Overseas migration rate") + 
+    ggtitle("Fitted annual migration rate") + theme_bw() +
+    opts
+  
+  # Plot national overseas migration rate with uncertainty
+  mplot3 <- ggplot(data = filter(hivmigrate, state == "all"), aes(x = year, y = rate)) +
+    geom_line(color = "red") + 
+    geom_line(aes(y = lower), linetype = "dashed", color = "blue") + 
+    geom_line(aes(y = upper), linetype = "dashed", color = "blue") + 
+    geom_point(data = filter(absMigration, state == "all"), 
+               aes(y = migrate), size = 2, color = "black") +
+    ylim(c(0,0.02)) + xlab("Year") + ylab("Overseas migration rate") + 
+    ggtitle("Fitted annual migration rate (National with 90% CI)") + theme_bw() +
+    opts
+  
+  # Save to file 
+  png(paste(outputFolder, "/figures/prop_migrate.png",sep =""), 
+      width = 15, height = 5, units = "in", res = 300)
+  grid.arrange(mplot1, mplot2, mplot3, ncol = 3)
+  dev.off()  
 }
 
 ### Calculate interstate rates
@@ -722,7 +761,7 @@ undiagAllMin <- apply(rbind(propUndiagnosed$msm_lower, propUndiagnosed$non_msm_l
 undiagAllMax <- apply(rbind(propUndiagnosed$msm_upper, propUndiagnosed$non_msm_upper),2,max)
 
 ### Now estimate number of people living with HIV overall
-pldhivTemp <- filter(hivcascade, stage == "pldhiv" & population == "all")
+pldhivTemp <- filter(hivdiagnosed, stage == "pldhiv" & population == "all")
 infectedAll <- pldhivTemp$value/(1 - undiagAll)
 infectedAllMin <- pldhivTemp$lower/(1 - undiagAllMin)
 infectedAllMax <- pldhivTemp$upper/(1 - undiagAllMax)
@@ -737,7 +776,7 @@ hivundiag <- rbind(hivundiag, data_frame(stage = rep("infected",nyears),
 
 ### Now calculate undiagnosed for each state
 for (ii in 1:(nstates-1)) {
-  pldhivTemp <- filter(hivcascade, stage == "pldhiv" & population == states[ii])
+  pldhivTemp <- filter(hivdiagnosed, stage == "pldhiv" & population == states[ii])
   infectedState <- pldhivTemp$value/(1 - undiagAll)
   infectedStateMin <- pldhivTemp$lower/(1 - undiagAllMin)
   infectedStateMax <- pldhivTemp$upper/(1 - undiagAllMax)
@@ -754,7 +793,7 @@ for (ii in 1:(nstates-1)) {
 ### Now calculate for each exposure group
 
 for (ii in 1:nmodes) {
-  pldhivTemp <- filter(hivcascade, stage == "pldhiv" & population == modes[ii])
+  pldhivTemp <- filter(hivdiagnosed, stage == "pldhiv" & population == modes[ii])
   
   if (modes[ii] == "msm") {
     infectedExp <- pldhivTemp$value/(1 - propUndiagnosed$msm_best)
@@ -939,7 +978,37 @@ if (bindCascade) {
 ### Number taking ART
 
 ```{r treatment}
+# Calculate the number taking ART during the year. This uses a mixture of 
+# data sets as the Prospection data is only available for 2013-2014. Unlike
+# the stages based on the number living with diagnosed HIV we only estimate 
+# the number on treatment in the last 10 years due to a lack of data. 
+# (maybe should do this for all or have analysis start year???) 
 
+# Initialize final results data frame
+hivtreated <- data.frame(stage = character(), 
+                         year = double(),
+                         population = character(),
+                         estimate = double(),
+                         lower = double(),
+                         upper = double())
+
+# Load all the data we need
+s100data <- read.csv(file.path(dataFolder, "s100_treatment_costs.csv"), as.is = 1)
+prospectionData <- read.csv(file.path(dataFolder, "pharmdash_HIVpatients2014.csv"), as.is = 1)
+
+# Use the s100 data to estimate a trend for back projection
+
+# First shift financial year to year - okay as we are only using this data 
+# to estimate trend
+s100data$year <- 2008:2013
+
+
+######
+
+s100data$relative <- s100data$totalspend/filter(s100data, year == 2012)$totalspend
+
+lms100 <- lm(relative ~ year, data = filter(s100data, year < 2013)) 
+predict(lms100,data.frame(year = 2003:2013))
 
 
 ```
