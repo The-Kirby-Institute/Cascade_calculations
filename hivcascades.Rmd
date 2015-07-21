@@ -56,7 +56,8 @@ bindCascade <- TRUE # TRUE if we want to store all the cascade results in one da
 ```{r startAnalysis}
 # Load clean file
 hivdata <- read.csv(file.path(dataFolder, paste("hivnotifications",
-                    toString(analysisYear),".csv", sep ="")))
+                    toString(analysisYear),".csv", sep =""))) #, 
+#                     as.is = c(1:3, 6, 9, 11, 16:18))
 
 # Setup overarching analysis                   
 years <- startYear:analysisYear # Years to calculate and plot 
@@ -69,11 +70,11 @@ allyears <- min(hivdata$yeardiagnosis):analysisYear # All years of data
 
 # Quick checks that we are not doing analysis outside of the data.
 if (max(hivdata$yeardiagnosis) < analysisYear) {
-  stop("No data for specified for final year of analysis.")
+  stop("No data specified for final year of analysis.")
 }
 
 if (min(hivdata$yeardiagnosis) > startYear) {
-  stop("No data for specified for first year of analysis.")
+  stop("No data specified for first year of analysis.")
 }
 
 # Setup our working data frame
@@ -88,7 +89,6 @@ if (bindCascade) {
                          lower = double(),
                          upper = double())
 }
-
 
 ```
 
@@ -130,51 +130,6 @@ piecolours1 <- getPalette(12)
 piecolours2 <- gray.colors(3)
 piecolours <- c(piecolours2,piecolours1)
 linecolours <- brewer.pal(4,"Set1")
-```
-
-Sort out diagnoses ...
-
-```{r diagnoses}
-# Setup dataframe for overall results by first extracting diagnoses details
-
-# Overall annual results
-hivresults <- hivset %>% 
-  group_by(yeardiagnosis) %>% 
-  summarise(notifications = n()) %>% 
-  mutate(totalnotifications  = cumsum(notifications)) %>% 
-  filter(yeardiagnosis <= analysisYear)   
-
-# Calculate the proportion of diagnoses by exposure and population category by 
-# state and nationally. Theses data frames are used for further calculations
-
-hivstate <- hivset %>% group_by(state,yeardiagnosis) %>% 
-  summarise(notifications = n()) %>% 
-  mutate(totalnotifications = cumsum(notifications)) %>%
-  ungroup() %>% 
-  group_by(yeardiagnosis) %>% 
-  mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) %>% 
-  filter(yeardiagnosis <= analysisYear)   
-
-hivexpnat <- hivset %>% group_by(expgroup,yeardiagnosis) %>% 
-  summarise(notifications = n()) %>% 
-  mutate(totalnotifications = cumsum(notifications)) %>%
-  ungroup() %>% 
-  group_by(yeardiagnosis) %>% 
-  mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) %>% 
-  filter(yeardiagnosis <= analysisYear)   
-
-hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>% 
-  summarise(notifications = n()) %>% 
-  mutate(totalnotifications = cumsum(notifications)) %>%
-  ungroup() %>% 
-  group_by(state,yeardiagnosis) %>% 
-  mutate(propnotifications = notifications/sum(notifications)) %>%
-  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) %>% 
-  filter(yeardiagnosis <= analysisYear)   
-
-# TODO: Will have to do the same by population group
 ```
 
 ```{r functions}
@@ -239,6 +194,146 @@ deduplicateFile <- function(pop, state, mode, years) {
 # Source function for filling in missing data
 source('~/Research/!Evaluation_Modelling/project_care_cascades/code/fillMissing.R'
        , echo=TRUE)
+
+```
+
+Sort out diagnoses ...
+
+```{r diagnoses}
+# Setup dataframe for overall results by first extracting diagnoses details
+
+### Overall annual results
+hivresults <- hivset %>% 
+  group_by(yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  mutate(totalnotifications  = cumsum(notifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)   
+
+### Annual results by state and exposure category
+
+# Calculate the proportion of diagnoses by exposure and population category by 
+# state and nationally. Theses data frames are used for further calculations
+
+hivstate <- hivset %>% group_by(state,yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  ungroup() %>% 
+  group_by(state) %>%
+  mutate(totalnotifications = cumsum(notifications)) %>%
+  ungroup() %>% 
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = notifications/sum(notifications)) %>%
+  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)   
+
+hivexpnat <- hivset %>% group_by(expgroup,yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  ungroup() %>% 
+  group_by(expgroup) %>% 
+  mutate(totalnotifications = cumsum(notifications)) %>%
+  ungroup() %>% 
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = notifications/sum(notifications)) %>%
+  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)   
+
+hivexpstate <- hivset %>% group_by(expgroup,state,yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  ungroup() %>% 
+  group_by(state,expgroup) %>%
+  mutate(totalnotifications = cumsum(notifications)) %>%
+  ungroup() %>% 
+  group_by(state,yeardiagnosis) %>% 
+  mutate(propnotifications = notifications/sum(notifications)) %>%
+  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)   
+
+### Annual results by population group
+
+# Calculate the proportion of diagnoses by country of birth and indigenous 
+# status. These are used for further calculations and estimates for the number
+# of people living with diagnosed HIV in specific groups. 
+
+# There is a large number of notifications with missing country of birth and
+# indigenous status. Calculate overall proportion and known proportion.
+
+hivcob <- hivset %>%
+  group_by(yeardiagnosis, countrygroup) %>%
+  summarise(notifications = n()) %>%
+  ungroup() %>% 
+  group_by(countrygroup) %>% 
+  mutate(totalnotifications = cumsum(notifications)) %>%
+  ungroup() %>%
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = notifications/sum(notifications)) %>%
+  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)
+
+# Now add known proportions
+hivcobknown <- hivcob %>% 
+  filter(!is.na(countrygroup)) %>%
+  select(yeardiagnosis, countrygroup, notifications, totalnotifications) %>%
+  group_by(yeardiagnosis) %>%
+  mutate(propnotifications = notifications/sum(notifications)) %>%
+  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) 
+  
+hivcob$propknown <- NA
+hivcob[!is.na(hivcob$countrygroup),]$propknown <- hivcobknown$propnotifications
+hivcob[is.na(hivcob$countrygroup),]$propknown <- 0
+hivcob$proptotalknown <- NA
+hivcob[!is.na(hivcob$countrygroup),]$proptotalknown  <- hivcobknown$proptotalnotifications
+hivcob[is.na(hivcob$countrygroup),]$proptotalknown <- 0
+
+# Indigenous status
+hivaborig <- hivset %>%
+  group_by(yeardiagnosis, aboriggroup) %>%
+  summarise(notifications = n()) %>%
+  ungroup() %>% 
+  group_by(aboriggroup) %>% 
+  mutate(totalnotifications = cumsum(notifications)) %>%
+  ungroup() %>%
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = notifications/sum(notifications)) %>%
+  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)
+
+# Now add known proportions
+hivaborigknown <- hivaborig %>% 
+  filter(!is.na(aboriggroup) & aboriggroup != "othercob") %>%
+  select(yeardiagnosis, aboriggroup, notifications, totalnotifications) %>%
+  group_by(yeardiagnosis) %>%
+  mutate(propnotifications = notifications/sum(notifications))%>%
+  mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) 
+
+hivaborig$propknown <- NA
+hivaborig[!is.na(hivaborig$aboriggroup),]$propknown <- hivaborigknown$propnotifications
+hivaborig[is.na(hivaborig$aboriggroup),]$propknown <- 0
+hivaborig$proptotalknown <- NA
+hivaborig[!is.na(hivaborig$aboriggroup),]$proptotalknown  <- hivaborigknown$proptotalnotifications
+hivaborig[is.na(hivaborig$aboriggroup),]$proptotalknown <- 0
+
+# Create some useful plots
+if (plots) {
+  # ggplot(hivtemp,aes(x = yeardiagnosis, y = notifications, fill = countrygroup)) + geom_area()
+  # ggplot(hivcob, aes(x = yeardiagnosis, y = propnotifications, fill = countrygroup)) + geom_area()
+  # ggplot(hivaborig, aes(x = yeardiagnosis, y = propnotifications, fill = aboriggroup)) + geom_area()
+} 
+
+```
+
+Potentially impute country of birth and indigeous status
+
+```{r imputation}
+# 
+
+# temp <- select(hivset, state, sex, cob, exposure, partnercob, 
+#                previ_diag_overseas, country_prev_diag, yearhiv, 
+#                aborig, countrygroup)
+# 
+# impcob <- lm(countrygroup ~ state + sex + cob + exposure + partnercob + 
+#      previ_diag_overseas + country_prev_diag + yearhiv + aborig, 
+#       data = temp)
+# 
+# predcob <- predict(impcob, temp)
 
 ```
 
