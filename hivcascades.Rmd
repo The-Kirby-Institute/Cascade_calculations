@@ -305,17 +305,88 @@ hivaborigknown <- hivaborig %>%
   mutate(proptotalnotifications = totalnotifications/sum(totalnotifications)) 
 
 hivaborig$propknown <- NA
-hivaborig[!is.na(hivaborig$aboriggroup),]$propknown <- hivaborigknown$propnotifications
-hivaborig[is.na(hivaborig$aboriggroup),]$propknown <- 0
+hivaborig[!is.na(hivaborig$aboriggroup) & hivaborig$aboriggroup != "othercob",]$propknown <- hivaborigknown$propnotifications
+hivaborig[is.na(hivaborig$aboriggroup) | hivaborig$aboriggroup == "othercob",]$propknown <- 0
 hivaborig$proptotalknown <- NA
-hivaborig[!is.na(hivaborig$aboriggroup),]$proptotalknown  <- hivaborigknown$proptotalnotifications
-hivaborig[is.na(hivaborig$aboriggroup),]$proptotalknown <- 0
+hivaborig[!is.na(hivaborig$aboriggroup) & hivaborig$aboriggroup != "othercob",]$proptotalknown  <- hivaborigknown$proptotalnotifications
+hivaborig[is.na(hivaborig$aboriggroup) | hivaborig$aboriggroup == "othercob",]$proptotalknown <- 0
 
-# Create some useful plots
+# Create some useful diagnoses data plots
 if (plots) {
-  # ggplot(hivtemp,aes(x = yeardiagnosis, y = notifications, fill = countrygroup)) + geom_area()
-  # ggplot(hivcob, aes(x = yeardiagnosis, y = propnotifications, fill = countrygroup)) + geom_area()
-  # ggplot(hivaborig, aes(x = yeardiagnosis, y = propnotifications, fill = aboriggroup)) + geom_area()
+  graphics.off()
+  
+  ### All notifications
+  plotdiags1 <- ggplot(data = hivresults, 
+                        aes(x = yeardiagnosis, y = notifications)) + 
+    geom_line(size = 1.5) + ylab("Annual notifications") + xlab("Year") + theme_bw() + opts
+  
+  plotdiags2 <- ggplot(data = hivresults, 
+                        aes(x = yeardiagnosis, y = totalnotifications)) + 
+    geom_line(size = 1.5) + ylab("Cumulative notifications") + xlab("Year") + theme_bw() + opts
+  
+  # Save to file 
+  png(paste(outputFolder, "/figures/all_notifications.png",sep =""), 
+      width = 10, height = 5, units = "in", res = 300)
+  grid.arrange(plotdiags1, plotdiags2, ncol = 2)
+  dev.off()
+  
+  
+  # States
+  plotstates1 <- ggplot(data = hivstate, 
+                        aes(x = yeardiagnosis, y = notifications, fill = state)) + 
+    geom_area() + ylab("Annual notifications") + xlab("Year") + theme_bw() + opts
+  plotstates2 <- ggplot(data = hivstate, 
+                        aes(x = yeardiagnosis, y = propnotifications, fill = state)) + 
+    geom_area() + ylab("Proportion annual notifications") + xlab("Year") + theme_bw() + opts
+  
+  # Save to file 
+  png(paste(outputFolder, "/figures/state_notifications.png",sep =""), 
+      width = 10, height = 5, units = "in", res = 300)
+  grid.arrange(plotstates1, plotstates2, ncol = 2)
+  dev.off()
+  
+  # Exposure
+  plotexp1 <- ggplot(data = hivexpnat, 
+                     aes(x = yeardiagnosis, y = notifications, fill = expgroup)) + 
+    geom_area() + ylab("Annual notifications") + xlab("Year") + theme_bw() + opts
+  plotexp2 <- ggplot(data = hivexpnat, 
+                     aes(x = yeardiagnosis, y = propnotifications, fill = expgroup)) + 
+    geom_area() + ylab("Proportion annual notifications") + xlab("Year") + theme_bw() + opts
+  
+  # Save to file
+  png(paste(outputFolder, "/figures/exp_notifications.png",sep =""), 
+      width = 10, height = 5, units = "in", res = 300)
+  grid.arrange(plotexp1, plotexp2, ncol = 2)
+  dev.off()
+  
+  # Country of birth
+  plotcob1 <-ggplot(data = hivcob, 
+                    aes(x = yeardiagnosis, y = notifications, fill = countrygroup)) + 
+    geom_area() + ylab("Annual notifications") + xlab("Year") + theme_bw() + opts
+  plotcob2 <-ggplot(data = hivcob, 
+                    aes(x = yeardiagnosis, y = propknown, fill = countrygroup)) + 
+    geom_area() + ylab("Proportion annual notifications") + xlab("Year") + theme_bw() + opts
+  
+  # Save to file
+  png(paste(outputFolder, "/figures/cob_notifications.png",sep =""), 
+      width = 10, height = 5, units = "in", res = 300)
+  grid.arrange(plotcob1, plotcob2, ncol = 2)
+  dev.off()
+  
+  # Indigenous status
+  plotindig1 <- ggplot(data = hivaborig, 
+                       aes(x = yeardiagnosis, y = notifications, fill = aboriggroup)) + 
+    geom_area() + ylab("Annual notifications") + xlab("Year") + theme_bw() + opts
+  plotindig2 <- ggplot(data = filter(hivaborig, aboriggroup == "indigenous"), 
+         aes(x = yeardiagnosis, y = propknown)) + 
+    geom_line() + ylim(c(0,0.2)) + ylab("Proportion notifications indigenous") + 
+    xlab("Year") + theme_bw() + opts
+  
+  # Save to file
+  png(paste(outputFolder, "/figures/indig_notifications.png",sep =""), 
+      width = 10, height = 5, units = "in", res = 300)
+  grid.arrange(plotindig1, plotindig2, ncol = 2)
+  dev.off()
 } 
 
 ```
