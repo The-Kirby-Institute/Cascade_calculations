@@ -77,6 +77,20 @@ for(ii in 1:8){
   hivdata[hivdata$state == ii,]$state <- states[ii]
 }
 
+# Add a classification for linkage to care based on CD4 count variable.
+# Linkage to care is traditionally getting a CD4 count within 3 months of 
+# original diagnosis. An entry in cd4count variable is NA if this hasn't been 
+# done within 3 months. From 2014 the date of CD4 count confirmatory 
+# test was recorded instead
+
+hivdata$linked <- NA
+# hivdata[is.na(hivdata$cd4count) & hivdata$yeardiagnosis < 2014,] <- "no"
+# hivdata[!is.na(hivdata$cd4count) & hivdata$yeardiagnosis < 2014,] <- "yes"
+
+# hivdata[hivdata$yeardiagnosis >= 2014,] <- 
+# If datecd4 - datediagnosis < 30 <- "yes"
+# If datecd4 - datediagnosis < 30 <- "no"
+
 # Reclassification of exposure to the broad surveillance categories - may need to change manually
 hivdata[hivdata$exposure == "1A",]$exposure <- "msm"
 hivdata[hivdata$exposure == "1A3A",]$exposure <- "msm-idu"
