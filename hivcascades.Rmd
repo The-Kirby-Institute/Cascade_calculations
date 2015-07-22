@@ -981,9 +981,9 @@ for (ii in 1:(nstates-1)) {
   hivundiag <- rbind(hivundiag,data_frame(stage = rep("infected",nyears), 
                             year = allyears, 
                             population = rep(states[ii], nyears), 
-                            value = infectedAll,
-                            lower = infectedAllMin,
-                            upper = infectedAllMax))
+                            value = infectedState,
+                            lower = infectedStateMin,
+                            upper = infectedStateMax))
 }
 
 ### Now calculate for each exposure group
@@ -1006,12 +1006,36 @@ for (ii in 1:nmodes) {
   hivundiag <- rbind(hivundiag,data_frame(stage = rep("infected",nyears), 
                                           year = allyears, 
                                           population = rep(modes[ii], nyears), 
-                                          value = infectedAll,
-                                          lower = infectedAllMin,
-                                          upper = infectedAllMax))
+                                          value = infectedExp,
+                                          lower = infectedExpMin,
+                                          upper = infectedExpMax))
 }               
 
 ### Now calculate for each population group
+for (ii in 1:npops) {
+  pldhivTemp <- filter(hivdiagnosed, stage == "pldhiv" & population == pops[ii])
+  
+  # Use overall undiagnosed proportion for non-indigenous and other cob. 
+  # For indigenous, bornssa, born sea use non_msm undiagnosed proportion
+  if (pops[ii] == "non-indigenous" | pops[ii] == "othercob") {
+    infectedPop <- pldhivTemp$value/(1 - undiagAll)
+    infectedPopMin <- pldhivTemp$lower/(1 - undiagAllMin)
+    infectedPopMax <- pldhivTemp$upper/(1 - undiagAllMax)
+  } else {
+    infectedPop <- pldhivTemp$value/(1 - propUndiagnosed$non_msm_best)
+    infectedPopMin <- pldhivTemp$lower/(1 - propUndiagnosed$non_msm_lower)
+    infectedPopMax <- pldhivTemp$upper/(1 - propUndiagnosed$non_msm_upper)
+  }
+  
+  # Store results 
+  hivundiag <- rbind(hivundiag,data_frame(stage = rep("infected",nyears), 
+                                          year = allyears, 
+                                          population = rep(pops[ii], nyears), 
+                                          value = infectedPop,
+                                          lower = infectedPopMin,
+                                          upper = infectedPopMax))
+}
+
 
 # Finally bind to overall results
 if (bindCascade) {
