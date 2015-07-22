@@ -472,9 +472,8 @@ for (ii in 1:length(modes)) {
 hivexpnat$propunique <- hivexpnat$uniquecases/hivexpnat$totalnotifications
 hivexpnat[hivexpnat$propunique > 1,]$propunique <- 1
 
-# We don't do country of birth or indigenous just using the proportions of
+# We don't do this for country of birth or indigenous just using the proportions of
 # notifications
-
 
 # Plot if required
 
@@ -497,7 +496,6 @@ if (plots) {
 #   ggsave(png,paste(outputFolder, "/figures/unique_diagnoses.png",sep =""), 
 #          width = 6*300, height = 5*300, res =300)
 }
-
 
 ```
 
@@ -634,43 +632,18 @@ for (ii in 1:nstates) {
   
   # Now we need to fit and extrapolate for other years
   lmrate <- lm(migrate ~ year, data = mrate)
-#   expmrate1 <- predict(lmrate, data.frame(year = allyears))
   expmrate <- predict(lmrate, data.frame(year = allyears),
                        level = 0.9, interval = "confidence")
+  
   # Store extrapolated rate
   allPredicts <- rbind(allPredicts, data.frame(year = allyears, 
                                 state = rep(states[ii],length(allyears)),
                                 rate = expmrate[, 1], 
                                 lower = expmrate[, 2],
                                 upper = expmrate[, 3]))
-  #   allPredicts[[states[ii]]] <- expmrate1
 }
 
-# Now work out mins and maxs and store in a final data frame.
-# Use state min and max as range for national migration rates.
-# Use the relative range of the national rates for each state rate
-# allmrateMin <- apply(select(allPredicts,-year), 1, min)
-# allmrateMax <- apply(select(allPredicts,-year), 1, max)
-# 
-# # Calculate relative rates
-# relmrateMin <- allmrateMin/allPredicts$all
-# relmrateMax <- allmrateMax/allPredicts$all
-# 
-# # Store everything in a dataframe
-# hivmigrate <- gather(allPredicts, "state", "rate", 2:10)
-# 
-# hivmigrate$lower <- NA
-# hivmigrate$upper <- NA
-# 
-# hivmigrate[hivmigrate$state == "all",]$lower <- allmrateMin
-# hivmigrate[hivmigrate$state == "all",]$upper <- allmrateMax
-# 
-# for (ii in 1:(nstates-1)) {
-#   temprate <- filter(hivmigrate, state == states[ii])$rate
-#   hivmigrate[hivmigrate$state == states[ii],]$lower <-  relmrateMin * temprate
-#   hivmigrate[hivmigrate$state == states[ii],]$upper <-  relmrateMax * temprate
-# }
-
+# Store results in final data frame
 hivmigrate <- allPredicts
 
 # Plot what we have done if required
@@ -710,7 +683,8 @@ if (plots) {
   dev.off()  
 }
 
-### Calculate interstate rates
+### Calculate interstate rates - At this stage just calculate the best fit.
+# Don't worry about upper and lower bounds.
 
 # First estimate erp for each state
 
@@ -881,6 +855,60 @@ for (ii in 1:nmodes) {
                             upper = pldhivExpMax))
 }
 
+### Now do population based PLDHIV
+pops <- c("non-indigenous", "indigenous", "bornssa", "bornsea","othercob")
+npops <- length(pops)
+
+for (ii in 1:npops) {
+  # Set up cumDiags for each population use the overall cumdiagnoses 
+  # For Australian born we have to also consider indigenous status
+  if (pops[ii] == "non-indigenous") {
+    popdiags <- filter(hivcob, countrygroup == "australia")$proptotalknown
+    popyears <- filter(hivcob, countrygroup == "australia")$yeardiagnosis
+    
+    aborigdiags <- filter(hivaborig, aboriggroup == "non-indigenous")$proptotalknown
+    aborigyears <- filter(hivaborig, aboriggroup == "non-indigenous")$yeardiagnosis
+    
+    fillPopDiags <- fillMissing(allyears, popyears, popdiags)
+    fillAborigDiags <- fillMissing(allyears, aborigyears, aborigdiags)
+    
+    cumPopDiags <- cumDiagnoses * fillPopDiags$value * fillAborigDiags$value
+  } else if (pops[ii] == "indigenous") {
+    popdiags <- filter(hivcob, countrygroup == "australia")$proptotalknown
+    popyears <- filter(hivcob, countrygroup == "australia")$yeardiagnosis
+    
+    aborigdiags <- filter(hivaborig, aboriggroup == "indigenous")$proptotalknown
+    aborigyears <- filter(hivaborig, aboriggroup == "indigenous")$yeardiagnosis
+    
+    fillPopDiags <- fillMissing(allyears, popyears, popdiags)
+    fillAborigDiags <- fillMissing(allyears, aborigyears, aborigdiags)
+    
+    cumPopDiags <- cumDiagnoses * fillPopDiags$value * fillAborigDiags$value
+  } else {
+    popdiags <- filter(hivcob, countrygroup == pops[ii])$proptotalknown
+    popyears <- filter(hivcob, countrygroup == pops[ii])$yeardiagnosis
+    
+    fillPopDiags <- fillMissing(allyears, popyears, popdiags)
+    cumPopDiags <- cumDiagnoses * fillPopDiags$value
+  }
+  
+  # Exp migration rates, death rates, assumed to be same overall
+  
+  # Do the Pop calculation and range
+  pldhivPop <- livingDiagnosed(cumPopDiags, deathRate, migrationRate)
+  
+  pldhivPopMin <- livingDiagnosed(cumPopDiags, deathRateMax, migrationRateMax)
+  pldhivPopMax <- livingDiagnosed(cumPopDiags, deathRateMin, migrationRateMin)
+  
+  # Store the state results
+  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = rep("pldhiv",nyears), 
+                            year = allyears, 
+                            population = rep(pops[ii], nyears), 
+                            value = pldhivPop,
+                            lower = pldhivPopMin,
+                            upper = pldhivPopMax))
+}
+
 # Finally bind to overall results
 if (bindCascade) {
   hivcascade <- rbind(hivcascade,hivdiagnosed)
@@ -982,6 +1010,8 @@ for (ii in 1:nmodes) {
                                           lower = infectedAllMin,
                                           upper = infectedAllMax))
 }               
+
+### Now calculate for each population group
 
 # Finally bind to overall results
 if (bindCascade) {
