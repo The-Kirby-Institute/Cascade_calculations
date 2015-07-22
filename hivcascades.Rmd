@@ -472,28 +472,30 @@ for (ii in 1:length(modes)) {
 hivexpnat$propunique <- hivexpnat$uniquecases/hivexpnat$totalnotifications
 hivexpnat[hivexpnat$propunique > 1,]$propunique <- 1
 
-# TODO: Country of births
+# We don't do country of birth or indigenous just using the proportions of
+# notifications
 
 
-# Plot is required
+# Plot if required
 
 if (plots) {
   graphics.off()
   
   # Plot national notifications data raw and deduplicated
-  diagsplot1 <- ggplot(hivresults,aes(yeardiagnosis)) + theme_bw() +
+  uniqueplot1 <- ggplot(hivresults,aes(yeardiagnosis)) + theme_bw() +
     opts + xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
     ylab("Number of notifications")
-  
-  diagsplot1 <- diagsplot1 + geom_line(aes(y = totalnotifications,color="All notifications")) + 
-    geom_line(aes(y = uniquecases,color="Unique notifications")) + 
+  uniqueplot1 <- uniqueplot1 + geom_line(aes(y = totalnotifications,color="All notifications")) + 
+    geom_line(aes(y = uniquecases, color="Unique notifications")) + 
     theme(legend.direction="vertical") + theme(legend.title=element_blank())
   
-  # Print figures
-  windows(width = 6,height = 5)
-  print(diagsplot1)
-  ggsave(png,paste(outputFolder, "/figures/unique_diagnoses.png",sep =""), 
-         width = 6, height = 5, res =300)
+  # Save to file
+  png(paste(outputFolder, "/figures/unique_diagnoses.png",sep =""), 
+      width = 5, height = 5, units = "in", res = 300)
+  print(uniqueplot1)
+  dev.off()
+#   ggsave(png,paste(outputFolder, "/figures/unique_diagnoses.png",sep =""), 
+#          width = 6*300, height = 5*300, res =300)
 }
 
 
