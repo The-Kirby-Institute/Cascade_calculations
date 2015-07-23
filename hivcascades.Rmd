@@ -39,15 +39,11 @@ outputFolder <- file.path(basePath,"output")
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 analysisYear <- 2013
 startYear <- 1990
-# reclean <- FALSE  # Rerun data cleaning if true otherwise load already cleaned file.
-# pop <- "all"  # Population exposure category
-# region <- "all" # State for analysis
-
-# TODO: Think about doing cumulative diagnoses for each state and population everytime
 
 # Script options
 plots <- FALSE # TRUE if we wnat to plot things
 bindCascade <- TRUE # TRUE if we want to store all the cascade results in one data frame
+saveCascade <- TRUE
 
 ```
 
@@ -780,9 +776,9 @@ pldhivAllMax <- livingDiagnosed(cumDiagnoses, deathRateMin, migrationRateMin)
 
 # Store results
 nyears <- length(allyears)
-hivdiagnosed <- rbind(hivdiagnosed,data_frame(stage = rep("pldhiv",nyears), 
+hivdiagnosed <- rbind(hivdiagnosed,data_frame(stage = "pldhiv", 
                             year = allyears, 
-                            population = rep("all", nyears), 
+                            population = "all", 
                             value = pldhivAll,
                             lower = pldhivAllMin,
                             upper = pldhivAllMax))
@@ -818,9 +814,9 @@ for (ii in 1:(nstates-1)) {
                                  arrStateRate, depStateRate, pldhivAll)
   
   # Store the state results
-  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = rep("pldhiv",nyears), 
+  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = "pldhiv", 
                             year = allyears, 
-                            population = rep(states[ii], nyears), 
+                            population = states[ii], 
                             value = pldhivState,
                             lower = pldhivStateMin,
                             upper = pldhivStateMax))
@@ -847,9 +843,9 @@ for (ii in 1:nmodes) {
   pldhivExpMax <- livingDiagnosed(cumExpDiags, deathRateMin, migrationRateMin)
   
   # Store the state results
-  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = rep("pldhiv",nyears), 
+  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = "pldhiv", 
                             year = allyears, 
-                            population = rep(modes[ii], nyears), 
+                            population = modes[ii], 
                             value = pldhivExp,
                             lower = pldhivExpMin,
                             upper = pldhivExpMax))
@@ -901,9 +897,9 @@ for (ii in 1:npops) {
   pldhivPopMax <- livingDiagnosed(cumPopDiags, deathRateMin, migrationRateMin)
   
   # Store the state results
-  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = rep("pldhiv",nyears), 
+  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = "pldhiv", 
                             year = allyears, 
-                            population = rep(pops[ii], nyears), 
+                            population = pops[ii], 
                             value = pldhivPop,
                             lower = pldhivPopMin,
                             upper = pldhivPopMax))
@@ -1239,7 +1235,7 @@ nrows <- nrow(relPredict)
 relTreat <- data.frame(relPredict)
 relTreat$year <- treatyears
 
-### Now use the relative rates to calculate number om treatment
+### Now use the relative rates to calculate number on treatment
 treated <- prospectionData %>%
   filter(gender == "all") %>%
   select(-gender) 
@@ -1253,11 +1249,14 @@ treated$upper <- NA
 states <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act", "all")
 nstates <- length(states)
 
+# Add stage column
+treated$stage <- "numART"
+
 # Loop through all the states and populations and calculate number on treatment
 # since 2003
 for (ii in 1:nstates) {
   # Extract 2013 data 
-  treat2013 <- filter(treated, year == 2013 & state == states[ii])$numART
+  treat2013 <- filter(treated, year == 2013 & population == states[ii])$value
   
   # Calculate estimates and ranges
   tempfit <- (treat2013 * relTreat$fit)/tail(relTreat$fit,1)
@@ -1265,17 +1264,15 @@ for (ii in 1:nstates) {
   tempupr <- (treat2013 * relTreat$upr)/tail(relTreat$upr,1)
   
   # Create a data frame 
-  tempdf <- data_frame(state = states[ii], year = treatyears, numART = tempfit,
-                       lower = templwr, upper = tempupr)
+  tempdf <- data_frame(population = states[ii], year = treatyears, value = tempfit,
+                       lower = templwr, upper = tempupr, stage = "numART")
   
   # Append data prior to 2013
   treated <- rbind(treated,filter(tempdf, year < 2013))
 }
 
-# Arrange by state and year
-treated <- arrange(treated, state, year)
-treated$stage <- "numART"
-
+# Order by state and year
+treated <- arrange(treated, population, year)
 
 # Finally bind to overall results
 if (bindCascade) {
@@ -1307,3 +1304,24 @@ if (plots) {
 
 ```
 
+### Number retained in care
+
+### Number with suppressed virus
+
+```{r cleanup}
+# Save final HIV cascades data frame
+if (saveCascade) {
+  # Directory and file name
+  saveString <- file.path(outputFolder, paste("HIVcascadeEstimates-",toString(analysisYear)))
+  
+  # Write to csv
+  write.csv(hivcascade, file = paste(saveString, ".csv", sep =""), row.names = FALSE)
+
+  # Save as R object
+  save(hivcascade,file = paste(saveString, ".rda", sep =""))
+
+}
+
+
+
+```
