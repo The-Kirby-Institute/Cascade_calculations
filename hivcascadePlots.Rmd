@@ -1,0 +1,61 @@
+---
+title: "Australian HIV Cascade"
+author: "Richard T. Gray"
+date: Latest version - `r format(Sys.Date(), format="%B %d %Y")`
+output:
+  word_document:
+    pandoc_args: --output="docs/Medicare_Ineligibles.docx"
+    reference_docx: docs/mystyles.docx
+csl: docs/plos.csl
+bibliography: docs/treatment_cascade.bib
+---
+
+This document shows various plots related to the HIV care and treatment cascade for Australia. 
+These results illustrate estimates for the key stages and populations used in the Kirby Annual Surveillance Reports.
+
+```{r setup, echo = FALSE, messages = FALSE, include=FALSE}
+# Clear workspace
+rm(list=ls()) 
+options(scipen=999)  # To get rid of scientific notation
+
+# Load libraries used
+require(readxl)
+require(dplyr)
+require(tidyr)
+
+require(ggplot2)
+require(RColorBrewer)
+require(Hmisc)
+require(knitr)
+
+# Set working directory 
+setwd(file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades"))
+
+# Details of results and outputs folders
+basePath <- getwd()
+docFolder <- file.path(basePath,"docs")
+figFolder <- file.path(basepath,"output","figures")
+resultsFolder <- file.path(basepath,"output")
+
+# Current time for appending to outputs
+currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
+
+# Script parameters
+resultsYear <- 2013 # Year of cascade we will plot
+saveplots <- FALSE # Save plots as separate files
+
+```
+
+```{r loadresults}
+
+
+```
+
+## National estimates
+
+
+## State estimates
+
+## Key population group estimates
+
+
