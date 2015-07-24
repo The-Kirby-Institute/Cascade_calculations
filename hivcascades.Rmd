@@ -22,7 +22,7 @@ require(utils)
 # Libraries for output
 require(ggplot2)    
 require(knitr)      
-require(gridExtra)  
+require(Hmisc)  
 require(RColorBrewer)
 
 # Set working directory
@@ -93,7 +93,7 @@ if (bindCascade) {
 graphics.off()
 
 # Baseline theme for plot variables
-opts <- theme(text = element_text(face = "bold",size=12,colour="black"),
+opts <- theme_bw() + theme(text = element_text(face = "bold",size=12,colour="black"),
   axis.text.x = element_text(face = "plain",size=10,colour="black"),
   axis.text.y = element_text(face = "plain",size=10,colour="black"),
   axis.line = element_line(colour="black"),
@@ -108,24 +108,13 @@ opts <- theme(text = element_text(face = "bold",size=12,colour="black"),
   plot.title=element_text(size=12, face="bold")
 )
 
-# Theme for pie chart
-# blank_theme <- theme_minimal()+
-#   theme(
-#   axis.title.x = element_blank(),
-#   axis.title.y = element_blank(),
-#   panel.border = element_blank(),
-#   panel.grid=element_blank(),
-#   axis.ticks = element_blank(),
-#   axis.text.y=element_blank(),
-#   plot.title=element_text(size=12, face="bold")
-#   )
-
 # Setup colours
-getPalette <- colorRampPalette(brewer.pal(12,"Set3"))
-piecolours1 <- getPalette(12)
-piecolours2 <- gray.colors(3)
-piecolours <- c(piecolours2,piecolours1)
-linecolours <- brewer.pal(4,"Set1")
+# getPalette <- colorRampPalette(brewer.pal(12,"Set3"))
+# piecolours1 <- getPalette(12)
+# piecolours2 <- gray.colors(3)
+# piecolours <- c(piecolours2,piecolours1)
+# linecolours <- brewer.pal(4,"Set1")
+
 ```
 
 ```{r functions}
@@ -1202,14 +1191,6 @@ if (bindCascade) {
 # the number on treatment in the last 10 years due to a lack of data. 
 # (maybe should do this for all or have analysis start year???) 
 
-# Initialize final results data frame
-hivtreated <- data.frame(stage = character(), 
-                         year = double(),
-                         population = character(),
-                         value = double(),
-                         lower = double(),
-                         upper = double())
-
 # Load all the data we need
 s100data <- read.csv(file.path(dataFolder, "s100_treatment_costs.csv"))
 prospectionData <- read.csv(file.path(dataFolder, "pharmdash_HIVpatients2014.csv"), as.is = c(1,2))
@@ -1236,27 +1217,27 @@ relTreat <- data.frame(relPredict)
 relTreat$year <- treatyears
 
 ### Now use the relative rates to calculate number on treatment
-treated <- prospectionData %>%
+hivtreated <- prospectionData %>%
   filter(gender == "all") %>%
   select(-gender) 
-colnames(treated) <- c("population","2013","2014")
-treated <- gather(treated,"year","value",2:3)
-treated$year <- as.numeric(as.character(treated$year))
+colnames(hivtreated) <- c("population","2013","2014")
+hivtreated <- gather(hivtreated,"year","value",2:3)
+hivtreated <- as.numeric(as.character(hivtreated$year))
 
-treated$lower <- NA
-treated$upper <- NA
+hivtreated$lower <- NA
+hivtreated$upper <- NA
 
 states <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act", "all")
 nstates <- length(states)
 
 # Add stage column
-treated$stage <- "numART"
+hivtreated$stage <- "numART"
 
 # Loop through all the states and populations and calculate number on treatment
 # since 2003
 for (ii in 1:nstates) {
   # Extract 2013 data 
-  treat2013 <- filter(treated, year == 2013 & population == states[ii])$value
+  treat2013 <- filter(hivtreated, year == 2013 & population == states[ii])$value
   
   # Calculate estimates and ranges
   tempfit <- (treat2013 * relTreat$fit)/tail(relTreat$fit,1)
@@ -1268,15 +1249,15 @@ for (ii in 1:nstates) {
                        lower = templwr, upper = tempupr, stage = "numART")
   
   # Append data prior to 2013
-  treated <- rbind(treated,filter(tempdf, year < 2013))
+  hivtreated <- rbind(hivtreated,filter(tempdf, year < 2013))
 }
 
 # Order by state and year
-treated <- arrange(treated, population, year)
+hivtreated <- arrange(hivtreated, population, year)
 
 # Finally bind to overall results
 if (bindCascade) {
-  hivcascade <- rbind(hivcascade,treated)
+  hivcascade <- rbind(hivcascade,hivtreated)
 }
 
 # Do some plots if required
@@ -1306,7 +1287,81 @@ if (plots) {
 
 ### Number retained in care
 
+```{r retained}
+# Calculate the number retained in care during the year. This uses a mixture of 
+# data sets from MBS and AHOD plus the number of people recieving treatment. 
+
+# Initialize final results data frame
+# hivretained <- data.frame(stage = character(), 
+#                          year = double(),
+#                          population = character(),
+#                          value = double(),
+#                          lower = double(),
+#                          upper = double())
+
+# Load all the data we need
+mbsFolder <- file.path(path.expand("~"),"Research","!Evaluation_Modelling","data")
+
+cd4data <- read.csv(file.path(mbsFolder, "MBS_Data_71139-clean.csv"))
+vlnoARTdata <- read.csv(file.path(mbsFolder, "MBS_Data_69378-clean.csv"))
+vlARTdata <- read.csv(file.path(mbsFolder, "MBS_Data_69381-clean.csv"))
+
+# TODO: load AHOD data
+
+# Filter, select and gather the data we need
+cd4data <- cd4data %>%
+  filter(sex == "all" & age == "all") %>%
+  select(-sex, -age) %>%
+  gather("state", "n", 2:10) 
+
+vlnoARTdata <- vlnoARTdata %>%
+  filter(sex == "all" & age == "all") %>%
+  select(-sex, -age) %>%
+  gather("state", "n", 2:10)
+
+vlARTdata <- vlARTdata %>%
+  filter(sex == "all" & age == "all") %>%
+  select(-sex, -age) %>%
+  gather("state", "n", 2:10)
+
+# Clean up the AHOD data on number of tests 
+
+# Start calculations
+retained <- (vlnoARTdata$n/3)/(1-0.1)
+
+# # Finally bind to overall results
+# if (bindCascade) {
+#   hivcascade <- rbind(hivcascade,hivretained)
+# }
+
+```
+
 ### Number with suppressed virus
+
+```{r suppressed}
+# Calculate the number on ART with suppressed virus during the year. This uses 
+# data from AHOD data and the number of people recieving treatment. 
+
+# Initialize final results data frame
+# hivsuppressed <- data.frame(stage = character(), 
+#                          year = double(),
+#                          population = character(),
+#                          value = double(),
+#                          lower = double(),
+#                          upper = double())
+
+# Load all the data we need
+# ahodData <- read.csv(file.path(dataFolder, "ahod.csv"))
+
+# Extract the viral suppression data
+
+# # Finally bind to overall results
+# if (bindCascade) {
+#   hivcascade <- rbind(hivcascade,hivsuppressed)
+# }
+
+
+```
 
 ```{r cleanup}
 # Save final HIV cascades data frame
