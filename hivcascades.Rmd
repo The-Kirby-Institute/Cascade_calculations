@@ -109,16 +109,16 @@ opts <- theme(text = element_text(face = "bold",size=12,colour="black"),
 )
 
 # Theme for pie chart
-blank_theme <- theme_minimal()+
-  theme(
-  axis.title.x = element_blank(),
-  axis.title.y = element_blank(),
-  panel.border = element_blank(),
-  panel.grid=element_blank(),
-  axis.ticks = element_blank(),
-  axis.text.y=element_blank(),
-  plot.title=element_text(size=12, face="bold")
-  )
+# blank_theme <- theme_minimal()+
+#   theme(
+#   axis.title.x = element_blank(),
+#   axis.title.y = element_blank(),
+#   panel.border = element_blank(),
+#   panel.grid=element_blank(),
+#   axis.ticks = element_blank(),
+#   axis.text.y=element_blank(),
+#   plot.title=element_text(size=12, face="bold")
+#   )
 
 # Setup colours
 getPalette <- colorRampPalette(brewer.pal(12,"Set3"))
@@ -1188,7 +1188,7 @@ for (ii in 1:nmodes) {
 
 # Finally bind to overall results
 if (bindCascade) {
-  hivcascade <- rbind(hivcascade,hivundiag)
+  hivcascade <- rbind(hivcascade,hivlinkcare)
 }
 
 ```
@@ -1312,7 +1312,8 @@ if (plots) {
 # Save final HIV cascades data frame
 if (saveCascade) {
   # Directory and file name
-  saveString <- file.path(outputFolder, paste("HIVcascadeEstimates-",toString(analysisYear)))
+  saveString <- file.path(outputFolder, paste("HIVcascadeEstimates-", 
+                                              toString(analysisYear), sep = ""))
   
   # Write to csv
   write.csv(hivcascade, file = paste(saveString, ".csv", sep =""), row.names = FALSE)
