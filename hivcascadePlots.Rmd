@@ -281,7 +281,88 @@ if (saveplots) {
 print(plotModeBar)
 ```
 
+
+```{r createtable2, echo = FALSE, messages = FALSE, include = FALSE}
+# Create and insert table 
+tableExp <- select(expResults,-year)
+tableExp[,3:5] <- lapply(tableExp[,3:5],round)
+
+finalTable <- select(tableExp, stage, population, value)
+finalTable$Range <- NA
+
+# Convert lower and upper into a range string
+for (ii in 1:nrow(tableExp)){
+  finalTable$Range[ii] <-paste("(", toString(tableExp$lower[ii]), "-", 
+                                     toString(tableExp$upper[ii]),")", sep = "")
+}
+
+# Manually reorder rows
+finalTable <- arrange(finalTable, population, stage)
+finalTable <- finalTable[c(3,4,1,2,7,8,5,6),]
+
+# Rename first column
+finalTable[finalTable$stage == "infected",]$stage <- "Living with HIV"
+finalTable[finalTable$stage == "pldhiv",]$stage <- "Diagnosed"
+
+# Rename second column
+finalTable[finalTable$population == "msm",]$population <- "MSM"
+finalTable[finalTable$population == "hetero",]$population <- "Heterosexual"
+finalTable[finalTable$population == "pwid",]$population <- "PWID"
+finalTable[finalTable$population == "otherexp",]$population <- "Other"
+
+# Rename columns
+finalTableExp <- rename(finalTable, "Cascade stage" = stage, 
+                     "Population by exposure" = population, Estimate = value)
+
+```
+
+**Table 2** -- Number of people living with HIV by exposure population in `r resultsYear`.
+```{r inserttable2, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+kable(finalTableExp, align = c("l", "l", "c", "c"))
+```
+
+
 **Figure 5** -- Number of people living with HIV by country of birth in `r resultsYear`.
 ```{r insertplot5, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3.5}
 print(plotPopBar)
+```
+
+```{r createtable3, echo = FALSE, messages = FALSE, include = FALSE}
+# Create and insert table 
+tablePop <- select(popResults,-year)
+tablePop[,3:5] <- lapply(tablePop[,3:5],round)
+
+finalTable <- select(tablePop, stage, population, value)
+finalTable$Range <- NA
+
+# Convert lower and upper into a range string
+for (ii in 1:nrow(tablePop)){
+  finalTable$Range[ii] <-paste("(", toString(tablePop$lower[ii]), "-", 
+                                     toString(tablePop$upper[ii]),")", sep = "")
+}
+
+# Manually reorder rows
+finalTable <- arrange(finalTable, population, stage)
+finalTable <- finalTable[c(7,8,5,6,1,2,3,4,9,10),]
+
+# Rename first column
+finalTable[finalTable$stage == "infected",]$stage <- "Living with HIV"
+finalTable[finalTable$stage == "pldhiv",]$stage <- "Diagnosed"
+
+# Rename second column
+finalTable[finalTable$population == "non-indigenous",]$population <- "Australian born non-indigenous"
+finalTable[finalTable$population == "indigenous",]$population <- "Australian born indigenous"
+finalTable[finalTable$population == "bornsea",]$population <- "Born in South East Asia"
+finalTable[finalTable$population == "bornssa",]$population <- "Born in sub-Saharan Africa"
+finalTable[finalTable$population == "othercob",]$population <- "Other"
+
+# Rename columns
+finalTablePop <- rename(finalTable, "Cascade stage" = stage, 
+                     "Country of birth" = population, Estimate = value)
+
+```
+
+**Table 3** -- Number of people living with HIV by country of birth in `r resultsYear`.
+```{r inserttable3, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+kable(finalTablePop, align = c("l", "l", "c", "c"))
 ```
