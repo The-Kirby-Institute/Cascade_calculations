@@ -4,7 +4,7 @@ author: "Richard T. Gray"
 date: Latest version - `r format(Sys.Date(), format="%B %d %Y")`
 output:
   word_document:
-    pandoc_args: --output="docs/Medicare_Ineligibles.docx"
+    pandoc_args: --output="docs/HIVcascades.docx"
     reference_docx: docs/mystyles.docx
 csl: docs/plos.csl
 bibliography: docs/treatment_cascade.bib
@@ -34,28 +34,254 @@ setwd(file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_car
 # Details of results and outputs folders
 basePath <- getwd()
 docFolder <- file.path(basePath,"docs")
-figFolder <- file.path(basepath,"output","figures")
-resultsFolder <- file.path(basepath,"output")
+figFolder <- file.path(basePath,"output","figures")
+resultsFolder <- file.path(basePath,"output")
 
 # Current time for appending to outputs
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
 resultsYear <- 2013 # Year of cascade we will plot
+minYear <- 10       # How long ago do we plot things
 saveplots <- FALSE # Save plots as separate files
 
 ```
 
-```{r loadresults}
+```{r loadresults, echo = FALSE, messages = FALSE, include=FALSE}
+# Load hiv cascde dataframe
+inputFile <- file.path(resultsFolder,paste("HIVcascadeEstimates-", 
+                                       toString(resultsYear), ".rda", sep = ""))
+load(inputFile)
+```
 
+```{r plotoptions, echo = FALSE, messages = FALSE, include=FALSE}
+# Default plot specifications
+graphics.off()
+
+# Baseline theme for plot variables
+plotopts <- theme_bw() + theme(text = element_text(face = "bold",size=12,colour="black"),
+  axis.text.x = element_text(face = "plain",size=10,colour="black"),
+  axis.text.y = element_text(face = "plain",size=10,colour="black"),
+  axis.line = element_line(colour="black"),
+  axis.ticks = element_line(colour="black"),
+  legend.position = "top",
+  legend.background = element_rect(),
+  legend.key = element_blank(),
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(), 
+  panel.background = element_blank(), 
+  panel.border = element_rect(colour = "black"),
+  axis.line = element_line(colour = "black"),
+  plot.title=element_text(size=12, face="bold"),
+  strip.background = element_blank()
+)
+
+# Setup colours
+# Palette with black and grey:
+cbPalette <- c("#000000","#999999", "#E69F00", "#56B4E9", "#009E73", 
+               "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+maincols <- brewer.pal(4,"Set1")
 
 ```
 
 ## National estimates
 
+```{r allpops, echo = FALSE, messages = FALSE, include=FALSE}
+# Create bar chart of current year's cascade
+resultsAll <- filter(hivcascade, population == "all" & year >= (resultsYear - minYear))
+resultsAllYear <- filter(resultsAll, year == resultsYear)
+
+# Plot specs
+stages <- c("infected", "pldhiv", "linked", "numART")
+stageNames <- c("Living with HIV", "Diagnosed", "Linked to care", "Receiving ART")
+
+### Plot the bar chart
+plotbarAll <- ggplot(data = resultsAllYear, aes(x = stage, y = value)) + 
+  geom_bar(stat = "identity", color = maincols[2], fill = maincols[2], width = 0.6) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, color = "black", size = 1.2) +
+  scale_x_discrete(limits = stages, labels = stageNames) + 
+  ylab("Number of people") + xlab("") +  
+  plotopts
+
+### Plot time varying values for each stage
+
+# Set up levels for faceting appropriately
+resultsAll$stage <- factor(resultsAll$stage)
+levels(resultsAll$stage) <- c("Living with HIV", "Linked to care", "Receiving ART", "Diagnosed")
+resultsAll <- within(resultsAll, stage <- factor(stage, levels(stage)[c(1,4,2,3)]))
+
+# Do the plot
+plotstagesAll <- ggplot(data = resultsAll, aes(x = year, y = value)) + 
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = cbPalette[4]) +
+  geom_line(color = "blue") + facet_wrap(~ stage, scales = "free")  +
+  scale_x_continuous(breaks = seq((resultsYear-minYear), resultsYear, by =2)) +
+  expand_limits(y = 0) +
+  ylab("Number of people") + xlab("Year") +  
+  plotopts
+
+# Save if required
+if (saveplots) {
+  png(file.path(figFolder, paste("HIVcascade-all-", toString(resultsYear), ".png",sep ="")), 
+        width = 8, height = 5, units = "in", res = 300)
+  print(plotbarAll)
+  dev.off()
+  
+  png(file.path(figFolder, paste("HIVcascade-Stages-", toString(resultsYear), ".png",sep ="")), 
+        width = 8, height = 5, units = "in", res = 300)
+  print(plotstagesAll)
+  dev.off()
+  
+}
+
+```
+
+**Figure 1** -- The HIV care and treatment cascade for Australia in `r resultsYear`.
+```{r insertplot1, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3}
+print(plotbarAll)
+```
+
+**Figure 2** -- The HIV care and treatment cascade stages `r resultsYear - minYear`-`r resultsYear`.
+```{r insertplot2, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3.5}
+print(plotstagesAll)
+```
+
+```{r createtable1, echo = FALSE, messages = FALSE, include = FALSE}
+# Create and insert table 
+tableAll <- select(resultsAllYear,-year, -population)
+tableAll[,2:4] <- lapply(tableAll[,2:4],round)
+
+finalTable <- select(tableAll, stage, value)
+finalTable$Range <- NA
+
+# Convert lower and upper into a range string
+for (ii in 1:nrow(tableAll)){
+  finalTable$Range[ii] <-print(paste("(", toString(tableAll$lower[ii]), "-", 
+                                     toString(tableAll$upper[ii]),")", sep = ""))
+}
+
+# Remove NA from final range
+finalTable$Range[nrow(finalTable)] <- "-"
+
+# Reorder first and second row
+finalTable[1:2,] <- finalTable[2:1,]
+
+# Rename first column
+finalTable$stage <- stageNames
+
+# Rename columns
+finalTable <- rename(finalTable, "Cascade stage" = stage, Estimate = value)
+
+```
+
+**Table 1** -- Estimates and range for each stage of the HIV care and treatment cascade for Australia in `r resultsYear`.
+```{r inserttable1, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+kable(finalTable, align = c("l", "c", "c"))
+```
 
 ## State estimates
+
+```{r allstates, echo = FALSE, messages = FALSE, include=FALSE}
+# Create bar charts of current year's cascade for each state
+states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act")
+
+# resultsState <- filter(hivcascade, population %in% states & year >= (resultsYear - minYear))
+resultsStatesYear <- filter(hivcascade, population %in% states & year == resultsYear)
+
+# Set up state factor levels
+resultsStatesYear$population <- factor(resultsStatesYear$population)
+levels(resultsStatesYear$population) <- c("ACT", "NSW", "Northern Territory",
+                                          "Queensland", "South Australia", "Tasmania",
+                                          "Victoria", "Western Australia")
+resultsStatesYear <- within(resultsStatesYear, 
+  population <- factor(population, levels(population)[c(2, 7, 4, 8, 5, 1, 6, 3)]))
+
+### Plot the bar charts
+plotbarAllStates <- ggplot(data = resultsStatesYear, aes(x = stage, y = value)) + 
+  geom_bar(stat = "identity", color = maincols[2], fill = maincols[2], width = 0.6) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, color = "black", size = 1.2) +
+  facet_wrap(~ population, scales = "free") + 
+  scale_x_discrete(limits = stages, labels = "") + 
+  ylab("Number of people") + xlab("") +  
+  plotopts
+
+# Save if required
+if (saveplots) {
+  png(file.path(figFolder, paste("HIVcascade-States-", toString(resultsYear), ".png",sep ="")), 
+        width = 8, height = 6, units = "in", res = 300)
+  print(plotbarAllStates)
+  dev.off()
+  
+}
+
+```
+
+**Figure 3** -- The HIV care and treatment cascade for each State and Territory in `r resultsYear`.
+From left to right the bars are for each satge of the care and treatment cascade: Living with HIV, Diagnosed, Linked to care, and Recieving ART
+```{r insertplot3, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=4.5}
+print(plotbarAllStates)
+```
+
 
 ## Key population group estimates
 
 
+```{r subpops, echo = FALSE, messages = FALSE, include=FALSE}
+# Create bar charts of pLHIV for exposure groups and country of birth
+# Set up our population groupings
+modes <- c("msm", "hetero", "pwid", "otherexp")
+modeNames <- c("MSM", "Heterosexual", "PWID", "Other exposure") 
+pops <- c("non-indigenous", "indigenous", "bornssa", "bornsea","othercob")
+popNames <- c("Non-indigenous \n Australians", "Indigenous \n Australians", 
+              "Born in \n Sub-Saharan \n Africa", "Born in \n South East Asia", 
+              "Other country \n of birth") 
+
+# Extract the results
+expResults <- filter(hivcascade, population %in% modes & year == resultsYear & stage != "linked")
+popResults <- filter(hivcascade, population %in% pops & year == resultsYear & stage != "linked")
+
+# Create the plots
+plotModeBar <- ggplot(data = expResults, aes(x = population, y = value, fill = stage)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), 
+                position = position_dodge(width = 0.9),
+                width = 0.2, color = "black", size = 1.2) +
+  scale_fill_brewer(palette = "Set1", name = "", labels = c("Living with HIV", "Diagnosed")) + 
+  scale_x_discrete(limits = modes, labels = modeNames) + 
+  ylab("Number of people") + xlab("") +  
+  plotopts
+
+plotPopBar <- ggplot(data = popResults, aes(x = population, y = value, fill = stage)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), 
+                position = position_dodge(width = 0.9),
+                width = 0.2, color = "black", size = 1.2) +
+  scale_fill_brewer(palette = "Set1", name = "", labels = c("Living with HIV", "Diagnosed")) + 
+  scale_x_discrete(limits = pops, labels = popNames) + 
+  ylab("Number of people") + xlab("") +  
+  plotopts
+
+# Save if required
+if (saveplots) {
+  png(file.path(figFolder, paste("HIVcascade-Modes-", toString(resultsYear), ".png",sep ="")), 
+        width = 6, height = 4, units = "in", res = 300)
+  print(plotModeBar)
+  dev.off()
+  
+  png(file.path(figFolder, paste("HIVcascade-Pops-", toString(resultsYear), ".png",sep ="")), 
+        width = 6, height = 4, units = "in", res = 300)
+  print(plotPopBar)
+  dev.off()
+}
+
+```
+
+**Figure 4** -- Number of people living with HIV by mode of exposure in `r resultsYear`.
+```{r insertplot4, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3.5}
+print(plotModeBar)
+```
+
+**Figure 5** -- Number of people living with HIV by country of birth in `r resultsYear`.
+```{r insertplot5, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3.5}
+print(plotPopBar)
+```
