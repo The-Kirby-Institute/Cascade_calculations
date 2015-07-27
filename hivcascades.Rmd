@@ -13,20 +13,8 @@ This document describes and contains the code for producing the HIV care cascade
 # Clear workspace
 rm(list=ls()) 
 
-# Libraries for data manipulation
-require(readxl)
-require(dplyr)
-require(tidyr)
-require(utils)
-
-# Libraries for output
-require(ggplot2)    
-require(knitr)      
-require(Hmisc)  
-require(RColorBrewer)
-
 # Set working directory
-setwd(file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades"))
+setwd(file.path(path.expand("~"),"Documents","Research","!Evaluation_Modelling","project_care_cascades"))
 
 # Base directory
 basePath <- getwd()
@@ -34,6 +22,23 @@ dataFolder <- file.path(basePath,"data")
 
 # Folder for plots 
 outputFolder <- file.path(basePath,"output")
+
+### Load libraries 
+
+# Loading function
+source(file.path(basePath, "code", "load.library.R"), echo=TRUE)
+
+# Libraries for data manipulation
+load.library(readxl)
+load.library(dplyr)
+load.library(tidyr)
+load.library(utils)
+
+# Libraries for output
+load.library(ggplot2)    
+load.library(knitr)      
+load.library(Hmisc)  
+load.library(RColorBrewer)
 
 # Primary script parameters
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
@@ -47,84 +52,17 @@ saveCascade <- TRUE
 
 ```
 
-## Estimate cumulative HIV notifications 
-
-```{r startAnalysis}
-# Load clean file
-hivdata <- read.csv(file.path(dataFolder, paste("hivnotifications",
-                    toString(analysisYear),".csv", sep =""))) #, 
-#                     as.is = c(1:3, 6, 9, 11, 16:18))
-
-# Setup overarching analysis                   
-years <- startYear:analysisYear # Years to calculate and plot 
-
-# Setup extra columns for analysis
-hivdata$yeardiagnosis <- as.numeric(substr(hivdata$datediagnosis,1,4))
-hivdata$yeardeath <- as.numeric(substr(hivdata$datedeath,1,4))
-
-allyears <- min(hivdata$yeardiagnosis):analysisYear # All years of data
-
-# Quick checks that we are not doing analysis outside of the data.
-if (max(hivdata$yeardiagnosis) < analysisYear) {
-  stop("No data specified for final year of analysis.")
-}
-
-if (min(hivdata$yeardiagnosis) > startYear) {
-  stop("No data specified for first year of analysis.")
-}
-
-# Setup our working data frame
-hivset <- filter(hivdata,yeardiagnosis <= analysisYear)
-
-# Initialize final results data frame
-if (bindCascade) {
-  hivcascade <- data.frame(stage = character(), 
-                         year = double(),
-                         population = character(),
-                         estimate = double(),
-                         lower = double(),
-                         upper = double())
-}
-
-```
-
-```{r plotcode, echo=FALSE,messages = FALSE,include=FALSE}
-# Default plot specifications
-graphics.off()
-
-# Baseline theme for plot variables
-opts <- theme_bw() + theme(text = element_text(face = "bold",size=12,colour="black"),
-  axis.text.x = element_text(face = "plain",size=10,colour="black"),
-  axis.text.y = element_text(face = "plain",size=10,colour="black"),
-  axis.line = element_line(colour="black"),
-  axis.ticks = element_line(colour="black"),
-  legend.position = "top",
-  legend.background = element_rect(),
-  legend.key = element_blank(),
-  panel.grid.major = element_blank(), 
-  panel.grid.minor = element_blank(), 
-  panel.background = element_blank(), 
-  axis.line = element_line(colour = "black"),
-  plot.title=element_text(size=12, face="bold")
-)
-
-# Setup colours
-# getPalette <- colorRampPalette(brewer.pal(12,"Set3"))
-# piecolours1 <- getPalette(12)
-# piecolours2 <- gray.colors(3)
-# piecolours <- c(piecolours2,piecolours1)
-# linecolours <- brewer.pal(4,"Set1")
-
-```
-
 ```{r functions}
 # Load and define useful functions for analysis
 
 # Load function to remove duplicates
-source('~/Research/!Evaluation_Modelling/project_care_cascades/code/removeDuplicates.R', echo=TRUE)
+source(file.path(basePath, "code","removeDuplicates.R"), echo=TRUE)
 
 # Load function to calculate number living with diagnosed HIV
-source('~/Research/!Evaluation_Modelling/project_care_cascades/code/livingDiagnosed.R', echo=TRUE)
+source(file.path(basePath, "code","livingDiagnosed.R"), echo=TRUE)
+
+# Source function for filling in missing data
+source(file.path(basePath, "code", "fillMissing.R"), echo=TRUE)
 
 # Function to easily extract sub-populations of interest
 subhivset <- function(hivdataframe, born = 'all', 
@@ -176,9 +114,75 @@ deduplicateFile <- function(pop, state, mode, years) {
                     toString(tail(years,1)),sep="")
 }
 
-# Source function for filling in missing data
-source('~/Research/!Evaluation_Modelling/project_care_cascades/code/fillMissing.R'
-       , echo=TRUE)
+```
+
+```{r plotcode, echo=FALSE,messages = FALSE,include=FALSE}
+# Default plot specifications
+graphics.off()
+
+# Baseline theme for plot variables
+opts <- theme_bw() + theme(text = element_text(face = "bold",size=12,colour="black"),
+  axis.text.x = element_text(face = "plain",size=10,colour="black"),
+  axis.text.y = element_text(face = "plain",size=10,colour="black"),
+  axis.line = element_line(colour="black"),
+  axis.ticks = element_line(colour="black"),
+  legend.position = "top",
+  legend.background = element_rect(),
+  legend.key = element_blank(),
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(), 
+  panel.background = element_blank(), 
+  axis.line = element_line(colour = "black"),
+  plot.title=element_text(size=12, face="bold")
+)
+
+# Setup colours
+# getPalette <- colorRampPalette(brewer.pal(12,"Set3"))
+# piecolours1 <- getPalette(12)
+# piecolours2 <- gray.colors(3)
+# piecolours <- c(piecolours2,piecolours1)
+# linecolours <- brewer.pal(4,"Set1")
+
+```
+
+## Estimate cumulative HIV notifications 
+
+```{r startAnalysis}
+# Load clean file
+hivdata <- read.csv(file.path(dataFolder, paste("hivnotifications",
+                    toString(analysisYear),".csv", sep =""))) #, 
+#                     as.is = c(1:3, 6, 9, 11, 16:18))
+
+# Setup overarching analysis                   
+years <- startYear:analysisYear # Years to calculate and plot 
+
+# Setup extra columns for analysis
+hivdata$yeardiagnosis <- as.numeric(substr(hivdata$datediagnosis,1,4))
+hivdata$yeardeath <- as.numeric(substr(hivdata$datedeath,1,4))
+
+allyears <- min(hivdata$yeardiagnosis):analysisYear # All years of data
+
+# Quick checks that we are not doing analysis outside of the data.
+if (max(hivdata$yeardiagnosis) < analysisYear) {
+  stop("No data specified for final year of analysis.")
+}
+
+if (min(hivdata$yeardiagnosis) > startYear) {
+  stop("No data specified for first year of analysis.")
+}
+
+# Setup our working data frame
+hivset <- filter(hivdata,yeardiagnosis <= analysisYear)
+
+# Initialize final results data frame
+if (bindCascade) {
+  hivcascade <- data.frame(stage = character(), 
+                         year = double(),
+                         population = character(),
+                         estimate = double(),
+                         lower = double(),
+                         upper = double())
+}
 
 ```
 
