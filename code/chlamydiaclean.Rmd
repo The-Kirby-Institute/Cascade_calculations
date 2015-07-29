@@ -1,0 +1,53 @@
+Chlamydia data cleaning 
+=======================
+
+This script is used to load and clean the raw Chlamydia related data from 
+various sources. These data are primarily used for the STI cascade 
+calculations. The resulting cleaned data sets are saved as dataframes in 
+csv files in the ~/Evaluation\_Modelling/project\_care\_cascades/data/ 
+folder. 
+
+```{r initialization}
+# Clear workspace
+rm(list=ls()) 
+
+# Key folder paths
+basePath <- file.path(path.expand("~"),"Documents", "Research",
+                      "!Evaluation_Modelling","project_care_cascades")
+dataPath <- file.path(basePath,"data","raw")
+
+cleanDataFolder <- file.path(basePath,"data")
+
+# Set working directory
+setwd(file.path(basePath,"code"))
+
+### Load libraries 
+
+# Loading function
+source(file.path(basePath, "code", "load.library.R"), echo=TRUE)
+
+# Libraries for data manipulation
+load.library(readxl)
+load.library(dplyr)
+load.library(tidyr)
+load.library(utils)
+
+# Primary script parameters
+dataYear <- 2014
+
+```
+
+```{r notifications}
+
+# Raw HIV notifications file
+rawdata <- file.path(dataPath,paste("ChlamydiaNotifications-", toString(dataYear), ".csv",sep=""))
+
+# Load the raw HIV notifications file and clean it up
+chlamdata <- read.csv(rawdata) 
+
+# Fix up headings
+colnames(chlamdata) <- tolower(colnames(chlamdata))
+
+
+
+```
