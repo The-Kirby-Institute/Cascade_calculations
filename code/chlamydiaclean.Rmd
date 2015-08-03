@@ -37,17 +37,244 @@ dataYear <- 2014
 
 ```
 
-```{r notifications}
+## Chlamydia notifications
 
+```{r notifications}
 # Raw HIV notifications file
 rawdata <- file.path(dataPath,paste("ChlamydiaNotifications-", toString(dataYear), ".csv",sep=""))
 
 # Load the raw HIV notifications file and clean it up
 chlamdata <- read.csv(rawdata) 
 
+### Clean up data
+
 # Fix up headings
 colnames(chlamdata) <- tolower(colnames(chlamdata))
 
+# Fix up sex labels
+chlamdata$sex <- tolower(chlamdata$sex)
 
+# Replace '-1's with NAs
+# chlamdata[chlamdata$sex == "missing",]$sex <- NA
+chlamdata[chlamdata$age == -1,]$age <- NA
+
+### Group into the required age groups
+temp1 <- chlamdata %>% 
+  filter(age < 15) %>%
+  group_by(sex,year) %>% 
+  summarise(n = sum(notification)) %>%
+  spread(sex,n) %>%
+  select(-year) %>%
+  select(male,everything()) %>%
+  rename("female < 15 yrs" = female, "male < 15 yrs" = male, 
+         "missing < 15 yrs" = missing)
+
+temp15 <- chlamdata %>% 
+  filter(age >= 15 & age <= 19) %>%
+  group_by(sex,year) %>% 
+  summarise(n = sum(notification)) %>%
+  spread(sex,n) %>%
+  select(-year) %>%
+  select(male,everything()) %>%
+  rename("female 15-19 yrs" = female, "male 15-19 yrs" = male, 
+         "missing 15-19 yrs" = missing)
+
+temp20 <- chlamdata %>% 
+  filter(age >= 20 & age <= 24) %>%
+  group_by(sex,year) %>% 
+  summarise(n = sum(notification)) %>%
+  spread(sex,n) %>%
+  select(-year) %>%
+  select(male,everything()) %>%
+  rename("female 20-24 yrs" = female, "male 20-24 yrs" = male, 
+         "missing 20-24 yrs" = missing)
+
+temp25 <- chlamdata %>% 
+  filter(age >= 25 & age <= 29) %>%
+  group_by(sex,year) %>% 
+  summarise(n = sum(notification)) %>%
+  spread(sex,n) %>%
+  select(-year) %>%
+  select(male,everything()) %>%
+  rename("female 25-29 yrs" = female, "male 25-29 yrs" = male, 
+         "missing 25-29 yrs" = missing)
+
+temp30 <- chlamdata %>% 
+  filter(age >= 30 & age <= 34) %>%
+  group_by(sex,year) %>% 
+  summarise(n = sum(notification)) %>%
+  spread(sex,n) %>%
+  select(-year) %>%
+  select(male,everything()) %>%
+  rename("female 30-34 yrs" = female, "male 30-34 yrs" = male, 
+         "missing 30-34 yrs" = missing)
+
+temp35 <- chlamdata %>% 
+  filter(age >= 35) %>%
+  group_by(sex,year) %>% 
+  summarise(n = sum(notification)) %>%
+  spread(sex,n) %>%
+  select(-year) %>%
+  select(male,everything()) %>%
+  rename("female > 34 yrs" = female, "male > 34 yrs" = male, 
+         "missing >34 yrs" = missing)
+
+tempAll <- chlamdata %>% 
+  group_by(sex,year) %>% 
+  summarise(n = sum(notification)) %>%
+  spread(sex,n) %>%
+  select(-year) %>%
+  select(male,everything()) %>%
+  rename("female all" = female, "male all" = male, 
+         "missing all" = missing)
+
+tempMiss <- chlamdata %>% 
+  filter(is.na(age)) %>%
+  group_by(sex,year) %>% 
+  summarise(n = sum(notification)) %>%
+  spread(sex,n) %>%
+  select(-year) %>%
+  select(male,everything()) %>%
+  rename("female no age" = female, "male no age" = male, 
+         "missing no age" = missing)
+
+#Bind into a wide data frame
+chlamNotifications <- cbind(temp1, temp15, temp20, temp25, temp30, temp35, 
+                            tempAll, tempMiss)
+
+# Rearrange to match model input
+chlamNotifications <- chlamNotifications %>% select(starts_with("male"), 
+                                                    starts_with("female"), 
+                                                    everything()) 
+
+### Sort out missing data
+
+# Work out proportions in each age group each year 
+subNotifications <- chlamNotifications %>%
+  select(ends_with("yrs"), -starts_with("missing")) 
+
+propNotifications <- subNotifications/apply(subNotifications, 1, sum, na.rm = TRUE)
+
+allNotifications <- chlamNotifications %>%
+  select(ends_with("all"), -starts_with("missing"))
+
+propNotificationsAll <- allNotifications/apply(allNotifications, 1, sum, na.rm = TRUE)
+
+propNotifications <- cbind(propNotifications, propNotificationsAll)
+propNotifications <- select(propNotifications, starts_with("male"), everything())
+
+# Distribute missing notifications across age groups
+missingNotifications <- chlamNotifications %>% 
+  select(-ends_with("yrs"), -starts_with("female all"), -starts_with("male all")) %>%
+  apply(1, sum, na.rm = TRUE)
+
+extraNotifications <- round(propNotifications * missingNotifications)
+
+### Estimate final number of notifications
+knownNotifications <- chlamNotifications %>%
+  select(-starts_with("missing"), -ends_with("age"))
+
+finalNotifications <- knownNotifications + extraNotifications
+
+# A little test to see how important extra notifications are
+propKnown <- knownNotifications/finalNotifications
+
+# Save cleaned chlamdata
+write.csv(finalNotifications, file = file.path(cleanDataFolder, paste("chlamnotifications",toString(dataYear),".csv", sep ="")), row.names = FALSE)
+
+
+```
+
+## Chlamydia tests
+
+```{r tests}
+
+load.library(haven)
+
+# Raw testing file
+rawdata <- file.path(dataPath,paste("CHLAMYDIA_MBS-", toString(dataYear), ".dta",sep=""))
+
+# Load raw testing data
+chlamtests <- read_dta(rawdata)
+
+### Clean up data
+
+# Fix up headings
+colnames(chlamtests) <- tolower(colnames(chlamtests))
+
+# Fix up sex & state labels
+chlamtests$sex <- tolower(chlamtests$sex)
+chlamtests$state <- tolower(chlamtests$state)
+
+# Convert tests to numeric
+chlamtests$tests <- as.numeric(chlamtests$tests)
+
+# Select national data
+chlamtests <- filter(chlamtests, state == "aus")
+
+# Create a year variable
+chlamtests$year <- NA
+
+for (ii in 1:nrow(chlamtests)) {
+  tempstr <- chlamtests$date[ii]
+  tempSplit <- strsplit(tempstr, "-")
+  year <- tempSplit[[1]][2]
+  year <- paste("20", year, sep = "")
+  chlamtests$year[ii] <- year
+}
+
+# Arrange by year
+chlamtests <- arrange(chlamtests,year)
+
+# Calculate total for each year, age group and sex
+chlamtests <- chlamtests %>%
+  group_by(age, year, sex) %>%
+  summarise(total = sum(tests)) %>% 
+  spread(age, total)
+
+# Sum age categories - do this manually
+youngtests <- chlamtests %>% 
+  select(one_of(c("0-4", "5-14"))) %>% 
+  apply(1,sum)
+
+oldtests <- chlamtests %>% 
+  select(one_of(c(">=85", "35-44", "45-54", "55-64", "65-74", "75-84"))) %>% 
+  apply(1,sum)
+
+chlamtests$young <- youngtests
+chlamtests$old <- oldtests
+
+# Finally pull out the columns we need
+chlamtests <- chlamtests %>% 
+  select(-one_of(c(">=85", "35-44", "45-54", "55-64", "65-74", "75-84", "0-4", "5-14"))) %>%
+  rename("<15" = young, ">34" = old)
+
+# Reorgonize into the format we need
+
+# Male tests
+maletests <- chlamtests %>%
+  filter(sex == "male") %>%
+  select(-year, -sex) %>%
+  select(one_of("<15"), everything())
+  
+colnames(maletests) <- c("males < 15 yrs", "males 15-24 yrs", 
+                         "males 25-34 yrs", "males > 34 yrs")
+maletests$all <- apply(maletests, 1, sum)
+
+# Female tests
+femaletests <- chlamtests %>%
+  filter(sex == "female") %>%
+  select(-year, -sex) %>%
+  select(one_of("<15"), everything())
+  
+colnames(femaletests) <- c("females < 15 yrs", "females 15-24 yrs", 
+                         "females 25-34 yrs", "females > 34 yrs")
+femaletests$all <- apply(femaletests, 1, sum)
+
+# Bind the male and female tests
+finalTests <- cbind(maletests, femaletests)
+
+# Save cleaned chlamdata
+write.csv(finalTests, file = file.path(cleanDataFolder, paste("chlamtests",toString(dataYear),".csv", sep ="")), row.names = FALSE)
 
 ```
