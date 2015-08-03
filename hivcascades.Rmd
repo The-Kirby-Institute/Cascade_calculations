@@ -536,12 +536,9 @@ for (ii in 1:nrow(hivparams)) {
 }
 
 # Load AHOD data to calculate mortality and do some simple cleaning
-ahodData <- read_excel(file.path(dataFolder, 
+ahodData <- read.csv(file.path(dataFolder, 
                                paste("ahod", toString(analysisYear), 
-                                     ".xlsx", sep = "")))
-ahodData$state <- tolower(ahodData$state)
-ahodData$mode <- tolower(ahodData$mode)
-ahodData <- ahodData[,1:(ncol(ahodData)-2)] # Remove last two columns
+                                     ".csv", sep = "")))
 
 # Load backprojection estimates for comparison
 bpdeaths <- read.csv(file.path(dataFolder, "projectedDeaths.csv", 
@@ -1319,7 +1316,7 @@ s100data$year <- 2008:2013
 s100data$relative <- s100data$totalspend/s100data$totalspend[5]
 
 # Fit to the relative data ignoring the 2013 value
-firstYear <- 2005
+firstYear <- 2003
 treatyears <- firstYear:2013
 lms100 <- lm(relative ~ year, data = filter(s100data, year < 2013)) 
 relPredict <- predict(lms100, data.frame(year = treatyears), 
@@ -1368,15 +1365,18 @@ for (ii in 1:nstates) {
                        stage = "numART")
   
   # Append data prior to 2013
-  hivtreated <- rbind(hivtreated,filter(tempdf, year < 2013))
+  hivtreated <- rbind(hivtreated, filter(tempdf, year < 2013))
 }
 
 # Order by state and year
 hivtreated <- arrange(hivtreated, population, year)
 
+# If analysis year is before current year
+hivtreated <- filter(hivtreated, year <= analysisYear)
+
 # Finally bind to overall results
 if (bindCascade) {
-  hivcascade <- rbind(hivcascade,hivtreated)
+  hivcascade <- rbind(hivcascade, hivtreated)
 }
 
 # Do some plots if required
@@ -1480,16 +1480,9 @@ hivsuppressed <- data.frame(stage = character(),
                          upper = double())
 
 # Load all the data we need
-ahodData <- read_excel(file.path(dataFolder, 
+ahodData <- read.csv(file.path(dataFolder, 
                                paste("ahod", toString(analysisYear), 
-                                     ".xlsx", sep = "")))
-
-# Do some simple cleaning
-ahodData$state <- tolower(ahodData$state)
-ahodData$mode <- tolower(ahodData$mode)
-
-# Remove last two columns
-ahodData <- ahodData[,1:(ncol(ahodData)-2)]
+                                     ".csv", sep = "")))
 
 # Extract the viral suppression data
 propSuppressed <- ahodData %>%
@@ -1503,12 +1496,14 @@ propSuppressed <- ahodData %>%
             n1000 = sum(n_rx1000)) %>%
   mutate(prop50 = n50/n, 
          prop400 = n400/n,
-         prop1000 = n1000/n)
+         prop1000 = n1000/n) %>%
+  filter(year <= analysisYear)
 
-propSuppressedMode <- ahodData %>%
-  select(one_of(c("year", "state", "mode", "n_id")), 
-         starts_with("n_rx"), -n_rx) %>% 
-  group_by(year, mode)
+# TODO: by exposure mode
+# propSuppressedMode <- ahodData %>%
+#   select(one_of(c("year", "state", "mode", "n_id")), 
+#          starts_with("n_rx"), -n_rx) %>% 
+#   group_by(year, mode)
 
 # Loop through states and calculate number suppressed. 
 states <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas", "all")
@@ -1547,7 +1542,7 @@ for (ii in seq(along = states)) {
 
 # Finally bind to overall results
 if (bindCascade) {
-  hivcascade <- rbind(hivcascade,hivsuppressed)
+  hivcascade <- rbind(hivcascade, hivsuppressed)
 }
 
 ```
