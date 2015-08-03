@@ -943,6 +943,7 @@ for (ii in 1:npops) {
       
       cumPopDiags <- cumDiagnoses * fillPopDiags$value * fillAborigDiags$value
     }
+    
   } else {
     popdiags <- filter(hivcob, countrygroup == pops[ii])$proptotalknown
     popyears <- filter(hivcob, countrygroup == pops[ii])$yeardiagnosis
@@ -953,11 +954,19 @@ for (ii in 1:npops) {
   
   # Exp migration rates, death rates, assumed to be same overall
   
-  # Do the Pop calculation and range
-  pldhivPop <- livingDiagnosed(cumPopDiags, deathRate, migrationRate)
+  # Do the Pop calculation and range - if indigenous adjust mortality rate 
+  # appropriately
   
-  pldhivPopMin <- livingDiagnosed(cumPopDiags, deathRateMax, migrationRateMax)
-  pldhivPopMax <- livingDiagnosed(cumPopDiags, deathRateMin, migrationRateMin)
+  mortalityMultiplier <- ifelse(pops[ii] == "indigenous", aborigMortality, 1)
+  mortalityMultiplierMin <- ifelse(pops[ii] == "indigenous", aborigMortalityMin, 1)
+  mortalityMultiplierMax <- ifelse(pops[ii] == "indigenous", aborigMortalityMax, 1)
+  
+  # If non-Indigenous then no need to adjust dethar 
+  pldhivPop <- livingDiagnosed(cumPopDiags, mortalityMultiplier * deathRate, migrationRate)
+  
+  pldhivPopMin <- livingDiagnosed(cumPopDiags, mortalityMultiplierMin * deathRateMax, migrationRateMax)
+  pldhivPopMax <- livingDiagnosed(cumPopDiags, mortalityMultiplierMax * deathRateMin, migrationRateMin)
+  
   
   # Store the state results
   hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = "pldhiv", 
