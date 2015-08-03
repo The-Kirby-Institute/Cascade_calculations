@@ -226,13 +226,14 @@ for (ii in seq(along = charyears)){
   pharmData[,charyears[ii]] <- as.numeric(gsub("^<= ","",pharmData[,charyears[ii]]))
 }
 
-# Remove category variable and reorder
+# Remove category variable, reorder, and remove unnecessary years
 pharmData <- pharmData %>%
   select(-category) %>%
-  select(gender, state, num_range("X",years))
+  select(gender, state, num_range("X",years)) %>%
+  select(gender, state, num_range("X",startyear:dataYear))
 
 # Finally have it a relatively tidy format so save to output file
-write.csv(pharmData, file = file.path(cleanDataFolder, paste("pharmdash_HIVpatients",toString(years[length(years)]),".csv", sep ="")), row.names = FALSE)
+write.csv(pharmData, file = file.path(cleanDataFolder, paste("pharmdash_HIVpatients",toString(dataYear),".csv", sep ="")), row.names = FALSE)
 
 ```
 
@@ -379,6 +380,12 @@ ahodData$mode <- tolower(ahodData$mode)
 
 # Remove last two columns
 ahodData <- ahodData[,1:(ncol(ahodData)-2)]
+
+# Convert year to number
+ahodData$year <- as.numeric(ahodData$year)
+
+# Filter out unnecessary years
+ahodData <- filter(ahodData, year <= dataYear)
 
 #Save cleaned hivdata
 write.csv(ahodData, file = file.path(cleanDataFolder, 
