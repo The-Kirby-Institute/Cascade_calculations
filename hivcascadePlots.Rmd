@@ -29,7 +29,7 @@ require(Hmisc)
 require(knitr)
 
 # Set working directory 
-setwd(file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades"))
+setwd(file.path(path.expand("~"),"Documents", "Research","!Evaluation_Modelling","project_care_cascades"))
 
 # Details of results and outputs folders
 basePath <- getwd()
