@@ -19,7 +19,8 @@ require(tidyr)
 require(utils)
 
 # Key folder paths
-basePath <- file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades")
+basePath <- file.path(path.expand("~"), "Documents", "Research", 
+                      "!Evaluation_Modelling", "project_care_cascades")
 dataPath <- file.path(basePath,"data","raw")
 
 cleanDataFolder <- file.path(basePath,"data")
@@ -243,7 +244,7 @@ To get trends in number on treatment I use the total spending data from a PBS sp
 # Raw s100 spending file
 rawS100 <- file.path(dataPath,"S100_2015.xls",sep="")
 
-#Load the raw HIV notifications file and clean it up
+# Load the file and clean it up
 s100data <- read_excel(rawS100, na = "NA")
 
 # Calculate total cost for drugs in each financial year
@@ -362,6 +363,28 @@ write.csv(projectDeaths, file = file.path(cleanDataFolder, "projectedDeaths.csv"
 
 ```
 
+## AHod data for mortality, retained in care and suppressed virus
 
+```{r ahoddata}
+# Clean up the ahod data provided by the biostats program
+
+# Load the ahod data
+ahodData <- read_excel(file.path(dataPath, 
+                               paste("ahod", toString(dataYear),".xlsx", 
+                                          sep ="")))
+
+# Do some simple cleaning
+ahodData$state <- tolower(ahodData$state)
+ahodData$mode <- tolower(ahodData$mode)
+
+# Remove last two columns
+ahodData <- ahodData[,1:(ncol(ahodData)-2)]
+
+#Save cleaned hivdata
+write.csv(ahodData, file = file.path(cleanDataFolder, 
+                                    paste("ahod", toString(dataYear),".csv", 
+                                          sep ="")), row.names = FALSE)
+
+```
 
 
