@@ -93,8 +93,9 @@ resultsAll <- filter(hivcascade, population == "all" & year >= (resultsYear - mi
 resultsAllYear <- filter(resultsAll, year == resultsYear)
 
 # Plot specs
-stages <- c("infected", "pldhiv", "linked", "numART")
-stageNames <- c("Living with HIV", "Diagnosed", "Linked to care", "Receiving ART")
+stages <- c("infected", "pldhiv", "linked", "numART", "suppressed")
+stageNames <- c("Living with HIV", "Diagnosed", "Linked to care", 
+                "Receiving ART", "Suppressed virus")
 
 ### Plot the bar chart
 plotbarAll <- ggplot(data = resultsAllYear, aes(x = stage, y = value)) + 
@@ -106,10 +107,12 @@ plotbarAll <- ggplot(data = resultsAllYear, aes(x = stage, y = value)) +
 
 ### Plot time varying values for each stage
 
-# Set up levels for faceting appropriately
+# Set up levels for faceting appropriately - have to do this manually
 resultsAll$stage <- factor(resultsAll$stage)
-levels(resultsAll$stage) <- c("Living with HIV", "Linked to care", "Receiving ART", "Diagnosed")
-resultsAll <- within(resultsAll, stage <- factor(stage, levels(stage)[c(1,4,2,3)]))
+levels(resultsAll$stage) <- c("Living with HIV", "Linked to care", 
+                              "Receiving ART", "Diagnosed",
+                              "Suppressed virus")
+resultsAll <- within(resultsAll, stage <- factor(stage, levels(stage)[c(1, 4, 2, 3, 5)]))
 
 # Do the plot
 plotstagesAll <- ggplot(data = resultsAll, aes(x = year, y = value)) + 
