@@ -438,12 +438,17 @@ for (ii in 1:length(states)) {
   
   # Store state results
   hivstate[hivstate$state == states[ii],]$uniquecases <- numberUnique
+  
+  # Replace proportion unique if using national estimates
+  if (nationalUniques) {
+    stateyears <- hivstate[hivstate$state == states[ii],]$yeardiagnosis
+    hivstate[hivstate$state == states[ii],]$propunique <- 
+      filter(hivresults, yeardiagnosis %in% stateyears)$propunique
+  } 
 }
 
-# Calculate proportion unique
-if (nationalUniques) {
-  hivstate$propunique <- hivresults$propunique
-} else {  
+# Calculate proportion unique if not doing national estimates
+if (!nationalUniques) {
   hivstate$propunique <- hivstate$uniquecases/hivstate$totalnotifications
   hivstate[hivstate$propunique > 1,]$propunique <- 1
 }
@@ -463,12 +468,17 @@ for (ii in 1:length(modes)) {
   
   # Store exposure results
   hivexpnat[hivexpnat$expgroup == modes[ii],]$uniquecases <- numberUnique
+  
+  # Replace proportion unique if using national estimates
+  if (nationalUniques) {
+    expyears <- hivexpnat[hivexpnat$expgroup == modes[ii],]$yeardiagnosis
+    hivexpnat[hivexpnat$expgroup == modes[ii],]$propunique <- 
+      filter(hivresults, yeardiagnosis %in% expyears)$propunique
+  } 
 }
 
-# Calculate proportion unique
-if (nationalUniques) {
-  hivexpnat$propunique <- hivresults$propunique
-} else {
+# Calculate proportion unique if not doing national estimates
+if (!nationalUniques) {
   hivexpnat$propunique <- hivexpnat$uniquecases/hivexpnat$totalnotifications
   hivexpnat[hivexpnat$propunique > 1,]$propunique <- 1
 }
@@ -524,6 +534,14 @@ hivparams <- select(hivparams,parameter,value)
 for (ii in 1:nrow(hivparams)) {
   assign(hivparams$parameter[ii],hivparams$value[ii])
 }
+
+# Load AHOD data to calculate mortality and do some simple cleaning
+ahodData <- read_excel(file.path(dataFolder, 
+                               paste("ahod", toString(analysisYear), 
+                                     ".xlsx", sep = "")))
+ahodData$state <- tolower(ahodData$state)
+ahodData$mode <- tolower(ahodData$mode)
+ahodData <- ahodData[,1:(ncol(ahodData)-2)] # Remove last two columns
 
 # Load backprojection estimates for comparison
 bpdeaths <- read.csv(file.path(dataFolder, "projectedDeaths.csv", 
@@ -582,6 +600,18 @@ linkageMortalityMin <- deaths_min/numliving_max
 linkageMortalityMax <- deaths_max/numliving_min
 
 ### Append AHOD mortality
+
+# Calculate crude death rate for each state and year - use 95% CI as the upper and lower bound
+
+ahodDeaths <- ahodData %>% 
+  group_by(state, year) %>%
+  summarise(n = sum(n_id), 
+            deaths = sum(n_death), 
+            deathrate = unname(prop.test(sum(n_death), sum(n_id))$estimate), 
+            lower = unname(prop.test(sum(n_death), sum(n_id))$conf.int[1]),
+            upper = unname(prop.test(sum(n_death), sum(n_id))$conf.int[2]))
+
+#######.....
 
 # First find index corresponding to year of linkage 
 indexLinkage <- max(seq(along = min(hivresults$yeardiagnosis):linkageYear))
@@ -667,7 +697,7 @@ for (ii in 1:nstates) {
   
   # Store extrapolated rate
   allPredicts <- rbind(allPredicts, data.frame(year = allyears, 
-                                state = states[ii]),
+                                state = states[ii],
                                 rate = expmrate[, 3]/2, #expmrate[, 1]
                                 lower = 0, #expmrate[, 2],
                                 upper = expmrate[, 3]))
@@ -1333,7 +1363,8 @@ for (ii in 1:nstates) {
   tempupr <- (treat2013 * relTreat$upr)/tail(relTreat$upr,1)
   
   # Create a data frame 
-  tempdf <- data_frame(population = states[ii], year = treatyears, value = tempfit,
+  tempdf <- data_frame(population = states[ii], year = 
+                         , value = tempfit,
                        lower = templwr, upper = tempupr, stage = "numART")
   
   # Append data prior to 2013
@@ -1474,17 +1505,50 @@ propSuppressed <- ahodData %>%
          prop400 = n400/n,
          prop1000 = n1000/n)
 
+propSuppressedMode <- ahodData %>%
+  select(one_of(c("year", "state", "mode", "n_id")), 
+         starts_with("n_rx"), -n_rx) %>% 
+  group_by(year, mode)
+
 # Loop through states and calculate number suppressed. 
+states <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas", "all")
+availableStates <- c("all", "nsw", "vic", "qld")
 
+for (ii in seq(along = states)) {
+  # Proportion suppressed
+  if(states[ii] %in% availableStates) {
+    tempDf <- filter(propSuppressed, state == states[ii])
+  } else {
+    tempDf <- filter(propSuppressed, state == "all")
+  }
+  
+  tempProp <- tempDf$prop400
+  tempPropMin <- tempDf$prop50
+  tempPropMax <- tempDf$prop1000
+  
+  # Number treated 
+  tempTreat <- filter(hivtreated, population == states[ii])$value
+  tempTreatMin <- filter(hivtreated, population == states[ii])$lower
+  tempTreatMax <- filter(hivtreated, population == states[ii])$upper
+  
+  nyears <- length(tempDf$year)
+  
+  # Number suppressed
+  hivsuppressed <- rbind(hivsuppressed, data.frame(stage = "suppressed",  
+                         year = as.numeric(tempDf$year),
+                         population = states[ii],
+                         value = tempTreat * tempProp,
+                         lower = tempTreatMin * tempPropMin,
+                         upper = tempTreatMax * tempPropMax)) 
+}
 
+### TODO: number suppressed by exposure and country of birth. Once we work out
+# how to do it
 
-
-
-
-# # Finally bind to overall results
-# if (bindCascade) {
-#   hivcascade <- rbind(hivcascade,hivsuppressed)
-# }
+# Finally bind to overall results
+if (bindCascade) {
+  hivcascade <- rbind(hivcascade,hivsuppressed)
+}
 
 
 ```
