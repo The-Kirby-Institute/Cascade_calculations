@@ -1303,7 +1303,9 @@ if (bindCascade) {
 
 # Load all the data we need
 s100data <- read.csv(file.path(dataFolder, "s100_treatment_costs.csv"))
-prospectionData <- read.csv(file.path(dataFolder, "pharmdash_HIVpatients2014.csv"), as.is = c(1,2))
+prospectionData <- read.csv(file.path(dataFolder, paste("pharmdash_HIVpatients", 
+                                      toString(analysisYear), 
+                                      ".csv", sep = "")), as.is = c(1,2))
 
 # Use the s100 data to estimate a trend for back projection
 
@@ -1331,8 +1333,11 @@ relTreat$year <- treatyears
 hivtreated <- prospectionData %>%
   filter(gender == "all") %>%
   select(-gender) 
-colnames(hivtreated) <- c("population","2013","2014")
-hivtreated <- gather(hivtreated,"year","value",2:3)
+
+yearNames <- strsplit(toString(2013:analysisYear), ", ")[[1]]
+
+colnames(hivtreated) <- c("population",yearNames)
+hivtreated <- gather(hivtreated,"year","value", 2:ncol(hivtreated))
 hivtreated$year <- as.numeric(as.character(hivtreated$year))
 
 hivtreated$lower <- NA
@@ -1530,7 +1535,7 @@ for (ii in seq(along = states)) {
   
   # Number suppressed
   hivsuppressed <- rbind(hivsuppressed, data.frame(stage = "suppressed",  
-                         year = as.numeric(tempDf$year),
+                         year = tempDf$year,
                          population = states[ii],
                          value = tempTreat * tempProp,
                          lower = tempTreatMin * tempPropMin,
