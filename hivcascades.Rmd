@@ -1495,22 +1495,34 @@ vlARTdata <- vlARTdata %>%
 # Clean up the AHOD data on number of tests 
 ahodTests <- ahodData %>% 
   group_by(year, state) %>%
-  summarise(ntests = sum(meanVL_noRx * n_id),
-            npeople = sum(n_id),
-            avetests = ntests/npeople,
-            prop_notests = sum(Cd4noRxVL)/npeople) %>%
+  summarise(npeople = sum(n_id),
+            nvltests = sum(meanVL_noRx * n_id),
+            avevltests = nvltests/npeople,
+            ncd4Rxtests = sum(meanCd4_Rx * n_id),
+            avecd4Rxtests = ncd4Rxtests/npeople,
+            ncd4tests = sum(meanCd4_noRx * n_id),
+            avecd4tests = ncd4tests/npeople) %>%
   filter(year <= analysisYear)
 
-# Do the calculations for all
+### Do the calculations for all
 treatYears <- filter(hivtreated, population == "all")$year
 treatValue <- filter(hivtreated, population == "all")$value
 treatLower <- filter(hivtreated, population == "all")$lower
 treatUpper <- filter(hivtreated, population == "all")$upper
 
-avevlTests <- filter(ahodTests, state == "all")$avetests
-numTests <- filter(vlnoARTdata, state == "all" & year %in% treatYears)$n
+# Using VL estimates
+avevlTests <- filter(ahodTests, state == "all")$avevltests
+numvlTests <- filter(vlnoARTdata, state == "all" & year %in% treatYears)$n
 
-receivedCare <- (numTests/avevlTests)
+receivedCareVL <- (numvlTests/avevlTests)
+
+# Using CD4 data
+numTreated <- filter(hivtreated, population == "all")$value
+aveCd4_Rx <- filter(ahodTests, state == "all")$avecd4Rxtests
+aveCd4_noRx <- filter(ahodTests, state == "all")$avecd4tests
+numCd4Tests <- filter(cd4data, state == "all" & year %in% treatYears)$n
+
+receivedCareCD4 <- (numCd4Tests - numTreated * aveCd4_Rx)/aveCd4_noRx
 
 # Bind to hivretained
 hivretained <- rbind(hivretained, data.frame(stage = "retained", 
