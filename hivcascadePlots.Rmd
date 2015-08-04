@@ -43,7 +43,10 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 # Script parameters
 resultsYear <- 2013 # Year of cascade we will plot
 minYear <- 10       # How long ago do we plot things
-saveplots <- FALSE # Save plots as separate files
+saveplots <- TRUE # Save plots as separate files
+
+# Function to format data and range into thousands
+source(file.path(basePath, "code", "format.data.R"), echo=TRUE)
 
 ```
 
@@ -93,15 +96,17 @@ resultsAll <- filter(hivcascade, population == "all" & year >= (resultsYear - mi
 resultsAllYear <- filter(resultsAll, year == resultsYear)
 
 # Plot specs
-stages <- c("infected", "pldhiv", "linked", "numART", "suppressed")
+stages <- c("infected", "pldhiv", "linked", "retained", "numART", "suppressed")
 stageNames <- c("Living with HIV", "Diagnosed", "Linked to care", 
-                "Receiving ART", "Suppressed virus")
+                "Retained in care", "Receiving ART", "Suppressed virus")
+stageNamesNeat <- c("Living \n with HIV", "Diagnosed", "Linked \n to care", 
+                "Retained \n in care", "Receiving \n ART", "Suppressed \n virus")
 
 ### Plot the bar chart
 plotbarAll <- ggplot(data = resultsAllYear, aes(x = stage, y = value)) + 
   geom_bar(stat = "identity", color = maincols[2], fill = maincols[2], width = 0.6) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, color = "black", size = 1.2) +
-  scale_x_discrete(limits = stages, labels = stageNames) + 
+  scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
   ylab("Number of people") + xlab("") +  
   plotopts
 
@@ -110,15 +115,15 @@ plotbarAll <- ggplot(data = resultsAllYear, aes(x = stage, y = value)) +
 # Set up levels for faceting appropriately - have to do this manually
 resultsAll$stage <- factor(resultsAll$stage)
 levels(resultsAll$stage) <- c("Living with HIV", "Linked to care", 
-                              "Receiving ART", "Diagnosed",
-                              "Suppressed virus")
-resultsAll <- within(resultsAll, stage <- factor(stage, levels(stage)[c(1, 4, 2, 3, 5)]))
+                              "Receiving ART", "Diagnosed", 
+                              "Retained in care", "Suppressed virus")
+resultsAll <- within(resultsAll, stage <- factor(stage, levels(stage)[c(1, 4, 2, 3, 5, 6)]))
 
 # Do the plot
 plotstagesAll <- ggplot(data = resultsAll, aes(x = year, y = value)) + 
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = cbPalette[4]) +
   geom_line(color = "blue") + facet_wrap(~ stage, scales = "free")  +
-  scale_x_continuous(breaks = seq((resultsYear-minYear), resultsYear, by =2)) +
+  scale_x_continuous(breaks = seq((resultsYear - minYear + 1), resultsYear, by = 3)) +
   expand_limits(y = 0) +
   ylab("Number of people") + xlab("Year") +  
   plotopts
@@ -152,28 +157,35 @@ print(plotstagesAll)
 ```{r createtable1, echo = FALSE, messages = FALSE, include = FALSE}
 # Create and insert table 
 tableAll <- select(resultsAllYear,-year, -population)
-tableAll[,2:4] <- lapply(tableAll[,2:4],round)
+# tableAll[,2:4] <- lapply(tableAll[,2:4],round)
 
-finalTable <- select(tableAll, stage, value)
-finalTable$Range <- NA
+finalTable <- select(tableAll, stage)
+finalTable$estimate <- NA
 
 # Convert lower and upper into a range string
+skip <- c(4,5)
 for (ii in 1:nrow(tableAll)){
-  finalTable$Range[ii] <-print(paste("(", toString(tableAll$lower[ii]), "-", 
-                                     toString(tableAll$upper[ii]),")", sep = ""))
+  if (ii %in% skip) {
+    finalTable$estimate[ii] <- format.data(tableAll$value[ii], places = -1)
+  } else {
+    finalTable$estimate[ii] <- format.data(tableAll$value[ii], 
+                                           tableAll$lower[ii], 
+                                           tableAll$upper[ii], places = -1)
+  }
 }
 
-# Remove NA from final range
-finalTable$Range[nrow(finalTable)] <- "-"
+# Reorder rows
+finalTable[1:6,] <- finalTable[c(2, 1, 3, 5, 4, 6),]
 
-# Reorder first and second row
-finalTable[1:2,] <- finalTable[2:1,]
+# Remove NA from final range
+# finalTable[finalTable$stage == "numART",]$stimate <- "-"
 
 # Rename first column
 finalTable$stage <- stageNames
 
 # Rename columns
-finalTable <- rename(finalTable, "Cascade stage" = stage, Estimate = value)
+finalTable <- rename(finalTable, "Cascade stage" = stage, 
+                     "Estimate (range)" = estimate)
 
 ```
 
