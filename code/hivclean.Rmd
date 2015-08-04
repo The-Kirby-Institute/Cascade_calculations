@@ -384,6 +384,9 @@ ahodData <- ahodData[,1:(ncol(ahodData)-2)]
 # Convert year to number
 ahodData$year <- as.numeric(ahodData$year)
 
+# Replace "-99" with NA
+ahodData[ahodData == -99] <- NA
+
 # Filter out unnecessary years
 ahodData <- filter(ahodData, year <= dataYear)
 
