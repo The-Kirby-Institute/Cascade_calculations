@@ -179,6 +179,10 @@ finalNotifications <- knownNotifications + extraNotifications
 # A little test to see how important extra notifications are
 propKnown <- knownNotifications/finalNotifications
 
+# Final bind to year for reference
+year <- unique(chlamdata$year)
+finalNotifications <- cbind(year, finalNotifications)
+
 # Save cleaned chlamdata
 write.csv(finalNotifications, file = file.path(cleanDataFolder, paste("chlamnotifications",toString(dataYear),".csv", sep ="")), row.names = FALSE)
 
@@ -272,7 +276,8 @@ colnames(femaletests) <- c("females < 15 yrs", "females 15-24 yrs",
 femaletests$all <- apply(femaletests, 1, sum)
 
 # Bind the male and female tests
-finalTests <- cbind(maletests, femaletests)
+year <- unique(as.numeric(chlamtests$year))
+finalTests <- cbind(year, maletests, femaletests)
 
 # Save cleaned chlamdata
 write.csv(finalTests, file = file.path(cleanDataFolder, paste("chlamtests",toString(dataYear),".csv", sep ="")), row.names = FALSE)
