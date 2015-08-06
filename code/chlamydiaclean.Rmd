@@ -12,7 +12,7 @@ folder.
 rm(list=ls()) 
 
 # Key folder paths
-basePath <- file.path(path.expand("~"),"Documents", "Research",
+basePath <- file.path(path.expand("~"), "Research",
                       "!Evaluation_Modelling","project_care_cascades")
 dataPath <- file.path(basePath,"data","raw")
 
@@ -221,9 +221,10 @@ chlamtests$year <- NA
 
 for (ii in 1:nrow(chlamtests)) {
   tempstr <- chlamtests$date[ii]
-  tempSplit <- strsplit(tempstr, "-")
-  year <- tempSplit[[1]][2]
-  year <- paste("20", year, sep = "")
+#   tempSplit <- strsplit(tempstr, "-")
+#   year <- tempSplit[[1]][2]
+  year <- format(tempstr, "%Y")
+#   year <- paste("20", year, sep = "")
   chlamtests$year[ii] <- year
 }
 
