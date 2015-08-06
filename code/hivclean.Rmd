@@ -19,7 +19,8 @@ require(tidyr)
 require(utils)
 
 # Key folder paths
-basePath <- file.path(path.expand("~"), "Documents", "Research", 
+privateDataPath <- file.path("/", "SVR-NAS", "Public", "SERP", "Cascades", "HIV", "data")
+basePath <- file.path(path.expand("~"), "Research", 
                       "!Evaluation_Modelling", "project_care_cascades")
 dataPath <- file.path(basePath,"data","raw")
 
@@ -29,7 +30,7 @@ cleanDataFolder <- file.path(basePath,"data")
 setwd(file.path(basePath,"code"))
 
 # Primary script parameters
-dataYear <- 2013
+dataYear <- 2014
 
 ```
 
@@ -52,19 +53,32 @@ We also use broad population categories:
 
 ```{r notifications}
 # Raw HIV notifications file
-rawdata <- file.path(dataPath,paste("cascadeHIVnotifications-", toString(dataYear), ".csv",sep=""))
+rawdata <- file.path(privateDataPath, paste("cascadeHIVnotifications-", 
+                                            toString(dataYear), ".csv",sep=""))
 
 # Load the raw HIV notifications file and clean it up
-hivdata <- read.csv(rawdata, colClasses = c("numeric", "numeric", "Date",
+
+if (dataYear <= 2013) {
+  hivdata <- read.csv(rawdata, colClasses = c("numeric", "numeric", "Date",
                     "numeric", "numeric", "Date", "numeric", "numeric", 
                     "character", "numeric", "Date", "numeric", "numeric",
                     "numeric", "numeric"))
+  
+} else {
+  hivdata <- read.csv(rawdata, colClasses = c("numeric", "numeric", "Date",
+                    "numeric", "numeric", "Date", "numeric", "numeric", 
+                    "character", "numeric", "Date", "numeric", "numeric",
+                    "Date", "numeric", "character"))
+}
 
 # Rename variable for ease of ues
 colnames(hivdata)[3] <- "dob"
 colnames(hivdata)[6] <- "datediagnosis"
 colnames(hivdata)[7] <- "agehiv"
 colnames(hivdata)[9] <- "exposure"
+if (dataYear > 2013){
+  colnames(hivdata)[14] <- "cd4date"
+}
 
 # Replace codes with easier to use strings - so we don't have to look up 
 # what they mean
@@ -85,12 +99,22 @@ for(ii in 1:8){
 # test was recorded instead
 
 hivdata$linked <- NA
-# hivdata[is.na(hivdata$cd4count) & hivdata$yeardiagnosis < 2014,] <- "no"
-# hivdata[!is.na(hivdata$cd4count) & hivdata$yeardiagnosis < 2014,] <- "yes"
 
-# hivdata[hivdata$yeardiagnosis >= 2014,] <- 
-# If datecd4 - datediagnosis < 30 <- "yes"
-# If datecd4 - datediagnosis < 30 <- "no"
+if (dataYear <= 2013) {
+  hivdata[is.na(hivdata$cd4count),]$linked <- "no"
+  hivdata[!is.na(hivdata$cd4count),]$linked <- "yes"
+} else {
+  hivdata[is.na(hivdata$cd4count) & hivdata$yearhiv < 2014,]$linked <- "no"
+  hivdata[!is.na(hivdata$cd4count) & hivdata$yearhiv < 2014,]$linked <- "yes"
+
+  hivdata[hivdata$yearhiv >= 2014 & is.na(hivdata$cd4date - hivdata$datediagnosis),]$linked <- "no"
+  
+  hivdata[hivdata$yearhiv >= 2014 & !is.na(hivdata$cd4date - hivdata$datediagnosis) & 
+            (hivdata$cd4date - hivdata$datediagnosis) <= 31,]$linked <- "yes"
+  hivdata[hivdata$yearhiv >= 2014 & !is.na(hivdata$cd4date - hivdata$datediagnosis) &
+            (hivdata$cd4date - hivdata$datediagnosis) > 31,]$linked <- "no"
+  
+}
 
 # Reclassification of exposure to the broad surveillance categories - may need to change manually
 hivdata[hivdata$exposure == "1A",]$exposure <- "msm"
@@ -132,11 +156,14 @@ hivdata[hivdata$exposure == "4F",]$exposure <- "mtct"
 hivdata[hivdata$exposure == "4G",]$exposure <- "mtct"
 hivdata[hivdata$exposure == "4J",]$exposure <- "mtct"
 hivdata[hivdata$exposure == "4K",]$exposure <- "mtct"
+hivdata[hivdata$exposure == "5A",]$exposure <- "unknown"
 hivdata[hivdata$exposure == "5A1",]$exposure <- "unknown"
 hivdata[hivdata$exposure == "5A2",]$exposure <- "unknown"
 hivdata[hivdata$exposure == "5A3",]$exposure <- "unknown"
 hivdata[hivdata$exposure == "5A4",]$exposure <- "unknown"
 hivdata[hivdata$exposure == "5B",]$exposure <- "unknown"
+
+# hivdata[hivdata$exposure == "",]$exposure <- "unknown"
 
 # Add a broad exposure category indicator. 
 msmgroup <- c("msm","bisex-male","bisex-male-idu","msm-idu")
@@ -164,8 +191,8 @@ hivdata[which(hivdata$rob == 7 & hivdata$cob != 1100),]$countrygroup <- "otherco
 hivdata$aboriggroup <- rep(NA,nrow(hivdata))
 hivdata[which(hivdata$cob != 1100 | hivdata$rob != 7),]$aboriggroup <- "othercob"
 hivdata[which(hivdata$cob == 0),]$aboriggroup <- NA
-hivdata[which(hivdata$cob == 1100 & hivdata$aborig == 2),]$aboriggroup <- "indigenous"
-hivdata[which(hivdata$cob == 1100 & hivdata$aborig == 1),]$aboriggroup <- "non-indigenous"
+hivdata[which(hivdata$cob == 1100 & hivdata$aborig == "Indigenous"),]$aboriggroup <- "indigenous"
+hivdata[which(hivdata$cob == 1100 & hivdata$aborig == "Non indigenous"),]$aboriggroup <- "non-indigenous"
   
 # Save cleaned hivdata
 write.csv(hivdata, file = file.path(cleanDataFolder, paste("hivnotifications",toString(dataYear),".csv", sep ="")), row.names = FALSE)
@@ -178,7 +205,7 @@ Description of the output from Prospection and the cleaning process.
 
 ```{r prospection}
 # Raw prospection file
-rawPharmDash <- file.path(dataPath,paste("PharmDash_HIV_Patients_Treatment-", toString(dataYear+1), ".csv",sep=""))
+rawPharmDash <- file.path(dataPath,paste("PharmDash_HIV_Patients_Treatment-", toString(dataYear), ".csv",sep=""))
 
 # Data only reliable from 2013
 startyear <- 2013
