@@ -29,7 +29,7 @@ require(Hmisc)
 require(knitr)
 
 # Set working directory 
-setwd(file.path(path.expand("~"),"Documents", "Research","!Evaluation_Modelling","project_care_cascades"))
+setwd(file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades"))
 
 # Details of results and outputs folders
 basePath <- getwd()
@@ -41,7 +41,7 @@ resultsFolder <- file.path(basePath,"output")
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2013 # Year of cascade we will plot
+resultsYear <- 2014 # Year of cascade we will plot
 minYear <- 10       # How long ago do we plot things
 saveplots <- TRUE # Save plots as separate files
 
