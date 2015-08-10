@@ -458,7 +458,7 @@ if (!nationalUniques) {
 }
 
 ### Now do mode of exposure
-modes <- c("msm", "pwid", "hetero", "otherexp")
+modes <- c("msm", "pwid", "hetero", "otherexp", "unknown")
 
 hivexpnat$uniquecases <- rep(NA,nrow(hivexpnat))
 hivexpnat$propunique <- rep(NA,nrow(hivexpnat))
@@ -930,12 +930,18 @@ for (ii in 1:(nstates-1)) {
 
 ### Now do exposure based PLHIV
 
-modes <- c("msm", "pwid", "hetero", "otherexp")
+modes <- c("msm", "pwid", "hetero", "otherexp", "unknown")
 nmodes <- length(modes)
 
 for (ii in 1:nmodes) {
   expyears <- filter(hivexpnat, expgroup == modes[ii])$yeardiagnosis
-  expdiags <- filter(hivexpnat, expgroup == modes[ii])$uniquecases
+  
+  if (nationalUniques) {
+    expdiags <- filter(hivexpnat, expgroup == modes[ii])$totalnotifications *
+      filter(hivexpnat, expgroup == modes[ii])$propunique
+  } else {
+    expdiags <- filter(hivexpnat, expgroup == modes[ii])$uniquecases
+  }
     
   fillExpDiags <- fillMissing(allyears, expyears, expdiags)  
   cumExpDiags <- fillExpDiags$value
@@ -957,6 +963,55 @@ for (ii in 1:nmodes) {
                             upper = pldhivExpMax))
 }
 
+### Remove unknowns by redistributing to known exposure groups in proportion
+keygroups <- c("msm", "pwid", "hetero", "otherexp")
+
+# Calculate proportion known in each category
+propExpDiags <- hivdiagnosed %>% 
+  filter(population %in% keygroups) %>%
+  group_by(year) %>%
+  mutate(totalval = sum(value), 
+         propval = value/totalval) %>%
+  select(-stage, -totalval)
+
+# Calculate the number unknown and the proportional increase
+numUnknown <- hivdiagnosed %>% 
+  filter(population == "unknown") %>%
+  select(year, value)
+
+numUnknown$msm <- filter(propExpDiags, population == "msm")$propval * numUnknown$value
+numUnknown$pwid <- filter(propExpDiags, population == "pwid")$propval * numUnknown$value 
+numUnknown$hetero <- filter(propExpDiags, population == "hetero")$propval * numUnknown$value 
+numUnknown$otherexp <- filter(propExpDiags, population == "otherexp")$propval * numUnknown$value 
+
+# Make into long format
+numUnknown <- numUnknown %>%
+  select(-value) %>%
+  gather("mode", "number", 2:5)
+
+
+# Update hivdiagnosed
+for (ii in seq(along = keygroups)) {
+     tempdf <- filter(hivdiagnosed, population == keygroups[ii])
+     proplwr <- tempdf$lower/tempdf$value
+     propupr <- tempdf$upper/tempdf$value
+     
+     hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$value <- 
+       hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$value + 
+       filter(numUnknown, mode == keygroups[ii])$number
+     
+     hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$lower <- 
+       hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$value * proplwr
+      
+     hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$upper <- 
+       hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$value * propupr
+}    
+   
+# Remove unknown & fix up modes
+hivdiagnosed <- filter(hivdiagnosed, population != "unknown")
+modes <- keygroups
+nmodes <- length(modes)
+  
 ### Now do population based PLDHIV
 pops <- c("non-indigenous", "indigenous", "bornssa", "bornsea","othercob")
 npops <- length(pops)
