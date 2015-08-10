@@ -1482,6 +1482,11 @@ cd4data <- read.csv(file.path(mbsFolder, "MBS_Data_71139-clean.csv"))
 vlnoARTdata <- read.csv(file.path(mbsFolder, "MBS_Data_69378-clean.csv"))
 vlARTdata <- read.csv(file.path(mbsFolder, "MBS_Data_69381-clean.csv"))
 
+# Reload ahodData
+ahodData <- read.csv(file.path(dataFolder, 
+                               paste("ahod", toString(analysisYear), 
+                                     ".csv", sep = "")))
+
 # Filter, select and gather the data we need
 cd4data <- cd4data %>%
   filter(sex == "all" & age == "all") %>%
@@ -1502,15 +1507,45 @@ vlARTdata <- vlARTdata %>%
   filter(year <= analysisYear)
 
 # Clean up the AHOD data on number of tests 
-ahodTests <- ahodData %>% 
-  group_by(year, state) %>%
-  summarise(npeople = sum(n_id),
-            nvltests = sum(meanVL_noRx * n_id),
-            avevltests = nvltests/npeople,
-            ncd4Rxtests = sum(meanCd4_Rx * n_id),
-            avecd4Rxtests = ncd4Rxtests/npeople,
-            ncd4tests = sum(meanCd4_noRx * n_id),
-            avecd4tests = ncd4tests/npeople) %>%
+
+# Some of the people of unknown modes have missing data
+replaceVars <- c("medCd4_noRx", "meanCd4_noRx", "medVL_noRx", "meanVL_noRx", "meanCd4_Rx")
+for (ii in 1:nrow(ahodData)) {
+  if (is.na(ahodData$medCd4_noRx[ii])) {
+    ahodData$medCd4_noRx[ii] <- filter(ahodData, year == ahodData$year[ii] & 
+                                         state == "all" & 
+                                         mode == ahodData$mode[ii])$medCd4_noRx
+    ahodData$meanCd4_noRx[ii] <- filter(ahodData, year == ahodData$year[ii] & 
+                                          state == "all" &
+                                          mode == ahodData$mode[ii])$meanCd4_noRx
+    ahodData$medVL_noRx[ii] <- filter(ahodData, year == ahodData$year[ii] & 
+                                        state == "all" &
+                                        mode == ahodData$mode[ii])$medVL_noRx
+    ahodData$meanVL_noRx[ii] <- filter(ahodData, year == ahodData$year[ii] & 
+                                         state == "all" &
+                                         mode == ahodData$mode[ii])$meanVL_noRx
+    ahodData$meanCd4_Rx[ii] <- filter(ahodData, year == ahodData$year[ii] & 
+                                        state == "all" &
+                                        mode == ahodData$mode[ii])$meanCd4_Rx
+  }
+}
+
+# Calculate averages across populations
+
+# ahodTests <- ahodData %>% 
+#   group_by(year, state) %>%
+#   summarise(npeople = sum(n_id),
+#             nvltests = sum(meanVL_noRx * n_id),
+#             avevltests = nvltests/npeople,
+#             ncd4Rxtests = sum(meanCd4_Rx * n_id),
+#             avecd4Rxtests = ncd4Rxtests/npeople,
+#             ncd4tests = sum(meanCd4_noRx * n_id),
+#             avecd4tests = ncd4tests/npeople) %>%
+#   filter(year <= analysisYear)
+
+ahodTests <- ahodData %>%
+  filter(mode == "all") %>%
+  select(-mode) %>%
   filter(year <= analysisYear)
 
 ### Do the calculations for all
@@ -1522,15 +1557,15 @@ treatUpper <- filter(hivtreated, population == "all")$upper
 if (useCD4) {
   # Using CD4 data
   numTreated <- filter(hivtreated, population == "all")$value
-  aveCd4_Rx <- filter(ahodTests, state == "all")$avecd4Rxtests
-  aveCd4_noRx <- filter(ahodTests, state == "all")$avecd4tests
+  aveCd4_Rx <- filter(ahodTests, state == "all")$meanCd4_Rx
+  aveCd4_noRx <- filter(ahodTests, state == "all")$meanCd4_noRx
   numCd4Tests <- filter(cd4data, state == "all" & year %in% treatYears)$n
 
   receivedCare <- (numCd4Tests - numTreated * aveCd4_Rx)/aveCd4_noRx
   
 } else {
   # Use VL estimates
-  avevlTests <- filter(ahodTests, state == "all")$avevltests
+  avevlTests <- filter(ahodTests, state == "all")$meanVL_noRx
   numvlTests <- filter(vlnoARTdata, state == "all" & year %in% treatYears)$n
   
   receivedCare <- (numvlTests/avevlTests)
@@ -1566,24 +1601,24 @@ for (ii in 1:nstates) {
     # due to number of tests calculations
     if (states[ii] %in% availableStates) {
       
-      aveCd4_Rx <- filter(ahodTests, state == states[ii])$avecd4Rxtests
+      aveCd4_Rx <- filter(ahodTests, state == states[ii])$meanCd4_Rx
       if (any(is.na(aveCd4_Rx))){
         naindex <- is.na(aveCd4_Rx)
-        temp <- filter(ahodTests, state == "all")$avecd4Rxtests
+        temp <- filter(ahodTests, state == "all")$meanCd4_Rx
         aveCd4_Rx[naindex] <- temp[naindex]
       }
       
-      aveCd4_noRx <- filter(ahodTests, state == states[ii])$avecd4tests
+      aveCd4_noRx <- filter(ahodTests, state == states[ii])$meanCd4_noRx
       if (any(is.na(aveCd4_noRx))){
         naindex <- is.na(aveCd4_noRx)
-        temp <- filter(ahodTests, state == "all")$avecd4tests
+        temp <- filter(ahodTests, state == "all")$meanCd4_noRx
         aveCd4_noRx[naindex] <- temp[naindex]
       }
       
     } else {  
       # Not available so use all data
-      aveCd4_Rx <- filter(ahodTests, state == "all")$avecd4Rxtests
-      aveCd4_noRx <- filter(ahodTests, state == "all")$avecd4tests
+      aveCd4_Rx <- filter(ahodTests, state == "all")$meanCd4_Rx
+      aveCd4_noRx <- filter(ahodTests, state == "all")$meanCd4_noRx
     }
   
     receivedCare <- (numCd4Tests - numTreated * aveCd4_Rx)/aveCd4_noRx
@@ -1594,15 +1629,15 @@ for (ii in 1:nstates) {
   
     # Work out average VL tests for each state if available and non-NA
     if (states[ii] %in% availableStates) {
-      avevlTests <- filter(ahodTests, state == states[ii])$avevltests
+      avevlTests <- filter(ahodTests, state == states[ii])$meanVL_noRx
       if (any(is.na(avevlTests))){
         naindex <- is.na(avevlTests)
-        tempTests <- filter(ahodTests, state == "all")$avevltests
+        tempTests <- filter(ahodTests, state == "all")$meanVL_noRx
         avevlTests[naindex] <- tempTests[naindex]
       }     
     } else {
       # Not available so use all data
-      avevlTests <- filter(ahodTests, state == "all")$avevltests
+      avevlTests <- filter(ahodTests, state == "all")$meanVL_noRx
     }
   
     receivedCare <- (numvlTests/avevlTests)
