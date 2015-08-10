@@ -169,13 +169,14 @@ hivdata[hivdata$exposure == "5B",]$exposure <- "unknown"
 msmgroup <- c("msm","bisex-male","bisex-male-idu","msm-idu")
 pwidgroup <- c("idu","hetero-idu")
 heterogroup <- c("hetero","hetero-unspecified")
-othergroup <- c("unknown","high-prev-country","mtct","blood-recipient")
+othergroup <- c("high-prev-country","mtct","blood-recipient")
 
 hivdata$expgroup <- rep(NA,nrow(hivdata))
 hivdata[hivdata$exposure %in% msmgroup,]$expgroup <- "msm"
 hivdata[hivdata$exposure %in% pwidgroup,]$expgroup <- "pwid"
 hivdata[hivdata$exposure %in% heterogroup,]$expgroup <- "hetero"
 hivdata[hivdata$exposure %in% othergroup,]$expgroup <- "otherexp"
+hivdata[hivdata$exposure == "unknown",]$expgroup <- "unknown"
 
 # Add broad population codes from region of birth (rob) and 
 # aboriginal variables - keep unknowns as NAs for imputation during the 
