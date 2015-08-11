@@ -1,0 +1,272 @@
+---
+title: "Australian Chlamydia Cascade"
+author: "Richard T. Gray"
+date: Date - `r format(Sys.Date(), format="%B %d %Y")`
+output:
+  word_document:
+    pandoc_args: --output="docs/ChlamydiaCascade.docx"
+    reference_docx: docs/mystyles.docx
+csl: docs/plos.csl
+bibliography: docs/treatment_cascade.bib
+---
+
+This document shows the care and treatment cascade for *chlamydia trachomatis* infection in Australia. 
+
+```{r initialization,echo = FALSE,messages = FALSE,include=FALSE}
+# Clear workspace
+rm(list=ls()) 
+options(scipen=999)  # To get rid of scientific notation
+
+# Load libraries used
+require(readxl)
+require(dplyr)
+require(tidyr)
+
+require(ggplot2)
+require(RColorBrewer)
+require(Hmisc)
+require(knitr)
+
+# Set working directory 
+setwd(file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades"))
+
+# Details of results and outputs folders
+basePath <- getwd()
+docFolder <- file.path(basePath,"docs")
+figFolder <- file.path(basePath,"output","figures")
+resultsFolder <- file.path(basePath,"output")
+
+# Current time for appending to outputs
+currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
+
+# Script parameters
+resultsYear <- 2014 # Year of cascade we will plot      # How long ago do we plot things
+saveplots <- FALSE # Save plots as separate files
+
+# Function to format data and range into thousands
+source(file.path(basePath, "code", "format.data.R"), echo=TRUE)
+```
+
+```{r loadresults, echo = FALSE, messages = FALSE, include=FALSE}
+# Load hiv cascde dataframe
+notificationsFile <- file.path(basePath, "data", paste("chlamnotifications", 
+                                       toString(resultsYear), ".csv", sep = ""))
+incidenceFile <- file.path(basePath, "data", paste("chlamincidence", 
+                                       toString(resultsYear), ".csv", sep = ""))
+treatFile <- file.path(basePath, "data", paste("chlamtreatment", 
+                                       toString(resultsYear), ".csv", sep = ""))
+
+notifications <-  read.csv(notificationsFile)
+incidence <- read.csv(incidenceFile)
+treatment <- read.csv(treatFile)
+
+```
+
+```{r extractResults, echo = FALSE, messages = FALSE, include=FALSE}
+# Extract the actual results we want - resultsYear for 15-29 year olds
+currentDiags <- notifications %>% 
+  filter(year == resultsYear) %>%
+  select(-male...15.yrs, -male.30.34.yrs, -male...34.yrs, -male.all, 
+         -female...15.yrs, -female.30.34.yrs, -female...34.yrs, -female.all)
+
+# Current incidence
+currentInc <- incidence %>% 
+  filter(year == resultsYear)
+
+# Current treatment data
+currentTreat <- treatment %>%
+  select(-notes_sources, -Reference)
+
+```
+
+```{r calculations, echo = FALSE, messages = FALSE, include=FALSE}
+# Initialize output data frame
+chlamcascade <- data.frame(stage = character(), sex = character(),
+             estimate = numeric(), lower = numeric(), 
+             upper = numeric())
+
+# New infections
+maleInc <- rowMeans(currentInc[, 2:3])
+maleIncLower <- currentInc[, 2]
+maleIncUpper <- currentInc[, 3]
+femaleInc <- rowMeans(currentInc[, 4:5])
+femaleIncLower <- currentInc[, 4]
+femaleIncUpper <- currentInc[, 5]
+
+chlamcascade <- rbind(chlamcascade, data.frame(stage = "infections",
+                  sex = c("male", "female"), estimate = c(maleInc, femaleInc),
+                  lower = c(maleIncLower, femaleIncLower), 
+                  upper = c(maleIncUpper, femaleIncUpper)))
+
+# Diagnoses
+maleDiags <- sum(currentDiags[,2:4])
+femaleDiags <- sum(currentDiags[,5:7])
+chlamcascade <- rbind(chlamcascade, data.frame(stage = "notifications",
+                  sex = c("male", "female"), estimate = c(maleDiags, femaleDiags),
+                  lower = NA, 
+                  upper = NA))
+
+# Weights for calculations
+weightsDF <- filter(currentTreat, stage == "notifications")
+weights <- c(weightsDF$urban, weightsDF$regional, weightsDF$remote)
+
+# Proportion treated
+treatedDF <- filter(currentTreat, stage == "treated")
+propTreated <- colMeans(treatedDF[,3:5], na.rm = TRUE)
+propTreated <- sum(propTreated * weights)
+
+# Hard coded ranges based on propTreated value - +/- 10%
+propTreatedMin <- propTreated * 0.9
+propTreatedMax <- min(1, propTreated * 1.1)
+
+maleTreated <- filter(chlamcascade, stage == "notifications" & sex == "male")$estimate *
+  c(propTreated, propTreatedMin, propTreatedMax)
+femaleTreated <- filter(chlamcascade, stage == "notifications" & sex == "female")$estimate *
+  c(propTreated, propTreatedMin, propTreatedMax)
+
+chlamcascade <- rbind(chlamcascade, data.frame(stage = "treated",
+                  sex = c("male", "female"), 
+                  estimate = c(maleTreated[1], femaleTreated[1]),
+                  lower =  c(maleTreated[2], femaleTreated[2]), 
+                  upper = c(maleTreated[3], femaleTreated[3])))
+
+# Retesting
+retestDF <- filter(currentTreat, stage == "retested")
+diagnosesProp <- filter(currentTreat, stage == "diagnoses")$urban
+diagnosesProp[3] <- 1 # Replace for remote 
+
+propReTest <- colSums(retestDF[, 3:5] * diagnosesProp, na.rm = TRUE)
+propReTest <- sum(propReTest * weights)
+
+# Hard coded ranges based on propTreated value - +/- 10%
+propReTestMin <- propReTest * 0.9
+propReTestMax <- min(1, propReTest * 1.1)
+
+maleRetested <- filter(chlamcascade, stage == "treated" & sex == "male")$estimate *
+  c(propReTest, propReTestMin, propReTestMax)
+femaleRetested <- filter(chlamcascade, stage == "treated" & sex == "female")$estimate *
+  c(propReTest, propReTestMin, propReTestMax)
+
+chlamcascade <- rbind(chlamcascade, data.frame(stage = "retested",
+                  sex = c("male", "female"), 
+                  estimate = c(maleRetested[1], femaleRetested[1]),
+                  lower =  c(maleRetested[2], femaleRetested[2]), 
+                  upper = c(maleRetested[3], femaleRetested[3])))
+
+# Retested positive 
+positiveDF <- filter(currentTreat, stage == "positive")
+propPositive <- colSums(positiveDF[, 3:5] * diagnosesProp, na.rm = TRUE)
+propNegative <- 1- sum(propPositive * weights)
+
+# Hard coded ranges based on propNegative value - +/- 10%
+propNegativeMin <- propNegative * 0.9
+propNegativeMax <- min(propNegative * 1.1,1)
+
+maleNegative <- filter(chlamcascade, stage == "retested" & sex == "male")$estimate *
+  c(propNegative, propNegativeMin, propNegativeMax)
+femaleNegative <- filter(chlamcascade, stage == "retested" & sex == "female")$estimate *
+  c(propNegative, propNegativeMin, propNegativeMax)
+
+chlamcascade <- rbind(chlamcascade, data.frame(stage = "negative",
+                  sex = c("male", "female"), 
+                  estimate = c(maleNegative[1], femaleNegative[1]),
+                  lower =  c(maleNegative[2], femaleNegative[2]), 
+                  upper = c(maleNegative[3], femaleNegative[3])))
+
+```
+
+```{r plotcode, echo=FALSE,messages = FALSE,include=FALSE}
+# Default plot specifications
+graphics.off()
+
+# Baseline theme for plot variables
+plotopts <- theme_bw() + theme(text = element_text(face = "bold",size=12,colour="black"),
+  axis.text.x = element_text(face = "plain",size=10,colour="black"),
+  axis.text.y = element_text(face = "plain",size=10,colour="black"),
+  axis.line = element_line(colour="black"),
+  axis.ticks = element_line(colour="black"),
+  legend.position = "top",
+  legend.background = element_rect(),
+  legend.key = element_blank(),
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(), 
+  panel.background = element_blank(), 
+  panel.border = element_rect(colour = "black"),
+  axis.line = element_line(colour = "black"),
+  plot.title=element_text(size=12, face="bold"),
+  strip.background = element_blank()
+)
+
+# Setup colours
+# Palette with black and grey:
+cbPalette <- c("#000000","#999999", "#E69F00", "#56B4E9", "#009E73", 
+               "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+maincols <- brewer.pal(4,"Set1")
+
+```
+
+```{r barchart, echo = FALSE, messages = FALSE, include=FALSE}
+# Create bar chart plot for Chlamydia cascade
+stages <- c("New infections", "Notifications", "Received treatment", 
+                "Retested within 1-4 months", "Remain uninfected")
+stagesNeat <- c("New \n infections", "Notifications", "Received \n treatment", 
+                "Retested \n within \n 1-4 months", "Remain \n uninfected")
+
+### Plot the bar chart
+plotCascade <- ggplot(data = chlamcascade, aes(x = stage, y = estimate, fill = sex)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), 
+                position = position_dodge(width = 0.9),
+                width = 0.2, color = "black", size = 1.2) +
+  scale_fill_brewer(palette = "Set1", name = "", labels = c("Male", "Female")) + 
+  scale_x_discrete(labels = stagesNeat) +
+  ylab("Number of people") + xlab("") +  
+  plotopts
+
+# Print plot in separate window and save
+if (saveplots) {
+  windows(width=7,height=5)
+  print(plotCascade)
+  ggsave(paste(figFolder,"chlamcascade.png"),width=7,height=5)
+}
+
+```
+
+**Figure 1** -- The Chlamydia care and treatment cascade for or 15-29 year old Australians in `r resultsYear`.
+
+```{r insertplot1, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height = 4}
+print(plotCascade)
+```
+
+```{r createTable, echo = FALSE, messages = FALSE, include = FALSE}
+# Create and insert table 
+finalTable <- select(chlamcascade, stage, sex)
+finalTable$estimate <- NA
+
+skip <- c(3,4)
+for (ii in 1:nrow(finalTable)){
+  if (ii %in% skip) {
+    finalTable$estimate[ii] <- format.data(chlamcascade$estimate[ii], places = -1)
+  } else {
+    finalTable$estimate[ii] <- format.data(chlamcascade$estimate[ii], 
+                                           chlamcascade$lower[ii], 
+                                           chlamcascade$upper[ii], places = -1)
+  }
+}
+
+# Rename first column
+finalTable$stage <- rep(stages, each = 2)
+
+# Rename columns
+finalTable <- rename(finalTable, "Cascade stage" = stage, "Sex" = sex, 
+                     "Estimate (range)" = estimate)
+
+```
+
+**Table 1** -- Estimates and range for each stage of the Chlamydia care and treatment cascade for 15-29 year old Australians in `r resultsYear`.
+
+```{r inserttable1, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+kable(finalTable, align = c("l", "c", "c"))
+```
+
