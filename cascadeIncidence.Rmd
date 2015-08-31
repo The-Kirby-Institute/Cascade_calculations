@@ -1,11 +1,11 @@
 ---
-title: "Count HIV Cascade calculations"
+title: "HIV Cascade Incidence Calculations"
 author: "Richard T. Gray"
-date: "Tuesday, April 21, 2015"
+date: Latest version - `r format(Sys.Date(), format="%B %d %Y")`
 output: word_document
 ---
 
-This Rmarkdown document describes various approaches of estimating the proportion of new HIV infections in the overall population due to due to each stage of the HIV care and treatment cascade. For this analysis the stages we use are:are people living with undiagnosed HIV (PLUHIV); people living with diagnosed HIV (PLDHIV); people receiving ART with detectable viral load; and people recieving ART with undetectable viral load. The analysis either uses annual estimates for new infections or recorded HIV notifications. 
+This Rmarkdown document describes various approaches of estimating the proportion of new HIV infections in the overall population due to due to each stage of the HIV care and treatment cascade. For this analysis the stages I use are: are people living with undiagnosed HIV (PLUHIV); people living with diagnosed HIV (PLDHIV); people receiving ART with detectable viral load; and people recieving ART with undetectable viral load. The analysis either uses annual estimates for new infections or recorded HIV notifications. 
 
 
 ```{r initialization, echo = FALSE, messages = FALSE, include=FALSE}
@@ -13,10 +13,8 @@ This Rmarkdown document describes various approaches of estimating the proportio
 rm(list=ls()) 
 options(scipen=999)  # To get rid of scientific notation
 
-# Load libraries used and that nice for data manipulation
+# Load libraries used
 require(ggplot2)
-# require(reshape2)
-# require(RColorBrewer)
 require(readxl)
 require(dplyr)
 require(tidyr)
@@ -25,22 +23,22 @@ require(nnls) # For optimization
 require(knitr)
 require(gridExtra)
 
-# Set workin directory
-setwd("C:/Users/Rgray/Documents/Research/!Evaluation_Modelling/projects/Care_Cascade_Calculations/code")
+# Set working directory
+setwd("~/Research/!Evaluation_Modelling/project_care_cascades")
 
 ```
 
 ```{r inputdetails, echo = FALSE, messages = FALSE, include=FALSE}
 # Details of where to store outputs
-dataFolder <- "../data/"
-outputFolder <- "../output/"
+dataFolder <- "./data/"
+outputFolder <- "./output/"
 inputFile <- "countAbstractData.xlsx"
 currTime <- format(Sys.time(), "%Y-%m-%d(%H-%M)") # to append to files
 
 # Analysis parameters
 numSamples <- 1000  # Number of sampled parameter sets for each year
 numInits <- 1000    # Number of init starting points for optimization 
-useDiagnoses <- FALSE 
+useDiagnoses <- FALSE # Use reported notifications or estimated incidence 
 
 # Options for running and saving things
 fullRun <- TRUE # Everytime we do a run from scratch save everything 
@@ -52,7 +50,6 @@ if(fullRun){
 
 ```
 
-
 ```{r loaddata, echo=FALSE, messages = FALSE, include=FALSE}
 # Load data from the countdata.xlsx file 
 countData <- read_excel(paste(dataFolder,inputFile,sep =""), na = "NA")
@@ -60,21 +57,27 @@ countData <- read_excel(paste(dataFolder,inputFile,sep =""), na = "NA")
 # Using the input data calculate numbers in each column
 countClean <- countData[,c("year","diagnoses","infectsmin","infectsmax")]
 
-countClean$undiagmin <- countData$diagnosedmin/(1-countData$undiagmin)-countData$diagnosedmin
-countClean$undiagmax <- countData$diagnosedmax/(1-countData$undiagmax)-countData$diagnosedmax
-countClean$diagnosedmin <- countData$diagnosedmin-countData$treatedmin
-countClean$diagnosedmax <- countData$diagnosedmax-countData$treatedmax
+countClean$undiagmin <- countData$diagnosedmin / (1 - countData$undiagmin) - 
+  countData$diagnosedmin
+countClean$undiagmax <- countData$diagnosedmax / (1 - countData$undiagmax) - 
+  countData$diagnosedmax
+countClean$diagnosedmin <- countData$diagnosedmin - countData$treatedmin
+countClean$diagnosedmax <- countData$diagnosedmax - countData$treatedmax
 
 # Number detectables is a little tricker to get the max and min right
-countClean$detectablemin <- countData$treatedmin-countData$suppressedmax*countData$treatedmax
-countClean$detectablemax <- countData$treatedmax-countData$suppressedmin*countData$treatedmin
-countClean$undetectablemin <- countData$suppressedmin*countData$treatedmin
-countClean$undetectablemax <- countData$suppressedmax*countData$treatedmax
+countClean$detectablemin <- countData$treatedmin - countData$suppressedmax * 
+  countData$treatedmax
+countClean$detectablemax <- countData$treatedmax - countData$suppressedmin * 
+  countData$treatedmin
+countClean$undetectablemin <- countData$suppressedmin * countData$treatedmin
+countClean$undetectablemax <- countData$suppressedmax * countData$treatedmax
 
 # Save count files as csv files for later 
 if (fullRun){
-  write.csv(countData, file = file.path(outputFolder, paste(currTime, "_countRaw.csv", sep ="")))
-  write.csv(countClean, file = file.path(outputFolder, paste(currTime, "_countFinal.csv", sep ="")))
+  write.csv(countData, file = file.path(outputFolder, paste(currTime, 
+    "_countRaw.csv", sep ="")))
+  write.csv(countClean, file = file.path(outputFolder, paste(currTime, 
+    "_countFinal.csv", sep ="")))
 }
 
 # Display some output
@@ -88,31 +91,60 @@ print(head(countClean,n=2))
 nyears <- nrow(countClean)
 numRows <- nyears*numSamples # For preallocation
 
-countSample <- data.frame(year = numeric(numRows),diagnoses = numeric(numRows), newinfects = numeric(numRows), 
-                          undiagnosed = numeric(numRows), diagnosed = numeric(numRows),  detectable = numeric(numRows),
+
+# Preallocate data frames for storing samples
+countSample <- data.frame(year = numeric(numRows), 
+                          diagnoses = numeric(numRows), 
+                          newinfects = numeric(numRows), 
+                          undiagnosed = numeric(numRows), 
+                          diagnosed = numeric(numRows),  
+                          detectable = numeric(numRows),
                           undetectable = numeric(numRows))
 
-countAverage <- data.frame(year = numeric(nyears),diagnoses = numeric(nyears), newinfects = numeric(nyears),
-                           undiagnosed = numeric(nyears), diagnosed = numeric(nyears), detectable = numeric(nyears),
+countAverage <- data.frame(year = numeric(nyears),
+                           diagnoses = numeric(nyears), 
+                           newinfects = numeric(nyears),
+                           undiagnosed = numeric(nyears), 
+                           diagnosed = numeric(nyears), 
+                           detectable = numeric(nyears),
                            undetectable = numeric(nyears))
 
-for (ii in 1:nyears){
-  startIndex <- (ii-1)*numSamples+1
-  endIndex <- ii*numSamples
+# Loop through years taking samples for each year
+for (ii in 1:nyears) {
+  
+  # Setup indices for this year
+  startIndex <- (ii - 1) * numSamples + 1
+  endIndex <- ii * numSamples
+  
   # Fixed data
-  countSample[startIndex:endIndex,]$year <- countClean$year[ii]*rep(1,numSamples)
-  countSample[startIndex:endIndex,]$diagnoses <- countClean$diagnoses[ii]*rep(1,numSamples)
+  countSample[startIndex:endIndex,]$year <- countClean$year[ii] * rep(1, numSamples)
+  countSample[startIndex:endIndex,]$diagnoses <- countClean$diagnoses[ii] * rep(1, numSamples)
+  
   # Random sampling
-  countSample[startIndex:endIndex,]$newinfects <- runif(numSamples,countClean$infectsmin[ii], countClean$infectsmax[ii])
-  countSample[startIndex:endIndex,]$undiagnosed <- runif(numSamples,countClean$undiagmin[ii],countClean$undiagmax[ii])
-  countSample[startIndex:endIndex,]$diagnosed <- runif(numSamples,countClean$diagnosedmin[ii],countClean$diagnosedmax[ii])
-  countSample[startIndex:endIndex,]$detectable <- runif(numSamples,countClean$detectablemin[ii],countClean$detectablemax[ii])
-  countSample[startIndex:endIndex,]$undetectable <- runif(numSamples,countClean$undetectablemin[ii],countClean$undetectablemax[ii]) 
+  countSample[startIndex:endIndex,]$newinfects <- runif(numSamples,
+                                                        countClean$infectsmin[ii], 
+                                                        countClean$infectsmax[ii])
+  
+  countSample[startIndex:endIndex,]$undiagnosed <- runif(numSamples,
+                                                         countClean$undiagmin[ii],
+                                                         countClean$undiagmax[ii])
+  
+  countSample[startIndex:endIndex,]$diagnosed <- runif(numSamples,
+                                                       countClean$diagnosedmin[ii],
+                                                       countClean$diagnosedmax[ii])
+  
+  countSample[startIndex:endIndex,]$detectable <- runif(numSamples,
+                                                        countClean$detectablemin[ii],
+                                                        countClean$detectablemax[ii])
+  
+  countSample[startIndex:endIndex,]$undetectable <- runif(numSamples,
+                                                          countClean$undetectablemin[ii],
+                                                          countClean$undetectablemax[ii]) 
   
   countAverage[ii,] <- colMeans(countSample[startIndex:endIndex,])
 }
 
-# Save count sample and avearge as csv files for later 
+# Save count sample and average as csv files for later 
 if (fullRun){
   write.csv(countSample, file = file.path(outputFolder, paste(currTime, "_countSample.csv", sep ="")))
   write.csv(countAverage, file = file.path(outputFolder, paste(currTime, "_countAverage.csv", sep ="")))
@@ -131,8 +163,9 @@ print(countAverage)
 plotDataAve <- gather(countAverage,"indicator","estimate",4:7)
 
 # Create a plot looking at the relationships
-countplotAve <- ggplot(data=plotDataAve,aes(x=estimate,y=newinfects)) + geom_point() + 
-  facet_wrap(~indicator,scales = "free_x") + theme_bw()
+countplotAve <- ggplot(data = plotDataAve,aes(x = estimate, y = diagnoses)) + 
+  geom_point() + 
+  facet_wrap(~indicator, scales = "free_x") + theme_bw()
 
 # Plot and save
 windows(width=7,height=7)
@@ -143,214 +176,339 @@ if (fullRun){
 
 ```
 
-```{r analysis, echo=FALSE, messages = FALSE, include=FALSE}
-# Now perform analysis trying to estimate beta values using a simple linear model
+# Analysis
 
-# Unadjusted analysis
-#====================
+This section describes the various calcaultions and approaches.
 
-# Try a standard linear regression first on everything without adjusting for known reductions when undetectable
-# lm <- lm(diagnoses ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
-lm <- lm(newinfects ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
+## Simple regression analysis
+
+I tried a standard linear regresiion first without adjusting for known/expected
+biological effects. 
+
+```{r simpleanalysis, message = FALSE, tidy = TRUE}
+
+if(useDiagnoses) {
+  lm <- lm(diagnoses ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
+} else { 
+  lm <- lm(newinfects ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
+}
+
 print(lm)
 coefUnadjustedOverall <- unname(coef(lm))
 
-# Adjusted analysis
-# ================
+```
+
+This analysis produced unrealistic results with the beta value for those with 
+suppressed virus too high compared to the undiagnosed population. 
+
+## Constrained regression 
+
+I then tried some simple constraints on the beta parameters for those on ART
+to reflect the lower transmission probability (especially for suppressed)
+virus. This was done using an adjusted regression analysis.
+
+The first analysis was just for those with undetectable viral load leaving
+the beta for those on ART but with detectable viral load free to be fitted 
+by the regression. 
+
+```{r suppressedconstraint, message = FALSE, tidy = TRUE}
+# Perform an adjusted regression analysis were we contrain the beta values 
+# for those on ART to better reflect known biological data
 
 # Biogically we know undiagnosed people are more infectious due to acute infection or at least as infectious as diagnosed people. We also know undetectable PLHIV are 71 to 99% less infectious than diagnosed people. 
 
-# Test forcing a constraint
+# Use a constraint on the beta for undetectable viral load so it is forced
+# to be much less than undiagnosed proportion. 
 
 countAdjust <- countSample # [5001:nrow(countSample)]
 numRows <- nrow(countAdjust)
-countAdjust$beta4 <- runif(numRows,0.01,0.29)
-# countAdjust$beta4 <- 1-rtriangle(numSamples,0.71,0.99,0.96)
-countAdjust$adjusted <- (countAdjust$diagnosed + countAdjust$beta4*countAdjust$undetectable)
 
-# if(useDiagnoses){
-#   lmAdjust <- lm(diagnoses ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
-# } else {  
-  lmAdjust <- lm(newinfects ~ 0 + undiagnosed + adjusted + detectable, data = countAdjust)
-# }
-print(lmAdjust)
-coefAdjustedOverall <- unname(coef(lmAdjust))
+# Set up a distribution for the reduction multiplicative factor
+
+# Uniform distribution
+countAdjust$beta4 <- runif(numRows, 0.01,0.29)
+# countAdjust$beta4 <- 1-rtriangle(numSamples,0.71,0.99,0.96)
+
+# Adjust the undetecable numbers for regression analysis with this new parameter
+countAdjust$undetect <- (countAdjust$diagnosed + countAdjust$beta4 * countAdjust$undetectable)
+
+# Use reported notifications or estimated new infections and perform the 
+# regression analysis
+if(useDiagnoses){
+  lmUndetect <- lm(diagnoses ~ 0 + undiagnosed + undetect + detectable, data = countAdjust)
+} else {  
+  lmUndetect <- lm(newinfects ~ 0 + undiagnosed + undetect + detectable, data = countAdjust)
+}
+print(lmUndetect)
+coefAdjustedUndetect <- unname(coef(lmUndetect)) # Resulting coefficients
 
 # Sample from coefficents to create uncertainty in the estimates.
-confintTemp <- confint(lmAdjust)
-coefLower <- c(confint(lmAdjust)[1,1],confint(lmAdjust)[2,1],confint(lmAdjust)[3,1])
-coefUpper <- c(confint(lmAdjust)[1,2],confint(lmAdjust)[2,2],confint(lmAdjust)[3,2])
+coefLowerTemp <- c(confint(lmUndetect)[1,1], confint(lmUndetect)[2,1], confint(lmUndetect)[3,1])
+coefUpperTemp <- c(confint(lmUndetect)[1,2], confint(lmUndetect)[2,2], confint(lmUndetect)[3,2])
 
-sampleUndiag <- runif(numRows,coefLower[1],coefUpper[1])
-sampleDiag <- runif(numRows,coefLower[2],coefUpper[2])
-sampleDetect <- runif(numRows,coefLower[3],coefUpper[3])
-sampleUndetect <- countAdjust$beta4*sampleDiag
+# Store resulting samples for the cascade beta values
+undetectAnalysis <- data.frame(undiag = runif(numRows,coefLowerTemp[1], coefUpperTemp[1]),
+           diag = runif(numRows,coefLowerTemp[2], coefUpperTemp[2]),
+           detect = runif(numRows,coefLowerTemp[3], coefUpperTemp[3]),
+           undetect = countAdjust$beta4 * sampleDiag)
 
-# Extra constraint
-countAdjust$beta2 <- runif(numRows,0.5,1)
-countAdjust$adjusted2 <- (countAdjust$diagnosed + countAdjust$beta2*countAdjust$detectable + countAdjust$beta4*countAdjust$undetectable)
-lmAdjust2 <- lm(diagnoses ~ 0 + undiagnosed + adjusted2, data = countAdjust)
-print(lmAdjust2)
-coefAdjustedOverall2 <- unname(coef(lmAdjust2))
-coefLower2 <- c(confint(lmAdjust2)[1,1],confint(lmAdjust2)[2,1])
-coefUpper2 <- c(confint(lmAdjust2)[1,2],confint(lmAdjust2)[2,2])
-
-sampleUndiag2 <- runif(numRows,coefLower2[1],coefUpper2[1])
-sampleDiag2 <- runif(numRows,coefLower2[2],coefUpper2[2])
-sampleDetect2 <- countAdjust$beta2*sampleDiag2
-sampleUndetect2 <- countAdjust$beta4*sampleDiag2
+# Display some summary stats
+print(colMeans(undetectAnalysis))
 
 ```
 
-```{r}
-# Constrained constrain analysis
+One issue we encountered with this analysis is the beta for undiagnosed is 
+lower than the beta for diagnosed. I would potentially expect the diagnosed 
+beta to be lower given they know they are infected and are likley to reduce
+risk to their partners.
+
+To potentially account for this I tried an additional constraint on the beta 
+for those on ART with detectable viral load. 
+
+```{r artconstraint, message = FALSE, tidy = TRUE}
+# Add an extra constraint on the on ART but detectable coefficient 
+# We are assuming detectable viral load is has a multiplicative factor between 
+# 0.5 and 1 of diagnosed 
+
+# Set up a distribution for the reduction multiplicative factor
+countAdjust$beta2 <- runif(numRows, 0.5,1)
+
+# Adjust the detecable numbers for regression analysis with this new parameter
+countAdjust$art <- (countAdjust$diagnosed + countAdjust$beta2 * 
+                      countAdjust$detectable + countAdjust$beta4 * 
+                      countAdjust$undetectable)
+
+# Use reported notifications or estimated new infections and perform the 
+# regression analysis
+if(useDiagnoses){
+  lmArt <- lm(diagnoses ~ 0 + undiagnosed + art, data = countAdjust)
+} else {
+  lmArt <- lm(newinfects ~ 0 + undiagnosed + art, data = countAdjust)
+}
+print(lmArt)
+coefAdjustedArt<- unname(coef(lmArt)) # Resulting coefficients
+
+# Sample from coefficents to create uncertainty in the estimates.
+coefLowerTemp <- c(confint(lmArt)[1, 1], confint(lmArt)[2, 1])
+coefUpperTemp <- c(confint(lmArt)[1, 2], confint(lmArt)[2, 2])
+
+# Store resulting samples for the cascade beta values
+artAnalysis <- data.frame (undiag = runif(numRows, coefLowerTemp[1], coefUpperTemp[1]),
+                           diag = runif(numRows, coefLowerTemp[2], coefUpperTemp[2]),
+                           detect = countAdjust$beta2*sampleDiag2, 
+                           undetect = countAdjust$beta4*sampleDiag2)
+
+# Display some summary stats
+print(colMeans(artAnalysis))
+
+```
+
+The final approach constraining the ART parameters seems to produce the 
+most plausible estimates. However, the methods is a little sketchy I think
+and I would prefer to use a more robust approach.
+
+## Experiemental approaches
+
+Given my reservations with the constrained regression approach. I tried some
+other experimental approaches for doing the regression. The first approach 
+used an optimization method to keep the beta values between specified ranges. 
+
+```{r optimization, message = FALSE, tidy = TRUE}
+# Using optimization tools to perform the analysis.
+
+# Set up data frame we use
 countConstrain <- countAdjust
-countConstrain$z <- -countConstrain$adjusted
+
+countConstrain$z <- -countConstrain$undetect
 dat <- countConstrain #tail(dat, n = numSamples) 
 
+# Define the function we optimize - minimizing least squares
 min.RSS <- function(data,par){
   with(data,sum((par[1]*undiagnosed + par[2]*newinfects + par[3]*detectable - z)^2))
 }
 
+# Set up analysis with multiple initial conditions
 results <- list()
-numInits <- 1000 #numSamples
-values <- rep(numInits,0)
+numInits <- 100 #numSamples
+values <- rep(numInits, 0)
 
-initpars <- matrix(c(runif(numInits,1,50),runif(numInits,-50,0),runif(numInits,0,1)),nrow=numInits,ncol = 3)
+initpars <- matrix(c(runif(numInits, 1, 50),
+                     runif(numInits, -50, 0),
+                     runif(numInits, 0, 1)),
+                   nrow = numInits, ncol = 3)
+
+# Perform optimization for each initial value
 for (ii in 1:numInits) {
-  results[[ii]] <- optim(par = initpars[ii,], min.RSS, data = dat,lower=c(1,-50,0),
-                         upper=c(50,0,1),method="L-BFGS-B")
+  results[[ii]] <- optim(par = initpars[ii,], 
+                         min.RSS, data = dat,lower=c(1,-50,0),
+                         upper=c(50,0,1), method="L-BFGS-B")
   values[ii] <- results[[ii]]$value
 }
 
-pars <- results[[which.min(values)]]$par
-p2 <- -1/pars[2]
-p3 <- p2*pars[3]
-p1 <- p2*pars[1]
+# Extract the results we want
+pars <- results[[which.min(values)]]$par # Use one with minimum error
 
-sampleUndiag3 <- runif(numRows,p1,p1)
-sampleDiag3 <- runif(numRows,p2,p2)
-sampleDetect3 <- runif(numRows,p3,p3)
-sampleUndetect3 <- countConstrain$beta4*sampleDiag3
+# calculate the resulting parameters
+param2 <- -1/pars[2]
+param3 <- param2*pars[3]
+param1 <- param2*pars[1]
+
+# Store resulting samples for the cascade beta values
+optimAnalysis <- data.frame(undiag = runif(numRows, param1, param1),
+                            diag = runif(numRows, param2, param2), 
+                            detect = runif(numRows, param3, param3),
+                            undetect = countConstrain$beta4*diagOptim)
+
+# Display some summary stats
+print(colMeans(optimAnalysis))
+
 ```
 
+The first experimental results produces some weird results with the beta value
+for those with detectable viral loads << than the beta for suppressed virus. 
 
-```{r constrain2}
-# Constrained constrain analysis
+The next approach tried to encode an optimization approach by weighting for 
+parameters such that beta1 > beta2 > beta3 > beta4. This has not been finalized.
+
+```{r optimizationweighted, message = FALSE, tidy = TRUE}
+# Using optimization tools to perform the analysis where unrealistic 
+# beta values are eliminated. 
+
+# Set up data frame we use
 dat <- countAverage #tail(dat, n = numSamples) 
 
+## Define the function we optimize - minimizing least squares with a zero 
+# weighting for problematic parmaters
 min.RSS <- function(data,par){
   if((par[2] < par[1] || par[3] > par[2]) || par[4] > par[3]){
     output <- 1e10
   } else {
-    output <- with(data,sum((par[1]*undiagnosed + par[2]*diagnosed + par[3]*detectable + par[4]*undetectable - newinfects)^2))
+    output <- with(data, sum((par[1]*undiagnosed + par[2]*diagnosed + 
+                              par[3]*detectable + par[4]*undetectable - 
+                              newinfects)^2))
   }
- output
+  output # Return
 }
 
+# Set up analysis with multiple initial conditions
 results <- list()
-
 numInits <- 100 #numSamples
-values <- rep(numInits,0)
+values <- rep(numInits, 0)
 
-initpars <- matrix(c(runif(numInits,0.8,1),runif(numInits,0.5,0.8),runif(numInits,0.4,0.5),runif(numInits,0,0.4)),nrow=numInits,ncol = 4)
+initpars <- matrix(c(runif(numInits, 0.8, 1),
+                     runif(numInits, 0.5, 0.8), 
+                     runif(numInits,0.4,0.5),
+                     runif(numInits,0,0.4)),
+                   nrow = numInits, ncol = 4)
+
+# Perform optimization for each initial value
 for (ii in 1:numInits) {
-  results[[ii]] <- optim(par = initpars[ii,], min.RSS, data = dat,lower=c(0,0,0,0),
-                         upper=c(1,1,1,1),method="L-BFGS-B")
+  results[[ii]] <- optim(par = initpars[ii,], min.RSS, data = dat,
+                         lower=c(0,0,0,0), upper=c(1,1,1,1),
+                         method="L-BFGS-B")
   values[ii] <- results[[ii]]$value
 }
 
 pars <- results[[which.min(values)]]$par
 
-
-
 ```
 
-```{r}
-# Extract results
-adjustedCoefs <- matrix(c(sampleUndiag,sampleDiag,sampleDetect,sampleUndetect),nrow = numRows, ncol = 4)
-aveCoeffs <- colMeans(adjustedCoefs)
-print(aveCoeffs)
- 
-adjustedCoefs2 <- matrix(c(sampleUndiag2,sampleDiag2,sampleDetect2,sampleUndetect2),nrow = numRows, ncol = 4)
-aveCoeffs2 <- colMeans(adjustedCoefs2)
-print(aveCoeffs2)
+# Results
 
-adjustedCoefs3 <- matrix(c(sampleUndiag3,sampleDiag3,sampleDetect3,sampleUndetect3),nrow = numRows, ncol = 4)
-aveCoeffs3 <- colMeans(adjustedCoefs3)
-print(aveCoeffs3)
+The final results are preseneted in this section
+
+```{r extractresults}
+# This script extracts the results we want to assess. 
+
+# Specify the results we want
+results <- "art"
+if (results == "undetect") {
+  resultsCoefs <- undetectAnalysis
+} else if (results == "art") {
+  resultsCoefs <- artAnalysis
+} else if (results == "optim") {
+  resultsCoefs <- optimAnalysis
+} else {
+  print("Results unspecified")  
+}
+
+# Extract the results
+aveCoeffs <- colMeans(resultsCoefs)
+print(aveCoeffs)
 
 # Now estimate the uncertainty and proportion of infections caused by each stage
-numUndiag <- sampleUndiag*countSample$undiagnosed
-numDiag <- sampleDiag*countSample$diagnosed
-numDetect <- sampleDetect*countSample$detectable
-numUndetect <- sampleUndetect*countSample$undetectable     
+numUndiag <- resultsCoefs$undiag*countSample$undiagnosed
+numDiag <- resultsCoefs$diag*countSample$diagnosed
+numDetect <- resultsCoefs$detect*countSample$detectable
+numUndetect <- resultsCoefs$undetect*countSample$undetectable     
 numSum <- numUndiag + numDiag + numDetect + numUndetect
                                                                                                                                                                                                                                                                                                                                  
-numUndiag2 <- sampleUndiag2*countSample$undiagnosed
-numDiag2 <- sampleDiag2*countSample$diagnosed
-numDetect2 <- sampleDetect2*countSample$detectable
-numUndetect2 <- sampleUndetect2*countSample$undetectable
-numSum2 <- numUndiag2 + numDiag2 + numDetect2 + numUndetect2
-
-numUndiag3 <- sampleUndiag3*countSample$undiagnosed
-numDiag3 <- sampleDiag3*countSample$diagnosed
-numDetect3 <- sampleDetect3*countSample$detectable
-numUndetect3 <- sampleUndetect3*countSample$undetectable
-numSum3 <- numUndiag3 + numDiag3 + numDetect3 + numUndetect3
-
 # Put things in a data frame so we can extract results
-stageInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag, diagnosed = numDiag, detectable = numDetect, undetectable = numUndetect)
+stageInfects <- data.frame(year = countAdjust$year, 
+                           undiagnosed = numUndiag, 
+                           diagnosed = numDiag, 
+                           detectable = numDetect, 
+                           undetectable = numUndetect)
 
-propInfects <- data.frame(year = countAdjust$year, undiagnosed = numUndiag/numSum, diagnosed = numDiag/numSum, detectable = numDetect/numSum, undetectable = numUndetect/numSum)
-
-stageInfects2 <- data.frame(year = countAdjust$year, undiagnosed = numUndiag2, diagnosed = numDiag2, detectable = numDetect2, undetectable = numUndetect2)
-
-propInfects2 <- data.frame(year = countAdjust$year, undiagnosed = numUndiag2/numSum2, diagnosed = numDiag2/numSum2, detectable = numDetect2/numSum2, undetectable = numUndetect2/numSum2)
-
-stageInfects3 <- data.frame(year = countAdjust$year, undiagnosed = numUndiag3, diagnosed = numDiag3, detectable = numDetect3, undetectable = numUndetect3)
-
-propInfects3 <- data.frame(year = countAdjust$year, undiagnosed = numUndiag3/numSum3, diagnosed = numDiag3/numSum3, detectable = numDetect3/numSum3, undetectable = numUndetect3/numSum3)
+propInfects <- data.frame(year = countAdjust$year, 
+                          undiagnosed = numUndiag/numSum, 
+                          diagnosed = numDiag/numSum, 
+                          detectable = numDetect/numSum, 
+                          undetectable = numUndetect/numSum)
 
 ```
 
 ```{r prettyplots, echo=FALSE, messages = FALSE, include=FALSE}
+# Create a pretty plot to show proportion of infections due to each stage 
+# of the cascade for the results selected in "extractresults" chunk
 graphics.off()
 
-pldhivFrame <- countSample[c(1,4:7)]  %>% dplyr::group_by(year) %>% summarise_each(funs(mean))
-infectsFrame <- stageInfects2 %>% dplyr::group_by(year) %>% summarise_each(funs(mean)) 
+# Organize the results
+pldhivFrame <- countSample[c(1,4:7)]  %>% 
+  group_by(year) %>% 
+  summarise_each(funs(mean))
+
+infectsFrame <- stageInfects %>% 
+  group_by(year) %>% 
+  summarise_each(funs(mean)) 
 
 # Melt data into right format 
 plhivResults <- gather(pldhivFrame,"stage","number",2:5) %>%
-                  dplyr::group_by(year) %>%
+                  group_by(year) %>%
                     mutate(cumsum=cumsum(number))
+
 infectsResults <- gather(infectsFrame,"stage","number",2:5) %>%
-                    dplyr::group_by(year) %>%
+                    group_by(year) %>%
                       mutate(cumsum=cumsum(number))
 
-# Now create plots 
+## Now create plots 
 
-plhivPlotBase <- ggplot(data = plhivResults, aes(x=year,y=number, fill = stage)) +
-  theme_bw() + xlab("Year") + labs(fill='Cascade stage') 
-plhivPlot1 <- plhivPlotBase + geom_bar(stat="identity") + ylab("Number PLDHIV") 
-plhivPlot2 <- plhivPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion PLDHIV") 
+# PLDHIV overall
+plhivPlotBase <- ggplot(data = plhivResults, aes(x = year, y = number, fill = stage)) +
+  theme_bw() + xlab("Year") + labs(fill = 'Cascade stage') 
 
-infectsPlotBase <- ggplot(data = infectsResults, aes(x=year,y=number, fill = stage))+
+plhivPlotNum <- plhivPlotBase + geom_bar(stat="identity") + ylab("Number PLDHIV") 
+plhivPlotProp <- plhivPlotBase + geom_bar(stat="identity", position= "fill") + 
+  ylab("Proportion PLDHIV")
+
+# New infections/diagnoses
+infectsPlotBase <- ggplot(data = infectsResults, aes(x = year, y = number, fill = stage))+
   theme_bw() + xlab("Year") +  labs(fill='Cascade stage')
+
 if(useDiagnoses){
-  infectsPlot1 <- infectsPlotBase + geom_bar(stat="identity") + ylab("Number Diagnoses")
-  infectsPlot2 <- infectsPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion Diagnoses")
+  infectsPlotNum <- infectsPlotBase + geom_bar(stat="identity") + ylab("Number Diagnoses")
+  infectsPlotProp <- infectsPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion Diagnoses")
 } else {
-  infectsPlot1 <- infectsPlotBase + geom_bar(stat="identity") + ylab("Number Diagnoses")
-  infectsPlot2 <- infectsPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion Diagnoses") 
+  infectsPlotNum <- infectsPlotBase + geom_bar(stat="identity") + ylab("Number Diagnoses")
+  infectsPlotProp <- infectsPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion Diagnoses") 
 }
 
 # Print plots
 windows(width=12,height=5)
-print(grid.arrange(plhivPlot1,infectsPlot1,plhivPlot2,infectsPlot2,ncol = 2))
+print(grid.arrange(plhivPlotNum, infectsPlotNum, plhivPlotProp, infectsPlotProp, ncol = 2))
 
 ```
 
-```{r tidyup,echo = FALSE}
+```{r tidyup, echo = FALSE}
 options(scipen=0)  # Set back to default
 ```
