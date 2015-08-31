@@ -415,7 +415,7 @@ pars <- results[[which.min(values)]]$par
 
 # Results
 
-The final results are preseneted in this section
+The final results are preseneted in this section.
 
 ```{r extractresults}
 # This script extracts the results we want to assess. 
@@ -503,8 +503,9 @@ if(useDiagnoses){
   infectsPlotProp <- infectsPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion Diagnoses") 
 }
 
-# Print plots
-windows(width=12,height=5)
+```
+
+```{r printplot, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3}
 print(grid.arrange(plhivPlotNum, infectsPlotNum, plhivPlotProp, infectsPlotProp, ncol = 2))
 
 ```
