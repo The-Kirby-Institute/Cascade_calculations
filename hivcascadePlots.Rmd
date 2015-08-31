@@ -7,7 +7,7 @@ output:
     pandoc_args: --output="docs/HIVcascades.docx"
     reference_docx: docs/mystyles.docx
 csl: docs/plos.csl
-bibliography: docs/treatment_cascade.bib
+bibliography: docs/HIVcascades.bib
 ---
 
 This document shows various plots related to the HIV care and treatment cascade for Australia. 
@@ -97,7 +97,7 @@ maincols <- brewer.pal(4,"Set1")
 
 ```
 
-## National estimates
+# National estimates
 
 ```{r allpops, echo = FALSE, messages = FALSE, include=FALSE}
 # Create bar chart of current year's cascade
@@ -166,6 +166,43 @@ if (saveplots) {
 
 ```
 
+```{r nswcascade, echo = FALSE, messages = FALSE, include=FALSE}
+# Create bar chart of current year's cascade for NSW for steering committee meeting
+resultsAllnsw <- filter(hivcascade, population == "nsw" & year == 2014)
+
+# Plot specs
+if (excludeCare) {
+  stages <- c("infected", "pldhiv", "numART", "suppressed")
+  stageNames <- c("Living with HIV", "Diagnosed", "Receiving ART", "Suppressed virus")
+  stageNamesNeat <- c("Living \n with HIV", "Diagnosed", "Receiving \n ART", 
+                      "Suppressed \n virus")
+  
+} else {
+  stages <- c("infected", "pldhiv", "linked", "retained", "numART", "suppressed")
+  stageNames <- c("Living with HIV", "Diagnosed", "Linked to care", 
+                  "Retained in care", "Receiving ART", "Suppressed virus")
+  stageNamesNeat <- c("Living \n with HIV", "Diagnosed", "Linked \n to care", 
+                  "Retained \n in care", "Receiving \n ART", "Suppressed \n virus")
+}
+
+### Plot the bar chart
+plotbarNSW <- ggplot(data = resultsAllnsw, aes(x = stage, y = value)) + 
+  geom_bar(stat = "identity", color = maincols[2], fill = maincols[2], width = 0.6) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, color = "black", size = 1.2) +
+  scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
+  ylab("Number of people") + xlab("") +  
+  plotopts
+
+# Save if required
+if (saveplots) {
+  png(file.path(figFolder, paste("HIVcascade-NSW-", toString(resultsYear), ".png",sep ="")), 
+        width = 5, height = 5, units = "in", res = 300)
+  print(plotbarNSW)
+  dev.off()
+}
+
+```
+
 **Figure 1** -- The HIV care and treatment cascade for Australia in `r resultsYear`.
 ```{r insertplot1, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3}
 print(plotbarAll)
@@ -186,9 +223,9 @@ finalTable$estimate <- NA
 
 # Convert lower and upper into a range string
 if (excludeCare) {
-  skip <- c(3)
+  skip <- NULL #c(3)
 } else {
-  skip <- c(4, 5)
+  skip <- c(4,5)
 }
 
 for (ii in 1:nrow(tableAll)){
@@ -225,7 +262,7 @@ finalTable <- rename(finalTable, "Cascade stage" = stage,
 kable(finalTable, align = c("l", "c", "c"))
 ```
 
-## State estimates
+# State estimates
 
 ```{r allstates, echo = FALSE, messages = FALSE, include=FALSE}
 # Create bar charts of current year's cascade for each state
@@ -234,20 +271,36 @@ states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act")
 # resultsState <- filter(hivcascade, population %in% states & year >= (resultsYear - minYear))
 resultsStatesYear <- filter(hivcascade, population %in% states & year == resultsYear)
 
+resultsStatesYear$stage <- factor(resultsStatesYear$stage)
+if (excludeCare) {
+  levels(resultsStatesYear$stage) <- c("Living with HIV", "Receiving ART", 
+                                "Diagnosed", "Suppressed virus")
+  resultsStatesYear <- within(resultsStatesYear, stage <- factor(stage, levels(stage)[c(1, 3, 2, 4)]))  
+} else {
+ levels(resultsStatesYear$stage) <- c("Living with HIV", "Linked to care", 
+                              "Receiving ART", "Diagnosed", 
+                              "Retained in care", "Suppressed virus")
+  resultsStatesYear <- within(resultsStatesYear, stage <- 
+                                factor(stage, levels(stage)[c(1, 4, 2, 3, 5, 6)])) 
+  
+}
+
 # Set up state factor levels
 resultsStatesYear$population <- factor(resultsStatesYear$population)
 levels(resultsStatesYear$population) <- c("ACT", "NSW", "Northern Territory",
                                           "Queensland", "South Australia", "Tasmania",
                                           "Victoria", "Western Australia")
+
 resultsStatesYear <- within(resultsStatesYear, 
-  population <- factor(population, levels(population)[c(2, 7, 4, 8, 5, 1, 6, 3)]))
+    population <- factor(population, levels(population)[c(2, 7, 4, 8, 5, 1, 6, 3)]))
+
 
 ### Plot the bar charts
 plotbarAllStates <- ggplot(data = resultsStatesYear, aes(x = stage, y = value)) + 
   geom_bar(stat = "identity", color = maincols[2], fill = maincols[2], width = 0.6) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, color = "black", size = 1.2) +
   facet_wrap(~ population, scales = "free") + 
-  scale_x_discrete(limits = stages, labels = "") + 
+  scale_x_discrete(labels = "") + 
   ylab("Number of people") + xlab("") +  
   plotopts
 
@@ -263,14 +316,14 @@ if (saveplots) {
 ```
 
 **Figure 3** -- The HIV care and treatment cascade for each State and Territory in `r resultsYear`.
-From left to right the bars are for each satge of the care and treatment cascade: Living with HIV, Diagnosed, Linked to care, and Recieving ART
+From left to right the bars are for each stage of the care and treatment cascade: living with HIV, diagnosed, recieving ART, and suppressed virus.
 ```{r insertplot3, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=4.5}
 print(plotbarAllStates)
 ```
 
 ```{r createtable2, echo = FALSE, messages = FALSE, include = FALSE}
 # Create bar charts of current year's cascade for each state
-states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act", "all")
+states <- c("nsw", "vic", "qld", "wa", "sa", "act", "tas", "nt", "all")
 
 stateTable <- filter(hivcascade, population %in% states & year == resultsYear)
 
@@ -284,15 +337,29 @@ finalTable <- stateTable %>%
 finalTable$estimate <- NA
 
 # Convert lower and upper into a range string
-skip <- c(4,5)
+
 for (ii in 1:nrow(stateTable)){
-  if (ii %in% skip) {
+  if (stateTable$stage[ii] == "linked") {
     finalTable$estimate[ii] <- format.data(stateTable$value[ii], places = -1)
   } else {
     finalTable$estimate[ii] <- format.data(stateTable$value[ii], 
                                            stateTable$lower[ii], 
                                            stateTable$upper[ii], places = -1)
   }
+}
+
+finalTable$stage <- factor(finalTable$stage)
+if (excludeCare) {
+  levels(finalTable$stage) <- c("Living with HIV", "Receiving ART", 
+                                "Diagnosed", "Suppressed virus")
+  finalTable <- within(finalTable, stage <- factor(stage, levels(stage)[c(1, 3, 2, 4)]))  
+} else {
+ levels(finalTable$stage) <- c("Living with HIV", "Linked to care", 
+                              "Receiving ART", "Diagnosed", 
+                              "Retained in care", "Suppressed virus")
+  finalTable <- within(finalTable, stage <- 
+                                factor(stage, levels(stage)[c(1, 4, 2, 3, 5, 6)])) 
+  
 }
 
 # Spread to the format we want
@@ -313,12 +380,11 @@ finalTable$State[9] <- "National"
 
 **Table 2** -- The HIV care and treatment cascade estimates for each State and Territory in `r resultsYear`. The table shows the cascade estimates with ranges in brackets for each State and Territory.
 
-
 ```{r inserttable2, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
 kable(finalTable, align = c("l", "c", "c", "c", "c", "c", "c"))
 ```
 
-## Key population group estimates
+# Key population group estimates
 
 ```{r subpops, echo = FALSE, messages = FALSE, include=FALSE}
 # Create bar charts of pLHIV for exposure groups and country of birth
@@ -375,7 +441,6 @@ if (saveplots) {
 print(plotModeBar)
 ```
 
-
 ```{r createtable3, echo = FALSE, messages = FALSE, include = FALSE}
 # Create and insert table 
 tableExp <- select(expResults,-year)
@@ -414,7 +479,6 @@ finalTableExp <- rename(finalTable, "Cascade stage" = stage,
 ```{r inserttable3, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
 kable(finalTableExp, align = c("l", "l", "c", "c"))
 ```
-
 
 **Figure 5** -- Number of people living with HIV by country of birth in `r resultsYear`.
 ```{r insertplot5, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3.5}
@@ -460,3 +524,90 @@ finalTablePop <- rename(finalTable, "Cascade stage" = stage,
 ```{r inserttable4, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
 kable(finalTablePop, align = c("l", "l", "c", "c"))
 ```
+
+# Methods and data sources
+
+The following sections describe the methods and data sources used to produce the estimates for each stage of the cascade.
+
+## Estimating the number of people with diagnosed infection
+
+To estimate the number of people living with diagnosed HIV infection (PLDHIV) we performed a simple
+calculation using annual notifications, estimated mortality rates, and overseas
+migration rates.  
+
+Annual HIV notifications data was provided by Australia's National HIV registry. Due to incomplete or
+inaccurate recording of name codes the registry contains multiple reports for some individuals. To
+estimate the number of duplicates we applied a statistical technique which has previously been applied
+to Australia's National HIV Registry [@nakhaee2009changes]. This calculation estimated the number of duplicate
+notifications annually resulting in 8.4% duplicate cases by 2014 with the majority of duplicates
+occurring early in the epidemic.  
+
+We combined two approaches to estimate the number of deaths among people diagnosed 
+with HIV infection. To estimate the number of deaths up to 2003 we used a linkage 
+study conducted between Australia's National Death Index and the National HIV Registry 
+for cases to the end of 2003 [@nakhaee2009changes]. This study calculated HIV- and AIDS-related
+deaths and also
+calculated standardized mortality ratios for people with HIV during different ART eras. It identified
+8,519 deaths among people diagnosed with HIV or AIDS to the end of 2003. Of these deaths, 6,900 were recorded in the HIV registry meaning 19% of all deaths were missing from the registry. Due to the back dating of deaths in the HIV registry after 2003, we used this percentage to inflated the number of recorded deaths in the registry until the end of 2003 (inflating the 7,102 deaths recorded to the end of 2003 to 8,768 deaths overall) and estimated the overall average mortality rate for PLDHIV prior to 2003. After 2003 we used annual mortality rates from the Australian HIV Observational Database (AHOD) [@ahod2014report]. Over 2004-2014, similar annual mortality rates were estimated for the AHOD cohort regardless of whether people were retained, lost or returned to follow up. We used the annual overall mortality rate from AHOD as the best estimate and the 95% confidence interval as a range in our calculations for the number of PLDHIV. 
+
+We also considered the impact of overseas migration. As people are not
+included in the HIV registry until they have been diagnosed in Australia (even if they have been
+diagnosed previously overseas) we did not consider the entry of people living with diagnosed HIV. We
+estimated an overseas migration rate for PLDHIV using data from the Australian Bureau of Statistics (ABS
+). Given there is likely to be a flux of people leaving temporarily and returning to Australia (some of
+which may still receive care and treatment while overseas), we used data on the annual number of people
+in the overall population who permanently leave Australia (provided by the ABS since 1976 in series 340102)
+and the estimated resident population (ABS series 310104) to calculate an overall migration rate. Since 1981 this rate has risen from around 0.1% to 0.4% of the resident population leaving Australia permanently. Due to the requirement for ongoing care and treatment (which is not subsidised in many countries) we assumed a range in the annual overseas migration rate between zero and the overall rate of permanent departure with a best estimate in the middle. 
+
+Our overall estimate of the number of PLDHIV in Australia each year is obtained by adding the number of unique notifications to the previous year's estimate and subtracting the number of deaths and permanent overseas migrants using the mortality and migration rates. 
+
+### State and territory and sub-population estimates
+
+We also provided HIV estimates for the number of PLHIV and PLDHIV for each state and territory, mode of
+exposure, region of birth, and Aboriginal and Torres Strait Islander status. 
+
+For these sub-population calculations we assumed the proportion of duplicates, overseas migration
+rate, and HIV mortality rate for each population equals the values for the overall population.
+Mortality rates were adjusted for the Indigenous and non-Indigenous Australian born population to
+reflect the higher overall mortality in Aboriginal and Torres Strait Islanders as reported by the ABS 
+(http://www.abs.gov.au/ausstats/abs@.nsf/mf/3302.0).
+
+To produce HIV cascades for each state we also considered population movement between states. The ABS
+provides estimates for interstate arrivals and departures (series 3101016). Using this data and estimated resident population in each state, we estimated the rate people leave each state and territory and the rate people enter from the other jurisdictions. We assumed PLDHIV move between states
+at the same rate as the overall population as the provision of care and treatment is maintained across
+jurisdictions. 
+
+## Estimating the number of people living with HIV
+
+To estimate the overall number of MSM living with HIV (PLHIV), both diagnosed and undiagnosed,
+we estimated the the proportion of MSM and non-MSM PLHIV who are undiagnosed. For MSM we used empirical
+data from the COUNT study conducted alongside routine behavioural surveillance surveys in which gay and
+homosexually active men from Sydney, Melbourne, Canberra and Perth recruited from a range of gay
+community sites in 2013 - 2014. In this study 8.9% of participants had previously undiganosed HIV (95%
+CI 5.8-13.5%). For non-MSM we used results from a statistical back projection method  which reported
+20% of non-MSM living with HIV are undiagnosed [@wand2010increasing, @mallitt2012incidence]. For 
+non-MSM we assumed a range of 15 to 25%.  
+
+Multiplying the proportion of MSM and non-MSM undiagnosed by the proportion of all diagnoses attributed
+to male homosexual contact and other exposure gives a weighted average for the overall population of
+PLHIV who are undiagnosed of 12.3%. We assumed a range of 9% to 17%. The overall prevalence of 
+HIV in Australia was then estimated by inflating the calculated number of people living with diagnosed
+infection by the estimated level of undiagnosed infection.
+
+### State and territory and sub-population estimates
+
+We applied the national estimates for the proportion of MSM and non-MSM undiagnosed with HIV to each state and territory and sub-population--- with the non-MSM estimates were used for all non-MSM sub-populations. 
+
+## Estimating antiretroviral treatment coverage
+
+We estimated the number of people receiving ART using a 10% sample of Pharmaceutical Benefits Scheme (PBS) patient level script claims data provided by the company Prospection. This is a randomised patient level, de-identified PBS script claims data set from 2006-present. Currently the data set has 170 million script claims and 3 million patients. It includes all PBS listed drugs with HIV 
+indications. Our estimate is the number of unique patients in the PBS data set who filled in at least one script in the 12 months prior to the end of December 2014 multiplied by 10. We assumed that 10% of the Australian population were sampled to estimate the uncertainty range (which equates to approximately $\pm$ 5%)
+
+## Estimating levels of virological suppression
+
+We define virological suppression as less than 400 viral copies per ml. The proportion of people
+on ART with viral suppression is taken to be the proportion of people recorded in the Australian
+HIV Observational Database (AHOD) who had less than 400 copies per ml at their last viral load
+test.Uncertainty bounds were taken to be the proportion of people recorded in AHOD who had less than 1000 copies per ml and 50 copies per ml at their last viral load test. We estimate the number of PLHIV on ART with viral suppression by multiplying this proportion and range by estimated the number of people receiving ART. 
+
+# References

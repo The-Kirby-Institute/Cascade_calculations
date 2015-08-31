@@ -110,9 +110,9 @@ if (dataYear <= 2013) {
   hivdata[hivdata$yearhiv >= 2014 & is.na(hivdata$cd4date - hivdata$datediagnosis),]$linked <- "no"
   
   hivdata[hivdata$yearhiv >= 2014 & !is.na(hivdata$cd4date - hivdata$datediagnosis) & 
-            (hivdata$cd4date - hivdata$datediagnosis) <= 31,]$linked <- "yes"
+            (hivdata$cd4date - hivdata$datediagnosis) <= 90,]$linked <- "yes"
   hivdata[hivdata$yearhiv >= 2014 & !is.na(hivdata$cd4date - hivdata$datediagnosis) &
-            (hivdata$cd4date - hivdata$datediagnosis) > 31,]$linked <- "no"
+            (hivdata$cd4date - hivdata$datediagnosis) > 90,]$linked <- "no"
   
 }
 

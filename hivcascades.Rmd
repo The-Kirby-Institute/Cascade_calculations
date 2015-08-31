@@ -58,6 +58,10 @@ permDeparts <- TRUE # Use national permant departures for overseas migration
 
 useCD4 <- FALSE # Use CD4 AHOD and testing data for retained in care
 
+# Given issues with undiagnosed estimates use hardcoded estimates from 
+# 2013 ASR
+useOldpropundiagnosed <- TRUE 
+
 ```
 
 ```{r functions}
@@ -1077,7 +1081,6 @@ for (ii in 1:npops) {
   
   # Do the Pop calculation and range - if indigenous adjust mortality rate 
   # appropriately
-  
   mortalityMultiplier <- ifelse(pops[ii] == "indigenous", aborigMortality, 1)
   mortalityMultiplierMin <- ifelse(pops[ii] == "indigenous", aborigMortalityMin, 1)
   mortalityMultiplierMax <- ifelse(pops[ii] == "indigenous", aborigMortalityMax, 1)
@@ -1127,6 +1130,17 @@ propUndiagnosed <- read.csv(file.path(dataFolder,
 # Only keep required years
 propUndiagnosed <- filter(propUndiagnosed, year %in% allyears) 
 
+if (useOldpropundiagnosed) {
+  # Replace 2014 estimates with COUNT and 2014 ASR supplement non-MSM estimates
+  # COUNT: 8.9% (95% CI: 5.8-13.5%)
+  # Non-MSM: 20% (range 12-23%) across states
+
+  hardcode <- c(analysisYear, 0.09, 0.06, 0.14, 0.2, 0.15, 0.25)
+  
+  propUndiagnosed[propUndiagnosed$year == analysisYear,] <- hardcode
+}
+
+
 # Estimate proportion MSM and non-MSM for weighting
 propMSM <- filter(hivexpnat, expgroup == "msm")$proptotalnotifications
 propHetero <- filter(hivexpnat, expgroup == "hetero")$proptotalnotifications
@@ -1145,8 +1159,12 @@ propNonMSM <- 1 - propMSM$value
 # Weighted undiagnosed proportion
 undiagAll <- propMSM$value * propUndiagnosed$msm_best + 
             propNonMSM * propUndiagnosed$non_msm_best
-undiagAllMin <- apply(rbind(propUndiagnosed$msm_lower, propUndiagnosed$non_msm_lower),2,min)                
-undiagAllMax <- apply(rbind(propUndiagnosed$msm_upper, propUndiagnosed$non_msm_upper),2,max)
+# undiagAllMin <- apply(rbind(propUndiagnosed$msm_lower, propUndiagnosed$non_msm_lower),2,min)                
+# undiagAllMax <- apply(rbind(propUndiagnosed$msm_upper, propUndiagnosed$non_msm_upper),2,max)
+undiagAllMin <- propMSM$value * propUndiagnosed$msm_lower + 
+            propNonMSM * propUndiagnosed$non_msm_lower
+undiagAllMax <- propMSM$value * propUndiagnosed$msm_upper + 
+            propNonMSM * propUndiagnosed$non_msm_upper
 
 ### Now estimate number of people living with HIV overall
 pldhivTemp <- filter(hivdiagnosed, stage == "pldhiv" & population == "all")
@@ -1155,9 +1173,9 @@ infectedAllMin <- pldhivTemp$lower/(1 - undiagAllMin)
 infectedAllMax <- pldhivTemp$upper/(1 - undiagAllMax)
 
 # Store overall results
-hivundiag <- rbind(hivundiag, data_frame(stage = rep("infected",nyears), 
+hivundiag <- rbind(hivundiag, data_frame(stage = "infected", 
                             year = allyears, 
-                            population = rep("all", nyears), 
+                            population = "all", 
                             value = infectedAll,
                             lower = infectedAllMin,
                             upper = infectedAllMax))
@@ -1170,9 +1188,9 @@ for (ii in 1:(nstates-1)) {
   infectedStateMax <- pldhivTemp$upper/(1 - undiagAllMax)
   
   # Store results 
-  hivundiag <- rbind(hivundiag,data_frame(stage = rep("infected",nyears), 
+  hivundiag <- rbind(hivundiag,data_frame(stage = "infected", 
                             year = allyears, 
-                            population = rep(states[ii], nyears), 
+                            population = states[ii], 
                             value = infectedState,
                             lower = infectedStateMin,
                             upper = infectedStateMax))
@@ -1195,9 +1213,9 @@ for (ii in 1:nmodes) {
   }
   
   # Store results 
-  hivundiag <- rbind(hivundiag,data_frame(stage = rep("infected",nyears), 
+  hivundiag <- rbind(hivundiag,data_frame(stage = "infected", 
                                           year = allyears, 
-                                          population = rep(modes[ii], nyears), 
+                                          population = modes[ii],  
                                           value = infectedExp,
                                           lower = infectedExpMin,
                                           upper = infectedExpMax))
@@ -1220,9 +1238,9 @@ for (ii in 1:npops) {
   }
   
   # Store results 
-  hivundiag <- rbind(hivundiag,data_frame(stage = rep("infected",nyears), 
+  hivundiag <- rbind(hivundiag,data_frame(stage = "infected", 
                                           year = allyears, 
-                                          population = rep(pops[ii], nyears), 
+                                          population = pops[ii], 
                                           value = infectedPop,
                                           lower = infectedPopMin,
                                           upper = infectedPopMax))
@@ -1309,7 +1327,7 @@ if (plots) {
 
 ### State calculations
 hivlinkedState <- hivset %>% group_by(state,yeardiagnosis) %>% 
-  filter(!is.na(cd4count)) %>%
+  filter(linked == "yes") %>%
   summarise(linked = n()) %>% 
   mutate(totallinked = cumsum(linked)) %>%
   filter(yeardiagnosis <= analysisYear) 
@@ -1437,12 +1455,13 @@ colnames(hivtreated) <- c("population",yearNames)
 hivtreated <- gather(hivtreated,"year","value", 2:ncol(hivtreated))
 hivtreated$year <- as.numeric(as.character(hivtreated$year))
 
-hivtreated$lower <- NA
-hivtreated$upper <- NA
+# Hardcoded uncertainty for the time being
+hivtreated$lower <- 0.95 * hivtreated$value
+hivtreated$upper <- 1.05 * hivtreated$value
 
 # Assume no uncertainty for in Prospection data. 
-hivtreated$lower <- hivtreated$value
-hivtreated$upper <- hivtreated$value
+hivtreated$lower <- 0.95 * hivtreated$value
+hivtreated$upper <- 1.05 * hivtreated$value
 
 states <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act", "all")
 nstates <- length(states)
