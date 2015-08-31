@@ -5,9 +5,7 @@ date: "Tuesday, April 21, 2015"
 output: word_document
 ---
 
-This Rmarkdown document describes an analysis of the HIV care and treatment cascade to estimate the proportion of new HIV infections in the overall population due to each stage of the cascade. The stages we are considering are people living with undiagnosed HIV (PLUHIV), people living with diagnosed HIV (PLDHIV), people receiving ART with detectable viral load, and people recieving ART with undetectable viral load. The analysis uses annual estimates for new infections and HIV notifications. 
-
-The results are written in an abstract format at the end of the document for submission to ASHM.....
+This Rmarkdown document describes various approaches of estimating the proportion of new HIV infections in the overall population due to due to each stage of the HIV care and treatment cascade. For this analysis the stages we use are:are people living with undiagnosed HIV (PLUHIV); people living with diagnosed HIV (PLDHIV); people receiving ART with detectable viral load; and people recieving ART with undetectable viral load. The analysis either uses annual estimates for new infections or recorded HIV notifications. 
 
 
 ```{r initialization, echo = FALSE, messages = FALSE, include=FALSE}
