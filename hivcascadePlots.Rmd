@@ -166,41 +166,48 @@ if (saveplots) {
 
 ```
 
-```{r nswcascade, echo = FALSE, messages = FALSE, include=FALSE}
-# Create bar chart of current year's cascade for NSW for steering committee meeting
-resultsAllnsw <- filter(hivcascade, population == "nsw" & year == 2014)
+```{r statecascade, echo = FALSE, messages = FALSE, include=FALSE}
+### Create separate figures of each state cascade
 
-# Plot specs
-if (excludeCare) {
-  stages <- c("infected", "pldhiv", "numART", "suppressed")
-  stageNames <- c("Living with HIV", "Diagnosed", "Receiving ART", "Suppressed virus")
-  stageNamesNeat <- c("Living \n with HIV", "Diagnosed", "Receiving \n ART", 
-                      "Suppressed \n virus")
+states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act")
+
+
+for (ii in seq(along = states)){
+  resultsStatesYear <- filter(hivcascade, population == states[ii] & year == resultsYear)
   
-} else {
-  stages <- c("infected", "pldhiv", "linked", "retained", "numART", "suppressed")
-  stageNames <- c("Living with HIV", "Diagnosed", "Linked to care", 
-                  "Retained in care", "Receiving ART", "Suppressed virus")
-  stageNamesNeat <- c("Living \n with HIV", "Diagnosed", "Linked \n to care", 
-                  "Retained \n in care", "Receiving \n ART", "Suppressed \n virus")
-}
-
-### Plot the bar chart
-plotbarNSW <- ggplot(data = resultsAllnsw, aes(x = stage, y = value)) + 
-  geom_bar(stat = "identity", color = maincols[2], fill = maincols[2], width = 0.6) +
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, color = "black", size = 1.2) +
-  scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
-  ylab("Number of people") + xlab("") +  
-  plotopts
-
-# Save if required
-if (saveplots) {
-  png(file.path(figFolder, paste("HIVcascade-NSW-", toString(resultsYear), ".png",sep ="")), 
+  
+  # Plot specs
+  if (excludeCare) {
+    stages <- c("infected", "pldhiv", "numART", "suppressed")
+    stageNames <- c("Living with HIV", "Diagnosed", "Receiving ART", "Suppressed virus")
+    stageNamesNeat <- c("Living \n with HIV", "Diagnosed", "Receiving \n ART", 
+                        "Suppressed \n virus")
+    
+    } else {
+      stages <- c("infected", "pldhiv", "linked", "retained", "numART", "suppressed")
+      stageNames <- c("Living with HIV", "Diagnosed", "Linked to care", 
+                      "Retained in care", "Receiving ART", "Suppressed virus")
+      stageNamesNeat <- c("Living \n with HIV", "Diagnosed", "Linked \n to care", 
+                          "Retained \n in care", "Receiving \n ART", "Suppressed \n virus")
+      }
+  
+  ### Plot the bar chart
+  plotbarState <- ggplot(data = resultsStatesYear, aes(x = stage, y = value)) + 
+    geom_bar(stat = "identity", color = maincols[2], fill = maincols[2], width = 0.6) +
+    geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, color = "black", size = 1.2) +
+    scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
+    ylab("Number of people") + xlab("") +  
+    plotopts
+  
+  # Save if required
+  if (saveplots) {
+    png(file.path(figFolder, paste("HIVcascade-", states[ii] ,"-", 
+                                   toString(resultsYear), ".png",sep ="")), 
         width = 5, height = 5, units = "in", res = 300)
-  print(plotbarNSW)
-  dev.off()
-}
-
+    print(plotbarState)
+    dev.off()
+    }
+  }
 ```
 
 **Figure 1** -- The HIV care and treatment cascade for Australia in `r resultsYear`.
