@@ -49,7 +49,7 @@ startYear <- 1990
 # Script options
 plots <- FALSE # TRUE if we wnat to plot things
 bindCascade <- TRUE # TRUE if we want to store all the cascade results in one data frame
-saveCascade <- TRUE
+saveCascade <- FALSE
 
 nationalUniques <- TRUE # Use proportion from National estimates for sub-population de-duplication
 indigKnown <- TRUE # Only use notifications with indigenous classification for indigenous estimates
@@ -312,6 +312,15 @@ hivaborig$proptotalknown <- NA
 hivaborig[!is.na(hivaborig$aboriggroup) & hivaborig$aboriggroup != "othercob",]$proptotalknown  <- hivaborigknown$proptotalnotifications
 hivaborig[is.na(hivaborig$aboriggroup) | hivaborig$aboriggroup == "othercob",]$proptotalknown <- 0
 
+### Overall annual results by gender
+hivgender <- hivset %>% 
+  group_by(yeardiagnosis, sex) %>% 
+  summarise(notifications = n()) %>% 
+  ungroup() %>% 
+  group_by(sex) %>%
+  mutate(totalnotifications  = cumsum(notifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)
+
 # Create some useful diagnoses data plots
 if (plots) {
   graphics.off()
@@ -494,6 +503,18 @@ if (!nationalUniques) {
 
 # We don't do this for country of birth or indigenous just using the proportions of
 # notifications
+
+### Now do genders
+genders <- c("male", "female", "transgender", "unknown")
+hivgender$propunique <- rep(NA,nrow(hivgender))
+
+for (ii in 1:length(genders)) {
+  # Use national estimates
+  genyears <- hivgender[hivgender$sex == genders[ii],]$yeardiagnosis
+  hivgender[hivgender$sex == genders[ii],]$propunique <- 
+    filter(hivresults, yeardiagnosis %in% genyears)$propunique
+  
+}
 
 # Plot if required
 
@@ -1092,7 +1113,7 @@ for (ii in 1:npops) {
   pldhivPopMax <- livingDiagnosed(cumPopDiags, mortalityMultiplierMax * deathRateMin, migrationRateMin)
   
   
-  # Store the state results
+  # Store the population results
   hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = "pldhiv", 
                             year = allyears, 
                             population = pops[ii], 
@@ -1101,7 +1122,44 @@ for (ii in 1:npops) {
                             upper = pldhivPopMax))
 }
 
-# Finally bind to overall results
+### Now do gender based PLDHIV
+# Quick and dirty at the moment for a separate calculation
+hivDiagGender <- data.frame(stage = character(), 
+                         year = double(),
+                         population = character(),
+                         estimate = double(),
+                         lower = double(),
+                         upper = double())
+
+genders <- c("male", "female", "transgender", "unknown")
+ngenders <- length(genders)
+
+for (ii in 1:ngenders) {
+  genyears <- filter(hivgender, sex == genders[ii])$yeardiagnosis
+  gendiags <- filter(hivgender, sex == genders[ii])$totalnotifications * 
+    filter(hivgender, sex == genders[ii])$propunique
+    
+  fillGenDiags <- fillMissing(allyears, genyears, gendiags)  
+  cumGenDiags <- fillGenDiags$value
+  
+  # Exp migration rates, death rates, assumed to be same overall
+  
+  # Do the Exp calculation and range
+  pldhivGen <- livingDiagnosed(cumGenDiags, deathRate, migrationRate)
+  
+  pldhivGenMin <- livingDiagnosed(cumGenDiags, deathRateMax, migrationRateMax)
+  pldhivGenMax <- livingDiagnosed(cumGenDiags, deathRateMin, migrationRateMin)
+  
+  # Store the state results
+  hivDiagGender <- rbind(hivDiagGender, data_frame(stage = "pldhiv", 
+                            year = allyears, 
+                            population = genders[ii], 
+                            value = pldhivGen,
+                            lower = pldhivGenMin,
+                            upper = pldhivGenMax))
+}
+
+### Finally bind to overall results
 if (bindCascade) {
   hivcascade <- rbind(hivcascade,hivdiagnosed)
 }
@@ -1246,13 +1304,53 @@ for (ii in 1:npops) {
                                           upper = infectedPopMax))
 }
 
+### Now calculate for each gender
+hivGenUndiag <- data.frame(stage = character(), 
+                         year = double(),
+                         population = character(),
+                         estimate = double(),
+                         lower = double(),
+                         upper = double())
 
-# Finally bind to overall results
+for (ii in 1:ngenders) {
+  pldhivTemp <- filter(hivDiagGender, stage == "pldhiv" & population == genders[ii])
+  
+  # Use overall undiagnosed proportion for non-indigenous and other cob. 
+  # For indigenous, bornssa, born sea use non_msm undiagnosed proportion
+#   if (genders[ii] == "male") {
+    infectedPop <- pldhivTemp$value/(1 - undiagAll)
+    infectedPopMin <- pldhivTemp$lower/(1 - undiagAllMin)
+    infectedPopMax <- pldhivTemp$upper/(1 - undiagAllMax)
+#   } else {
+#     infectedPop <- pldhivTemp$value/(1 - propUndiagnosed$non_msm_best)
+#     infectedPopMin <- pldhivTemp$lower/(1 - propUndiagnosed$non_msm_lower)
+#     infectedPopMax <- pldhivTemp$upper/(1 - propUndiagnosed$non_msm_upper)
+#   }
+  
+  # Store results 
+  hivGenUndiag <- rbind(hivGenUndiag, data_frame(stage = "infected", 
+                                          year = allyears, 
+                                          population = genders[ii], 
+                                          value = infectedPop,
+                                          lower = infectedPopMin,
+                                          upper = infectedPopMax))
+}
+
+# Merged with gender PLDHIV and extract 2014 results
+genderTemp <- rbind(hivGenUndiag,hivDiagGender)
+genderTemp <- filter(genderTemp, year == 2014)
+
+# Write to file for Skye
+
+
+
+### Finally bind to overall results
 if (bindCascade) {
   hivcascade <- rbind(hivcascade,hivundiag)
 }
 
 ```
+
 
 ## Number linked to care
 
