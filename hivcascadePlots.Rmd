@@ -183,22 +183,50 @@ for (ii in seq(along = states)){
     stageNamesNeat <- c("Living \n with HIV", "Diagnosed", "Receiving \n ART", 
                         "Suppressed \n virus")
     
+    if (states[ii] == "nsw") {
+      # Add ipharmacies data
+      nswCascade <- resultsStatesYear
+      
+      nswCascade$data <- "pbs"
+
+      newFrame <- nswCascade
+      newFrame[1,4:6] <- c(0, NA, NA)
+      newFrame[2,4:6] <- c(0, NA, NA)
+      newFrame[3,4:6] <- c(9130, NA, NA)
+      newFrame[4,4:6] <- c(8400, 8130, 8450)
+      newFrame$data <- "iPharmacies"
+      
+      nswCascade <- rbind(nswCascade, newFrame)
+      
+    }
+    
     } else {
       stages <- c("infected", "pldhiv", "linked", "retained", "numART", "suppressed")
       stageNames <- c("Living with HIV", "Diagnosed", "Linked to care", 
                       "Retained in care", "Receiving ART", "Suppressed virus")
       stageNamesNeat <- c("Living \n with HIV", "Diagnosed", "Linked \n to care", 
                           "Retained \n in care", "Receiving \n ART", "Suppressed \n virus")
-      }
+    }
   
   ### Plot the bar chart
-  plotbarState <- ggplot(data = resultsStatesYear, aes(x = stage, y = value)) + 
-    geom_bar(stat = "identity", color = maincols[2], fill = maincols[2], width = 0.6) +
-    geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, color = "black", size = 1.2) +
-    scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
-    ylab("Number of people") + xlab("") +  
-    plotopts
-  
+  if (states[ii] == "nsw") {
+    plotbarState <- ggplot(data = nswCascade, aes(x = stage, y = value, fill = data)) + 
+      geom_bar(stat = "identity", width = 0.8, position = "dodge") +
+      geom_errorbar(aes(ymin = lower, ymax = upper), 
+                position = position_dodge(width = 0.8),
+                width = 0.2, color = "black", size = 1.2) +
+      scale_fill_brewer(palette = "Paired", name = "", labels = c("iPharmacies", "PBS")) +
+      scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
+      ylab("Number of people") + xlab("") +  
+      plotopts  
+  } else {
+    plotbarState <- ggplot(data = resultsStatesYear, aes(x = stage, y = value)) + 
+      geom_bar(stat = "identity", color = maincols[2], fill = maincols[2], width = 0.6) +
+      geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, color = "black", size = 1.2) +
+      scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
+      ylab("Number of people") + xlab("") +  
+      plotopts
+  }
   # Save if required
   if (saveplots) {
     png(file.path(figFolder, paste("HIVcascade-", states[ii] ,"-", 
