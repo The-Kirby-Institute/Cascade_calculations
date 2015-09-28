@@ -234,7 +234,7 @@ numRows <- nrow(countAdjust)
 countAdjust$beta4 <- runif(numRows, 0.01,0.3) # HPTN-052 transmission rate
 
 # Beta distribution
-# source('~/Research/!Evaluation_Modelling/project_care_cascades/findBeta.R')
+# source('~/Research/!Evaluation_Modelling/project_care_cascades/code/findBeta.R')
 # quantile1 <- list(p=0.5, x=0.03)
 # quantile2 <- list(p=0.975, x=0.27)
 # quantile3 <- list(p=0.025, x=0.01)
