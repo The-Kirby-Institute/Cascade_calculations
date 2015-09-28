@@ -30,23 +30,25 @@ setwd("~/Research/!Evaluation_Modelling/project_care_cascades")
 
 ```{r inputdetails, echo = FALSE, messages = FALSE, include=FALSE}
 # Details of where to store outputs
-dataFolder <- "./data/"
-outputFolder <- "./output/"
-inputFile <- "countAbstractData.xlsx"
+dataFolder <- "./data/countData/"
+outputFolder <- "./output"
+inputFile <- "countData.xlsx"
 currTime <- format(Sys.time(), "%Y-%m-%d(%H-%M)") # to append to files
 
 # Analysis parameters
 numSamples <- 1000  # Number of sampled parameter sets for each year
 numInits <- 1000    # Number of init starting points for optimization 
-useDiagnoses <- FALSE # Use reported notifications or estimated incidence 
+useDiagnoses <- TRUE # Use reported notifications or estimated incidence 
 
 # Options for running and saving things
 fullRun <- TRUE # Everytime we do a run from scratch save everything 
-folder <- paste("CountAbstractAnalysis_",currTime,sep="")
+folder <- paste("CountAnalysis_",currTime,sep="")
 if(fullRun){
   dir.create(file.path(outputFolder,folder), showWarnings = FALSE)
   outputFolder <- file.path(outputFolder,folder)
 }
+
+saveplots <- TRUE
 
 ```
 
@@ -55,7 +57,7 @@ if(fullRun){
 countData <- read_excel(paste(dataFolder,inputFile,sep =""), na = "NA")
 
 # Using the input data calculate numbers in each column
-countClean <- countData[,c("year","diagnoses","infectsmin","infectsmax")]
+countClean <- countData[,c("year","diagnoses")]
 
 countClean$undiagmin <- countData$diagnosedmin / (1 - countData$undiagmin) - 
   countData$diagnosedmin
@@ -71,6 +73,9 @@ countClean$detectablemax <- countData$treatedmax - countData$suppressedmin *
   countData$treatedmin
 countClean$undetectablemin <- countData$suppressedmin * countData$treatedmin
 countClean$undetectablemax <- countData$suppressedmax * countData$treatedmax
+
+# Make sure mins aren't less than zero
+countClean$detectablemin[countClean$detectablemin < 0] <- 0
 
 # Save count files as csv files for later 
 if (fullRun){
@@ -95,7 +100,7 @@ numRows <- nyears*numSamples # For preallocation
 # Preallocate data frames for storing samples
 countSample <- data.frame(year = numeric(numRows), 
                           diagnoses = numeric(numRows), 
-                          newinfects = numeric(numRows), 
+                          # newinfects = numeric(numRows), 
                           undiagnosed = numeric(numRows), 
                           diagnosed = numeric(numRows),  
                           detectable = numeric(numRows),
@@ -103,7 +108,7 @@ countSample <- data.frame(year = numeric(numRows),
 
 countAverage <- data.frame(year = numeric(nyears),
                            diagnoses = numeric(nyears), 
-                           newinfects = numeric(nyears),
+                           # newinfects = numeric(nyears),
                            undiagnosed = numeric(nyears), 
                            diagnosed = numeric(nyears), 
                            detectable = numeric(nyears),
@@ -121,9 +126,9 @@ for (ii in 1:nyears) {
   countSample[startIndex:endIndex,]$diagnoses <- countClean$diagnoses[ii] * rep(1, numSamples)
   
   # Random sampling
-  countSample[startIndex:endIndex,]$newinfects <- runif(numSamples,
-                                                        countClean$infectsmin[ii], 
-                                                        countClean$infectsmax[ii])
+#   countSample[startIndex:endIndex,]$newinfects <- runif(numSamples,
+#                                                         countClean$infectsmin[ii], 
+#                                                         countClean$infectsmax[ii])
   
   countSample[startIndex:endIndex,]$undiagnosed <- runif(numSamples,
                                                          countClean$undiagmin[ii],
@@ -160,7 +165,7 @@ print(countAverage)
 # Before we get serious lets have a look at the data and what we are trying to do
 
 # Melt data into a plotting data frame
-plotDataAve <- gather(countAverage,"indicator","estimate",4:7)
+plotDataAve <- gather(countAverage,"indicator","estimate",3:6)
 
 # Create a plot looking at the relationships
 countplotAve <- ggplot(data = plotDataAve,aes(x = estimate, y = diagnoses)) + 
@@ -190,7 +195,7 @@ biological effects.
 if(useDiagnoses) {
   lm <- lm(diagnoses ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
 } else { 
-  lm <- lm(newinfects ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
+#   lm <- lm(newinfects ~ 0 + undiagnosed + diagnosed + detectable + undetectable, data = countSample)
 }
 
 print(lm)
@@ -226,8 +231,19 @@ numRows <- nrow(countAdjust)
 # Set up a distribution for the reduction multiplicative factor
 
 # Uniform distribution
-countAdjust$beta4 <- runif(numRows, 0.01,0.29)
-# countAdjust$beta4 <- 1-rtriangle(numSamples,0.71,0.99,0.96)
+countAdjust$beta4 <- runif(numRows, 0.01,0.3) # HPTN-052 transmission rate
+
+# Beta distribution
+# source('~/Research/!Evaluation_Modelling/project_care_cascades/findBeta.R')
+# quantile1 <- list(p=0.5, x=0.03)
+# quantile2 <- list(p=0.975, x=0.27)
+# quantile3 <- list(p=0.025, x=0.01)
+# require(LearnBayes)
+# findBeta(quantile1, quantile2, quantile3)
+# # "The best beta prior has a= 0.85 b= 10.76"
+# curve(dbeta(x, 0.85, 10.76))# plot the prior
+countAdjust$beta4 <- rbeta(numRows, 0.85, 10.76)
+# countAdjust$beta4 <- rbeta(numRows, 0.53, 8.44)
 
 # Adjust the undetecable numbers for regression analysis with this new parameter
 countAdjust$undetect <- (countAdjust$diagnosed + countAdjust$beta4 * countAdjust$undetectable)
@@ -246,18 +262,22 @@ coefAdjustedUndetect <- unname(coef(lmUndetect)) # Resulting coefficients
 coefLowerTemp <- c(confint(lmUndetect)[1,1], confint(lmUndetect)[2,1], confint(lmUndetect)[3,1])
 coefUpperTemp <- c(confint(lmUndetect)[1,2], confint(lmUndetect)[2,2], confint(lmUndetect)[3,2])
 
+sampleDiag <- runif(numRows,coefLowerTemp[2], coefUpperTemp[2])
+
 # Store resulting samples for the cascade beta values
 undetectAnalysis <- data.frame(undiag = runif(numRows,coefLowerTemp[1], coefUpperTemp[1]),
-           diag = runif(numRows,coefLowerTemp[2], coefUpperTemp[2]),
+           diag = sampleDiag,
            detect = runif(numRows,coefLowerTemp[3], coefUpperTemp[3]),
            undetect = countAdjust$beta4 * sampleDiag)
 
 # Display some summary stats
-print(colMeans(undetectAnalysis))
+aveBetas <- colMeans(undetectAnalysis)
+print(aveBetas)
+print(aveBetas/aveBetas[2])
 
 ```
 
-One issue we encountered with this analysis is the beta for undiagnosed is 
+One issue we encountered with the intial analysis is the beta for undiagnosed is 
 lower than the beta for diagnosed. I would potentially expect the diagnosed 
 beta to be lower given they know they are infected and are likley to reduce
 risk to their partners.
@@ -292,11 +312,13 @@ coefAdjustedArt<- unname(coef(lmArt)) # Resulting coefficients
 coefLowerTemp <- c(confint(lmArt)[1, 1], confint(lmArt)[2, 1])
 coefUpperTemp <- c(confint(lmArt)[1, 2], confint(lmArt)[2, 2])
 
+sampleDiag2 <- runif(numRows, coefLowerTemp[2], coefUpperTemp[2])
+
 # Store resulting samples for the cascade beta values
 artAnalysis <- data.frame (undiag = runif(numRows, coefLowerTemp[1], coefUpperTemp[1]),
-                           diag = runif(numRows, coefLowerTemp[2], coefUpperTemp[2]),
-                           detect = countAdjust$beta2*sampleDiag2, 
-                           undetect = countAdjust$beta4*sampleDiag2)
+                           diag = sampleDiag2,
+                           detect = countAdjust$beta2 * sampleDiag2, 
+                           undetect = countAdjust$beta4 * sampleDiag2)
 
 # Display some summary stats
 print(colMeans(artAnalysis))
@@ -324,7 +346,7 @@ dat <- countConstrain #tail(dat, n = numSamples)
 
 # Define the function we optimize - minimizing least squares
 min.RSS <- function(data,par){
-  with(data,sum((par[1]*undiagnosed + par[2]*newinfects + par[3]*detectable - z)^2))
+  with(data,sum((par[1] * undiagnosed + par[2] * diagnoses + par[3] * detectable - z)^2))
 }
 
 # Set up analysis with multiple initial conditions
@@ -421,7 +443,7 @@ The final results are preseneted in this section.
 # This script extracts the results we want to assess. 
 
 # Specify the results we want
-results <- "art"
+results <- "undetect"
 if (results == "undetect") {
   resultsCoefs <- undetectAnalysis
 } else if (results == "art") {
@@ -434,7 +456,17 @@ if (results == "undetect") {
 
 # Extract the results
 aveCoeffs <- colMeans(resultsCoefs)
+medCoeffs <- apply(resultsCoefs,2, FUN = median)
+iqrCoeffs <- apply(resultsCoefs,2, FUN = IQR)
+
 print(aveCoeffs)
+print(aveCoeffs/aveCoeffs[2])
+
+print(medCoeffs)
+print(medCoeffs/medCoeffs[2])
+
+print(medCoeffs + iqrCoeffs/2)
+print(medCoeffs - iqrCoeffs/2)
 
 # Now estimate the uncertainty and proportion of infections caused by each stage
 numUndiag <- resultsCoefs$undiag*countSample$undiagnosed
@@ -458,13 +490,47 @@ propInfects <- data.frame(year = countAdjust$year,
 
 ```
 
+```{r plotoptions, echo = FALSE, messages = FALSE, include=FALSE}
+# Default plot specifications
+graphics.off()
+
+# Baseline theme for plot variables
+plotopts <- theme_bw() + theme(text = element_text(face = "bold", size=12, colour = "black"),
+  axis.text.x = element_text(face = "plain",size = 10,colour="black"),
+  axis.text.y = element_text(face = "plain",size = 10,colour="black"),
+  axis.line = element_line(colour="black"),
+  axis.ticks = element_line(colour="black"),
+  legend.position = "top",
+#   legend.direction = "vertical",
+  legend.background = element_rect(),
+  legend.key = element_blank(),
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(), 
+  panel.background = element_blank(), 
+  panel.border = element_rect(colour = "black"),
+  axis.line = element_line(colour = "black"),
+  plot.title=element_text(size=12, face="bold"),
+  strip.background = element_blank()
+)
+
+# Setup colours
+# Palette with black and grey:
+cbPalette <- c("#000000","#999999", "#E69F00", "#56B4E9", "#009E73", 
+               "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+maincols <- brewer.pal(4,"Set1")
+maincols <- c("#621C20", "#AB2322", "#D95728", "#E97164")
+
+```
+
+
 ```{r prettyplots, echo=FALSE, messages = FALSE, include=FALSE}
 # Create a pretty plot to show proportion of infections due to each stage 
 # of the cascade for the results selected in "extractresults" chunk
 graphics.off()
 
 # Organize the results
-pldhivFrame <- countSample[c(1,4:7)]  %>% 
+pldhivFrame <- countSample[c(1,3:6)]  %>% 
   group_by(year) %>% 
   summarise_each(funs(mean))
 
@@ -482,31 +548,68 @@ infectsResults <- gather(infectsFrame,"stage","number",2:5) %>%
                       mutate(cumsum=cumsum(number))
 
 ## Now create plots 
+legendLabels <- c("Undiagnosed", "Diagnosed no ART", 
+                  "On ART detectable VL", "On ART undetectable VL")
+xvalues <- seq(2005,2014, by = 3)
 
 # PLDHIV overall
 plhivPlotBase <- ggplot(data = plhivResults, aes(x = year, y = number, fill = stage)) +
-  theme_bw() + xlab("Year") + labs(fill = 'Cascade stage') 
+  xlab("Year") + labs(fill = 'Cascade stage') +
+  scale_fill_manual(values = maincols, name = "", labels = legendLabels, 
+                    guide = guide_legend(reverse=TRUE, nrow = 2)) +  
+  scale_x_continuous(breaks = xvalues) + plotopts 
 
-plhivPlotNum <- plhivPlotBase + geom_bar(stat="identity") + ylab("Number PLDHIV") 
+
+plhivPlotNum <- plhivPlotBase + geom_bar(stat="identity") + ylab("Number PLHIV") 
 plhivPlotProp <- plhivPlotBase + geom_bar(stat="identity", position= "fill") + 
-  ylab("Proportion PLDHIV")
+  ylab("Proportion PLHIV")
 
 # New infections/diagnoses
-infectsPlotBase <- ggplot(data = infectsResults, aes(x = year, y = number, fill = stage))+
-  theme_bw() + xlab("Year") +  labs(fill='Cascade stage')
+infectsPlotBase <- ggplot(data = infectsResults, aes(x = year, y = number, fill = stage)) +
+  xlab("Year") +  labs(fill = 'Cascade stage') +
+  scale_fill_manual(values = maincols, name = "", labels = legendLabels, 
+                    guide = guide_legend(reverse=TRUE, nrow = 2)) + 
+  scale_x_continuous(breaks = xvalues) + plotopts
 
 if(useDiagnoses){
-  infectsPlotNum <- infectsPlotBase + geom_bar(stat="identity") + ylab("Number Diagnoses")
-  infectsPlotProp <- infectsPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion Diagnoses")
+  infectsPlotNum <- infectsPlotBase + geom_bar(stat="identity") + ylab("Number new infections")
+  infectsPlotProp <- infectsPlotBase + geom_bar(stat="identity",position="fill") + 
+    ylab("Proportion new infections")
 } else {
   infectsPlotNum <- infectsPlotBase + geom_bar(stat="identity") + ylab("Number Diagnoses")
   infectsPlotProp <- infectsPlotBase + geom_bar(stat="identity",position="fill") + ylab("Proportion Diagnoses") 
 }
 
-```
+# print(grid.arrange(plhivPlotNum, infectsPlotNum, plhivPlotProp, infectsPlotProp, ncol = 2))
 
-```{r printplot, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3}
-print(grid.arrange(plhivPlotNum, infectsPlotNum, plhivPlotProp, infectsPlotProp, ncol = 2))
+# Print figures to separate windows
+if (saveplots) {
+  png(file.path(outputFolder, paste("cascadeIncidence-", "numPLHIV", "-", 
+                                    toString(max(countClean$year)), ".png",sep ="")), 
+      width = 5, height = 4, units = "in", res = 300)
+  print(plhivPlotNum)
+  dev.off()
+  
+  png(file.path(outputFolder, paste("cascadeIncidence-", "numDiags", "-", 
+                                    toString(max(countClean$year)), ".png",sep ="")), 
+      width = 5, height = 4, units = "in", res = 300)
+  print(infectsPlotNum)
+  dev.off()
+  
+  png(file.path(outputFolder, paste("cascadeIncidence-", "propPLHIV", "-", 
+                                    toString(max(countClean$year)), ".png",sep ="")), 
+      width = 5, height = 4, units = "in", res = 300)
+  print(plhivPlotProp)
+  dev.off()
+  
+  png(file.path(outputFolder, paste("cascadeIncidence-", "propDiags", "-", 
+                                    toString(max(countClean$year)), ".png",sep ="")), 
+      width = 5, height = 4, units = "in", res = 300)
+  print(infectsPlotProp)
+  dev.off()
+}
+
+
 
 ```
 
