@@ -214,7 +214,7 @@ startyear <- 2013
 # Load the raw HIV notifications file and clean it up. The exported data from 
 # PharmDash is a little messy. Need to skip the first 3 rows. Then tidy up and 
 # extract the data we want. Only valuable from the year 2013
-pharmData <- read.csv(rawPharmDash,skip = 16,na.strings = c("NA", ""))
+pharmData <- read.csv(rawPharmDash,skip = 16, na.strings = c("NA", "")) # Skip used to be 3 
 pharmData <- pharmData[!apply(is.na(pharmData) | pharmData == "", 1, all), ] # Remove empty rows
 pharmData$X <- as.character(pharmData$X) # Make sure first column is a character string
 
