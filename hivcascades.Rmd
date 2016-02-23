@@ -14,7 +14,7 @@ This document describes and contains the code for producing the HIV care cascade
 rm(list=ls()) 
 
 # Set working directory
-setwd(file.path(path.expand("~"),"Research","!Evaluation_Modelling","project_care_cascades"))
+setwd(file.path(path.expand("~"), "Documents", "Research", "!Evaluation_Modelling", "project_care_cascades"))
 
 # Base directory
 basePath <- getwd()
@@ -48,7 +48,7 @@ startYear <- 1990
 
 # Script options
 plots <- FALSE # TRUE if we wnat to plot things
-bindCascade <- TRUE # TRUE if we want to store all the cascade results in one data frame
+bindCascade <- FALSE # TRUE if we want to store all the cascade results in one data frame
 saveCascade <- FALSE
 
 nationalUniques <- TRUE # Use proportion from National estimates for sub-population de-duplication
@@ -1515,34 +1515,31 @@ if (bindCascade) {
 # (maybe should do this for all or have analysis start year???) 
 
 # Load all the data we need
-s100data <- read.csv(file.path(dataFolder, "s100_treatment_costs.csv"))
+# s100data <- read.csv(file.path(dataFolder, "s100_treatment_costs.csv"))
+ahodART <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
 prospectionData <- read.csv(file.path(dataFolder, paste("pharmdash_HIVpatients", 
                                       toString(analysisYear), 
                                       ".csv", sep = "")), as.is = c(1,2))
 
-# Use the s100 data to estimate a trend for back projection
+# Use the AHOD ART data to estimate a trend for back projection
 
-# First shift financial year to year - okay as we are only using this data 
-# to estimate trend
-s100data$year <- 2008:2013
+# First simplify column names
+colnames(ahodART) <- c("year", "numART")
 
-# Looking at the data 2013 seens to be a outlier. Create new varaible showing 
-# the relative change in ART costs versus 2012. 
-s100data$relative <- s100data$totalspend/s100data$totalspend[5]
+# Create new varaible showing the relative change in ART numbers versus 2013. 
+artBase <- filter(ahodART, year == 2013)$numART
+ahodART$relative <- ahodART$numART/artBase
 
-# Fit to the relative data ignoring the 2013 value
+# Hardcoded uncertainty for the time being
+# hivtreated$lower <- 0.95 * hivtreated$value
+# hivtreated$upper <- 1.05 * hivtreated$value
+
+# Sort out years for analysis
 firstYear <- 2003
 treatyears <- firstYear:2013
-lms100 <- lm(relative ~ year, data = filter(s100data, year < 2013)) 
-relPredict <- predict(lms100, data.frame(year = treatyears), 
-                      level = 0.9, interval = "confidence")
+treatTrend <- filter(ahodART, year %in% treatyears)$relative
 
-# Store relative results in a data frame
-nrows <- nrow(relPredict)
-relTreat <- data.frame(relPredict)
-relTreat$year <- treatyears
-
-### Now use the relative rates to calculate number on treatment
+# Tidy up the prospection data
 hivtreated <- prospectionData %>%
   filter(gender == "all") %>%
   select(-gender) 
@@ -1553,13 +1550,11 @@ colnames(hivtreated) <- c("population",yearNames)
 hivtreated <- gather(hivtreated,"year","value", 2:ncol(hivtreated))
 hivtreated$year <- as.numeric(as.character(hivtreated$year))
 
-# Hardcoded uncertainty for the time being
-hivtreated$lower <- 0.95 * hivtreated$value
-hivtreated$upper <- 1.05 * hivtreated$value
+# Uncertainty for Prospection data. 
+hivtreated$lower <- 0.9 * hivtreated$value
+hivtreated$upper <- 1.1 * hivtreated$value
 
-# Assume no uncertainty for in Prospection data. 
-hivtreated$lower <- 0.95 * hivtreated$value
-hivtreated$upper <- 1.05 * hivtreated$value
+### Now use the relative rates to calculate number on treatment
 
 states <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act", "all")
 nstates <- length(states)
@@ -1571,12 +1566,12 @@ hivtreated$stage <- "numART"
 # since 2003
 for (ii in 1:nstates) {
   # Extract 2013 data 
-  treat2013 <- filter(hivtreated, year == 2013 & population == states[ii])$value
+  treat2013 <- filter(hivtreated, year == 2013 & population == states[ii])
   
   # Calculate estimates and ranges
-  tempfit <- (treat2013 * relTreat$fit)/tail(relTreat$fit,1)
-  templwr <- (treat2013 * relTreat$lwr)/tail(relTreat$lwr,1)
-  tempupr <- (treat2013 * relTreat$upr)/tail(relTreat$upr,1)
+  tempfit <- treatTrend * treat2013$value
+  templwr <- treat2013$lower * treatTrend
+  tempupr <- treat2013$upper * treatTrend
   
   # Create a data frame 
   tempdf <- data_frame(population = states[ii], year = treatyears,
