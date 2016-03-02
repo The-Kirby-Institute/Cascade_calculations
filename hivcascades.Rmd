@@ -14,7 +14,7 @@ This document describes and contains the code for producing the HIV care cascade
 rm(list=ls()) 
 
 # Set working directory
-setwd(file.path(path.expand("~"), "Documents", "Research", "!Evaluation_Modelling", "project_care_cascades"))
+setwd(file.path(path.expand("~"), "Research", "!Evaluation_Modelling", "project_care_cascades"))
 
 # Base directory
 basePath <- getwd()
@@ -48,8 +48,10 @@ startYear <- 1990
 
 # Script options
 plots <- FALSE # TRUE if we wnat to plot things
-bindCascade <- FALSE # TRUE if we want to store all the cascade results in one data frame
-saveCascade <- FALSE
+bindCascade <- TRUE # TRUE if we want to store all the cascade results in one data frame
+saveCascade <- TRUE
+saveNotifications <- FALSE # Save cleaned notifications set
+saveResults <- FALSE # Save information national annual notifications
 
 nationalUniques <- TRUE # Use proportion from National estimates for sub-population de-duplication
 indigKnown <- TRUE # Only use notifications with indigenous classification for indigenous estimates
@@ -185,6 +187,20 @@ if (min(hivdata$yeardiagnosis) > startYear) {
 
 # Setup our working data frame
 hivset <- filter(hivdata,yeardiagnosis <= analysisYear)
+
+if (saveNotifications) {
+  # Directory and file name
+  saveString <- file.path(outputFolder, paste("HIVset-", 
+                                              toString(analysisYear), sep = ""))
+  
+  # Write to csv
+  write.csv(hivset, file = paste(saveString, ".csv", sep =""), 
+            row.names = FALSE)
+
+  # Save as R object
+  save(hivset, file = paste(saveString, ".rda", sep =""))  
+  
+}
 
 # Initialize final results data frame
 if (bindCascade) {
@@ -545,152 +561,6 @@ if (plots) {
 
 ```
 
-Sort out deathrates
-
-```{r deaths}
-# To calculate the number of deaths each year we calculate a deathrate with 
-# an uncertainty range. This is used to work out the number of people
-# diagnosed with HIV. 
-
-# The estimate of the death rate uses a number of methods. Firstly uses the 
-# 2003 linkage results and the number of known deaths to estimate the
-# deathrate up to 2003. It then uses AHOD mortality rates from 2003 to  
-
-# Load all the data sets we use for this estimate - use the parameter column as 
-# row names for easier subsetting
-hivparams <- read.csv(file.path(dataFolder, "individualHIVparameters.csv", 
-                                sep =""),as.is = 1)
-hivparams <- select(hivparams,parameter,value)
-for (ii in 1:nrow(hivparams)) {
-  assign(hivparams$parameter[ii],hivparams$value[ii])
-}
-
-# Load AHOD data to calculate mortality and do some simple cleaning
-ahodData <- read.csv(file.path(dataFolder, 
-                               paste("ahod", toString(analysisYear), 
-                                     ".csv", sep = "")))
-
-# Load backprojection estimates for comparison
-# bpdeaths <- read.csv(file.path(dataFolder, "projectedDeaths.csv", 
-#                                 sep =""),as.is = 1)
-
-# Extract number of known deaths and store in a central data frame
-hivdeaths <- hivdata %>% 
-  filter(! is.na(yeardeath)) %>%
-  group_by(yeardeath) %>% 
-  summarise(number_deaths = n()) %>% 
-  filter(yeardeath <= analysisYear)  
-
-# Calculate sensitivity of recorded deaths based on linkage results
-linkageFactor <- (linkedDeaths+notifiedDeaths)/notifiedDeaths
-linkageFactorLower <- linkageFactor*(1-linkageSensitivity)
-linkageFactorUpper <- linkageFactor*(1+linkageSensitivity)  
-
-#  We don't need to adjust deaths for number of unique diagnoses as
-# different dates of death should result in different people
-
-# Set up linked deaths
-hivdeaths$inflated_deaths <- hivdeaths$number_deaths * linkageFactor
-hivdeaths$inflated_deaths_lower <- hivdeaths$number_deaths * linkageFactorLower
-hivdeaths$inflated_deaths_upper <- hivdeaths$number_deaths * linkageFactorUpper
-
-# No deaths in 1980 and 1982 so add this data manually to ensure everything lines up
-hivdeaths <- rbind(hivdeaths,c(1980,0,0,0,0))
-hivdeaths <- rbind(hivdeaths,c(1982,0,0,0,0))
-hivdeaths <- arrange(hivdeaths,yeardeath)
-
-### Now calculate mortality rate for linkage data ------------------------
-cumdiagnoses <- hivresults$totalnotifications
-deaths <- hivdeaths$inflated_deaths
-deaths_min <- hivdeaths$inflated_deaths_lower
-deaths_max <- hivdeaths$inflated_deaths_upper
-anndiags <- c(cumdiagnoses[1],diff(cumdiagnoses))  # Annual diagnoses
-
-# Calculate number living each year 
-numliving <- rep(NA,length(anndiags))
-numliving_min <- rep(NA,length(anndiags))
-numliving_max <- rep(NA,length(anndiags))
-
-numliving[1] <- anndiags[1]
-numliving_min[1] <- anndiags[1]
-numliving_max[1] <- anndiags[1]
-
-for (ii in 2:length(anndiags)) {
-  numliving[ii] <- numliving[ii-1] + anndiags[ii] - deaths[ii-1] 
-  numliving_min[ii] <- numliving_min[ii-1] + anndiags[ii] - deaths_max[ii-1] 
-  numliving_max[ii] <- numliving_max[ii-1] + anndiags[ii] - deaths_min[ii-1] 
-}
-
-# Calculate mortality
-linkageMortality <- deaths/numliving
-linkageMortalityMin <- deaths_min/numliving_max
-linkageMortalityMax <- deaths_max/numliving_min
-
-### Append AHOD mortality
-
-# Calculate crude death rate for each state and year - use 95% CI as the upper and lower bound
-
-ahodDeaths <- ahodData %>% 
-  group_by(state, year) %>%
-  summarise(n = sum(n_id), 
-            deaths = sum(n_death), 
-            deathrate = unname(prop.test(sum(n_death), sum(n_id))$estimate), 
-            lower = unname(prop.test(sum(n_death), sum(n_id))$conf.int[1]),
-            upper = unname(prop.test(sum(n_death), sum(n_id))$conf.int[2])) %>%
-  filter(year > 2003)
-
-
-# First find index corresponding to year of linkage 
-indexLinkage <- max(seq(along = min(hivresults$yeardiagnosis):linkageYear))
-
-# Save in deathrate
-deathrate <- rep(NA,length(allyears))
-deathrate_min <- rep(NA,length(allyears))
-deathrate_max <- rep(NA,length(allyears))
-
-deathrate[1:indexLinkage] <- linkageMortality[1:indexLinkage]
-deathrate[(indexLinkage+1):length(deathrate)] <- filter(ahodDeaths, 
-                                                        state == "all")$deathrate # ahodMortality
-
-deathrate_min[1:indexLinkage] <- linkageMortalityMin[1:indexLinkage]
-deathrate_min[(indexLinkage+1):length(deathrate)] <- filter(ahodDeaths, 
-                                                        state == "all")$lower # ahodMortalityLower
-
-deathrate_max[1:indexLinkage] <- linkageMortalityMax[1:indexLinkage]
-deathrate_max[(indexLinkage+1):length(deathrate)] <- filter(ahodDeaths, 
-                                                        state == "all")$upper # ahodMortalityUpper
-
-# Store final death rate
-hivdeathrate <- data.frame(year = allyears, deathrate = deathrate, 
-                           deathrate_min = deathrate_min, 
-                           deathrate_max = deathrate_max)
-
-# Plot what we have done if required
-if (plots) {
-  graphics.off()
-  
-  # Plot the deathrate
-  dplot1 <- ggplot(data = hivdeathrate, aes(x = year, y = deathrate)) +
-    geom_line(size = 1.25, color = "blue") + ylim(0,NA) + 
-    xlab("Year") + ylab("Annual death rate") + theme_bw() +
-    opts
-  
-  dplot2 <- ggplot(data = hivdeathrate, aes(x = year, y = deathrate)) +
-    geom_line(size = 1.25, color = "blue") + ylim(0,0.025) + xlim(2000, NA) +
-    geom_line(aes(y = deathrate_min), size = 1.25, color = "red") + 
-    geom_line(aes(y = deathrate_max), size = 1.25, color = "red") +
-    xlab("Year") + ylab("Annual death rate") + theme_bw() +
-    opts
-  
-  # Save to file 
-  png(paste(outputFolder, "/figures/death_rate.png",sep =""), 
-      width = 15, height = 5, units = "in", res = 300)
-  grid.arrange(dplot1, dplot2, ncol = 2)
-  dev.off() 
-}
-
-```
-
 Sort out population movement rates
 
 ```{r migration}
@@ -803,7 +673,6 @@ if (permDeparts) {
   
 }
 
-
 ### Calculate interstate rates - At this stage just calculate the best fit.
 # Don't worry about upper and lower bounds.
 
@@ -860,6 +729,190 @@ hivinterstate[hivinterstate$state == "all",]$arriverate <-
   hivinterstate[hivinterstate$state == "all",]$departrate
 
 ```
+
+Sort out deathrates
+
+```{r deaths}
+# To calculate the number of deaths each year we calculate an overall 
+# deathrate with an uncertainty range. This is used to work out the number 
+# of people diagnosed with HIV. 
+
+# The estimate of the death rate uses a number of methods. Firstly uses the 
+# 2003 linkage results and the number of known deaths to estimate the
+# deathrate up to 2003. It then uses AHOD mortality rates from 2003.
+
+# Load all the data sets we use for this estimate - use the parameter column as 
+# row names for easier subsetting
+hivparams <- read.csv(file.path(dataFolder, "individualHIVparameters.csv", 
+                                sep =""),as.is = 1)
+hivparams <- select(hivparams,parameter,value)
+for (ii in 1:nrow(hivparams)) {
+  assign(hivparams$parameter[ii],hivparams$value[ii])
+}
+
+# Load AHOD data to calculate mortality and do some simple cleaning
+ahodData <- read.csv(file.path(dataFolder, 
+                               paste("ahod", toString(analysisYear), 
+                                     ".csv", sep = "")))
+
+# Load backprojection estimates for comparison
+# bpdeaths <- read.csv(file.path(dataFolder, "projectedDeaths.csv", 
+#                                 sep =""),as.is = 1)
+
+# Extract number of known deaths and store in a central data frame
+hivdeaths <- hivdata %>% 
+  filter(! is.na(yeardeath)) %>%
+  group_by(yeardeath) %>% 
+  summarise(number_deaths = n()) %>% 
+  filter(yeardeath <= analysisYear)  
+
+# Calculate sensitivity of recorded deaths based on linkage results
+linkageFactor <- (linkedDeaths+notifiedDeaths)/notifiedDeaths
+linkageFactorLower <- linkageFactor*(1-linkageSensitivity)
+linkageFactorUpper <- linkageFactor*(1+linkageSensitivity)  
+
+#  We don't need to adjust deaths for number of unique diagnoses as
+# different dates of death should result in different people
+
+# Set up linked deaths
+hivdeaths$inflated_deaths <- hivdeaths$number_deaths * linkageFactor
+hivdeaths$inflated_deaths_lower <- hivdeaths$number_deaths * linkageFactorLower
+hivdeaths$inflated_deaths_upper <- hivdeaths$number_deaths * linkageFactorUpper
+
+# No deaths in 1980 and 1982 so add this data manually to ensure everything lines up
+hivdeaths <- rbind(hivdeaths,c(1980,0,0,0,0))
+hivdeaths <- rbind(hivdeaths,c(1982,0,0,0,0))
+hivdeaths <- arrange(hivdeaths,yeardeath)
+
+## Now calculate mortality rate for linkage data ------------------------
+cumdiagnoses <- hivresults$uniquecases #totalnotifications #uniquecases
+deaths <- hivdeaths$inflated_deaths
+deaths_min <- hivdeaths$inflated_deaths_lower
+deaths_max <- hivdeaths$inflated_deaths_upper
+anndiags <- c(cumdiagnoses[1],diff(cumdiagnoses))  # Annual diagnoses
+
+# Calculate number living each year 
+numliving <- rep(NA,length(anndiags))
+numliving_min <- rep(NA,length(anndiags))
+numliving_max <- rep(NA,length(anndiags))
+
+numliving[1] <- anndiags[1]
+numliving_min[1] <- anndiags[1]
+numliving_max[1] <- anndiags[1]
+
+allmigrate <- filter(hivmigrate, state == "all") # Overall migration rate for deaths estimate
+
+for (ii in 2:length(anndiags)) {
+  numliving[ii] <- numliving[ii-1] + anndiags[ii] - deaths[ii-1] 
+    - numliving[ii-1] * allmigrate$rate[ii-1]
+  numliving_min[ii] <- numliving_min[ii-1] + anndiags[ii] - deaths_max[ii-1]
+    - numliving_min[ii-1] * allmigrate$upper[ii-1]
+  numliving_max[ii] <- numliving_max[ii-1] + anndiags[ii] - deaths_min[ii-1]
+    - numliving_max[ii-1] * allmigrate$lower[ii-1]
+}
+
+# Calculate mortality
+linkageMortality <- deaths/numliving
+linkageMortalityMin <- deaths_min/numliving_max
+linkageMortalityMax <- deaths_max/numliving_min
+
+### Append AHOD mortality
+
+# Calculate crude death rate for each state and year - use 95% CI as the upper and lower bound
+
+ahodDeaths <- ahodData %>% 
+  group_by(state, year) %>%
+  summarise(n = sum(n_id), 
+            deaths = sum(n_death), 
+            deathrate = unname(prop.test(sum(n_death), sum(n_id))$estimate), 
+            lower = unname(prop.test(sum(n_death), sum(n_id))$conf.int[1]),
+            upper = unname(prop.test(sum(n_death), sum(n_id))$conf.int[2])) %>%
+  filter(year > 2003)
+
+
+# First find index corresponding to year of linkage 
+indexLinkage <- max(seq(along = min(hivresults$yeardiagnosis):linkageYear))
+
+# Save in deathrate
+deathrate <- rep(NA,length(allyears))
+deathrate_min <- rep(NA,length(allyears))
+deathrate_max <- rep(NA,length(allyears))
+
+# ahodMortality
+
+deathrate[1:indexLinkage] <- linkageMortality[1:indexLinkage]
+deathrate[(indexLinkage+1):length(deathrate)] <- filter(ahodDeaths, 
+                                                        state == "all")$deathrate # 
+# ahodMortalityLower
+
+deathrate_min[1:indexLinkage] <- linkageMortalityMin[1:indexLinkage]
+deathrate_min[(indexLinkage+1):length(deathrate)] <- filter(ahodDeaths, 
+                                                        state == "all")$lower # 
+# ahodMortalityUpper
+
+deathrate_max[1:indexLinkage] <- linkageMortalityMax[1:indexLinkage]
+deathrate_max[(indexLinkage+1):length(deathrate)] <- filter(ahodDeaths, 
+                                                        state == "all")$upper # 
+
+# Store final death rate
+hivdeathrate <- data.frame(year = allyears, deathrate = deathrate, 
+                           deathrate_min = deathrate_min, 
+                           deathrate_max = deathrate_max)
+
+# Store national results
+hivresults$osrate <- allmigrate$rate
+hivresults$oslower <- allmigrate$lower
+hivresults$osupper <- allmigrate$upper
+
+hivresults$deathslinked <- deaths
+hivresults$deathslower <- deaths_min
+hivresults$deathsupper <- deaths_max
+
+hivresults$deathrate <- deathrate
+hivresults$drlower <- deathrate_min
+hivresults$drupper <- deathrate_max
+
+# Create a HIV deaths dataframe if we are saving results for other calculations
+if (saveResults) {
+  # Directory and file name
+  saveString <- file.path(outputFolder, paste("HIVresults-", 
+                                              toString(analysisYear), sep = ""))
+  
+  # Write to csv
+  write.csv(hivresults, file = paste(saveString, ".csv", sep =""), 
+            row.names = FALSE)
+
+  # Save as R object
+  save(hivresults, file = paste(saveString, ".rda", sep =""))
+}
+
+
+# Plot what we have done if required
+if (plots) {
+  graphics.off()
+  
+  # Plot the deathrate
+  dplot1 <- ggplot(data = hivdeathrate, aes(x = year, y = deathrate)) +
+    geom_line(size = 1.25, color = "blue") + ylim(0,NA) + 
+    xlab("Year") + ylab("Annual death rate") + theme_bw() +
+    opts
+  
+  dplot2 <- ggplot(data = hivdeathrate, aes(x = year, y = deathrate)) +
+    geom_line(size = 1.25, color = "blue") + ylim(0,0.025) + xlim(2000, NA) +
+    geom_line(aes(y = deathrate_min), size = 1.25, color = "red") + 
+    geom_line(aes(y = deathrate_max), size = 1.25, color = "red") +
+    xlab("Year") + ylab("Annual death rate") + theme_bw() +
+    opts
+  
+  # Save to file 
+  png(paste(outputFolder, "/figures/death_rate.png",sep =""), 
+      width = 15, height = 5, units = "in", res = 300)
+  grid.arrange(dplot1, dplot2, ncol = 2)
+  dev.off() 
+}
+
+```
+
 
 ## Number living with diagnosed HIV
 
@@ -1189,15 +1242,15 @@ propUndiagnosed <- read.csv(file.path(dataFolder,
 propUndiagnosed <- filter(propUndiagnosed, year %in% allyears) 
 
 if (useOldpropundiagnosed) {
-  # Replace 2014 estimates with COUNT and 2014 ASR supplement non-MSM estimates
+  # Replace 2013 & 2014 estimates with COUNT and 2014 ASR supplement non-MSM estimates
   # COUNT: 8.9% (95% CI: 5.8-13.5%)
   # Non-MSM: 20% (range 12-23%) across states
-
-  hardcode <- c(analysisYear, 0.09, 0.06, 0.14, 0.2, 0.15, 0.25)
-  
-  propUndiagnosed[propUndiagnosed$year == analysisYear,] <- hardcode
+  hardcodeYears <- analysisYear - 2013 + 1
+  hardcode <- c(0.09, 0.06, 0.14, 0.2, 0.15, 0.25)
+ 
+  propUndiagnosed[propUndiagnosed$year >= 2013,2:7] <-  matrix(hardcode, 
+    nrow = hardcodeYears, ncol = length(hardcode), byrow = TRUE)
 }
-
 
 # Estimate proportion MSM and non-MSM for weighting
 propMSM <- filter(hivexpnat, expgroup == "msm")$proptotalnotifications
@@ -1679,7 +1732,7 @@ vlARTdata <- vlARTdata %>%
 replaceVars <- c("medCd4_noRx", "meanCd4_noRx", "medVL_noRx", "meanVL_noRx", "meanCd4_Rx")
 for (ii in 1:nrow(ahodData)) {
   if (is.na(ahodData$medCd4_noRx[ii])) {
-    ahodData$medCd4_noRx[ii] <- filter(ahodData, year == ahodData$year[ii] & 
+    ahodData$medCd4_noRx[ii] <- filter(ahodData, year == ahodData$year[ii] &
                                          state == "all" & 
                                          mode == ahodData$mode[ii])$medCd4_noRx
     ahodData$meanCd4_noRx[ii] <- filter(ahodData, year == ahodData$year[ii] & 
@@ -1723,16 +1776,20 @@ treatUpper <- filter(hivtreated, population == "all")$upper
 
 if (useCD4) {
   # Using CD4 data
-  numTreated <- filter(hivtreated, population == "all")$value
-  aveCd4_Rx <- filter(ahodTests, state == "all")$meanCd4_Rx
-  aveCd4_noRx <- filter(ahodTests, state == "all")$meanCd4_noRx
+  numTreated <- filter(hivtreated, population == "all" & 
+                         year %in% treatYears)$value
+  aveCd4_Rx <- filter(ahodTests, state == "all" & 
+                        year %in% treatYears)$meanCd4_Rx
+  aveCd4_noRx <- filter(ahodTests, state == "all" & 
+                          year %in% treatYears)$meanCd4_noRx
   numCd4Tests <- filter(cd4data, state == "all" & year %in% treatYears)$n
 
   receivedCare <- (numCd4Tests - numTreated * aveCd4_Rx)/aveCd4_noRx
   
 } else {
   # Use VL estimates
-  avevlTests <- filter(ahodTests, state == "all")$meanVL_noRx
+  avevlTests <- filter(ahodTests, state == "all" & 
+                         year %in% treatYears)$meanVL_noRx
   numvlTests <- filter(vlnoARTdata, state == "all" & year %in% treatYears)$n
   
   receivedCare <- (numvlTests/avevlTests)
@@ -1760,51 +1817,63 @@ for (ii in 1:nstates) {
   treatLower <- filter(hivtreated, population == states[ii])$lower
   treatUpper <- filter(hivtreated, population == states[ii])$upper
   
-  numTreated <- filter(hivtreated, population == states[ii])$value
-  numCd4Tests <- filter(cd4data, state == states[ii] & year %in% treatYears)$n
+  numTreated <- filter(hivtreated, population == states[ii] & 
+                         year %in% treatYears)$value
+  numCd4Tests <- filter(cd4data, state == states[ii] & 
+                          year %in% treatYears)$n
   
   if (useCD4) { 
     # Use CD4 results - warning produces negative numbers for some states 
     # due to number of tests calculations
     if (states[ii] %in% availableStates) {
       
-      aveCd4_Rx <- filter(ahodTests, state == states[ii])$meanCd4_Rx
+      aveCd4_Rx <- filter(ahodTests, state == states[ii] & 
+                            year %in% treatYears)$meanCd4_Rx
       if (any(is.na(aveCd4_Rx))){
         naindex <- is.na(aveCd4_Rx)
-        temp <- filter(ahodTests, state == "all")$meanCd4_Rx
+        temp <- filter(ahodTests, state == "all" & 
+                         year %in% treatYears)$meanCd4_Rx
         aveCd4_Rx[naindex] <- temp[naindex]
       }
       
-      aveCd4_noRx <- filter(ahodTests, state == states[ii])$meanCd4_noRx
+      aveCd4_noRx <- filter(ahodTests, state == states[ii] & 
+                              year %in% treatYears)$meanCd4_noRx
       if (any(is.na(aveCd4_noRx))){
         naindex <- is.na(aveCd4_noRx)
-        temp <- filter(ahodTests, state == "all")$meanCd4_noRx
+        temp <- filter(ahodTests, state == "all" & 
+                         year %in% treatYears)$meanCd4_noRx
         aveCd4_noRx[naindex] <- temp[naindex]
       }
       
     } else {  
       # Not available so use all data
-      aveCd4_Rx <- filter(ahodTests, state == "all")$meanCd4_Rx
-      aveCd4_noRx <- filter(ahodTests, state == "all")$meanCd4_noRx
+      aveCd4_Rx <- filter(ahodTests, state == "all" & 
+                            year %in% treatYears)$meanCd4_Rx
+      aveCd4_noRx <- filter(ahodTests, state == "all" & 
+                              year %in% treatYears)$meanCd4_noRx
     }
   
     receivedCare <- (numCd4Tests - numTreated * aveCd4_Rx)/aveCd4_noRx
     
   } else {
     # Use VL testing data 
-    numvlTests <- filter(vlnoARTdata, state == states[ii] & year %in% treatYears)$n
+    numvlTests <- filter(vlnoARTdata, state == states[ii] & 
+                           year %in% treatYears)$n
   
     # Work out average VL tests for each state if available and non-NA
     if (states[ii] %in% availableStates) {
-      avevlTests <- filter(ahodTests, state == states[ii])$meanVL_noRx
+      avevlTests <- filter(ahodTests, state == states[ii] & 
+                             year %in% treatYears)$meanVL_noRx
       if (any(is.na(avevlTests))){
         naindex <- is.na(avevlTests)
-        tempTests <- filter(ahodTests, state == "all")$meanVL_noRx
+        tempTests <- filter(ahodTests, state == "all" & 
+                              year %in% treatYears)$meanVL_noRx
         avevlTests[naindex] <- tempTests[naindex]
       }     
     } else {
       # Not available so use all data
-      avevlTests <- filter(ahodTests, state == "all")$meanVL_noRx
+      avevlTests <- filter(ahodTests, state == "all" & 
+                             year %in% treatYears)$meanVL_noRx
     }
   
     receivedCare <- (numvlTests/avevlTests)
