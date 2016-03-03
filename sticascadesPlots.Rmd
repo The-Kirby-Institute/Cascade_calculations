@@ -49,7 +49,7 @@ resultsYear <- 2014 # Year of cascade we will plot      # How long ago do we plo
 saveplots <- FALSE # Save plots as separate files
 
 # Function to format data and range into thousands
-source(file.path(basePath, "code", "format.data.R"), echo=TRUE)
+source(file.path(basePath, "code", "FormatData.R"), echo=TRUE)
 ```
 
 ```{r loadresults, echo = FALSE, messages = FALSE, include=FALSE}
@@ -258,9 +258,9 @@ finalTable$estimate <- NA
 skip <- c(3,4)
 for (ii in 1:nrow(finalTable)){
   if (ii %in% skip) {
-    finalTable$estimate[ii] <- format.data(chlamcascade$estimate[ii], places = -1)
+    finalTable$estimate[ii] <- FormatData(chlamcascade$estimate[ii], places = -1)
   } else {
-    finalTable$estimate[ii] <- format.data(chlamcascade$estimate[ii], 
+    finalTable$estimate[ii] <- FormatData(chlamcascade$estimate[ii], 
                                            chlamcascade$lower[ii], 
                                            chlamcascade$upper[ii], places = -1)
   }
