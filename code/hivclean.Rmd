@@ -20,7 +20,7 @@ require(utils)
 
 # Key folder paths
 privateDataPath <- file.path("/", "SVR-NAS", "Public", "SERP", "Cascades", "HIV", "data")
-basePath <- file.path(path.expand("~"), "Research", 
+basePath <- file.path(path.expand("~"), "Documents", "Research", 
                       "!Evaluation_Modelling", "project_care_cascades")
 dataPath <- file.path(basePath,"data","raw")
 
