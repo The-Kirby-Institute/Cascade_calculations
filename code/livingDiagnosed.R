@@ -1,3 +1,7 @@
+## R function to calculate number of PLDHIV
+
+# R. T. Gray
+
 livingDiagnosed <- function(cumdiagnoses, deathrate, migration, 
                             arrivals = NULL, departs = NULL, 
                             pldhiv = NULL) {
@@ -70,7 +74,7 @@ livingDiagnosed <- function(cumdiagnoses, deathrate, migration,
       migration[ii-1] + departs[ii-1]) * nliving[ii-1] + arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
     
   }
-  
+
   # Return final output
   return(nliving)
   
