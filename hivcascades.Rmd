@@ -40,9 +40,9 @@ startYear <- 1990
 
 plots <- FALSE # TRUE if we wnat to plot things
 bindCascade <- TRUE # TRUE if we want to store all the cascade results in one data frame
-saveCascade <- FALSE
-saveNotifications <- FALSE # Save cleaned notifications set
-saveResults <- FALSE # Save information national annual notifications
+saveCascade <- TRUE
+saveNotifications <- TRUE # Save cleaned notifications set
+saveResults <- TRUE # Save information national annual notifications
 
 nationalUniques <- TRUE # Use proportion from National estimates for sub-population de-duplication
 indigKnown <- TRUE # Only use notifications with indigenous classification for indigenous estimates

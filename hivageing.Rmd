@@ -75,6 +75,7 @@ analysisYear <- 2014
 
 # Script options
 savePlots <- TRUE
+plotGray <- TRUE
 # saveResults <- TRUE
 
 ```
@@ -204,9 +205,6 @@ absDeathRates <- read.csv(file.path(absFolder,
 
 absDeathRates <- filter(absDeathRates, sex == "male")
 
-# Convert into matrix format
-
-
 ```
 
 ```{r calculate, echo = FALSE, messages = FALSE, include=FALSE} 
@@ -301,9 +299,15 @@ pldhivTidy$age <- rep(sub("a", "", ageBins), nyears)
 
 # Setup some ploting variables
 startYear <- 1986
-getPalette <- colorRampPalette(brewer.pal(9, "Spectral"))
-getPalette <- colorRampPalette(cbPalette)
-mainColours <- rev(getPalette(nages))
+if (plotGray) {
+  getPalette <- gray.colors(nrow(binPldhiv), start = 0, end = 0.95)
+  mainColours <- rev(getPalette)
+} else {
+  getPalette <- colorRampPalette(brewer.pal(9, "Spectral"))
+  getPalette <- colorRampPalette(cbPalette)
+  mainColours <- rev(getPalette(nages))
+}
+
 xValues <- seq(startYear, analysisYear, by = 7)
 
 
