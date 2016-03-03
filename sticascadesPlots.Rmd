@@ -53,7 +53,7 @@ source(file.path(basePath, "code", "format.data.R"), echo=TRUE)
 ```
 
 ```{r loadresults, echo = FALSE, messages = FALSE, include=FALSE}
-# Load hiv cascde dataframe
+# Load hiv cascade dataframe
 notificationsFile <- file.path(basePath, "data", paste("chlamnotifications", 
                                        toString(resultsYear), ".csv", sep = ""))
 incidenceFile <- file.path(basePath, "data", paste("chlamincidence", 

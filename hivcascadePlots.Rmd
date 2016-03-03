@@ -46,7 +46,7 @@ minYear <- 10       # How long ago do we plot things
 saveplots <- TRUE # Save plots as separate files
 
 # Include linked and reatined in care?
-excludeCare <- TRUE
+excludeCare <- FALSE
 
 # Function to format data and range into thousands
 source(file.path(basePath, "code", "format.data.R"), echo=TRUE)
@@ -208,8 +208,8 @@ for (ii in seq(along = states)){
                           "Retained \n in care", "Receiving \n ART", "Suppressed \n virus")
     }
   
-  ### Plot the bar chart
-  if (states[ii] == "nsw") {
+  ### Plot the bar chart  
+  if (states[ii] == "nsw" & excludeCare) {
     plotbarState <- ggplot(data = nswCascade, aes(x = stage, y = value, fill = data)) + 
       geom_bar(stat = "identity", width = 0.8, position = "dodge") +
       geom_errorbar(aes(ymin = lower, ymax = upper), 
@@ -316,7 +316,7 @@ if (excludeCare) {
                               "Receiving ART", "Diagnosed", 
                               "Retained in care", "Suppressed virus")
   resultsStatesYear <- within(resultsStatesYear, stage <- 
-                                factor(stage, levels(stage)[c(1, 4, 2, 3, 5, 6)])) 
+                                factor(stage, levels(stage)[c(1, 4, 2, 5, 3, 6)])) 
   
 }
 
