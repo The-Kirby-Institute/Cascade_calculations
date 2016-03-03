@@ -1,0 +1,363 @@
+---
+title: "PLDHIV by Age"
+author: "Richard T. Gray"
+date: Latest version - `r format(Sys.Date(), format="%B %d %Y")`
+output:
+  word_document:
+    pandoc_args: --output="docs/PLDHIV_aging.docx"
+    reference_docx: docs/mystyles.docx
+csl: docs/plos.csl
+bibliography: docs/HIVcascades.bib
+---
+
+This R Markdown document provides estimates of the number of PLDHIV by age
+group up to 2014. This work builds on the previous work of J. Murray et. 
+al. [@murray2010hivaging] using a similar methodology but including 
+overseas migration and a slightly different approach to estimating the 
+number of deaths. The analysis uses data for the total number of deaths, 
+the estimated death rate, and the estimated overseas migration rate from
+the national HIV cascade estimates.
+
+# Analysis
+
+Previously J. Murray et. al. estimated the number of deaths in
+PLDHIV by age using AIDS diagnoses and the overall mortality rate for the 
+Australian population using ABS data [@murray2010hivaging]. In this 
+analysis we count the number of deaths recorded in the registry since the
+start of the epidemic. Up to 2003 we use the results from a linkage study 
+with the National Death Index [@nakhaee2009changes] to estimate the number 
+of missing deaths each year. Overall this linkage study estimated 23.5% of 
+deaths in PLDHIV were missing from the HIV registry. After 2003, we 
+estimated the number of deaths using the overall death rates from AHOD
+(NOTE: could potentially use AHOD death rates by age but I don't have 
+these at the moment and numbers could be too small for some age groups).
+
+Deaths missing from the HIV registry were allocated to age groups based on
+the age-specific death rates from the ABS. The ABS provides age-specific 
+death rates from 2000 to 2011 for males and 
+females in the general population [ABS website](http://www.abs.gov.au/ausstats/abs@.nsf/Lookup/by%20Subject/4125.0~Jan%202013~Main%20Features~Death%20rate~3210). This rates from 2000 to 2013, Figure 1 shows an example from the year 2011. 
+
+**Figure 1** - Age-specific death rates in the general population in 2011.
+![ABS Deathrate Curve](misc/ABS_2011_Deathrate.png)
+
+As we are using the relative death rate to allocate estimated deaths where
+the age at death is unknown we use male age-death rates (as they have a
+similar shape to the female death rates), the 2000 death rates for all
+years up to 2000 and the 2011 death rates for all years after 2011. 
+
+```{r initialization, echo = FALSE, messages = FALSE, include=FALSE}
+# Set working directory to source file location
+
+# Clear workspace
+rm(list=ls())
+
+# Various directories
+basePath <- getwd()
+dataFolder <- file.path(basePath, "data")
+docFolder <- file.path(basePath, "docs")
+figFolder <- file.path(basePath, "output","figures")
+resultsFolder <- file.path(basePath, "output")
+
+# Source key functions
+Rcode <- file.path(basePath, "code") 
+source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
+source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+source(file.path(Rcode, "TidyLongitudinal.R"), echo=TRUE)
+source(file.path(Rcode, "AgeCat.R"), echo=TRUE)
+
+# Load standard libraries
+source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+LoadLibrary(gridExtra)
+
+# Primary script parameters
+currTime <- format(Sys.time(), "%y-%m-%d") # to append to saved files
+analysisYear <- 2014
+
+# Script options
+savePlots <- TRUE
+# saveResults <- TRUE
+
+```
+
+```{r loaddresults, echo = FALSE, messages = FALSE, include=FALSE}
+# Load the previously saved hiv notifications data frame
+load(file.path(resultsFolder, paste("HIVset-",
+                    toString(analysisYear), ".rda", sep = "")))
+
+# Load the previously saved hivresults data frame
+load(file.path(resultsFolder, paste("HIVresults-",
+                    toString(analysisYear), ".rda", sep = "")))
+
+# Load current hiv cascade 
+load(file.path(resultsFolder, paste("HIVcascadeEstimates-",
+                    toString(analysisYear), ".rda", sep = "")))
+
+# Extract PLDHIV for overall population
+pldhiv <- hivcascade %>%
+  filter(stage == "pldhiv", population == "all") %>%
+  select(-stage, -population)
+                    
+```
+
+```{r organizedata, echo = FALSE, messages = FALSE, include=FALSE}
+# Organize diagnoses and known deaths into matrices
+# Each row is an age group and each column is a year after 1980
+# Age groups: <15, 15-19, 20-24, 25-29, 30-34, 35-39, 40-44, 45-49, 50-54, 
+#             55-59, 60-64, 65-69, 70+ (13 age groups)
+
+nyears <- analysisYear - 1980 + 1
+nages <- 18
+
+ageList <- c("a0-4", "a4-9","a10-14", "a15-19", "a20-24", "a25-29", 
+             "a30-34", "a35-39", "a40-44", "a45-49", "a50-54", "a55-59", 
+             "a60-64", "a65-69", "a70-74", "a75-79", "a80-84", "a85+")
+
+yearList <- paste("y", as.character(1980:analysisYear), sep = "")
+
+
+# Initialize age diagnosis and age death matrices
+ageDiag <- matrix(0, nages, nyears)
+rownames(ageDiag) <- ageList
+colnames(ageDiag) <- yearList
+
+ageDeath <- matrix(0, nages, nyears)
+rownames(ageDeath) <- ageList
+colnames(ageDeath) <- yearList
+
+# Calculate estimated number of unique diagnoses
+unqiueDiags <- c(hivresults$uniquecases[1], diff(hivresults$uniquecases))
+
+# Now loop through all the notifications and put age in the right place
+for (ii in 1:nyears) {
+  year <- 1980 + ii - 1
+  
+  # Sort out diagnoses ----------------------------------------------------
+  
+  # Extract diagnoses in this year and age at diagnosis
+  yearDiags <- hivset %>% 
+    filter(yeardiagnosis == year) %>%
+    select(agehiv)
+  
+  # Now put people in the right age bin
+  agebins <- table(AgeCat(yearDiags$agehiv, lower = 0, 
+                           upper = 85, by = 5), useNA = "always")
+  
+  # Reallocate NA's
+  probvec <- head(agebins,-1)/sum(head(agebins,-1))
+  reallocate <- sample(length(head(agebins,-1)), tail(agebins, 1), 
+                       replace = TRUE, prob = probvec)
+  
+  agebins[unique(reallocate)] <- agebins[unique(reallocate)] + 
+                                  as.vector(table(reallocate)) 
+  
+  # Tidy up age bins and add to the agediag matix
+  agebins <- head(agebins,-1)
+  
+  # Adjust age bins to remove duplicates normalizing to the number
+  # of unique cases 
+  ageDiag[,ii] <- agebins * unqiueDiags[ii]/sum(agebins) 
+
+  # Sort out deaths -----------------------------------------------------
+  
+  # Extract deaths in this year and age at death
+  yearDeaths <- hivset %>% 
+    filter(yeardeath == year) %>%
+    mutate(agedeath = agehiv + (yeardeath - yeardiagnosis)) %>%
+    select(agedeath)
+  
+  # Now put people in the right age bin -  assume all deaths are complete 
+  # so we don't have to reallocate NAs
+  deathbins <- table(AgeCat(yearDeaths$agedeath, lower = 0, upper = 85, 
+                           by = 5))
+  
+  # Tidy up 
+  # deathbins <- as.vector(c(sum(deathbins[1:3]), 
+  #                          deathbins[4:length(deathbins)]))
+  
+  ageDeath[,ii] <- deathbins
+}
+```
+
+```{r extradeaths, echo = FALSE, messages = FALSE, include=FALSE}
+# Estimate the total number of deaths each year using the death rates
+
+# Calculate estimated number of deaths each year using the deathrate
+estimateDeaths <- pldhiv$value * hivresults$deathrate
+
+# Determine the difference in deaths between the estimate and the known 
+# deaths - if there are negative numbers it is okay because we will end
+# up adding people instead of removing them below to ensure total deaths
+# are consistant with the overall estimate of deaths. (TODO): This does 
+# raise questions about using AHOD rates if there are less deaths than
+# recorded! 
+unknownDeaths <- estimateDeaths - colSums(ageDeath)
+
+# Distribute deaths to age groups based on the ABS death rates for
+# each group - (TODO): May replace with AHOD death rates if available
+
+# Load deathrates data
+absFolder <- file.path(path.expand("~"), "Research",
+                       "!Evaluation_Modelling", "data")
+absDeathRates <- read.csv(file.path(absFolder, 
+                          "ABS_deathrate_sex_age.csv", 
+                          sep =""), as.is = c(1,2))
+
+absDeathRates <- filter(absDeathRates, sex == "male")
+
+# Convert into matrix format
+
+
+```
+
+```{r calculate, echo = FALSE, messages = FALSE, include=FALSE} 
+# Calculate the number in each age group 
+
+yearsVec <- 1980:analysisYear
+
+# Initialize results matrix
+agePldhiv <- matrix(0, nages, nyears)
+rownames(agePldhiv) <- ageList
+colnames(agePldhiv) <- yearList
+
+# Add first years diagnoses
+agePldhiv[, 1] <- ageDiag[, 1]
+
+# Create an aging rate vector 
+ageRate <- c(rep(0.2, nages - 1), 0)
+
+# Loop through each year and age and tally up number of PLDHIV in each 
+# age group
+for (ii in 2:nyears) {
+  
+  # Extract abs death rates for this year
+  if (yearsVec[ii - 1] <= 2000) {
+    absDeaths <- filter(absDeathRates, year == 2000)$deathrate
+  } else if (yearsVec[ii - 1] >= 2011) {
+    absDeaths <- filter(absDeathRates, year == 2011)$deathrate
+  } else {
+    absDeaths <- filter(absDeathRates, year == yearsVec[ii - 1])$deathrate
+  }
+  
+  # Adjust numbers per 1000 to rate and remove deaths for those aged 0
+  absDeaths <- absDeaths/1000
+  absDeaths <- absDeaths[2:length(absDeaths)]
+  
+  # Use ABS deathrate to estimate expected deaths in each age group
+  deathsABSrate <- absDeaths * agePldhiv[, ii - 1]
+  
+  # Calculate adjustment factor so deaths across age groups matchs
+  # unknown death - can be negative if unknownDeaths is negative equates
+  # to adding people rather than removing them. This keeps things 
+  # consistent with estimated total deaths.
+  adjustFactor <- unknownDeaths[ii - 1] / sum(deathsABSrate)
+  unknownAgeDeaths <- adjustFactor * deathsABSrate
+  
+  for (jj in 1:nages) {
+    
+    # Calculate number of people moving up in age
+    if (jj == 1) {
+      # If in first age group no-one ages from younger group
+      ageUp <- 0
+    } else {
+      ageUp <- agePldhiv[jj - 1, ii - 1] * ageRate[jj-1]
+    }
+    
+    # Update current age group for current year - assuming same 
+    # overseas migration rate for each age group equal to overall 
+    # migration rate
+    agePldhiv[jj, ii] <- agePldhiv[jj, ii - 1] + ageDiag[jj, ii] - 
+      ageDeath[jj, ii - 1] - unknownAgeDeaths[jj] - 
+      agePldhiv[jj, ii - 1] * hivresults$osrate[ii-1] - 
+      agePldhiv[jj, ii - 1] * ageRate[jj] + ageUp
+    
+    # For low numbers the previous calculation could give number less
+    # than zero. In this case repalce with zero
+    if (agePldhiv[jj, ii] < 0) {
+      agePldhiv[jj, ii] <- 0
+    }
+  }
+}
+
+# Tidy up agePldhiv so it has the bins we want to plot
+ageBins <- c("a<15", "a15-19", "a20-24", "a25-29", 
+             "a30-34", "a35-39", "a40-44", "a45-49", "a50-54", "a55-59", 
+             "a60-64", "a65-69", "a70+")
+
+binPldhiv <- matrix(0, length(ageBins), nyears)
+binPldhiv[2:12,] <- agePldhiv[4:14,]
+binPldhiv[1,] <- colSums(agePldhiv[1:3,])
+binPldhiv[13,] <- colSums(agePldhiv[15:18,])
+
+```
+
+```{r plotresults, echo = FALSE, messages = FALSE, include=FALSE} 
+# Create a stacked bar chart and filled bar chart 
+graphics.off()
+
+# First reshape the matrix into a dataframe for ggplot and replace 
+# age group numbering with labels
+pldhivTidy <- TidyLongitudinal(binPldhiv, 1980, firstCol = "age")
+pldhivTidy$age <- rep(sub("a", "", ageBins), nyears)
+
+# Setup some ploting variables
+startYear <- 1986
+getPalette <- colorRampPalette(brewer.pal(9, "Spectral"))
+getPalette <- colorRampPalette(cbPalette)
+mainColours <- rev(getPalette(nages))
+xValues <- seq(startYear, analysisYear, by = 7)
+
+
+# Get the data we want to plot
+pldhivTidy <- pldhivTidy %>%
+  filter(year >= startYear) %>%
+  rename(number = value)
+
+# Now do the barplot of number of PLDHIV
+barPlot <- ggplot(data = pldhivTidy, aes(x = year, y = number, 
+  fill = age)) + geom_bar(stat = "identity") + 
+  xlab("Year") + ylab("Number of PLDHIV") +
+  scale_fill_manual(values = mainColours, name = "Age",
+                     guide = guide_legend(reverse=TRUE)) + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "",
+                   legend.text = element_text(size = 8))
+
+# Now do the barplot of proportions
+propPlot <- ggplot(data = pldhivTidy, aes(x = year, y = number, 
+  fill = age)) + geom_bar(stat="identity", position = "fill") + 
+  xlab("Year") + ylab("Proportion of PLDHIV") +
+  scale_fill_manual(values = mainColours, name = "Age",
+                    guide = guide_legend(reverse=TRUE)) + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "right",
+                   legend.text = element_text(size = 8))
+
+# Print figures to separate windows
+if (savePlots) {
+  png(file.path(figFolder, paste("PLDHIV_Age.png",sep ="")), 
+    width = 5, height = 4, units = "in", res = 300)
+  barPlotLeg <- barPlot + theme(legend.position = "right")
+  print(barPlotLeg)
+  dev.off()
+  
+  png(file.path(figFolder, paste("PLDHIV_Age_Proportion.png",sep ="")), 
+    width = 6, height = 4, units = "in", res = 300)
+  print(propPlot)
+  dev.off()
+}
+
+```
+
+# Results
+
+**Figure 2** - Number and proportion of PLDHIV by age-group in Australia 
+from 1986 to 2014.  
+```{r insertyplots1, echo=FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width = 8, fig.height = 4}
+print(grid.arrange(barPlot, propPlot, ncol = 2, widths = c(1, 1.2)))
+```
+
+**Table 1** - (TODO): Number of PLDHIV by age-group in Australia 
+from 2005 to 2014
+
+
+# References
