@@ -1,8 +1,10 @@
-### R function to format results
+##R function to format results
 
-## This function formats data and results into string showing the value and range
+# This function formats data and results into string showing the value 
+# and range
 
-format.data <- function(estimate, lower = NULL, upper = NULL, places = -2, money = FALSE) {
+FormatData <- function(estimate, lower = NULL, upper = NULL, 
+                        places = -2, money = FALSE) {
   
   if (is.null(lower) | is.null(upper)) {
     if (money) {

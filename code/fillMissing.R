@@ -1,4 +1,8 @@
-fillMissing <- function(years, yearsValues, avalValues) {
+## R function to fill in missing data
+
+# R. T. Gray
+
+FillMissing <- function(years, yearsValues, avalValues) {
   # Fill in missing years data using previous years estimates. 
   # Primarily used for cumulative diagnoses
   # Args:
@@ -8,7 +12,7 @@ fillMissing <- function(years, yearsValues, avalValues) {
   # Returns:
   #   filledDiagnoses: A data frame with all years and 
   #       values filled in for missing years.
-  
+  #
   # ------------------------------------------------------ 
   
   # Initialize output dataframe

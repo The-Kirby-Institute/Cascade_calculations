@@ -1,4 +1,24 @@
-findBeta <- function(quantile1,quantile2,quantile3)
+## findBeta.R
+# This function is used to estimate the a and b values of a beta
+# distribution which best fits a distribution specified by three priors. 
+# Code was copied from the following website.
+# http://a-little-book-of-r-for-bayesian-statistics.readthedocs.org/en/latest/src/bayesianstats.html
+
+## Example of use
+# ===============
+
+# For example, if you want to estimate the proportion of people like 
+# chocolate, you might have a rough idea that the most likely value is 
+# around 0.85, but that the proportion is unlikely to be smaller than 0.60 or 
+# bigger than 0.95. You can find the best Beta prior to use in this case by 
+# specifying that the median (50% percentile) of the prior is 0.85, that the 
+# 99.999% percentile is 0.95, and that the 0.001% percentile is 0.60:
+# > quantile1 <- list(p=0.5, x=0.85)    # we believe the median of the prior is 0.85
+# > quantile2 <- list(p=0.99999,x=0.95) # we believe the 99.999th percentile of the prior is 0.95
+# > quantile3 <- list(p=0.00001,x=0.60) # we believe the 0.001st percentile of the prior is 0.60
+# We can then use the findBeta() function below to find the most appropriate Beta prior to use.
+                                                                                    
+FindBeta <- function(quantile1,quantile2,quantile3)
 {
   # find the quantiles specified by quantile1 and quantile2 and quantile3
   quantile1_p <- quantile1[[1]]; quantile1_q <- quantile1[[2]]
@@ -42,5 +62,8 @@ findBeta <- function(quantile1,quantile2,quantile3)
       }
     }
   }
+  
+  # Return the values
   print(paste("The best beta prior has a=",best_a,"b=",best_b))
+  return(c(best_a, best_b))
 }

@@ -1,9 +1,11 @@
-### R function to load libraries
+## R function to load libraries
 
-## Uses require to check if library is available and then attempts to install 
+# Uses require to check if library is available and then attempts to install 
 # package if unavailable
 
-load.library <- function(package) {
+# R. T. Gray
+
+LoadLibrary <- function(package) {
   # Load speciifed library
   #
   # Args:
