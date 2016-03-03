@@ -49,7 +49,7 @@ saveplots <- TRUE # Save plots as separate files
 excludeCare <- FALSE
 
 # Function to format data and range into thousands
-source(file.path(basePath, "code", "format.data.R"), echo=TRUE)
+source(file.path(basePath, "code", "FormatData.R"), echo=TRUE)
 
 ```
 
@@ -265,9 +265,9 @@ if (excludeCare) {
 
 for (ii in 1:nrow(tableAll)){
   if (ii %in% skip) {
-    finalTable$estimate[ii] <- format.data(tableAll$value[ii], places = -1)
+    finalTable$estimate[ii] <- FormatData(tableAll$value[ii], places = -1)
   } else {
-    finalTable$estimate[ii] <- format.data(tableAll$value[ii], 
+    finalTable$estimate[ii] <- FormatData(tableAll$value[ii], 
                                            tableAll$lower[ii], 
                                            tableAll$upper[ii], places = -1)
   }
@@ -375,9 +375,9 @@ finalTable$estimate <- NA
 
 for (ii in 1:nrow(stateTable)){
   if (stateTable$stage[ii] == "linked") {
-    finalTable$estimate[ii] <- format.data(stateTable$value[ii], places = -1)
+    finalTable$estimate[ii] <- FormatData(stateTable$value[ii], places = -1)
   } else {
-    finalTable$estimate[ii] <- format.data(stateTable$value[ii], 
+    finalTable$estimate[ii] <- FormatData(stateTable$value[ii], 
                                            stateTable$lower[ii], 
                                            stateTable$upper[ii], places = -1)
   }
