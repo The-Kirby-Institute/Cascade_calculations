@@ -2,7 +2,7 @@
 
 # R. T. Gray
 
-livingDiagnosed <- function(cumdiagnoses, deathrate, migration, 
+LivingDiagnosed <- function(cumdiagnoses, deathrate, migration, 
                             arrivals = NULL, departs = NULL, 
                             pldhiv = NULL) {
   # Calculate the number of people living with diagnosed HIV.

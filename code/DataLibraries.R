@@ -11,7 +11,11 @@
 LoadLibrary(dplyr)
 LoadLibrary(tidyr)
 LoadLibrary(utils)
+LoadLibrary(readxl)
+
+# Libraries for output
 LoadLibrary(ggplot2)
 LoadLibrary(RColorBrewer)
 LoadLibrary(Hmisc)
 LoadLibrary(knitr)
+LoadLibrary(gridExtra)

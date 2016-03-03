@@ -1,4 +1,8 @@
-removeDuplicates <- function(dobvector, days.ignore, 
+## R function to estimate duplicates in the HIV registry
+
+# R. T. Gray
+
+RemoveDuplicates <- function(dobvector, days.ignore, 
                              na.rm = FALSE, 
                              write = NA){
   # Calculate the number of unique people given recorded date of birth. 
