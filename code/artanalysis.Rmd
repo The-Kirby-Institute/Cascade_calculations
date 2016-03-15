@@ -1,0 +1,273 @@
+Analysis of patients taking ART
+===============================
+
+This script explores the number of people taking ART in Australia. 
+
+
+```{r initialization} 
+# Set working directory to source file loaction
+
+# Clear workspace
+rm(list=ls())
+
+# Various directories
+basePath <- getwd()
+# dataFolder <- file.path(basePath, "data")
+# docFolder <- file.path(basePath, "docs")
+# figFolder <- file.path(basePath, "output","figures")
+# resultsFolder <- file.path(basePath, "output")
+Rcode <- file.path(basePath, "code") 
+
+# Load standard libraries, key functions and options
+source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
+source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+source(file.path(Rcode, "TidyLongitudinal.R"), echo=TRUE)
+source(file.path(Rcode, "AgeCat.R"), echo=TRUE)
+
+# Script parameters
+analysisYear <- 2014
+
+```
+
+```{r loaddata}
+# Load the ART data
+dataFile <- paste("ART_estimates-", toString(analysisYear), 
+                  ".csv", sep = "")
+artEstimates <- read.csv(dataFile)
+
+# Add some variables for specific data
+artEstimates$ahodraw <- NA
+artEstimates$all <- NA
+artEstimates$ahodraw[1:10] <- artEstimates$ahod[1:10]
+artEstimates$all[1:13] <- artEstimates$ahod[1:13]
+artEstimates$all[14:15] <- artEstimates$pbs[14:15]
+```
+
+```{r fitcurves}
+# Explore fitting a function to the data. Don't need to do the various
+# logistic regressions because these can be done using ggplot with 
+# geom_smooth. Rather we explore different fitting functions
+
+# Functions to fit
+fitFunc<- function(x, a, b, c, d) {
+  # A four parameter logistic function
+  return((b-a) / (1 + exp(-d * (x - c))) + a)
+}
+
+# Specify our x and y data for fitting
+ydata <- artEstimates$all
+xdata <- artEstimates$year
+
+# Set weights to reflect PBS data is likely to be more accurate
+weights <- c(rep(0.66, 10), rep(0.33, 3), 1, 1)
+
+# Weighted logistic regression -------------------------------------------
+
+# For comparison add a weighted regression fit
+fitWlm <- lm(ydata ~ xdata, weights = weights)
+artEstimates$fitwlm <- predict(fitWlm, xdata = xdata)
+
+# GLM --------------------------------------------------------------------
+
+# Try various general lineraized models
+
+# First try a poisson regression
+fitGlmPois <- glm(all ~ year, data = artEstimates, 
+              family = poisson(link = "log"), weights = weights)
+artEstimates$fitglmpois <- predict(fitGlmPois, type="response")
+
+# No try a binomial regression
+
+saturationCoverage <- 30000 # estimate of saturation coverage
+
+# Take the difference because we are taking the log
+artEstimates$diff <- saturationCoverage - artEstimates$all 
+
+# Now do a binomial fit
+fitGlmBin <- glm(cbind(all, diff) ~ year, data = artEstimates, 
+              family = binomial(link = "logit"), weights = weights)
+artEstimates$fitglmbin <- predict(fitGlmBin, type="response") * 
+  saturationCoverage
+
+# Fit a specific function ------------------------------------------------
+
+# Do the fitting - Note: nls seems to have lots of problems fitting to
+# the full four parameter logistic function but works if we force one of 
+# of the parameters to a specific value. Here we set the infection point,
+# it appears to be insentivie to a value greater than 2015
+inflectionYear <- 2020
+
+fitLog <- nls(ydata ~ fitFunc(xdata, a, b, inflectionYear, d),
+           start = list(a = 5000, b = 30000, d = 0.1),
+           weights = weights)
+
+# Note: best fit from Matlab
+# a = 5270, b = 30200, c = 2014.7 d = 0.207) 
+
+# Compare to an exponential
+fitFuncExp <- function(x, a, b, c) {
+  # A three parameter exponential function
+  return(a * exp(b * (x - c)))
+}
+
+fitExp <- nls(ydata ~ fitFuncExp(xdata, a, b, 2000),
+           start = list(a = 6233, b = 0.07),
+           weights = weights)
+
+
+# Add the fits to dataframe 
+artEstimates$fitlog <- predict(fitLog, xdata = xdata)
+artEstimates$fitexp <- predict(fitExp, xdata = xdata)
+
+# Explore the fit - e.g logfit
+# summary(fitLog)
+# sum(resid(fitLog)^2)
+# confint(fitLog)
+
+```
+
+```{r predictnls}
+# Generate ensemble of curves based on variation in 95% confidence interval
+# of estimated parameters values
+aRange <- confint(fitLog)[1,]
+bRange <- confint(fitLog)[2,]
+dRange <- confint(fitLog)[3,]
+
+nsamples <- 1000
+simMatrix <- matrix(0,nsamples, length(xdata))
+
+aSample <- runif(nsamples,aRange[1],aRange[2])
+bSample <- runif(nsamples,bRange[1],bRange[2])
+dSample <- runif(nsamples,dRange[1],dRange[2])
+
+for (ii in 1:nsamples) {
+  simMatrix[ii,] <- fitFunc(xdata,aSample[ii], bSample[ii], 
+                            inflectionYear, dSample[ii])
+}
+
+# Use function to generate lower and upper bounds for ART numbers for best 
+# fitting function
+artEstimates$fitmin <- apply(simMatrix, 2, min)
+artEstimates$fitlwr95 <- apply(simMatrix, 2, quantile, probs = 0.025)
+artEstimates$fitlwriqr <- apply(simMatrix, 2, quantile, probs = 0.25)
+artEstimates$fitupriqr <- apply(simMatrix, 2, quantile, probs = 0.75)
+artEstimates$fitupr95 <- apply(simMatrix, 2, quantile, probs = 0.975)
+artEstimates$fitmax <- apply(simMatrix, 2, max)
+```
+
+
+```{r plotanalysis}
+# Adjust plotOpts
+plotOpts <- plotOpts + theme(legend.position = "right",
+  legend.text = element_text(size = 8),
+  legend.title = element_text(size = 9, face = "bold"))
+
+#Setup colours, labels and shapes for legend aesthetics
+cols <- c("ahod" = "blue", "pbs" = "red", "all" = "black", 
+          "reg1" = "#99CCFF", "reg2" = "#663399", "reg3" = "#006699",
+          "fitreg" = "#003300", "fitexp" = "#006699",
+          "fitlog" = "#993333")
+
+labels <- c("ahod" = "AHOD data", 
+            "pbs" = "PBS data", 
+            "all" = "ART data", 
+            "reg1" = "Regression AHOD\n2000-2010",
+            "reg2" = "Regression AHOD\n2000-2013", 
+            "reg3" = "Regression all data", 
+            "fitreg" = "Regression\nweighted", 
+            "fitexp" = "Exponential fit",
+            "fitlog" = "Logistic fit")
+
+shapes <- c("ahod" = 18, "pbs" = 18, "all" = 18, 
+            "reg1" = NA, "reg2" = NA, "reg3" = NA, 
+            "fitreg" = NA, "fitexp" = NA, "fitlog" = NA)
+            
+# Create a plot for comparing the regression analysis
+aesLabels <- c("ahod", "pbs", "fitreg", "reg3", "reg2", "reg1")
+
+regressionPlot <- ggplot(data = artEstimates, aes(x = year, y = ahod)) + 
+  geom_point(aes(colour = "ahod", shape = "ahod"), 
+             na.rm = TRUE) + 
+  geom_point(aes(y = pbs, colour = "pbs", shape = "pbs"), na.rm = TRUE) +
+  geom_smooth(aes(y = ahodraw, colour = "reg1", shape = "reg1"),
+              method = "lm", se = FALSE, na.rm = TRUE, fullrange = TRUE) + 
+  geom_smooth(aes(colour = "reg2", shape = "reg2"), 
+              method = "lm", se = FALSE, na.rm = TRUE, fullrange = TRUE) + 
+  geom_smooth(aes(y = all, colour = "reg3", shape = "reg3"), 
+              method = "lm",  se = FALSE, na.rm = TRUE, fullrange = TRUE) +
+  geom_line(aes(y = fitwlm, colour = "fitreg", shape = "fitreg")) + 
+  scale_colour_manual(name = "", values = cols,
+                      labels = labels[aesLabels],
+                      breaks = aesLabels,
+                      guide = guide_legend(override.aes = list(
+                         linetype = c("blank", "blank", 
+                                      rep("solid", 4))))) +
+  scale_shape_manual(name = "", values = shapes,
+                     breaks = aesLabels, 
+                     labels = labels[aesLabels]) +
+  ylim(c(0,20000)) + 
+  ylab("Number on ART") + 
+  xlab("Year") + 
+  plotOpts
+
+fitPlot <- ggplot(data = artEstimates, aes(x = year)) +
+  geom_point(aes(y = all, colour = "all", shape = "all"), na.rm = TRUE) +
+  geom_line(aes(y = fitexp, colour = "fitexp", shape = "fitexp")) +
+  geom_line(aes(y = fitlog, colour = "fitlog", shape = "fitlog")) +
+  scale_colour_manual(name = "", values = cols,
+                      labels = labels[c("all", "fitexp", "fitlog")],
+                      breaks = c("all", "fitexp", "fitlog"),
+                      guide = guide_legend(override.aes = list(
+                         linetype = c("blank", "solid", "solid")))) +
+  scale_shape_manual(name = "", values = shapes,
+                     breaks = c("all", "fitexp", "fitlog"), 
+                     labels = labels[c("all", "fitexp", "fitlog")]) +
+  ylim(c(0,NA)) +
+  ylab("Number on ART") +
+  xlab("Year") +
+  plotOpts
+
+logPlot <- ggplot(data = artEstimates, aes(x = year)) + 
+  geom_ribbon(aes(ymin = fitmin, ymax = fitmax, 
+                  fill = "fitlog1", alpha = "fitlog1")) + 
+  geom_ribbon(aes(ymin = fitlwr95, ymax = fitupr95, 
+                  fill = "fitlog2", alpha = "fitlog2")) +
+  geom_ribbon(aes(ymin = fitlwriqr, ymax = fitupriqr, 
+                  fill = "fitlog3", alpha = "fitlog3")) +
+  geom_point(aes(y = all, colour = "all", shape = "all"), na.rm = TRUE) +
+  geom_line(aes(y = fitlog, colour = "fitlog", shape = "fitlog")) +
+  scale_colour_manual(name = "Fit", values = cols, 
+                      breaks = c("all", "fitlog"),
+                      labels = labels[c("all", "fitlog")],
+                      guide = guide_legend(override.aes = list(
+                         linetype = c("blank", "solid")))) +
+  scale_shape_manual(name = "Fit", values = shapes[c("all", "fitlog")], 
+                      breaks = c("all", "fitlog"),
+                      labels = labels[c("all", "fitlog")]) +
+  scale_fill_manual(name = "Range", 
+                    values = c("#993333", "#993333", "#993333"), 
+                    breaks = c("fitlog1", "fitlog2", "fitlog3"), 
+                    labels = c("Range", "95% interval", "IQR")) +
+  scale_alpha_manual(name = "Range", 
+                    values = c(0.2, 0.35, 0.5), 
+                    breaks = c("fitlog1", "fitlog2", "fitlog3"), 
+                    labels = c("Range", "95% interval", "IQR")) +
+  ylim(c(0,NA)) +
+  ylab("Number on ART") +
+  xlab("Year") +
+  plotOpts
+
+# Save plots as PNG files - 300 dpi by default
+plotWidth <- 12
+plotHeight <- 7
+plotUnits <- "cm"
+
+ggsave("Regression_Comparision.png", plot = regressionPlot,
+       width = plotWidth, height = plotHeight, units = plotUnits)
+ggsave("Fit_Comparison.png", plot = fitPlot, 
+       width = plotWidth, height = plotHeight, units = plotUnits)
+ggsave("Logistic_Fit.png", plot = logPlot,
+       width = plotWidth, height = plotHeight, units = plotUnits)
+
+```
