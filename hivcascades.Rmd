@@ -43,8 +43,8 @@ bindCascade <- FALSE # TRUE if we want to store all the cascade results
                      # one data frame
 
 saveCascade <- FALSE       # save final cascade dataframe
-saveNotifications <- FALSE # save cleaned notifications set
-saveResults <- FALSE       # save information national annual notifications
+saveNotifications <- TRUE # save cleaned notifications set
+saveResults <- TRUE       # save information national annual notifications
 
 nationalUniques <- TRUE # use proportion from National estimates for 
                         # sub-population de-duplication
@@ -274,7 +274,7 @@ hivCob[!is.na(hivCob$countrygroup), ]$propknown <-
 hivCob[is.na(hivCob$countrygroup), ]$propknown <- 0
 hivCob$proptotalknown <- NA
 hivCob[!is.na(hivCob$countrygroup), ]$proptotalknown  <- 
-  hivCobknown$proptotalnotifications
+  hivCobKnown$proptotalnotifications
 hivCob[is.na(hivCob$countrygroup), ]$proptotalknown <- 0
 
 # Indigenous status
@@ -928,7 +928,6 @@ if (plots) {
 }
 
 ```
-
 
 ## Number living with diagnosed HIV
 
