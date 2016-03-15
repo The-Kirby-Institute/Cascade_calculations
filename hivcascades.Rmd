@@ -13,23 +13,20 @@ This document describes and contains the code for producing the HIV care cascade
 # Clear workspace
 rm(list=ls()) 
 
+# Setup directories
+basePath <- file.path(path.expand("~"), "Research", 
+                      "!Evaluation_Modelling", "project_care_cascades")
+Rcode <- file.path(basePath, "code") 
+dataFolder <- file.path(basePath,"data") 
+outputFolder <- file.path(basePath,"output") 
+
 # Set working directory
-setwd(file.path(path.expand("~"), "Research", "!Evaluation_Modelling", "project_care_cascades"))
-
-# Base directory
-basePath <- getwd()
-dataFolder <- file.path(basePath,"data")
-
-# Folder for plots 
-outputFolder <- file.path(basePath,"output")
+setwd(basePath)
 
 # Load libraries ------------------------------------------------------
-
-# Loading function
-source(file.path(basePath, "code", "LoadLibrary.R"), echo=TRUE)
-
-# Libraries for data manipulation and output
-source(file.path(basePath, "code", "DataLibraries.R"), echo=TRUE)
+source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
+source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Primary script parameters
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
@@ -38,16 +35,22 @@ startYear <- 1990
 
 # Script options ------------------------------------------------------
 
-plots <- FALSE # TRUE if we wnat to plot things
-bindCascade <- TRUE # TRUE if we want to store all the cascade results in one data frame
-saveCascade <- TRUE
-saveNotifications <- TRUE # Save cleaned notifications set
-saveResults <- TRUE # Save information national annual notifications
+plots <- FALSE      # TRUE if we want to plot things
+bindCascade <- TRUE # TRUE if we want to store all the cascade results 
+                    # one data frame
 
-nationalUniques <- TRUE # Use proportion from National estimates for sub-population de-duplication
-indigKnown <- TRUE # Only use notifications with indigenous classification for indigenous estimates
+saveCascade <- FALSE       # save final cascade dataframe
+saveNotifications <- FALSE # save cleaned notifications set
+saveResults <- FALSE       # save information national annual notifications
 
-permDeparts <- TRUE # Use national permant departures for overseas migration
+nationalUniques <- TRUE # use proportion from National estimates for 
+                        # sub-population de-duplication
+
+indigKnown <- TRUE # only use notifications with indigenous classification 
+                   # for indigenous estimates
+
+permDeparts <- TRUE # Use national permant departures for 
+                    # overseas migration
 
 useCD4 <- FALSE # Use CD4 AHOD and testing data for retained in care
 
@@ -796,11 +799,11 @@ allmigrate <- filter(hivmigrate, state == "all") # Overall migration rate for de
 
 for (ii in 2:length(anndiags)) {
   numliving[ii] <- numliving[ii-1] + anndiags[ii] - deaths[ii-1] 
-    - numliving[ii-1] * allmigrate$rate[ii-1]
+   - numliving[ii-1] * allmigrate$rate[ii-1]
   numliving_min[ii] <- numliving_min[ii-1] + anndiags[ii] - deaths_max[ii-1]
-    - numliving_min[ii-1] * allmigrate$upper[ii-1]
+   - numliving_min[ii-1] * allmigrate$upper[ii-1]
   numliving_max[ii] <- numliving_max[ii-1] + anndiags[ii] - deaths_min[ii-1]
-    - numliving_max[ii-1] * allmigrate$lower[ii-1]
+   - numliving_max[ii-1] * allmigrate$lower[ii-1]
 }
 
 # Calculate mortality
