@@ -1,6 +1,8 @@
 Analysis of patients taking ART
 ===============================
 
+Richard T. Gray
+
 This script explores the number of people taking ART in Australia. 
 
 

@@ -1,15 +1,15 @@
----
-title: "HIV Cascades Calculations"
-author: "Richard T. Gray"
-date: Date - `r format(Sys.Date(), format="%B %d %Y")`
-output: 
-  word_document:
-    reference_docx: mystyles.docx
----
+HIV Cascades Calculations
+=========================
 
-This document describes and contains the code for producing the HIV care cascade estimates for Australia. It is written in dynamic format using R markdown v2 within Rstudio (version 0.98.1091 with R version`r substr(R.Version()$version.string,1,15)`) to produce a Word (.docx) document (see <http://rmarkdown.rstudio.com>). All the R code to clean the data and produce the figures and tables is contained in this file but suppressed in the final output document. 
+Author: Richard T. Gray
 
-```{r initialization, echo = FALSE, messages = FALSE, include=FALSE}
+This script describes and contains the code for producing the HIV care 
+cascade estimates for Australia. It is written in dynamic format using R 
+markdown v2 within Rstudio (version 0.98.1091 with R version`r 
+substr(R.Version()$version.string,1,15)`) (see 
+<http://rmarkdown.rstudio.com>). 
+
+```{r initialization}
 # Clear workspace
 rm(list=ls()) 
 
@@ -23,7 +23,7 @@ outputFolder <- file.path(basePath,"output")
 # Set working directory
 setwd(basePath)
 
-# Load libraries ------------------------------------------------------
+# Load standard libraries and options ----------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
@@ -64,13 +64,13 @@ useOldpropundiagnosed <- TRUE
 # Load and define useful functions for analysis
 
 # Load function to remove duplicates
-source(file.path(basePath, "code","RemoveDuplicates.R"), echo=TRUE)
+source(file.path(Rcode,"RemoveDuplicates.R"), echo=TRUE)
 
 # Load function to calculate number living with diagnosed HIV
-source(file.path(basePath, "code","LivingDiagnosed.R"), echo=TRUE)
+source(file.path(Rcode,"LivingDiagnosed.R"), echo=TRUE)
 
 # Source function for filling in missing data
-source(file.path(basePath, "code", "FillMissing.R"), echo=TRUE)
+source(file.path(Rcode, "FillMissing.R"), echo=TRUE)
 
 # Function to easily extract sub-populations of interest
 subhivset <- function(hivdataframe, born = 'all', 

@@ -13,25 +13,26 @@ This Rmarkdown document describes various approaches of estimating the proportio
 rm(list=ls()) 
 options(scipen=999)  # To get rid of scientific notation
 
-# Load libraries used
-require(ggplot2)
-require(readxl)
-require(dplyr)
-require(tidyr)
-require(utils)
-require(nnls) # For optimization
-require(knitr)
-require(gridExtra)
-
 # Set working directory
-setwd("~/Research/!Evaluation_Modelling/project_care_cascades")
+basePath <- file.path("~", "Research", "!Evaluation_Modelling", "project_care_cascades")
+setwd(basePath)
+
+# Various directories
+dataFolder <- file.path(basePath, "data", "countData")
+docFolder <- file.path(basePath, "docs")
+figFolder <- file.path(basePath, "output","figures")
+resultsFolder <- file.path(basePath, "output")
+Rcode <- file.path(basePath, "code") 
+
+# Load standard libraries, key functions and options
+source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
+source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 ```
 
 ```{r inputdetails, echo = FALSE, messages = FALSE, include=FALSE}
 # Details of where to store outputs
-dataFolder <- "./data/countData/"
-outputFolder <- "./output"
 inputFile <- "countData.xlsx"
 currTime <- format(Sys.time(), "%Y-%m-%d(%H-%M)") # to append to files
 
@@ -41,7 +42,7 @@ numInits <- 1000    # Number of init starting points for optimization
 useDiagnoses <- TRUE # Use reported notifications or estimated incidence 
 
 # Options for running and saving things
-fullRun <- TRUE # Everytime we do a run from scratch save everything 
+fullRun <- FALSE # Everytime we do a run from scratch save everything 
 folder <- paste("CountAnalysis_",currTime,sep="")
 if(fullRun){
   dir.create(file.path(outputFolder,folder), showWarnings = FALSE)
@@ -54,7 +55,7 @@ saveplots <- TRUE
 
 ```{r loaddata, echo=FALSE, messages = FALSE, include=FALSE}
 # Load data from the countdata.xlsx file 
-countData <- read_excel(paste(dataFolder,inputFile,sep =""), na = "NA")
+countData <- read_excel(file.path(dataFolder, inputFile), na = "NA")
 
 # Using the input data calculate numbers in each column
 countClean <- countData[,c("year","diagnoses")]
@@ -437,7 +438,7 @@ pars <- results[[which.min(values)]]$par
 
 # Results
 
-The final results are preseneted in this section.
+The final results are presented in this section.
 
 ```{r extractresults}
 # This script extracts the results we want to assess. 

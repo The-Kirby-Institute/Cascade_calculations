@@ -1,6 +1,8 @@
 Chlamydia data cleaning 
 =======================
 
+Richard T. Gray
+
 This script is used to load and clean the raw Chlamydia related data from 
 various sources. These data are primarily used for the STI cascade 
 calculations. The resulting cleaned data sets are saved as dataframes in 
