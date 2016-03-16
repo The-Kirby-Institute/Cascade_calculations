@@ -51,15 +51,17 @@ nationalUniques <- TRUE # use proportion from National estimates for
 indigKnown <- TRUE # only use notifications with indigenous classification 
                    # for indigenous estimates
 
-permDeparts <- TRUE # Use national permant departures for 
+permDeparts <- TRUE # use national permant departures for 
                     # overseas migration
 
-useCD4 <- FALSE # Use CD4 AHOD and testing data for retained in care
+
+includeLinked <- FALSE # Include linked to care in cascade
+
+useCD4 <- FALSE # use CD4 AHOD and testing data for retained in care
 
 # Given issues with undiagnosed estimates use hardcoded estimates from 
 # 2013 ASR
 useOldpropundiagnosed <- TRUE 
-
 ```
 
 ```{r functions}
@@ -1408,15 +1410,7 @@ if (bindCascade) {
 
 ```{r linked}
 # Now estimate the number living with diagnosesd HIV who have been linked 
-# to care
-
-# Initialize final results data frame
-hivLinkCare <- data.frame(stage = character(), 
-                          year = double(),
-                          population = character(),
-                          estimate = double(),
-                          lower = double(),
-                          upper = double())
+# to care 
 
 # Overall annual results ------------------------------------------------
 hivLinkedAll <- hivSet %>% 
@@ -1448,18 +1442,13 @@ lmlinked <- lm(proportion ~ year, data = filter(propl, year > 2000))
 predictlinked <- predict(lmlinked, data.frame(year = allYears))
 
 # Some basic tests
-# LivingDiagnosed(cumsum(uniqueDiags * predictlinked),deathRate, migrationRate)
-# LivingDiagnosed(cumsum(uniqueDiags * predictlinked),deathRate, rep(0,length(migrationRate)))
-
-hivLinkCare <- rbind(hivLinkCare, data_frame(stage = "linked", 
-                            year = allYears, 
-                            population = "all", 
-                            value = linkedAll,
-                            lower = linkedAllMin,
-                            upper = linkedAllMax))
+# LivingDiagnosed(cumsum(uniqueDiags * predictlinked),deathRate, 
+# migrationRate)
+# LivingDiagnosed(cumsum(uniqueDiags * predictlinked),deathRate, 
+# rep(0,length(migrationRate)))
 
 # Add results to hivResults 
-hivResults$uniquediags <- uniqueDiags
+hivResults$numlinked <- hivLinkedAll$linked
 hivResults$proplinked <- propLinked
 
 # Create a plot to show the fitting of the proportion linked 
@@ -1479,86 +1468,103 @@ if (plots) {
   plot = plotLinked, width = 5, height = 5)
 }
 
-### State calculations
-hivlinkedState <- hivset %>% group_by(state,yeardiagnosis) %>% 
-  filter(linked == "yes") %>%
-  summarise(linked = n()) %>% 
-  mutate(totallinked = cumsum(linked)) %>%
-  filter(yeardiagnosis <= analysisYear) 
+# Add linked to cascade ---------------------------------------------------
 
-for (ii in 1:(nstates - 1)) {
-  templinked <- filter(hivlinkedState, state == states[ii])
-  templinked <- FillMissing(allYears, templinked$yeardiagnosis, templinked$totallinked)
+if (includeLinked) {
   
-  cumlinked <- templinked$value
-  
-  # State migration rates
-  migStateRate <- filter(hivmigrate, state == states[ii])$rate
-  migStateRateMin <- filter(hivmigrate, state == states[ii])$lower
-  migStateRateMax <- filter(hivmigrate, state == states[ii])$upper
-  
-  # State departures
-  depStateRate <- filter(hivinterstate, state == states[ii])$departrate
-  
-  # State arrivals
-  arrStateRate <- filter(hivinterstate, state == states[ii])$arriverate
-  
-  # Do the state calculation and range
-  linkedState <- LivingDiagnosed(cumlinked, deathRate, migStateRate,
-                                 arrStateRate, depStateRate, pldhivAll)
-  
-  linkedStateMin <- LivingDiagnosed(cumlinked, deathRateMax, migStateRateMax,
-                                 arrStateRate, depStateRate, pldhivAll)
-  
-  linkedStateMax <- LivingDiagnosed(cumlinked, deathRateMin, migStateRateMin,
-                                 arrStateRate, depStateRate, pldhivAll)  
-  
-  # Store state results 
-  hivlinkcare <- rbind(hivlinkcare, data_frame(stage = "linked", 
+  # Start final results data frame
+  hivLinkCare <- data.frame(stage = "linked", 
                             year = allYears, 
-                            population = states[ii], 
-                            value = linkedState,
-                            lower = linkedStateMin,
-                            upper = linkedStateMax))
+                            population = "all", 
+                            value = linkedAll,
+                            lower = linkedAllMin,
+                            upper = linkedAllMax)
   
+  
+  # State calculations ---------------------------------------------------
+  hivLinkedState <- hivSet %>% group_by(state, yeardiagnosis) %>% 
+    filter(linked == "yes") %>%
+    summarise(linked = n()) %>% 
+    mutate(totallinked = cumsum(linked)) %>%
+    filter(yeardiagnosis <= analysisYear) 
+  
+  for (ii in 1:(nstates - 1)) {
+    tempLinked <- filter(hivLinkedState, state == states[ii])
+    tempLinked <- FillMissing(allYears, tempLinked$yeardiagnosis, 
+                              tempLinked$totallinked)
+    
+    cumLinked <- tempLinked$value
+    
+    # State migration rates
+    migStateRate <- filter(hivMigrate, state == states[ii])$rate
+    migStateRateMin <- filter(hivMigrate, state == states[ii])$lower
+    migStateRateMax <- filter(hivMigrate, state == states[ii])$upper
+    
+    # State departures
+    depStateRate <- filter(hivinterstate, state == states[ii])$departrate
+    
+    # State arrivals
+    arrStateRate <- filter(hivinterstate, state == states[ii])$arriverate
+    
+    # Do the state calculation and range
+    linkedState <- LivingDiagnosed(cumLinked, deathRate, migStateRate,
+                                   arrStateRate, depStateRate, pldhivAll)
+    
+    linkedStateMin <- LivingDiagnosed(cumLinked, deathRateMax, 
+      migStateRateMax, arrStateRate, depStateRate, pldhivAll)
+    
+    linkedStateMax <- LivingDiagnosed(cumLinked, deathRateMin,
+      migStateRateMin, arrStateRate, depStateRate, pldhivAll)  
+    
+    # Store state results 
+    hivLinkCare <- rbind(hivLinkCare, data_frame(stage = "linked", 
+                                                 year = allYears, 
+                                                 population = states[ii], 
+                                                 value = linkedState,
+                                                 lower = linkedStateMin,
+                                                 upper = linkedStateMax))
+    
+  }
+  
+  # Exposure mode calculations --------------------------------------------
+  hivLinkedExp <- hiSset %>% 
+    group_by(expgroup, yeardiagnosis) %>% 
+    filter(!is.na(cd4count)) %>%
+    summarise(linked = n()) %>% 
+    mutate(totallinked = cumsum(linked)) %>%
+    filter(yeardiagnosis <= analysisYear) 
+  
+  for (ii in 1:nmodes) {
+    tempLinked <- filter(hivLinkedExp, expgroup == modes[ii])
+    tempLinked <- FillMissing(allYears, tempLinked$yeardiagnosis, 
+                              tempLinked$totallinked)
+    
+    cumLinked <- tempLinked$value
+    
+    # Exp migration rates, death rates, assumed to be same overall
+    
+    # Do the Exp calculation and range
+    linkedExp <- LivingDiagnosed(cumLinked, deathRate, migrationRate)
+    
+    linkedExpMin <- LivingDiagnosed(cumLinked, deathRateMax, 
+                                    migrationRateMax)
+    linkedExpMax <- LivingDiagnosed(cumLinked, deathRateMin, 
+                                    migrationRateMin)
+    
+    # Store the state results
+    hivLinkCare <- rbind(hivLinkCare, data_frame(stage = "linked", 
+                                                 year = allYears, 
+                                                 population = modes[ii], 
+                                                 value = linkedExp,
+                                                 lower = linkedExpMin,
+                                                 upper = linkedExpMax))
+  }
+  
+  # Finally bind to overall results
+  if (bindCascade) {
+    hivCascade <- rbind(hivCascade, hivLinkCare)
+  }
 }
-
-### Exposure mode calculations  
-hivlinkedExp <- hivset %>% group_by(expgroup,yeardiagnosis) %>% 
-  filter(!is.na(cd4count)) %>%
-  summarise(linked = n()) %>% 
-  mutate(totallinked = cumsum(linked)) %>%
-  filter(yeardiagnosis <= analysisYear) 
-
-
-for (ii in 1:nmodes) {
-  templinked <- filter(hivlinkedExp, expgroup == modes[ii])
-  templinked <- FillMissing(allYears, templinked$yeardiagnosis, templinked$totallinked)
-  
-  cumlinked <- templinked$value
-  
-  # Exp migration rates, death rates, assumed to be same overall
-  
-  # Do the Exp calculation and range
-  linkedExp <- LivingDiagnosed(cumlinked, deathRate, migrationRate)
-  
-  linkedExpMin <- LivingDiagnosed(cumlinked, deathRateMax, migrationRateMax)
-  linkedExpMax <- LivingDiagnosed(cumlinked, deathRateMin, migrationRateMin)
-  
-  # Store the state results
-  hivlinkcare <- rbind(hivlinkcare, data_frame(stage = "linked", 
-                            year = allYears, 
-                            population = modes[ii], 
-                            value = linkedExp,
-                            lower = linkedExpMin,
-                            upper = linkedExpMax))
-}
-
-# Finally bind to overall results
-if (bindCascade) {
-  hivcascade <- rbind(hivcascade, hivlinkcare)
-}
-
 ```
 
 ## Number taking ART
@@ -1573,9 +1579,9 @@ if (bindCascade) {
 # Load all the data we need
 # s100data <- read.csv(file.path(dataFolder, "s100_treatment_costs.csv"))
 ahodART <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
-prospectionData <- read.csv(file.path(dataFolder, paste("pharmdash_HIVpatients", 
-                                      toString(analysisYear), 
-                                      ".csv", sep = "")), as.is = c(1,2))
+prospectionData <- read.csv(file.path(dataFolder, 
+  paste("pharmdash_HIVpatients", toString(analysisYear), 
+    ".csv", sep = "")), as.is = c(1,2))
 
 # Use the AHOD ART data to estimate a trend for back projection
 

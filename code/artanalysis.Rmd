@@ -38,6 +38,11 @@ dataFile <- paste("ART_estimates-", toString(analysisYear),
                   ".csv", sep = "")
 artEstimates <- read.csv(dataFile)
 
+# ahodART <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
+# prospectionData <- read.csv(file.path(dataFolder, 
+#   paste("pharmdash_HIVpatients", toString(analysisYear), 
+#     ".csv", sep = "")), as.is = c(1,2))
+
 # Add some variables for specific data
 artEstimates$ahodraw <- NA
 artEstimates$all <- NA
