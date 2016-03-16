@@ -3,7 +3,11 @@ Analysis of patients taking ART
 
 Richard T. Gray
 
-This script explores the number of people taking ART in Australia. 
+This script explores the number of people taking ART in Australia. It 
+estimates the number taking ART during the year. This uses a mixture of 
+data sets as Prospection Pharmaceutical Benefits Scheme (PBS) data is only 
+available for 2013-2014. We only estimate the number on treatment since
+2000. 
 
 
 ```{r initialization} 
@@ -14,9 +18,11 @@ rm(list=ls())
 
 # Various directories
 basePath <- getwd()
-# dataFolder <- file.path(basePath, "data")
-# docFolder <- file.path(basePath, "docs")
-# figFolder <- file.path(basePath, "output","figures")
+dataFolder <- file.path(path.expand("~"), "Research", 
+                      "!Evaluation_Modelling", 
+                      "project_care_cascades","data")
+outputFolder <- file.path(basePath, "data")
+figFolder <- file.path(basePath, "output","figures")
 # resultsFolder <- file.path(basePath, "output")
 Rcode <- file.path(basePath, "code") 
 
@@ -29,20 +35,42 @@ source(file.path(Rcode, "AgeCat.R"), echo=TRUE)
 
 # Script parameters
 analysisYear <- 2014
+saveResults <- TRUE
 
 ```
 
 ```{r loaddata}
 # Load the ART data
-dataFile <- paste("ART_estimates-", toString(analysisYear), 
-                  ".csv", sep = "")
-artEstimates <- read.csv(dataFile)
+artEstimates <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
+prospectionData <- read.csv(file.path(dataFolder,
+  paste("pharmdash_HIVpatients", toString(analysisYear),
+    ".csv", sep = "")), as.is = c(1, 2))
 
-# Test
-# ahodART <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
-# prospectionData <- read.csv(file.path(dataFolder, 
-#   paste("pharmdash_HIVpatients", toString(analysisYear), 
-#     ".csv", sep = "")), as.is = c(1,2))
+# Clean ART data ---------------------------------------------------------- 
+
+# First simplify column names
+colnames(artEstimates) <- c("year", "ahod")
+
+# Add national pbs data
+# artEstimates$pbs <- NA
+
+tempPbs <- prospectionData %>% 
+  filter(gender == "all", state == "all") %>%
+  gather("year", "pbs", 3:ncol(prospectionData)) %>%
+  select(year, pbs)
+
+# Replace year strings with year values
+tempPbs$year <- unlist(lapply(tempPbs$year, function(x)
+  as.numeric(strsplit(as.vector(x), 'X')[[1]][2])))
+
+# Add the PBS data to artEstimates
+artEstimates <- left_join(artEstimates, tempPbs, by = "year")
+
+# Add some hardcoded upper and lower bounds for the PBS data
+artEstimates$pbslower <- 0.9 * artEstimates$pbs
+artEstimates$pbsupper <- 1.1 * artEstimates$pbs
+
+# Add other variables ------------------------------------------------------
 
 # Add some variables for specific data
 artEstimates$ahodraw <- NA
@@ -90,13 +118,16 @@ artEstimates$fitglmpois <- predict(fitGlmPois, type="response")
 saturationCoverage <- 30000 # estimate of saturation coverage
 
 # Take the difference because we are taking the log
-artEstimates$diff <- saturationCoverage - artEstimates$all 
+artEstimates$diffbin <- saturationCoverage - artEstimates$all 
 
 # Now do a binomial fit
 fitGlmBin <- glm(cbind(all, diff) ~ year, data = artEstimates, 
               family = binomial(link = "logit"), weights = weights)
 artEstimates$fitglmbin <- predict(fitGlmBin, type="response") * 
   saturationCoverage
+
+# Remove difference calculation
+artEstimates <- select(artEstimates, -diffbin)
 
 # Fit a specific function ------------------------------------------------
 
@@ -132,17 +163,17 @@ artEstimates$fitexp <- predict(fitExp, xdata = xdata)
 # summary(fitLog)
 # sum(resid(fitLog)^2)
 # confint(fitLog)
-
 ```
 
-```{r predictnls}
+```{r predictcurves}
 # Generate ensemble of curves based on variation in 95% confidence interval
 # of estimated parameters values
 aRange <- confint(fitLog)[1,]
 bRange <- confint(fitLog)[2,]
 dRange <- confint(fitLog)[3,]
 
-nsamples <- 1000
+nsamples <- 10000  # ensure big enough to get enough samples out after 
+                   # filtering
 simMatrix <- matrix(0,nsamples, length(xdata))
 
 aSample <- runif(nsamples,aRange[1],aRange[2])
@@ -152,7 +183,19 @@ dSample <- runif(nsamples,dRange[1],dRange[2])
 for (ii in 1:nsamples) {
   simMatrix[ii,] <- fitFunc(xdata,aSample[ii], bSample[ii], 
                             inflectionYear, dSample[ii])
+  
 }
+
+# Filter samples which go outside the PBS error bounds for the final 
+# year
+goodRows <- apply(simMatrix, 1, 
+      function(x) any(x[length(xdata)] <
+                        artEstimates$pbsupper[length(xdata)]
+                      && x[length(xdata)] >
+                        artEstimates$pbslower[length(xdata)]))
+
+simMatrix <- simMatrix[goodRows, ]
+
 
 # Use function to generate lower and upper bounds for ART numbers for best 
 # fitting function
@@ -239,11 +282,13 @@ fitPlot <- ggplot(data = artEstimates, aes(x = year)) +
 logPlot <- ggplot(data = artEstimates, aes(x = year)) + 
   geom_ribbon(aes(ymin = fitmin, ymax = fitmax, 
                   fill = "fitlog1", alpha = "fitlog1")) + 
-  geom_ribbon(aes(ymin = fitlwr95, ymax = fitupr95, 
+  geom_ribbon(aes(ymin = fitlwr95, ymax = fitupr95,
                   fill = "fitlog2", alpha = "fitlog2")) +
-  geom_ribbon(aes(ymin = fitlwriqr, ymax = fitupriqr, 
+  geom_ribbon(aes(ymin = fitlwriqr, ymax = fitupriqr,
                   fill = "fitlog3", alpha = "fitlog3")) +
   geom_point(aes(y = all, colour = "all", shape = "all"), na.rm = TRUE) +
+  geom_errorbar(aes(ymin = pbslower, ymax = pbsupper), width = 0.3, 
+                color = "black", size = 0.8, na.rm = TRUE) + 
   geom_line(aes(y = fitlog, colour = "fitlog", shape = "fitlog")) +
   scale_colour_manual(name = "Fit", values = cols, 
                       breaks = c("all", "fitlog"),
@@ -253,13 +298,13 @@ logPlot <- ggplot(data = artEstimates, aes(x = year)) +
   scale_shape_manual(name = "Fit", values = shapes[c("all", "fitlog")], 
                       breaks = c("all", "fitlog"),
                       labels = labels[c("all", "fitlog")]) +
-  scale_fill_manual(name = "Range", 
-                    values = c("#993333", "#993333", "#993333"), 
-                    breaks = c("fitlog1", "fitlog2", "fitlog3"), 
+  scale_fill_manual(name = "Range",
+                    values = c("#993333", "#993333", "#993333"),
+                    breaks = c("fitlog1", "fitlog2", "fitlog3"),
                     labels = c("Range", "95% interval", "IQR")) +
-  scale_alpha_manual(name = "Range", 
-                    values = c(0.2, 0.35, 0.5), 
-                    breaks = c("fitlog1", "fitlog2", "fitlog3"), 
+  scale_alpha_manual(name =  "Range",
+                    values = c(0.2, 0.35, 0.5),
+                    breaks = c("fitlog1", "fitlog2", "fitlog3"),
                     labels = c("Range", "95% interval", "IQR")) +
   ylim(c(0,NA)) +
   ylab("Number on ART") +
@@ -271,11 +316,27 @@ plotWidth <- 12
 plotHeight <- 7
 plotUnits <- "cm"
 
-ggsave("Regression_Comparision.png", plot = regressionPlot,
+ggsave(file.path(figFolder, "Regression_Comparision.png"), 
+       plot = regressionPlot,
        width = plotWidth, height = plotHeight, units = plotUnits)
-ggsave("Fit_Comparison.png", plot = fitPlot, 
+ggsave(file.path(figFolder, "Fit_Comparison.png"), 
+       plot = fitPlot, 
        width = plotWidth, height = plotHeight, units = plotUnits)
-ggsave("Logistic_Fit.png", plot = logPlot,
+ggsave(file.path(figFolder, "Logistic_Fit.png"), 
+       plot = logPlot,
        width = plotWidth, height = plotHeight, units = plotUnits)
+
+```
+
+```{r saveresults}
+if (saveResults) {
+  # Directory and file name
+  saveString <- file.path(outputFolder, paste("ART_Estimates-", 
+    toString(analysisYear), sep = ""))
+  
+  # Write to csv
+   write.csv(artEstimates, file = paste(saveString, ".csv", sep =""), 
+            row.names = FALSE)
+}
 
 ```

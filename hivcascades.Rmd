@@ -1571,19 +1571,22 @@ if (includeLinked) {
 
 ```{r treatment}
 # Calculate the number taking ART during the year. This uses a mixture of 
-# data sets as the Prospection data is only available for 2013-2014. Unlike
-# the stages based on the number living with diagnosed HIV we only estimate 
-# the number on treatment in the last 10 years due to a lack of data. 
-# (maybe should do this for all or have analysis start year???) 
+# data sets as the Prospection data is only available for 2013-2014. For 
+# the  national overall estimates we use previously generated estimates
+# produced by the script 0-ArtAnalysis.Rmd. 
 
 # Load all the data we need
-# s100data <- read.csv(file.path(dataFolder, "s100_treatment_costs.csv"))
-ahodART <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
+artEstimate <- 
+
+
+# ahodART <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
+  
+# Reload Prospection PBS data to get gender and state estimates
 prospectionData <- read.csv(file.path(dataFolder, 
   paste("pharmdash_HIVpatients", toString(analysisYear), 
-    ".csv", sep = "")), as.is = c(1,2))
+    ".csv", sep = "")), as.is = c(1, 2))
 
-# Use the AHOD ART data to estimate a trend for back projection
+# Use the art analysis results for back projection trends
 
 # First simplify column names
 colnames(ahodART) <- c("year", "numART")
