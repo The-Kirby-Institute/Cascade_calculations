@@ -304,7 +304,7 @@ hivAborigKnown <- hivAborig %>%
 hivAborig$propknown <- NA
 hivAborig[!is.na(hivAborig$aboriggroup) & hivAborig$aboriggroup !=
             "othercob", ]$propknown <- hivAborigKnown$propnotifications
-hivAborig[is.na(hivaborig$aboriggroup) | hivAborig$aboriggroup == 
+hivAborig[is.na(hivAborig$aboriggroup) | hivAborig$aboriggroup == 
             "othercob",]$propknown <- 0
 hivAborig$proptotalknown <- NA
 hivAborig[!is.na(hivAborig$aboriggroup) & hivAborig$aboriggroup != 
@@ -1576,89 +1576,88 @@ if (includeLinked) {
 # produced by the script 0-ArtAnalysis.Rmd. 
 
 # Load all the data we need
-artEstimate <- 
+artEstimates <- read.csv(file.path(dataFolder, paste("ART_Estimates-", 
+    toString(analysisYear), ".csv", sep = "")))
 
-
-# ahodART <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
   
 # Reload Prospection PBS data to get gender and state estimates
 prospectionData <- read.csv(file.path(dataFolder, 
   paste("pharmdash_HIVpatients", toString(analysisYear), 
     ".csv", sep = "")), as.is = c(1, 2))
 
-# Use the art analysis results for back projection trends
-
-# First simplify column names
-colnames(ahodART) <- c("year", "numART")
-
-# Create new varaible showing the relative change in ART numbers versus 2013. 
-artBase <- filter(ahodART, year == 2013)$numART
-ahodART$relative <- ahodART$numART/artBase
-
-# Hardcoded uncertainty for the time being
-# hivtreated$lower <- 0.95 * hivtreated$value
-# hivtreated$upper <- 1.05 * hivtreated$value
-
-# Sort out years for analysis
-firstYear <- 2003
-treatyears <- firstYear:2013
-treatTrend <- filter(ahodART, year %in% treatyears)$relative
-
 # Tidy up the prospection data
-hivtreated <- prospectionData %>%
+hivTreated <- prospectionData %>%
   filter(gender == "all") %>%
   select(-gender) 
 
 yearNames <- strsplit(toString(2013:analysisYear), ", ")[[1]]
 
-colnames(hivtreated) <- c("population",yearNames)
-hivtreated <- gather(hivtreated,"year","value", 2:ncol(hivtreated))
-hivtreated$year <- as.numeric(as.character(hivtreated$year))
+colnames(hivTreated) <- c("population", yearNames)
+hivTreated <- gather(hivTreated,"year", "value", 2:ncol(hivTreated))
+hivTreated$year <- as.numeric(as.character(hivTreated$year))
 
-# Uncertainty for Prospection data. 
-hivtreated$lower <- 0.9 * hivtreated$value
-hivtreated$upper <- 1.1 * hivtreated$value
+hivTreated$lower <- NA
+hivTreated$upper <- NA
 
-### Now use the relative rates to calculate number on treatment
+# Sort out artEstimates
+artEstimates <- artEstimates %>%
+  select(year, all, fitmin, fitmax, rel, rellower, relupper) %>%
+  rename(value = all, lower = fitmin, upper = fitmax, 
+         trend = rel, trendlwr = rellower, trendupr = relupper) %>%
+  mutate(population = "all") %>%
+  select(population, everything())
 
-states <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act", "all")
-nstates <- length(states)
+# Bind all our ART data together
+hivTreated <- rbind(select(artEstimates, -contains("trend")), 
+                           filter(hivTreated, population != "all"))
 
 # Add stage column
-hivtreated$stage <- "numART"
+hivTreated$stage <- "numART"
 
-# Loop through all the states and populations and calculate number on treatment
-# since 2003
+# Use the relative rates to number in states
+
+states <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act")
+nstates <- length(states)
+
+# Calculate number on treatment for states --------------------------------
+
+# since 2000
 for (ii in 1:nstates) {
-  # Extract 2013 data 
-  treat2013 <- filter(hivtreated, year == 2013 & population == states[ii])
+  # Extract final year data 
+  treatFinal <- filter(hivTreated, population == states[ii],
+                       year >= 2013)
+  
+  # index positions
+  indexFinal <- nrow(artEstimates)
+  index2013 <- nrow(filter(artEstimates, year <= 2013))
   
   # Calculate estimates and ranges
-  tempfit <- treatTrend * treat2013$value
-  templwr <- treat2013$lower * treatTrend
-  tempupr <- treat2013$upper * treatTrend
+  tempFit <- treatFinal$value[nrow(treatFinal)] * artEstimates$trend
+  tempFit[index2013:indexFinal] <- treatFinal$value
+  tempLwr <- tempFit * artEstimates$trendlwr
+  tempUpr <- tempFit * artEstimates$trendupr
   
   # Create a data frame 
-  tempdf <- data_frame(population = states[ii], year = treatyears,
-                       value = tempfit, lower = templwr, upper = tempupr, 
+  tempDf <- data_frame(population = states[ii], year = 2000:analysisYear,
+                       value = tempFit, lower = tempLwr, upper = tempUpr, 
                        stage = "numART")
   
-  # Append data prior to 2013
-  hivtreated <- rbind(hivtreated, filter(tempdf, year < 2013))
+  # Append data prior to 2013 removing old 2013 and 2014 rows
+  tempTreated <- filter(hivTreated, population != states[ii])
+  hivTreated <- rbind(tempTreated, tempDf)
 }
 
 # Order by state and year
-hivtreated <- arrange(hivtreated, population, year)
-
-# If analysis year is before current year
-hivtreated <- filter(hivtreated, year <= analysisYear)
+hivTreated <- hivTreated %>%
+  arrange(population, year) %>%
+  filter(year <= analysisYear)
 
 # Finally bind to overall results
 if (bindCascade) {
-  hivcascade <- rbind(hivcascade, hivtreated)
+  hivCascade <- rbind(hivCascade, hivTreated)
 }
 
-# Do some plots if required
+# Do some plots if required -----------------------------------------------
 if (plots) {
   tplot1 <- ggplot(data = relTreat, aes(x = year, y = fit)) + 
     geom_point(data = s100data, aes(x = year, y =  relative), color = "black", size = 4) + 

@@ -205,6 +205,24 @@ artEstimates$fitlwriqr <- apply(simMatrix, 2, quantile, probs = 0.25)
 artEstimates$fitupriqr <- apply(simMatrix, 2, quantile, probs = 0.75)
 artEstimates$fitupr95 <- apply(simMatrix, 2, quantile, probs = 0.975)
 artEstimates$fitmax <- apply(simMatrix, 2, max)
+
+# Add relative trends and adjusted values
+finalIndex <- nrow(artEstimates)
+index2012 <- nrow(filter(artEstimates, year <= 2012))
+
+# Replace 2012 value with fitted value
+artEstimates$alladjust <- artEstimates$all
+artEstimates[index2012, ]$alladjust <- artEstimates[index2012, ]$fitlog 
+
+# Relative ART numbers
+artEstimates$rel <- artEstimates$alladjust / 
+  artEstimates$alladjust[finalIndex]
+
+artEstimates$rellower <- artEstimates$fitmin / 
+  artEstimates$alladjust
+
+artEstimates$relupper <- artEstimates$fitmax / 
+  artEstimates$alladjust
 ```
 
 
