@@ -37,14 +37,14 @@ startYear <- 1990
 # Script options ------------------------------------------------------
 
 plots <- FALSE       # TRUE if we want to plot things
-pubPlots <- FALSE    # TRUE if we want to save publication plots
-bindCascade <- FALSE # TRUE if we want to store all the cascade results 
+bindCascade <- TRUE  # TRUE if we want to store all the cascade results 
                      # one data frame
 
-saveCascade <- FALSE       # save final cascade dataframe
+saveCascade <- TRUE       # save final cascade dataframe
 saveNotifications <- TRUE # save cleaned notifications set
 saveResults <- TRUE       # save information national annual notifications
 
+# PLDHIV 
 nationalUniques <- TRUE # use proportion from National estimates for 
                         # sub-population de-duplication
 
@@ -54,16 +54,19 @@ indigKnown <- TRUE # only use notifications with indigenous classification
 permDeparts <- TRUE # use national permant departures for 
                     # overseas migration
 
+# PLHIV
+# Given issues with undiagnosed estimates use hardcoded estimates from 
+# 2013 ASR
+useOldPropUndiagnosed <- TRUE
 
+# Linked
 includeLinked <- FALSE # include linked to care in cascade
 
+# Retained
 useClinic <- TRUE # use McMahon et al clinic data  for retained in care
 useCD4 <- FALSE # use CD4 AHOD and testing data for retained in care if
                 # we don't use McMahon data
 
-# Given issues with undiagnosed estimates use hardcoded estimates from 
-# 2013 ASR
-useOldPropUndiagnosed <- TRUE 
 ```
 
 ```{r functions}
@@ -739,7 +742,6 @@ hivInterstate <- mutate(hivInterstate, arriverate = arrivals / intererp)
 # Gives indication of rate people move interstate nationally
 hivInterstate[hivInterstate$state == "all", ]$arriverate <- 
   hivInterstate[hivInterstate$state == "all", ]$departrate
-
 ```
 
 Sort out deathrates
@@ -922,11 +924,11 @@ if (plots) {
 
 # Initialize final results data frame
 hivDiagnosed <- data.frame(stage = character(), 
-                         year = double(),
-                         population = character(),
-                         estimate = double(),
-                         lower = double(),
-                         upper = double())
+                           year = double(),
+                           population = character(),
+                           estimate = double(),
+                           lower = double(),
+                           upper = double())
 
 # First calculate overall number ------------------------------------------
 
@@ -967,8 +969,9 @@ hivDiagnosed <- rbind(hivDiagnosed,
                             upper = pldhivAllMax))
 
 # State based PLDHIV -----------------------------------------------
+statesDiag <- head(states, -1)
 
-for (region in states) {
+for (region in statesDiag) {
   stateYears <- filter(hivState, state == region)$yeardiagnosis
   
   if (nationalUniques) {
@@ -1355,9 +1358,9 @@ hivUndiag <- rbind(hivUndiag, data_frame(stage = "infected",
                             upper = infectedAllMax))
 
 # Calculate undiagnosed for each state -----------------------------------
-states <-  head(states, -1)
+statesUndiag <- head(states, -1)
 
-for (region in states) {
+for (region in statesUndiag) {
   pldhivTemp <- filter(hivDiagnosed, stage == "pldhiv", 
                        population == region)
   infectedState <- pldhivTemp$value / (1 - undiagAll)
@@ -1471,7 +1474,7 @@ genderTemp <- filter(genderTemp, year == 2014)
 
 # Finally bind to overall results ----------------------------------------
 if (bindCascade) {
-  hivCascade <- rbind(hivCascade,hivUndiag)
+  hivCascade <- rbind(hivCascade, hivUndiag)
 }
 
 ```
@@ -1689,14 +1692,13 @@ hivTreated$stage <- "numART"
 # Use the relative rates to number in states
 
 states <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act")
-nstates <- length(states)
 
 # Calculate number on treatment for states --------------------------------
 
 # since 2000
-for (ii in 1:nstates) {
+for (region in states) {
   # Extract final year data 
-  treatFinal <- filter(hivTreated, population == states[ii],
+  treatFinal <- filter(hivTreated, population == region,
                        year >= 2013)
   
   # index positions
@@ -1710,12 +1712,12 @@ for (ii in 1:nstates) {
   tempUpr <- tempFit * artEstimates$trendupr
   
   # Create a data frame 
-  tempDf <- data_frame(population = states[ii], year = 2000:analysisYear,
+  tempDf <- data_frame(population = region, year = 2000:analysisYear,
                        value = tempFit, lower = tempLwr, upper = tempUpr, 
                        stage = "numART")
   
   # Append data prior to 2013 removing old 2013 and 2014 rows
-  tempTreated <- filter(hivTreated, population != states[ii])
+  tempTreated <- filter(hivTreated, population != region)
   hivTreated <- rbind(tempTreated, tempDf)
 }
 
@@ -1795,8 +1797,11 @@ if (useClinic) {
     mutate(retained = value * vicClinicData[1],
            retain_lower = lower * vicClinicData[2],
            retain_upper = upper * vicClinicData[3]) %>%
-    select(-value, -lower, -upper) %>%
+    select(-stage, -value, -lower, -upper) %>%
     rename(value = retained, lower = retain_lower, upper = retain_upper)
+  #
+  hivRetained$stage <- "retained"
+  
 } else {
   # Use old Medicare testing data approach --------------------------------
   
@@ -2004,7 +2009,7 @@ if (useClinic) {
 
 # Finally bind to overall results
 if (bindCascade) {
-  hivcascade <- rbind(hivCascade, hivRetained)
+  hivCascade <- rbind(hivCascade, hivRetained)
 }
 
 ```
@@ -2016,7 +2021,7 @@ if (bindCascade) {
 # data from AHOD data and the number of people recieving treatment. 
 
 # Initialize final results data frame
-hivsuppressed <- data.frame(stage = character(), 
+hivSuppressed <- data.frame(stage = character(), 
                             year = double(),
                             population = character(),
                             value = double(),
@@ -2042,6 +2047,8 @@ propSuppressed <- ahodData %>%
          prop1000 = n1000/n) %>%
   filter(year <= analysisYear)
 
+dataStart <- min(propSuppressed$year)
+
 # TODO: by exposure mode
 # propSuppressedMode <- ahodData %>%
 #   select(one_of(c("year", "state", "mode", "n_id")), 
@@ -2065,17 +2072,18 @@ for (region in states) {
   tempPropMax <- tempDf$prop1000
   
   # Number treated 
-  tempTreat <- filter(hivTreated, population == region)$value
-  tempTreatMin <- filter(hivTreated, population == region)$lower
-  tempTreatMax <- filter(hivTreated, population == region)$upper
+  treatDf <- filter(hivTreated, population == region, year >= dataStart)
+  tempTreat <- treatDf$value
+  tempTreatMin <- treatDf$lower
+  tempTreatMax <- treatDf$upper
   
-  nyears <- length(tempDf$year)
+  # nyears <- length(tempDf$year)
   
   # Number suppressed
   hivSuppressed <- rbind(hivSuppressed, 
                          data.frame(stage = "suppressed",  
                          year = tempDf$year,
-                         population = states[ii],
+                         population = region,
                          value = tempTreat * tempProp,
                          lower = tempTreatMin * tempPropMin,
                          upper = tempTreatMax * tempPropMax)) 
