@@ -314,8 +314,8 @@ logPlot <- ggplot(data = artEstimates, aes(x = year)) +
                       guide = guide_legend(override.aes = list(
                          linetype = c("blank", "solid")))) +
   scale_shape_manual(name = "Fit", values = shapes[c("all", "fitlog")], 
-                      breaks = c("all", "fitlog"),
-                      labels = labels[c("all", "fitlog")]) +
+                     breaks = c("all", "fitlog"),
+                     labels = labels[c("all", "fitlog")]) +
   scale_fill_manual(name = "Range",
                     values = c("#993333", "#993333", "#993333"),
                     breaks = c("fitlog1", "fitlog2", "fitlog3"),

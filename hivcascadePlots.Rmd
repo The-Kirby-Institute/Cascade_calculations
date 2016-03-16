@@ -356,8 +356,7 @@ if (pubPlots) {
     geom_ribbon(aes(ymin = 100*artcov_min, ymax = 100*artcov_max), 
               fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
-    scale_x_continuous(breaks = seq((resultsYear - minYear + 1), 
-                                    resultsYear, by = 3)) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
     ylim(c(0, 100)) +
     ylab("ART coverage (%)") + xlab("Year") +  
     plotOpts
@@ -371,9 +370,194 @@ if (pubPlots) {
 ```
 
 ```{r linkageplots, echo = FALSE, messages = FALSE, include=FALSE}
-# Create  a series of plot related to linkag to care
+# Create  a series of plot related to linkag to care for publication
 
-
+if (pubPlots) {
+  
+  # Proportion linked -----------------------------------------------------
+  
+  # Do some organization and calculations so we can compare MSM to non-MSM 
+  uniqueDiags <- c(hivResults$uniquecases[1], diff(hivResults$uniquecases))
+  uniqueDiags <- tail(uniqueDiags, 10)
+  
+  # Create an overall data frame
+  allLinked <- hivSet %>% 
+    group_by(yeardiagnosis) %>% 
+    filter(linked == "yes") %>%
+    summarise(linked = n()) %>% 
+    filter(yeardiagnosis <= resultsYear, yeardiagnosis >= startYear) %>%
+    mutate(proplinked  = linked / uniqueDiags) 
+  
+  # Overall estimate of unique diagnoses
+  propUnique <- hivResults$propunique
+  propUnique <- tail(propUnique, 11) # 11 because of use of diff()
+  
+  # Create data frame for unique cases for each group
+  expDiags <- hivSet %>% 
+    group_by(expgroup, yeardiagnosis) %>% 
+    summarise(notifications = n()) %>%
+    mutate(totalnotifications = cumsum(notifications)) %>%
+    filter(yeardiagnosis <= resultsYear, yeardiagnosis >= startYear - 1) %>%
+    mutate(cumcases = totalnotifications * propUnique) %>%
+    mutate(uniquecases = c(NA, diff(cumcases))) %>%
+    filter(yeardiagnosis >= startYear) %>%
+    rename(year = yeardiagnosis)
+  
+  # Now create new dataframes calculating the proportion linked for 
+  # each exposure group
+  expLinked <- hivSet %>% 
+    group_by(expgroup, yeardiagnosis) %>% 
+    filter(linked == "yes") %>%
+    summarise(linked = n()) %>% 
+    filter(yeardiagnosis <= resultsYear, yeardiagnosis >= startYear) %>%
+    rename(year = yeardiagnosis) %>%
+    inner_join(expDiags, by = c("expgroup", "year")) %>%
+    select(-notifications, -totalnotifications, - cumcases) %>%
+    mutate(proplinked = linked/uniquecases)
+  
+  nonMsmLinked <- expLinked %>%
+    filter(expgroup != "msm") %>%
+    group_by(year) %>%
+    mutate(nonlinked = sum(linked),
+           noncases = sum(uniquecases)) %>%
+    select(-linked, -uniquecases, -proplinked) %>%
+    mutate(proplinked = nonlinked / noncases) %>%
+    filter(expgroup == "hetero") %>%
+    select(-expgroup)
+    
+  # Create the plots - plot after 1984 to exclude small numbers early in the 
+  # epidemic
+  
+  linkPlot <- ggplot(data = filter(hivResults, yeardiagnosis >= 1984),
+                     aes(x = yeardiagnosis, y = 100 * proplinked)) + 
+    geom_line(color = asrcols[2], size = 1.1)  +
+    scale_x_continuous(breaks = seq(1982, resultsYear, by = 8)) +
+    ylim(c(0, 100)) +
+    ylab("Annual diagnoses \n linked to care (%)") + xlab("Year") +
+    plotOpts
+  
+  # Turns out there is not much difference in % linked between MSM and
+  # non-MSM so exclude from plot
+  linkPlotRecent <- ggplot(data = allLinked,
+                           aes(x = yeardiagnosis, y = 100 * proplinked)) + 
+    geom_line(color = asrcols[2], size = 1.1)  +
+    # geom_line(data = filter(expLinked, expgroup == "msm"),
+    #                         aes(x = year, y = 100 * proplinked), 
+    #           colour = "black", size = 1.1) + 
+    # geom_line(data = nonMsmLinked, aes(x = year, y = 100 * proplinked), 
+    #           colour = "blue", size = 1.1) + 
+    scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
+    ylim(c(0, 100)) + 
+    ylab("Annual diagnoses \n linked to care (%)") + xlab("Year") +
+    plotOpts
+  
+  # Save plots 
+  ggsave(file.path(figFolder, paste("linkage_prop_", 
+    toString(1982), "-", toString(resultsYear), saveFormat, sep = "")),
+       plot = linkPlot, width = 7.5, height = 6, units = "cm")
+  
+  ggsave(file.path(figFolder, paste("linkage_prop_", 
+    toString(startYear), "-", toString(resultsYear), 
+    saveFormat, sep = "")), plot = linkPlotRecent, 
+    width = 7.5, height = 6, units = "cm")
+  
+  # 2014 distribution -----------------------------------------------------
+  
+  # Organize our date and calculate days between diagnosis and CD4
+  linkDays <- hivSet %>%
+    filter(yeardiagnosis == resultsYear) %>%
+    select(yeardiagnosis, expgroup, datediagnosis, cd4date) %>%
+    rename(year = yeardiagnosis) %>%
+    filter(!is.na(cd4date)) %>%
+    # Convert string dates to date format and calculate number of days
+    mutate(dayslinked = as.numeric(as.Date(cd4date) - as.Date(datediagnosis))) %>%
+    # Some days are negative probably to errors in the data exclude
+    filter(dayslinked >= 0) 
+  
+  # days linked for MSM and non-MSM
+  msmLinkDays <- filter(linkDays, expgroup == "msm")
+  nonMsmLinkdays <- filter(linkDays, expgroup != "msm")
+  
+  # Some stats
+  mean(linkDays$dayslinked)
+  mean(msmLinkDays$dayslinked)
+  mean(nonMsmLinkdays$dayslinked)
+  
+  # Plot distributions
+  linkDist <- ggplot(data = linkDays, aes(x = dayslinked)) + 
+    geom_freqpoly(binwidth = 7, aes(colour = "all")) + # bin days into weeks
+    geom_freqpoly(data = msmLinkDays, 
+                  aes(x = dayslinked, colour = "msm"), 
+                  binwidth = 7) +
+    geom_freqpoly(data = nonMsmLinkdays, 
+                  aes(x = dayslinked, colour = "nonmsm"), 
+                  binwidth = 7) +
+    coord_cartesian(xlim = c(0, 100)) +
+    scale_colour_manual(name = "",
+                        breaks = c("all", "msm", "nonmsm"),
+                        values = c("black", asrcols[2], asrcols[4]),
+                        labels =  c("All", "MSM", "non-MSM")) +
+    # X marks correspond to weeks
+    scale_x_continuous(breaks = seq(0, 100, by = 7),
+                       labels = as.character(seq(0, 100, by = 7)/7)) +
+    ylab("Number of diagnoses") +
+    xlab("Weeks") +
+    plotOpts 
+  
+  # Save plot
+  ggsave(file.path(figFolder, paste("linkage_distribution-", 
+    toString(resultsYear), saveFormat, sep = "")), 
+    plot = linkDist, 
+    width = 9, height = 7.5, units = "cm")
+  
+  # Average CD4 count -----------------------------------------------------
+  
+  # Create data frames and do the calculations for each population group 
+  allCd4 <- hivSet %>% 
+    select(yeardiagnosis, expgroup, cd4count) %>%
+    group_by(yeardiagnosis) %>%
+    summarise(all = mean(cd4count, na.rm = TRUE)) %>% 
+    filter(yeardiagnosis <= resultsYear, yeardiagnosis >= startYear) %>%
+    rename(year = yeardiagnosis)
+  
+  msmCd4 <- hivSet %>% 
+    select(yeardiagnosis, expgroup, cd4count) %>%
+    filter(expgroup == "msm") %>%
+    group_by(yeardiagnosis) %>%
+    summarise(msm = mean(cd4count, na.rm = TRUE)) %>% 
+    filter(yeardiagnosis <= resultsYear, yeardiagnosis >= startYear)
+    
+  nonMsmCd4 <- hivSet %>% 
+    select(yeardiagnosis, expgroup, cd4count) %>%
+    filter(expgroup != "msm") %>%
+    group_by(yeardiagnosis) %>%
+    summarise(nonmsm = mean(cd4count, na.rm = TRUE)) %>% 
+    filter(yeardiagnosis <= resultsYear, yeardiagnosis >= startYear)
+  
+  # Add MSM and non-MSM results to overall results data frame
+  allCd4$msm <- msmCd4$msm
+  allCd4$nonmsm <- nonMsmCd4$nonmsm
+  
+  # Gather into long format for plotting 
+  allCd4 <- gather(allCd4, "category", "cd4", 2:4)
+  
+  # Creat the plot
+  aveCd4Plot <- ggplot(data = allCd4, aes(x = year, y = cd4, color = category)) + 
+    geom_line() +
+    scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
+    scale_colour_manual(name = "",
+                        values = c("black", asrcols[2], asrcols[4]),
+                        labels =  c("All", "MSM", "non-MSM")) +
+    ylim(c(0,NA)) + 
+    ylab("Average CD4 \n at diagnosis") + xlab("Year") +
+    plotOpts 
+    
+  # Save plot
+  ggsave(file.path(figFolder, paste("linkage_CD4_", 
+    toString(startYear), "-", toString(resultsYear), 
+    saveFormat, sep = "")), plot = aveCd4Plot, 
+    width = 7.5, height = 6, units = "cm")
+}
 ```
 
 
