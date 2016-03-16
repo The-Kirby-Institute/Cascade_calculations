@@ -47,11 +47,13 @@ minYear <- 10        # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE    # save plots as separate files
 pubPlots <- TRUE     # create additional plots for publications
-if (pubPlots) savePlots <- TRUE
+if (pubPlots) {
+  savePlots <- TRUE
+}
 saveFormat <- ".png" # file extension for saved plots 
 
 # Include linked and reatined in care?
-excludeCare <- TRUE
+excludeCare <- FALSE
 if (excludeCare) {
   asrcols <- asrcols[c(1, 2, 4, 5)]
 }
@@ -59,34 +61,44 @@ if (excludeCare) {
 ```
 
 ```{r loadresults, echo = FALSE, messages = FALSE, include=FALSE}
-# Load hiv cascde dataframe
+# Load the previously saved hiv notifications data frame
+load(file.path(resultsFolder, paste("HIVset-",
+                    toString(resultsYear), ".rda", sep = "")))
+
+# Load the previously saved hivresults data frame
+load(file.path(resultsFolder, paste("HIVresults-",
+                    toString(resultsYear), ".rda", sep = "")))
+
+# Load hiv cascade dataframe
 inputFile <- file.path(resultsFolder,paste("HIVcascadeEstimates-", 
   toString(resultsYear), ".rda", sep = ""))
 load(inputFile)
 
-# Removed linked and retained from hivcascade if specified
+# Exclude linked to care if it exists
+hivcascade <- filter(hivcascade, !(stage == "linked"))
+
+# Removed retained from hivcascade if specified but keep for final 
+# year bar chart
 if (excludeCare) {
-  hivcascade <- filter(hivcascade, !(stage %in% c("linked", "retained")))
+  hivcascade <- filter(hivcascade, stage != "retained")
 }
 ```
 
 # National estimates
 
 ```{r allpops, echo = FALSE, messages = FALSE, include=FALSE}
-# Create bar chart of current year's cascade
-resultsAll <- filter(hivcascade, population == "all" & 
-                       year >= startYear)
-resultsAllYear <- filter(resultsAll, year == resultsYear)
+# Create a series of plots related to the overall cascade
 
 # Plot specs
-stages <- c("infected", "pldhiv", "linked", 
+stages <- c("infected", "pldhiv",  
             "retained", "numART", "suppressed")
-stageNames <- c("Living with HIV", "Diagnosed", "Linked to care", 
+stageNames <- c("Living with HIV", "Diagnosed", 
                   "Retained in care", "Receiving ART", "Suppressed virus")
 stageNamesNeat <- c("Living \n with HIV", "Diagnosed", 
-                      "Linked \n to care", "Retained \n in care", 
+                      "Retained \n in care", 
                       "Receiving \n ART", "Suppressed \n virus")
 
+# Sort out labels and colors depending on script options - code a bit messy
 if (excludeCare) {
   # Exclude corresponding stages
   include <- c(1, 2, 5, 6)
@@ -94,6 +106,15 @@ if (excludeCare) {
   stageNames <- stageNames[include]
   stageNamesNeat <- stageNamesNeat[include]
 }
+
+# Create bar chart of current year's cascade and over time ----------------
+
+# Sort out the data we want
+resultsAll <- filter(hivcascade, 
+                     population == "all",
+                     year >= startYear)
+
+resultsAllYear <- filter(resultsAll, year == resultsYear)
 
 # Plot a bar chart for the results year ------------------------------------
 plotBarAll <- ggplot(data = resultsAllYear, aes(x = stage, y = value)) + 
@@ -106,17 +127,20 @@ plotBarAll <- ggplot(data = resultsAllYear, aes(x = stage, y = value)) +
   plotOpts
 
 if (pubPlots) {
-  # Create an additional stacked bar chart for publications
+  # Create an additional stacked bar chart for publications removing 
+  # retained stage
   
   plotLabels <- c("Undiagnosed", 
                   "Diagnosed untreated", 
                   "On ART:  VL > 400 last test", 
                   "On ART: VL < 400 last test")
   
+  plotCols <- asrcols[c(1, 2, 4, 5)]
   xValues <- seq(startYear, resultsYear, by = 3)
   
   # Set up data for plotting
   stackResults <- resultsAll %>%
+    filter(stage != "retained") %>%
     select(year, stage, value) %>%
     spread(stage, value) %>%
     mutate(undiagnosed = infected - pldhiv,
@@ -128,7 +152,7 @@ if (pubPlots) {
   # Create plots
   stackPlotBase <- ggplot(data = stackResults, aes(x = year, y = value, 
     fill = stage)) + xlab("Year") +
-    scale_fill_manual(values = asrcols, name = "", labels = plotLabels, 
+    scale_fill_manual(values = plotCols, name = "", labels = plotLabels, 
       guide = guide_legend(reverse=TRUE, nrow = 2)) +  
     scale_x_continuous(breaks = xValues) + plotOpts + 
     theme(legend.text = element_text(size = 8))
@@ -138,6 +162,33 @@ if (pubPlots) {
   stackPlotProp <- stackPlotBase + geom_bar(stat="identity", 
     position= "fill") + ylab("Proportion of PLHIV")
   
+}
+
+# Save if required ---------------------------------------------------------
+if (savePlots) {
+  graphics.off()
+  
+  if (excludePlots) {
+    width = 10
+  } else {
+    width = 12
+  } 
+  
+  ggsave(file.path(figFolder, paste("HIVcascade-all-", 
+    toString(resultsYear), saveFormat, sep = "")), 
+    plot = plotBarAll, width =  12, height = 10, units = "cm")
+
+} 
+
+if (pubPlots) {  
+  ggsave(file.path(figFolder, paste("HIVcascade-Stacked-", 
+    toString(resultsYear), saveFormat, sep = "")),
+    plot = stackPlotNum, width = 10, height = 10, units = "cm")
+  
+  # ggsave(file.path(figFolder, paste("HIVcascade-Proportion-", 
+  #   toString(resultsYear), saveFormat, sep = "")),
+  #   plot = stackPlotProp, width = 10, height = 10, units = "cm")
+
 }
 
 # Plot time varying values for each stage ----------------------------------
@@ -162,6 +213,16 @@ plotStagesAll <- ggplot(data = resultsAll, aes(x = year, y = value)) +
   expand_limits(y = 0) +
   ylab("Number of people") + xlab("Year") +  
   plotOpts
+
+if (savePlots) {
+ ggsave(file.path(figFolder, paste("HIVcascade-Stages-", 
+    toString(resultsYear), saveFormat, sep = "")),
+    plot = plotStagesAll, width = 15, height = 12, units = "cm")
+  
+  # ggsave(file.path(figFolder, paste("HIVcascade-Proportion-", 
+  #   toString(resultsYear), saveFormat, sep = "")),
+  #   plot = stackPlotProp, width = 10, height = 10, units = "cm")
+}
 
 # Do individual plots for publications
 if (pubPlots) {
@@ -200,29 +261,123 @@ if (pubPlots) {
   }
 }
 
-# Save if required ---------------------------------------------------------
-if (savePlots) {
-  graphics.off()
+# Additional time trend plots for publications -----------------------------
+if (pubPlots) {
   
-  ggsave(file.path(figFolder, paste("HIVcascade-all-", 
-    toString(resultsYear), saveFormat, sep = "")), 
-    plot = plotBarAll, width =  10, height = 10, units = "cm")
+  # Plot cummulative unique cases
+  casesPlot <- ggplot(data = filter(hivResults, yeardiagnosis >= startYear), 
+         aes(x = yeardiagnosis, y = uniquecases)) +
+    geom_line(color = asrcols[2])  +
+    scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
+    expand_limits(y = 0) +
+    ylab("Number of unique cases") + xlab("Year") +  
+    plotOpts
   
-  ggsave(file.path(figFolder, paste("HIVcascade-Stages-", 
-    toString(resultsYear), saveFormat, sep = "")),
-    plot = plotStagesAll, width = 15, height = 12, units = "cm")
+  # Plot death related data - this is a bit trickier than I thought.
+  # Need to multiply deathrates by PLDHIV and divided by 
+  # (1 - % undiagnosed). Can't just multiply by this number due to small 
+  # numbers at the start of the epidemic. 
+  #
+  # Alternatively could just plot deaths in PLDHIV which is easy (what I 
+  # decided to do below)
   
-  ggsave(file.path(figFolder, paste("HIVcascade-Stacked-", 
-    toString(resultsYear), saveFormat, sep = "")),
-    plot = stackPlotNum, width = 10, height = 10, units = "cm")
+  # Extract PLDHIV for 
+  pldhiv <- hivcascade %>%
+    filter(stage == "pldhiv", population == "all") %>%
+    select(-stage, -population) 
   
-  # ggsave(file.path(figFolder, paste("HIVcascade-Proportion-", 
-  #   toString(resultsYear), saveFormat, sep = "")),
-  #   plot = stackPlotProp, width = 10, height = 10, units = "cm")
+  # Generate the death data we want calculating the cumulative number of 
+  # deaths after 2003 
   
+  deathData <- hivResults %>%
+    rename(year = yeardiagnosis) %>%  
+    select(year, deathrate, drlower, drupper) %>%
+    inner_join(pldhiv, ., by = "year") %>%          # add pldhiv data frame
+    mutate(estdeaths = cumsum(value * deathrate),  # do the calculations
+           estdeaths_min = cumsum(lower * drlower),
+           estdeaths_max = cumsum(upper * drupper)) %>%
+    filter(year >= startYear, year <= resultsYear) %>%
+    select(-value, -lower, -upper)
+  
+  # Now generate our plots
+  plotDeaths <- ggplot(data = deathData, aes(x = year, y = estdeaths)) +
+    geom_ribbon(aes(ymin = estdeaths_min, ymax = estdeaths_max), 
+              fill = asrcols[2], alpha = 0.4) + 
+    geom_line(color = asrcols[2])  +
+    scale_x_continuous(breaks = seq((resultsYear - minYear + 1), 
+                                    resultsYear, by = 3)) +
+    expand_limits(y = 0) +
+    ylab("Number of deaths") + xlab("Year") +  
+    plotOpts
+  
+  plotDeathRate <- ggplot(data = deathData, 
+                          aes(x = year, y = 100 * deathrate)) +
+    geom_ribbon(aes(ymin = 100 * drlower, ymax = 100 * drupper), 
+              fill = asrcols[2], alpha = 0.4) + 
+    geom_line(color = asrcols[2])  +
+    scale_x_continuous(breaks = seq((resultsYear - minYear + 1), 
+                                    resultsYear, by = 3)) +
+    ylim(c(0, 2)) +
+    ylab("Mortality rate (%)") + xlab("Year") +  
+    plotOpts
+  
+  # Save plots
+  ggsave(file.path(figFolder, paste("HIVcases_", 
+      toString(startYear), "-", toString(resultsYear), 
+      saveFormat, sep = "")),
+      plot = casesPlot, width = 7.5, height = 6, units = "cm")
+  
+  ggsave(file.path(figFolder, paste("HIVdeaths_", 
+      toString(startYear), "-", toString(resultsYear), 
+      saveFormat, sep = "")),
+      plot = plotDeaths, width = 7.5, height = 6, units = "cm") 
+  
+  ggsave(file.path(figFolder, paste("HIVdeath_rate_", 
+      toString(startYear), "-", toString(resultsYear), 
+      saveFormat, sep = "")),
+      plot = plotDeathRate, width = 7.5, height = 6, units = "cm")
+  
+  # Treatment coverage plot -----------------------------------------------
+  
+  # Do our calculations and sort out data we want to plot
+  treatData <- hivcascade %>%
+    filter(stage == "numART", population == "all") %>%
+    rename(artvalue = value, artlower = lower, artupper = upper) %>%
+    select(-population, -stage) %>%
+    left_join(pldhiv, ., by = "year") %>%
+    filter(year >= startYear, year <= resultsYear) %>%
+    mutate(artcov = artvalue / value,
+           artcov_min = artlower / upper, 
+           artcov_max = artupper / lower) %>%
+    select(year, artcov, artcov_min, artcov_max)
+    
+  # plot art coverage
+  coveragePlot <- ggplot(data = treatData, aes(x = year, y = 100*artcov)) +
+    geom_ribbon(aes(ymin = 100*artcov_min, ymax = 100*artcov_max), 
+              fill = asrcols[2], alpha = 0.4) + 
+    geom_line(color = asrcols[2])  +
+    scale_x_continuous(breaks = seq((resultsYear - minYear + 1), 
+                                    resultsYear, by = 3)) +
+    ylim(c(0, 100)) +
+    ylab("ART coverage (%)") + xlab("Year") +  
+    plotOpts
+  
+  # Save plots
+  ggsave(file.path(figFolder, paste("ARTcoverage_", 
+      toString(startYear), "-", toString(resultsYear), 
+      saveFormat, sep = "")),
+      plot = coveragePlot, width = 7.5, height = 6, units = "cm")
 }
+```
+
+```{r linkageplots, echo = FALSE, messages = FALSE, include=FALSE}
+# Create  a series of plot related to linkag to care
+
+
+
 
 ```
+
 
 ```{r statecascade, echo = FALSE, messages = FALSE, include=FALSE}
 ### Create separate figures of each state cascade

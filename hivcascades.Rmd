@@ -33,7 +33,6 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 analysisYear <- 2014
 startYear <- 1990
-pubPlotYear <- 2005 # start year for publication plots
 
 # Script options ------------------------------------------------------
 
@@ -886,20 +885,6 @@ hivResults$deathrate <- deathRate
 hivResults$drlower <- deathRate_min
 hivResults$drupper <- deathRate_max
 
-# Create a HIV deaths dataframe if we are saving results for other calculations
-if (saveResults) {
-  # Directory and file name
-  saveString <- file.path(outputFolder, 
-    paste("HIVresults-", toString(analysisYear), sep = ""))
-  
-  # Write to csv
-  write.csv(hivResults, file = paste(saveString, ".csv", sep =""), 
-            row.names = FALSE)
-
-  # Save as R object
-  save(hivResults, file = paste(saveString, ".rda", sep =""))
-}
-
 
 # Plot what we have done if required --------------------------------------
 if (plots) {
@@ -935,14 +920,14 @@ if (plots) {
 # This chuck now estimates the number of people living with diagnosed HIV. 
 
 # Initialize final results data frame
-hivdiagnosed <- data.frame(stage = character(), 
+hivDiagnosed <- data.frame(stage = character(), 
                          year = double(),
                          population = character(),
                          estimate = double(),
                          lower = double(),
                          upper = double())
 
-### First calculate overall number
+# First calculate overall number
 
 # Setup all our vectors - first by filling in missing cumulative diagnoses
 filledDiagnoses <- FillMissing(allYears, hivresults$yeardiagnosis, 
@@ -1419,7 +1404,6 @@ if (bindCascade) {
 
 ```
 
-
 ## Number linked to care
 
 ```{r linked}
@@ -1427,15 +1411,15 @@ if (bindCascade) {
 # to care
 
 # Initialize final results data frame
-hivlinkcare <- data.frame(stage = character(), 
-                         year = double(),
-                         population = character(),
-                         estimate = double(),
-                         lower = double(),
-                         upper = double())
+hivLinkCare <- data.frame(stage = character(), 
+                          year = double(),
+                          population = character(),
+                          estimate = double(),
+                          lower = double(),
+                          upper = double())
 
-### Overall annual results
-hivlinkedAll <- hivset %>% 
+# Overall annual results ------------------------------------------------
+hivLinkedAll <- hivSet %>% 
   group_by(yeardiagnosis) %>% 
   filter(linked == "yes") %>%
   summarise(linked = n()) %>% 
@@ -1443,20 +1427,22 @@ hivlinkedAll <- hivset %>%
   filter(yeardiagnosis <= analysisYear) 
 
 # Manually insert first two years as they are missing
-hivlinkedAll <- rbind(hivlinkedAll, c(1980, 0, 0))
-hivlinkedAll <- rbind(hivlinkedAll, c(1981, 0, 0))
-hivlinkedAll <- arrange(hivlinkedAll, yeardiagnosis)
+hivLinkedAll <- rbind(hivLinkedAll, c(1980, 0, 0))
+hivLinkedAll <- rbind(hivLinkedAll, c(1981, 0, 0))
+hivLinkedAll <- arrange(hivLinkedAll, yeardiagnosis)
 
 # Calculate number linked to care using national death rates and migration rates
-cumLinked <- hivlinkedAll$totallinked
+cumLinked <- hivLinkedAll$totallinked
 linkedAll <- LivingDiagnosed(cumLinked, deathRate, migrationRate)
 linkedAllMin <- LivingDiagnosed(cumLinked, deathRateMax, migrationRateMax)
 linkedAllMax <- LivingDiagnosed(cumLinked, deathRateMin, migrationRateMin)
 
 # ISSUE: Number linked to care with above methodology seems too low. An 
 # An alternative is to look at the proportion linked each year.
-uniqueDiags <- c(hivresults$uniquecases[1], diff(hivresults$uniquecases))
-proplinked <- hivlinkedAll$linked/uniqueDiags
+uniqueDiags <- c(hivResults$uniquecases[1], diff(hivResults$uniquecases))
+propLinked <- hivLinkedAll$linked / uniqueDiags
+
+# Look at the trend since 2000
 propl <- data.frame(year = allYears, proportion = proplinked)
 lmlinked <- lm(proportion ~ year, data = filter(propl, year > 2000))
 predictlinked <- predict(lmlinked, data.frame(year = allYears))
@@ -1465,13 +1451,16 @@ predictlinked <- predict(lmlinked, data.frame(year = allYears))
 # LivingDiagnosed(cumsum(uniqueDiags * predictlinked),deathRate, migrationRate)
 # LivingDiagnosed(cumsum(uniqueDiags * predictlinked),deathRate, rep(0,length(migrationRate)))
 
-hivlinkcare <- rbind(hivlinkcare, data_frame(stage = "linked", 
+hivLinkCare <- rbind(hivLinkCare, data_frame(stage = "linked", 
                             year = allYears, 
                             population = "all", 
                             value = linkedAll,
                             lower = linkedAllMin,
                             upper = linkedAllMax))
 
+# Add results to hivResults 
+hivResults$uniquediags <- uniqueDiags
+hivResults$proplinked <- propLinked
 
 # Create a plot to show the fitting of the proportion linked 
 if (plots) {
@@ -1479,16 +1468,15 @@ if (plots) {
                        proportion = proplinked, 
                        prediction = predictlinked)
   
-  plplot <- ggplot(data = plotData,aes(x = year, y = proportion)) + geom_line() + 
+  plotLinked <- ggplot(data = plotData, aes(x = year, y = proportion)) + 
+    geom_line() + 
     geom_line(aes(y = predictlinked), color  = "blue") + 
-    theme_bw() + opts + ylim(c(0,NA)) + xlab("Year") + 
+    theme_bw() + plotOpts + ylim(c(0,NA)) + xlab("Year") + 
     ylab("Proportion annual notifications linked")
     
   # Print figures  
-  png(paste(outputFolder, "/figures/prop_linked.png",sep =""), 
-      width = 5, height = 5, units = "in", res = 300)
-  print(plplot)
-  dev.off()
+  ggsave(file.folder(figuresFolder, "prop_linked.png"),
+  plot = plotLinked, width = 5, height = 5)
 }
 
 ### State calculations
@@ -1995,15 +1983,30 @@ if (bindCascade) {
 ```
 
 ```{r cleanup}
+# Save HIV results dataframe 
+if (saveResults) {
+  # Directory and file name
+  saveString <- file.path(outputFolder, 
+    paste("HIVresults-", toString(analysisYear), sep = ""))
+  
+  # Write to csv
+  write.csv(hivResults, file = paste(saveString, ".csv", sep =""), 
+            row.names = FALSE)
+  
+  # Save as R object
+  save(hivResults, file = paste(saveString, ".rda", sep =""))
+}
+
 # Save final HIV cascades data frame
 if (saveCascade) {
   # Directory and file name
   saveString <- file.path(outputFolder, paste("HIVcascadeEstimates-", 
-                                              toString(analysisYear), sep = ""))
+    toString(analysisYear), sep = ""))
   
   # Write to csv
-  write.csv(hivcascade, file = paste(saveString, ".csv", sep =""), row.names = FALSE)
-
+  write.csv(hivcascade, file = paste(saveString, ".csv", sep =""), 
+            row.names = FALSE)
+  
   # Save as R object
   save(hivcascade,file = paste(saveString, ".rda", sep =""))
 }
