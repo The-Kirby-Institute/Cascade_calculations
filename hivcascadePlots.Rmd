@@ -75,12 +75,12 @@ inputFile <- file.path(resultsFolder,paste("HIVcascadeEstimates-",
 load(inputFile)
 
 # Exclude linked to care if it exists
-hivcascade <- filter(hivcascade, !(stage == "linked"))
+hivCascade <- filter(hivCascade, !(stage == "linked"))
 
-# Removed retained from hivcascade if specified but keep for final 
+# Removed retained from hivCascade if specified but keep for final 
 # year bar chart
 if (excludeCare) {
-  hivcascade <- filter(hivcascade, stage != "retained")
+  hivCascade <- filter(hivCascade, stage != "retained")
 }
 ```
 
@@ -110,7 +110,7 @@ if (excludeCare) {
 # Create bar chart of current year's cascade and over time ----------------
 
 # Sort out the data we want
-resultsAll <- filter(hivcascade, 
+resultsAll <- filter(hivCascade, 
                      population == "all",
                      year >= startYear)
 
@@ -168,7 +168,7 @@ if (pubPlots) {
 if (savePlots) {
   graphics.off()
   
-  if (excludePlots) {
+  if (excludeCare) {
     width = 10
   } else {
     width = 12
@@ -185,9 +185,9 @@ if (pubPlots) {
     toString(resultsYear), saveFormat, sep = "")),
     plot = stackPlotNum, width = 10, height = 10, units = "cm")
   
-  # ggsave(file.path(figFolder, paste("HIVcascade-Proportion-", 
-  #   toString(resultsYear), saveFormat, sep = "")),
-  #   plot = stackPlotProp, width = 10, height = 10, units = "cm")
+  ggsave(file.path(figFolder, paste("HIVcascade-Proportion-",
+    toString(resultsYear), saveFormat, sep = "")),
+    plot = stackPlotProp, width = 10, height = 10, units = "cm")
 
 }
 
@@ -282,7 +282,7 @@ if (pubPlots) {
   # decided to do below)
   
   # Extract PLDHIV for 
-  pldhiv <- hivcascade %>%
+  pldhiv <- hivCascade %>%
     filter(stage == "pldhiv", population == "all") %>%
     select(-stage, -population) 
   
@@ -340,7 +340,7 @@ if (pubPlots) {
   # Treatment coverage plot -----------------------------------------------
   
   # Do our calculations and sort out data we want to plot
-  treatData <- hivcascade %>%
+  treatData <- hivCascade %>%
     filter(stage == "numART", population == "all") %>%
     rename(artvalue = value, artlower = lower, artupper = upper) %>%
     select(-population, -stage) %>%
@@ -384,7 +384,7 @@ states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act")
 
 
 for (ii in seq(along = states)){
-  resultsStatesYear <- filter(hivcascade, population == states[ii] & year == resultsYear)
+  resultsStatesYear <- filter(hivCascade, population == states[ii] & year == resultsYear)
   
   
   # Plot specs
@@ -514,8 +514,8 @@ kable(finalTable, align = c("l", "c", "c"))
 # Create bar charts of current year's cascade for each state
 states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act")
 
-# resultsState <- filter(hivcascade, population %in% states & year >= (resultsYear - minYear))
-resultsStatesYear <- filter(hivcascade, population %in% states & year == resultsYear)
+# resultsState <- filter(hivCascade, population %in% states & year >= (resultsYear - minYear))
+resultsStatesYear <- filter(hivCascade, population %in% states & year == resultsYear)
 
 resultsStatesYear$stage <- factor(resultsStatesYear$stage)
 if (excludeCare) {
@@ -571,7 +571,7 @@ print(plotbarAllStates)
 # Create bar charts of current year's cascade for each state
 states <- c("nsw", "vic", "qld", "wa", "sa", "act", "tas", "nt", "all")
 
-stateTable <- filter(hivcascade, population %in% states & year == resultsYear)
+stateTable <- filter(hivCascade, population %in% states & year == resultsYear)
 
 # Convert population from factor to character
 index <- sapply(stateTable, is.factor)
@@ -643,8 +643,8 @@ popNames <- c("Non-indigenous \n Australians", "Indigenous \n Australians",
               "Other country \n of birth") 
 
 # Extract the results
-expResults <- filter(hivcascade, population %in% modes & year == resultsYear & stage != "linked")
-popResults <- filter(hivcascade, population %in% pops & year == resultsYear & stage != "linked")
+expResults <- filter(hivCascade, population %in% modes & year == resultsYear & stage != "linked")
+popResults <- filter(hivCascade, population %in% pops & year == resultsYear & stage != "linked")
 
 # Create the plots
 plotModeBar <- ggplot(data = expResults, aes(x = population, y = value, fill = stage)) + 
