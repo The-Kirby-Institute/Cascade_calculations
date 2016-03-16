@@ -55,13 +55,15 @@ permDeparts <- TRUE # use national permant departures for
                     # overseas migration
 
 
-includeLinked <- FALSE # Include linked to care in cascade
+includeLinked <- FALSE # include linked to care in cascade
 
-useCD4 <- FALSE # use CD4 AHOD and testing data for retained in care
+useClinic <- TRUE # use McMahon et al clinic data  for retained in care
+useCD4 <- FALSE # use CD4 AHOD and testing data for retained in care if
+                # we don't use McMahon data
 
 # Given issues with undiagnosed estimates use hardcoded estimates from 
 # 2013 ASR
-useOldpropundiagnosed <- TRUE 
+useOldPropUndiagnosed <- TRUE 
 ```
 
 ```{r functions}
@@ -188,14 +190,14 @@ Sort out diagnoses ...
 ```{r diagnoses}
 # Setup dataframe for overall results by first extracting diagnoses details
 
-### Overall annual results
+# Overall annual results --------------------------------------------------
 hivResults <- hivSet %>% 
   group_by(yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
   mutate(totalnotifications  = cumsum(notifications)) %>% 
   filter(yeardiagnosis <= analysisYear)   
 
-### Annual results by state and exposure category
+# Annual results by state and exposure category ---------------------------
 
 # Calculate the proportion of diagnoses by exposure and population 
 # category by state and nationally. Theses data frames are used for further
@@ -237,7 +239,7 @@ hivExpState <- hivSet %>% group_by(expgroup, state, yeardiagnosis) %>%
            totalnotifications / sum(totalnotifications)) %>% 
   filter(yeardiagnosis <= analysisYear)   
 
-### Annual results by population group
+# Annual results by population group --------------------------------------
 
 # Calculate the proportion of diagnoses by country of birth and indigenous 
 # status. These are used for further calculations and estimates for the 
@@ -313,7 +315,7 @@ hivAborig[!is.na(hivAborig$aboriggroup) & hivAborig$aboriggroup !=
 hivAborig[is.na(hivAborig$aboriggroup) | hivAborig$aboriggroup ==
             "othercob",]$proptotalknown <- 0
 
-### Overall annual results by gender
+# Overall annual results by gender ----------------------------------------
 hivGender <- hivSet %>% 
   group_by(yeardiagnosis, sex) %>% 
   summarise(notifications = n()) %>% 
@@ -322,11 +324,11 @@ hivGender <- hivSet %>%
   mutate(totalnotifications  = cumsum(notifications)) %>% 
   filter(yeardiagnosis <= analysisYear)
 
-# Create some useful diagnoses data plots
+# Create some useful diagnoses data plots ---------------------------------
 if (plots) {
   graphics.off()
   
-  ### All notifications
+  # All notifications
   plotDiags1 <- ggplot(data = hivResults, 
     aes(x = yeardiagnosis, y = notifications)) + 
     geom_line(size = 1.5) + ylab("Annual notifications") + xlab("Year") + 
@@ -337,7 +339,6 @@ if (plots) {
     geom_line(size = 1.5) + ylab("Cumulative notifications") + 
     xlab("Year") + theme_bw() + plotOpts
   
-  # Save to file 
   plotDiags <- grid.arrange(plotDiags1, plotDiags2, ncol = 2)
   ggsave(file.path(figuresFolder, "all_notifications.png"), 
     plot = plotDiags, width = 10, height = 5, units = "in")
@@ -353,7 +354,6 @@ if (plots) {
     geom_area() + ylab("Proportion annual notifications") + xlab("Year") + 
     theme_bw() + plotOpts
   
-  # Save to file 
   plotStates <- grid.arrange(plotStates1, plotStates2, ncol = 2)
   ggsave(file.path(figuresFolder, "state_notifications.png"), 
     plot = plotStates, width = 10, height = 5, units = "in")
@@ -369,7 +369,6 @@ if (plots) {
     geom_area() + ylab("Proportion annual notifications") + xlab("Year") + 
     theme_bw() + plotOpts
   
-  # Save to file
   plotExp <- grid.arrange(plotExp1, plotExp2, ncol = 2)
   ggsave(file.path(figuresFolder, "exp_notifications.png"), 
     plot = plotExp, width = 10, height = 5, units = "in")
@@ -385,7 +384,6 @@ if (plots) {
     geom_area() + ylab("Proportion annual notifications") + xlab("Year") + 
     theme_bw() + plotOpts
   
-  # Save to file
   plotCob <- grid.arrange(plotCob1, plotCob2, ncol = 2)
   ggsave(file.path(figuresFolder, "cob_notifications.png"), 
     plot = plotCob, width = 10, height = 5, units = "in")
@@ -403,7 +401,6 @@ if (plots) {
     ylab("Proportion notifications indigenous") + 
     xlab("Year") + theme_bw() + plotOpts
   
-  # Save to file
   plotIndig <- grid.arrange(plotIndig1, plotIndig2, ncol = 2)
   ggsave(file.path(figuresFolder, "indig_notifications.png"), 
     plot = plotIndig, width = 10, height = 5, units = "in")
@@ -451,27 +448,27 @@ hivResults$propunique <-
   hivResults$uniquecases / hivResults$totalnotifications
   hivResults[hivResults$propunique > 1, ]$propunique <- 1
 
-### Now do states and territories
+### States and territories
 states <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas")
 
 hivState$uniquecases <- rep(NA, nrow(hivState))
 hivState$propunique <- rep(NA, nrow(hivState))
 
-for (ii in 1:length(states)) {
+for (region in states) {
   # Dob vector
-  dobTemp <- select(subhivset(hivSet, region = states[ii]), 
+  dobTemp <- select(subhivset(hivSet, region = region), 
                     dob, yeardiagnosis)
   
   # Calculate number unique
   numberUnique <- numUnique(dobTemp, unique(dobTemp$yeardiagnosis), ignore)
   
   # Store state results
-  hivState[hivState$state == states[ii], ]$uniquecases <- numberUnique
+  hivState[hivState$state == region, ]$uniquecases <- numberUnique
   
   # Replace proportion unique if using national estimates
   if (nationalUniques) {
-    stateYears <- hivState[hivState$state == states[ii], ]$yeardiagnosis
-    hivState[hivState$state == states[ii], ]$propunique <- 
+    stateYears <- hivState[hivState$state == region, ]$yeardiagnosis
+    hivState[hivState$state == region, ]$propunique <- 
       filter(hivResults, yeardiagnosis %in% stateYears)$propunique
   } 
 }
@@ -479,18 +476,18 @@ for (ii in 1:length(states)) {
 # Calculate proportion unique if not doing national estimates
 if (!nationalUniques) {
   hivState$propunique <- hivState$uniquecases / hivState$totalnotifications
-  hivState[hivState$propunique > 1,]$propunique <- 1
+  hivState[hivState$propunique > 1, ]$propunique <- 1
 }
 
-# Now do mode of exposure -------------------------------------------------
+# Mode of exposure -------------------------------------------------
 modes <- c("msm", "pwid", "hetero", "otherexp", "unknown")
 
 hivExpNat$uniquecases <- rep(NA, nrow(hivExpNat))
 hivExpNat$propunique <- rep(NA, nrow(hivExpNat))
 
-for (ii in 1:length(modes)) {
+for (mode in modes) {
   # Dob vector
-  dobTemp <- select(subhivset(hivSet, mode = modes[ii]), dob,
+  dobTemp <- select(subhivset(hivSet, mode = mode), dob,
                     yeardiagnosis)
   dobTemp <- arrange(dobTemp, yeardiagnosis)
   
@@ -498,12 +495,12 @@ for (ii in 1:length(modes)) {
   numberUnique <- numUnique(dobTemp, unique(dobTemp$yeardiagnosis), ignore)
   
   # Store exposure results
-  hivExpNat[hivExpNat$expgroup == modes[ii], ]$uniquecases <- numberUnique
+  hivExpNat[hivExpNat$expgroup == mode, ]$uniquecases <- numberUnique
   
   # Replace proportion unique if using national estimates
   if (nationalUniques) {
-    expYears <- hivExpNat[hivExpNat$expgroup == modes[ii],]$yeardiagnosis
-    hivExpNat[hivExpNat$expgroup == modes[ii],]$propunique <- 
+    expYears <- hivExpNat[hivExpNat$expgroup == mode,]$yeardiagnosis
+    hivExpNat[hivExpNat$expgroup == mode, ]$propunique <- 
       filter(hivResults, yeardiagnosis %in% expYears)$propunique
   } 
 }
@@ -522,12 +519,11 @@ if (!nationalUniques) {
 genders <- c("male", "female", "transgender", "unknown")
 hivGender$propunique <- rep(NA, nrow(hivGender))
 
-for (ii in 1:length(genders)) {
+for (gender in genders) {
   # Use national estimates
-  genYears <- hivGender[hivGender$sex == genders[ii], ]$yeardiagnosis
-  hivGender[hivGender$sex == genders[ii], ]$propunique <- 
+  genYears <- hivGender[hivGender$sex == gender, ]$yeardiagnosis
+  hivGender[hivGender$sex == gender, ]$propunique <- 
     filter(hivResults, yeardiagnosis %in% genYears)$propunique
-  
 }
 
 # Plot if required --------------------------------------------------------
@@ -578,10 +574,10 @@ absDeparts <- read.csv(file.path(absFolder, "ABS_departures_clean.csv",
 absInterstate <- read.csv(file.path(absFolder, "ABS_interstate_clean.csv", 
                                 sep =""),as.is = 1)
 
-### Depending on data used calculate departure rate for each state 
+# Depending on data used calculate departure rate for each state ----------
 
 states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act", "all")
-nstates <- length(states)
+# nstates <- length(states)
   
 allPredicts <- data.frame(year = numeric(), 
                           state = character(),
@@ -590,7 +586,7 @@ allPredicts <- data.frame(year = numeric(),
                           upper = numeric())
 
 if (permDeparts) {
-  ### Use permanent departures
+  # Use permanent departures
   absDeparts <- mutate(absDeparts, migrate = departures / erp)
   mrate <- absDeparts$migrate
   
@@ -598,10 +594,9 @@ if (permDeparts) {
   mrate <- c(mrate[1], mrate)
   
   # Fill in the state values
-  
-  for (ii in 1:nstates) {
+  for (state in states) {
     allPredicts <- rbind(allPredicts, data.frame(year = allYears, 
-                                                 state = states[ii],
+                                                 state = state,
                                                  rate = mrate/2, 
                                                  lower = 0, 
                                                  upper = mrate))
@@ -611,13 +606,13 @@ if (permDeparts) {
   hivMigrate <- allPredicts
   
 } else {
-  ### Use state based NOM departures
+  # Use state based NOM departures
   
   # Calculate migration rate overall and for each state
   absMigration <- mutate(absMigration, migrate = departures / erp)
   
-  for (ii in 1:nstates) {
-    mrate <- filter(absMigration, state == states[ii])
+  for (region in states) {
+    mrate <- filter(absMigration, state == region)
     
     # Now we need to fit and extrapolate for other years
     lmrate <- lm(migrate ~ year, data = mrate)
@@ -626,17 +621,17 @@ if (permDeparts) {
     
     # Store extrapolated rate
     allPredicts <- rbind(allPredicts, data.frame(year = allYears, 
-                                                 state = states[ii],
+                                                 state = region,
                                                  rate = expmrate[, 3]/2, 
                                                  #expmrate[, 1]
                                                  lower = 0, #expmrate[, 2],
                                                  upper = expmrate[, 3]))
-    }
+  }
   
   # Store results in final data frame
   hivMigrate <- allPredicts
   
-  # Plot what we have done if required
+  # Plot what we have done if required ------------------------------------
   if (plots) {
     graphics.off()
     
@@ -686,60 +681,64 @@ if (permDeparts) {
     }
 }
 
-### Calculate interstate rates - At this stage just calculate the best fit.
+# Calculate interstate rates ----------------------------------------------
+
+# At this stage just calculate the best fit.
 # Don't worry about upper and lower bounds.
 
 # First estimate erp for each state
 
-allinterstate <- data.frame(year = allYears)
+allInterstate <- data.frame(year = allYears)
 
-for (ii in 1:nstates) {
-  lmerp <- lm(erp ~ year, data = filter(absMigration, state == states[ii]))
-  erpstate <- predict(lmerp, data.frame(year = allYears))
+for (region in states) {
+  lmErp <- lm(erp ~ year, data = filter(absMigration, state == region))
+  erpState <- predict(lmErp, data.frame(year = allYears))
   
   # Store extrapolated population
-  allinterstate[[states[ii]]] <- erpstate
+  allInterstate[[region]] <- erpState
 }
 
-hivinterstate <- gather(allinterstate, "state", "erp", 2:10)
+hivInterstate <- gather(allInterstate, "state", "erp", 2:10)
 
 # Calculate interstate ERP simply overall population minus state population
-allerp <- filter(hivinterstate, state == "all")$erp
+allErp <- filter(hivInterstate, state == "all")$erp
 
-hivinterstate <- hivinterstate %>% 
+hivInterstate <- hivInterstate %>% 
   group_by(state) %>%
-  mutate(intererp = allerp-erp)
+  mutate(intererp = allErp - erp)
 
 # Calculate departure rate
-hivinterstate$departures <- NA
+hivInterstate$departures <- NA
 
-for (ii in 1:nstates) {
-  lmdepart <- lm(departures ~ year, data = filter(absInterstate, state == states[ii]))
-  departstate <- predict(lmdepart, data.frame(year = allYears))
+for (region in states) {
+  lmDepart <- lm(departures ~ year, data = filter(absInterstate, 
+                                                  state == region))
+  departState <- predict(lmDepart, data.frame(year = allYears))
   
   # Store extrapolated population
-  hivinterstate[hivinterstate$state == states[ii],]$departures <- departstate
+  hivInterstate[hivInterstate$state == region, ]$departures <- departState
 }
 
-hivinterstate <- mutate(hivinterstate,departrate = departures/erp) 
+hivInterstate <- mutate(hivInterstate, departrate = departures / erp) 
 
 # Calculate arrival rate
-hivinterstate$arrivals <- NA
+hivInterstate$arrivals <- NA
 
-for (ii in 1:nstates) {
-  lmarrive <- lm(arrivals ~ year, data = filter(absInterstate, state == states[ii]))
-  arrivestate <- predict(lmarrive, data.frame(year = allYears))
+for (region in states) {
+  lmArrive <- lm(arrivals ~ year, data = filter(absInterstate, 
+                                                state == region))
+  arriveState <- predict(lmArrive, data.frame(year = allYears))
   
   # Store extrapolated population
-  hivinterstate[hivinterstate$state == states[ii],]$arrivals <- arrivestate
+  hivInterstate[hivInterstate$state == region, ]$arrivals <- arriveState
 }
 
-hivinterstate <- mutate(hivinterstate,arriverate = arrivals/intererp) 
+hivInterstate <- mutate(hivInterstate, arriverate = arrivals / intererp) 
 
 # As intererp is zero national set arriverate to departure rate for "all"
 # Gives indication of rate people move interstate nationally
-hivinterstate[hivinterstate$state == "all",]$arriverate <- 
-  hivinterstate[hivinterstate$state == "all",]$departrate
+hivInterstate[hivInterstate$state == "all", ]$arriverate <- 
+  hivInterstate[hivInterstate$state == "all", ]$departrate
 
 ```
 
@@ -869,10 +868,10 @@ deathRate_max[(indexLinkage+1):length(deathRate)] <- filter(ahodDeaths,
   state == "all")$upper # 
 
 # Store final death rate
-# hivDeathRate <- data.frame(year = allYears, 
-#                            deathrate = deathRate, 
-#                            deathrate_min = deathRate_min, 
-#                            deathrate_max = deathRate_max)
+hivDeathRate <- data.frame(year = allYears,
+                           deathrate = deathRate,
+                           deathrate_min = deathRate_min,
+                           deathrate_max = deathRate_max)
 
 # Store national results
 hivResults$osrate <- allMigrate$rate
@@ -919,7 +918,7 @@ if (plots) {
 ## Number living with diagnosed HIV
 
 ```{r livingdiags}
-# This chuck now estimates the number of people living with diagnosed HIV. 
+# This chunk now estimates the number of people living with diagnosed HIV. 
 
 # Initialize final results data frame
 hivDiagnosed <- data.frame(stage = character(), 
@@ -929,101 +928,108 @@ hivDiagnosed <- data.frame(stage = character(),
                          lower = double(),
                          upper = double())
 
-# First calculate overall number
+# First calculate overall number ------------------------------------------
 
 # Setup all our vectors - first by filling in missing cumulative diagnoses
-filledDiagnoses <- FillMissing(allYears, hivresults$yeardiagnosis, 
-                                 hivresults$uniquecases)
+filledDiagnoses <- FillMissing(allYears, hivResults$yeardiagnosis, 
+                                 hivResults$uniquecases)
 
 cumDiagnoses <- filledDiagnoses$value
 
 # All death rates used for all  populations
-deathRate <- hivdeathrate$deathrate
-deathRateMin <- hivdeathrate$deathrate_min
-deathRateMax <- hivdeathrate$deathrate_max
+deathRate <- hivDeathRate$deathrate
+deathRateMin <- hivDeathRate$deathrate_min
+deathRateMax <- hivDeathRate$deathrate_max
 
 # National migration rates
-migrationRate <- filter(hivmigrate, state == "all")$rate
-migrationRateMin <- filter(hivmigrate, state == "all")$lower
-migrationRateMax <- filter(hivmigrate, state == "all")$upper
+migrationRate <- filter(hivMigrate, state == "all")$rate
+migrationRateMin <- filter(hivMigrate, state == "all")$lower
+migrationRateMax <- filter(hivMigrate, state == "all")$upper
 
 # Calculate number living with diagnosed HIV and range
 pldhivAll <- LivingDiagnosed(cumDiagnoses, deathRate, migrationRate)
 
-# Use max rates for min estimate because they are removal rates and vice versa
-pldhivAllMin <- LivingDiagnosed(cumDiagnoses, deathRateMax, migrationRateMax) 
-pldhivAllMax <- LivingDiagnosed(cumDiagnoses, deathRateMin, migrationRateMin) 
+# Use max rates for min estimate because they are removal rates 
+# and vice versa
+pldhivAllMin <- LivingDiagnosed(cumDiagnoses, deathRateMax,
+                                migrationRateMax) 
+pldhivAllMax <- LivingDiagnosed(cumDiagnoses, deathRateMin,
+                                migrationRateMin) 
 
 # Store results
 nyears <- length(allYears)
-hivdiagnosed <- rbind(hivdiagnosed,data_frame(stage = "pldhiv", 
+hivDiagnosed <- rbind(hivDiagnosed, 
+                      data_frame(stage = "pldhiv", 
                             year = allYears, 
                             population = "all", 
                             value = pldhivAll,
                             lower = pldhivAllMin,
                             upper = pldhivAllMax))
 
-### Now do state based PLDHIV
+# State based PLDHIV -----------------------------------------------
 
-for (ii in 1:(nstates-1)) {
-  stateyears <- filter(hivstate, state == states[ii])$yeardiagnosis
+for (region in states) {
+  stateYears <- filter(hivState, state == region)$yeardiagnosis
   
   if (nationalUniques) {
-    statediags <- filter(hivstate, state == states[ii])$totalnotifications *
-      filter(hivstate, state == states[ii])$propunique
+    stateDiags <- filter(hivState, 
+      state == region)$totalnotifications * 
+      filter(hivState, state == region)$propunique
   } else {
-    statediags <- filter(hivstate, state == states[ii])$uniquecases
+    stateDiags <- filter(hivState, state == region)$uniquecases
   }
     
-  fillStateDiags <- FillMissing(allYears, stateyears, statediags)  
+  fillStateDiags <- FillMissing(allYears, stateYears, stateDiags)  
   cumStateDiags <- fillStateDiags$value
   
   # State migration rates
-  migStateRate <- filter(hivmigrate, state == states[ii])$rate
-  migStateRateMin <- filter(hivmigrate, state == states[ii])$lower
-  migStateRateMax <- filter(hivmigrate, state == states[ii])$upper
+  migStateRate <- filter(hivMigrate, state == region)$rate
+  migStateRateMin <- filter(hivMigrate, state == region)$lower
+  migStateRateMax <- filter(hivMigrate, state == region)$upper
   
   # State departures
-  depStateRate <- filter(hivinterstate, state == states[ii])$departrate
+  depStateRate <- filter(hivInterstate, state == region)$departrate
   
   # State arrivals
-  arrStateRate <- filter(hivinterstate, state == states[ii])$arriverate
+  arrStateRate <- filter(hivInterstate, state == region)$arriverate
   
   # Do the state calculation and range
   pldhivState <- LivingDiagnosed(cumStateDiags, deathRate, migStateRate,
                                  arrStateRate, depStateRate, pldhivAll)
   
-  pldhivStateMin <- LivingDiagnosed(cumStateDiags, deathRateMax, migStateRateMax,
-                                 arrStateRate, depStateRate, pldhivAll)
+  pldhivStateMin <- LivingDiagnosed(cumStateDiags, deathRateMax,
+                                    migStateRateMax, arrStateRate,
+                                    depStateRate, pldhivAll)
   
-  pldhivStateMax <- LivingDiagnosed(cumStateDiags, deathRateMin, migStateRateMin,
-                                 arrStateRate, depStateRate, pldhivAll)
+  pldhivStateMax <- LivingDiagnosed(cumStateDiags, deathRateMin,
+                                    migStateRateMin, arrStateRate,
+                                    depStateRate, pldhivAll)
   
   # Store the state results
-  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = "pldhiv", 
-                            year = allYears, 
-                            population = states[ii], 
-                            value = pldhivState,
-                            lower = pldhivStateMin,
-                            upper = pldhivStateMax))
+  hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
+                                                 year = allYears, 
+                                                 population = region, 
+                                                 value = pldhivState,
+                                                 lower = pldhivStateMin,
+                                                 upper = pldhivStateMax))
 }
 
-### Now do exposure based PLHIV
+# Exposure based PLHIV ---------------------------------------------
 
 modes <- c("msm", "pwid", "hetero", "otherexp", "unknown")
-nmodes <- length(modes)
+# nmodes <- length(modes)
 
-for (ii in 1:nmodes) {
-  expyears <- filter(hivexpnat, expgroup == modes[ii])$yeardiagnosis
+for (mode in modes) {
+  expYears <- filter(hivExpNat, expgroup == mode)$yeardiagnosis
   
   if (nationalUniques) {
-    expdiags <- filter(hivexpnat, expgroup == modes[ii])$totalnotifications *
-      filter(hivexpnat, expgroup == modes[ii])$propunique
+    expDiags <- filter(hivExpNat, expgroup == mode)$totalnotifications *
+      filter(hivExpNat, expgroup == mode)$propunique
   } else {
-    expdiags <- filter(hivexpnat, expgroup == modes[ii])$uniquecases
+    expDiags <- filter(hivExpNat, expgroup == mode)$uniquecases
   }
     
-  fillExpDiags <- FillMissing(allYears, expyears, expdiags)  
+  fillExpDiags <- FillMissing(allYears, expYears, expDiags)  
   cumExpDiags <- fillExpDiags$value
   
   # Exp migration rates, death rates, assumed to be same overall
@@ -1031,38 +1037,43 @@ for (ii in 1:nmodes) {
   # Do the Exp calculation and range
   pldhivExp <- LivingDiagnosed(cumExpDiags, deathRate, migrationRate)
   
-  pldhivExpMin <- LivingDiagnosed(cumExpDiags, deathRateMax, migrationRateMax)
-  pldhivExpMax <- LivingDiagnosed(cumExpDiags, deathRateMin, migrationRateMin)
+  pldhivExpMin <- LivingDiagnosed(cumExpDiags, deathRateMax,
+                                  migrationRateMax)
+  pldhivExpMax <- LivingDiagnosed(cumExpDiags, deathRateMin,
+                                  migrationRateMin)
   
   # Store the state results
-  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = "pldhiv", 
+  hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
                             year = allYears, 
-                            population = modes[ii], 
+                            population = mode, 
                             value = pldhivExp,
                             lower = pldhivExpMin,
                             upper = pldhivExpMax))
 }
 
-### Remove unknowns by redistributing to known exposure groups in proportion
-keygroups <- c("msm", "pwid", "hetero", "otherexp")
+# Remove unknowns by redistributing to known exposure groups in proportion
+keyGroups <- c("msm", "pwid", "hetero", "otherexp")
 
 # Calculate proportion known in each category
-propExpDiags <- hivdiagnosed %>% 
-  filter(population %in% keygroups) %>%
+propExpDiags <- hivDiagnosed %>% 
+  filter(population %in% keyGroups) %>%
   group_by(year) %>%
-  mutate(totalval = sum(value), 
-         propval = value/totalval) %>%
+  mutate(totalval = sum(value), propval = value  /totalval) %>%
   select(-stage, -totalval)
 
 # Calculate the number unknown and the proportional increase
-numUnknown <- hivdiagnosed %>% 
+numUnknown <- hivDiagnosed %>% 
   filter(population == "unknown") %>%
   select(year, value)
 
-numUnknown$msm <- filter(propExpDiags, population == "msm")$propval * numUnknown$value
-numUnknown$pwid <- filter(propExpDiags, population == "pwid")$propval * numUnknown$value 
-numUnknown$hetero <- filter(propExpDiags, population == "hetero")$propval * numUnknown$value 
-numUnknown$otherexp <- filter(propExpDiags, population == "otherexp")$propval * numUnknown$value 
+numUnknown$msm <- filter(propExpDiags, population == "msm")$propval *
+  numUnknown$value
+numUnknown$pwid <- filter(propExpDiags, population == "pwid")$propval *
+  numUnknown$value 
+numUnknown$hetero <- filter(propExpDiags, population == "hetero")$propval *
+  numUnknown$value 
+numUnknown$otherexp <- filter(propExpDiags, 
+  population == "otherexp")$propval * numUnknown$value 
 
 # Make into long format
 numUnknown <- numUnknown %>%
@@ -1070,86 +1081,103 @@ numUnknown <- numUnknown %>%
   gather("mode", "number", 2:5)
 
 
-# Update hivdiagnosed
-for (ii in seq(along = keygroups)) {
-     tempdf <- filter(hivdiagnosed, population == keygroups[ii])
-     proplwr <- tempdf$lower/tempdf$value
-     propupr <- tempdf$upper/tempdf$value
+# Update hivDiagnosed
+for (group in keyGroups) {
+     temPdf <- filter(hivDiagnosed, population == group)
+     propLwr <- temPdf$lower / temPdf$value
+     propUpr <- temPdf$upper / temPdf$value
      
-     hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$value <- 
-       hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$value + 
-       filter(numUnknown, mode == keygroups[ii])$number
+     hivDiagnosed[hivDiagnosed$population == group, ]$value <- 
+       hivDiagnosed[hivDiagnosed$population == group, ]$value + 
+       filter(numUnknown, mode == group)$number
      
-     hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$lower <- 
-       hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$value * proplwr
+     hivDiagnosed[hivDiagnosed$population == group, ]$lower <- 
+       hivDiagnosed[hivDiagnosed$population == group, ]$value *
+       propLwr
       
-     hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$upper <- 
-       hivdiagnosed[hivdiagnosed$population == keygroups[ii],]$value * propupr
+     hivDiagnosed[hivDiagnosed$population == group, ]$upper <- 
+       hivDiagnosed[hivDiagnosed$population == group, ]$value * 
+       propUpr
 }    
    
 # Remove unknown & fix up modes
-hivdiagnosed <- filter(hivdiagnosed, population != "unknown")
-modes <- keygroups
-nmodes <- length(modes)
+hivDiagnosed <- filter(hivDiagnosed, population != "unknown")
+modes <- keyGroups
+# nmodes <- length(modes)
   
-### Now do population based PLDHIV
-pops <- c("non-indigenous", "indigenous", "bornssa", "bornsea","othercob")
-npops <- length(pops)
+# Population based PLDHIV ------------------------------------------
 
-for (ii in 1:npops) {
+pops <- c("non-indigenous", "indigenous", "bornssa", "bornsea","othercob")
+# npops <- length(pops)
+
+for (pop in pops) {
   # Set up cumDiags for each population use the overall cumdiagnoses 
   # For Australian born we have to also consider indigenous status
-  if (pops[ii] == "non-indigenous") {
+  if (pop == "non-indigenous") {
     # Non-indigenous estimates
-    popdiags <- filter(hivcob, countrygroup == "australia")$proptotalknown
-    popyears <- filter(hivcob, countrygroup == "australia")$yeardiagnosis
-    fillPopDiags <- FillMissing(allYears, popyears, popdiags)
+    popDiags <- filter(hivCob, countrygroup == "australia")$proptotalknown
+    popYears <- filter(hivCob, countrygroup == "australia")$yeardiagnosis
+    fillPopDiags <- FillMissing(allYears, popYears, popDiags)
   
     if (indigKnown) {
       # If just using known subtract from australian born diagnoses
-      aborigdiags <- filter(hivaborig, aboriggroup == "indigenous")$totalnotifications
-      aborigyears <- filter(hivaborig, aboriggroup == "indigenous")$yeardiagnosis
+      aborigDiags <- filter(hivAborig, 
+        aboriggroup == "indigenous")$totalnotifications
+      aborigYears <- filter(hivAborig, 
+        aboriggroup == "indigenous")$yeardiagnosis
       
-      fillAborigDiags <- FillMissing(allYears, aborigyears, aborigdiags)
-      cumPopDiags <- cumDiagnoses * fillPopDiags$value - fillAborigDiags$value
+      fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
+      cumPopDiags <- cumDiagnoses * 
+        fillPopDiags$value - fillAborigDiags$value
     } else {
       # Use proportional estimate
-      aborigdiags <- filter(hivaborig, aboriggroup == "non-indigenous")$proptotalknown
-      aborigyears <- filter(hivaborig, aboriggroup == "non-indigenous")$yeardiagnosis
+      aborigDiags <- filter(hivAborig, 
+        aboriggroup == "non-indigenous")$proptotalknown
+      aborigYears <- filter(hivAborig, 
+        aboriggroup == "non-indigenous")$yeardiagnosis
       
-      fillAborigDiags <- FillMissing(allYears, aborigyears, aborigdiags)
-      cumPopDiags <- cumDiagnoses * fillPopDiags$value * fillAborigDiags$value
+      fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
+      cumPopDiags <- cumDiagnoses * 
+        fillPopDiags$value * 
+        fillAborigDiags$value
     }
       
-  } else if (pops[ii] == "indigenous") {
+  } else if (pop == "indigenous") {
     # Indigenous estimates
     if (indigKnown) {
       # Use known indigenous diagnoses
-      aborigdiags <- filter(hivaborig, aboriggroup == "indigenous")$totalnotifications
-      aborigyears <- filter(hivaborig, aboriggroup == "indigenous")$yeardiagnosis
+      aborigDiags <- filter(hivAborig, 
+        aboriggroup == "indigenous")$totalnotifications
+      aborigYears <- filter(hivAborig, 
+        aboriggroup == "indigenous")$yeardiagnosis
       
-      fillAborigDiags <- FillMissing(allYears, aborigyears, aborigdiags)
+      fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
       cumPopDiags <- fillAborigDiags$value
       
     } else {
       # Use proportionally known diagnoses
-      popdiags <- filter(hivcob, countrygroup == "australia")$proptotalknown
-      popyears <- filter(hivcob, countrygroup == "australia")$yeardiagnosis
+      popPiags <- filter(hivCob, 
+                         countrygroup == "australia")$proptotalknown
+      popYears <- filter(hivCob, countrygroup == "australia")$yeardiagnosis
       
-      aborigdiags <- filter(hivaborig, aboriggroup == "indigenous")$proptotalknown
-      aborigyears <- filter(hivaborig, aboriggroup == "indigenous")$yeardiagnosis
+      aborigDiags <- filter(hivAborig, 
+                            aboriggroup == "indigenous")$proptotalknown
+      aborigYears <- filter(hivAborig, 
+                            aboriggroup == "indigenous")$yeardiagnosis
       
-      fillPopDiags <- FillMissing(allYears, popyears, popdiags)
-      fillAborigDiags <- FillMissing(allYears, aborigyears, aborigdiags)
+      fillPopDiags <- FillMissing(allYears, popYears, popDiags)
+      fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
       
-      cumPopDiags <- cumDiagnoses * fillPopDiags$value * fillAborigDiags$value
+      cumPopDiags <- cumDiagnoses * 
+        fillPopDiags$value * 
+        fillAborigDiags$value
     }
     
   } else {
-    popdiags <- filter(hivcob, countrygroup == pops[ii])$proptotalknown
-    popyears <- filter(hivcob, countrygroup == pops[ii])$yeardiagnosis
+    popYiags <- filter(hivCob, countrygroup == pop)$proptotalknown
+    popyears <- filter(hivCob, countrygroup == pop)$yeardiagnosis
     
-    fillPopDiags <- FillMissing(allYears, popyears, popdiags)
+    fillPopDiags <- FillMissing(allYears, popYears, popDiags)
     cumPopDiags <- cumDiagnoses * fillPopDiags$value
   }
   
@@ -1157,27 +1185,36 @@ for (ii in 1:npops) {
   
   # Do the Pop calculation and range - if indigenous adjust mortality rate 
   # appropriately
-  mortalityMultiplier <- ifelse(pops[ii] == "indigenous", aborigMortality, 1)
-  mortalityMultiplierMin <- ifelse(pops[ii] == "indigenous", aborigMortalityMin, 1)
-  mortalityMultiplierMax <- ifelse(pops[ii] == "indigenous", aborigMortalityMax, 1)
+  mortalityMultiplier <- ifelse(pop == "indigenous", aborigMortality, 1)
+  mortalityMultiplierMin <- ifelse(pop == "indigenous", 
+                                   aborigMortalityMin, 1)
+  mortalityMultiplierMax <- ifelse(pop == "indigenous", 
+                                   aborigMortalityMax, 1)
   
   # If non-Indigenous then no need to adjust dethar 
-  pldhivPop <- LivingDiagnosed(cumPopDiags, mortalityMultiplier * deathRate, migrationRate)
+  pldhivPop <- LivingDiagnosed(cumPopDiags, 
+                               mortalityMultiplier * deathRate,
+                               migrationRate)
   
-  pldhivPopMin <- LivingDiagnosed(cumPopDiags, mortalityMultiplierMin * deathRateMax, migrationRateMax)
-  pldhivPopMax <- LivingDiagnosed(cumPopDiags, mortalityMultiplierMax * deathRateMin, migrationRateMin)
+  pldhivPopMin <- LivingDiagnosed(cumPopDiags, 
+                                  mortalityMultiplierMin * deathRateMax,
+                                  migrationRateMax)
   
+  pldhivPopMax <- LivingDiagnosed(cumPopDiags, 
+                                  mortalityMultiplierMax * deathRateMin,
+                                  migrationRateMin)
   
   # Store the population results
-  hivdiagnosed <- rbind(hivdiagnosed, data_frame(stage = "pldhiv", 
+  hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
                             year = allYears, 
-                            population = pops[ii], 
+                            population = pop, 
                             value = pldhivPop,
                             lower = pldhivPopMin,
                             upper = pldhivPopMax))
 }
 
-### Now do gender based PLDHIV
+# Gender based PLDHIV -----------------------------------------------------
+
 # Quick and dirty at the moment for a separate calculation
 hivDiagGender <- data.frame(stage = character(), 
                          year = double(),
@@ -1187,14 +1224,14 @@ hivDiagGender <- data.frame(stage = character(),
                          upper = double())
 
 genders <- c("male", "female", "transgender", "unknown")
-ngenders <- length(genders)
+# ngenders <- length(genders)
 
-for (ii in 1:ngenders) {
-  genyears <- filter(hivgender, sex == genders[ii])$yeardiagnosis
-  gendiags <- filter(hivgender, sex == genders[ii])$totalnotifications * 
-    filter(hivgender, sex == genders[ii])$propunique
+for (gender in genders) {
+  genYears <- filter(hivGender, sex == gender)$yeardiagnosis
+  genDiags <- filter(hivGender, sex == gender)$totalnotifications * 
+    filter(hivGender, sex == gender)$propunique
     
-  fillGenDiags <- FillMissing(allYears, genyears, gendiags)  
+  fillGenDiags <- FillMissing(allYears, genYears, genDiags)  
   cumGenDiags <- fillGenDiags$value
   
   # Exp migration rates, death rates, assumed to be same overall
@@ -1202,21 +1239,26 @@ for (ii in 1:ngenders) {
   # Do the Exp calculation and range
   pldhivGen <- LivingDiagnosed(cumGenDiags, deathRate, migrationRate)
   
-  pldhivGenMin <- LivingDiagnosed(cumGenDiags, deathRateMax, migrationRateMax)
-  pldhivGenMax <- LivingDiagnosed(cumGenDiags, deathRateMin, migrationRateMin)
+  pldhivGenMin <- LivingDiagnosed(cumGenDiags, 
+                                  deathRateMax,
+                                  migrationRateMax)
+  
+  pldhivGenMax <- LivingDiagnosed(cumGenDiags, 
+                                  deathRateMin, 
+                                  migrationRateMin)
   
   # Store the state results
   hivDiagGender <- rbind(hivDiagGender, data_frame(stage = "pldhiv", 
                             year = allYears, 
-                            population = genders[ii], 
+                            population = gender, 
                             value = pldhivGen,
                             lower = pldhivGenMin,
                             upper = pldhivGenMax))
 }
 
-### Finally bind to overall results
+# Finally bind to overall results -----------------------------------------
 if (bindCascade) {
-  hivcascade <- rbind(hivcascade,hivdiagnosed)
+  hivCascade <- rbind(hivCascade, hivDiagnosed)
 }
 
 ```
@@ -1227,44 +1269,57 @@ if (bindCascade) {
 # This chuck now estimates the number of people living with diagnosed HIV. 
 
 # Initialize final results data frame
-hivundiag <- data.frame(stage = character(), 
+hivUndiag <- data.frame(stage = character(), 
                          year = double(),
                          population = character(),
                          estimate = double(),
                          lower = double(),
                          upper = double())
 
+# Sort out proportion undiagnosed -----------------------------------------
+
 # Read in back projected undiagnosed estimates
 propUndiagnosed <- read.csv(file.path(dataFolder, 
-                                      paste("projectedUndiagnosed", 
-                                            toString(analysisYear), 
-                                            ".csv", sep = "")),as.is = 1)
+  paste("projectedUndiagnosed", toString(analysisYear), ".csv", 
+        sep = "")), as.is = 1)
 
 # Only keep required years
 propUndiagnosed <- filter(propUndiagnosed, year %in% allYears) 
 
-if (useOldpropundiagnosed) {
-  # Replace 2013 & 2014 estimates with COUNT and 2014 ASR supplement non-MSM estimates
+if (useOldPropUndiagnosed) {
+  # Replace 2013 & 2014 estimates with COUNT and 2014 ASR supplement 
+  # non-MSM estimates
   # COUNT: 8.9% (95% CI: 5.8-13.5%)
   # Non-MSM: 20% (range 12-23%) across states
-  hardcodeYears <- analysisYear - 2013 + 1
-  hardcode <- c(0.09, 0.06, 0.14, 0.2, 0.15, 0.25)
+  hardCodeYears <- analysisYear - 2013 + 1
+  hardCode <- c(0.09, 0.06, 0.14, 0.2, 0.15, 0.25)
  
-  propUndiagnosed[propUndiagnosed$year >= 2013,2:7] <-  matrix(hardcode, 
-    nrow = hardcodeYears, ncol = length(hardcode), byrow = TRUE)
+  propUndiagnosed[propUndiagnosed$year >= 2013, 2:7] <-  
+    matrix(hardCode, nrow = hardCodeYears, ncol = length(hardCode), 
+           byrow = TRUE)
 }
 
 # Estimate proportion MSM and non-MSM for weighting
-propMSM <- filter(hivexpnat, expgroup == "msm")$proptotalnotifications
-propHetero <- filter(hivexpnat, expgroup == "hetero")$proptotalnotifications
-propPwid <- filter(hivexpnat, expgroup == "pwid")$proptotalnotifications
-propOther <- filter(hivexpnat, expgroup == "otherexp")$proptotalnotifications
+propMSM <- filter(hivExpNat, expgroup == "msm")$proptotalnotifications
+propHetero <- filter(hivExpNat, 
+                     expgroup == "hetero")$proptotalnotifications
+propPwid <- filter(hivExpNat, expgroup == "pwid")$proptotalnotifications
+propOther <- filter(hivExpNat, 
+                    expgroup == "otherexp")$proptotalnotifications
 
-# Fill in missing data years - simply assume proportion is same previous year
-propMSM <- FillMissing(allYears, filter(hivexpnat, expgroup == "msm")$yeardiagnosis, propMSM)
-propHetero <- FillMissing(allYears, filter(hivexpnat, expgroup == "hetero")$yeardiagnosis, propHetero)
-propPwid <- FillMissing(allYears, filter(hivexpnat, expgroup == "pwid")$yeardiagnosis, propPwid)
-propOther <- FillMissing(allYears, filter(hivexpnat, expgroup == "otherexp")$yeardiagnosis, propOther)
+# Fill in missing data years - simply assume proportion is same previous 
+# year
+propMSM <- FillMissing(allYears, filter(hivExpNat,
+  expgroup == "msm")$yeardiagnosis, propMSM)
+
+propHetero <- FillMissing(allYears, 
+  filter(hivExpNat, expgroup == "hetero")$yeardiagnosis, propHetero)
+
+propPwid <- FillMissing(allYears, 
+  filter(hivExpNat, expgroup == "pwid")$yeardiagnosis, propPwid)
+
+propOther <- FillMissing(allYears, 
+  filter(hivExpNat, expgroup == "otherexp")$yeardiagnosis, propOther)
 
 # Estimate overall non-MSM undiagnosed proportion
 propNonMSM <- 1 - propMSM$value
@@ -1272,136 +1327,151 @@ propNonMSM <- 1 - propMSM$value
 # Weighted undiagnosed proportion
 undiagAll <- propMSM$value * propUndiagnosed$msm_best + 
             propNonMSM * propUndiagnosed$non_msm_best
-# undiagAllMin <- apply(rbind(propUndiagnosed$msm_lower, propUndiagnosed$non_msm_lower),2,min)                
-# undiagAllMax <- apply(rbind(propUndiagnosed$msm_upper, propUndiagnosed$non_msm_upper),2,max)
+
+# undiagAllMin <- apply(rbind(propUndiagnosed$msm_lower, 
+#   propUndiagnosed$non_msm_lower),2,min)                
+# undiagAllMax <- apply(rbind(propUndiagnosed$msm_upper, 
+#   propUndiagnosed$non_msm_upper),2,max)
+
 undiagAllMin <- propMSM$value * propUndiagnosed$msm_lower + 
             propNonMSM * propUndiagnosed$non_msm_lower
+
 undiagAllMax <- propMSM$value * propUndiagnosed$msm_upper + 
             propNonMSM * propUndiagnosed$non_msm_upper
 
-### Now estimate number of people living with HIV overall
-pldhivTemp <- filter(hivdiagnosed, stage == "pldhiv" & population == "all")
-infectedAll <- pldhivTemp$value/(1 - undiagAll)
-infectedAllMin <- pldhivTemp$lower/(1 - undiagAllMin)
-infectedAllMax <- pldhivTemp$upper/(1 - undiagAllMax)
+# Estimate number of people living with HIV overall -----------------------
+
+pldhivTemp <- filter(hivDiagnosed, stage == "pldhiv", population == "all")
+infectedAll <- pldhivTemp$value / (1 - undiagAll)
+infectedAllMin <- pldhivTemp$lower / (1 - undiagAllMin)
+infectedAllMax <- pldhivTemp$upper / (1 - undiagAllMax)
 
 # Store overall results
-hivundiag <- rbind(hivundiag, data_frame(stage = "infected", 
+hivUndiag <- rbind(hivUndiag, data_frame(stage = "infected", 
                             year = allYears, 
                             population = "all", 
                             value = infectedAll,
                             lower = infectedAllMin,
                             upper = infectedAllMax))
 
-### Now calculate undiagnosed for each state
-for (ii in 1:(nstates-1)) {
-  pldhivTemp <- filter(hivdiagnosed, stage == "pldhiv" & population == states[ii])
-  infectedState <- pldhivTemp$value/(1 - undiagAll)
-  infectedStateMin <- pldhivTemp$lower/(1 - undiagAllMin)
-  infectedStateMax <- pldhivTemp$upper/(1 - undiagAllMax)
+# Calculate undiagnosed for each state -----------------------------------
+states <-  head(states, -1)
+
+for (region in states) {
+  pldhivTemp <- filter(hivDiagnosed, stage == "pldhiv", 
+                       population == region)
+  infectedState <- pldhivTemp$value / (1 - undiagAll)
+  infectedStateMin <- pldhivTemp$lower / (1 - undiagAllMin)
+  infectedStateMax <- pldhivTemp$upper / (1 - undiagAllMax)
   
   # Store results 
-  hivundiag <- rbind(hivundiag,data_frame(stage = "infected", 
-                            year = allYears, 
-                            population = states[ii], 
-                            value = infectedState,
-                            lower = infectedStateMin,
-                            upper = infectedStateMax))
+  hivUndiag <- rbind(hivUndiag, data_frame(stage = "infected", 
+                                           year = allYears, 
+                                           population = region, 
+                                           value = infectedState,
+                                           lower = infectedStateMin,
+                                           upper = infectedStateMax))
 }
 
-### Now calculate for each exposure group
+# Calculate undiagnosed for each exposure group --------------------------
 
-for (ii in 1:nmodes) {
-  pldhivTemp <- filter(hivdiagnosed, stage == "pldhiv" & population == modes[ii])
+for (mode in modes) {
+  pldhivTemp <- filter(hivDiagnosed, stage == "pldhiv", 
+                       population == mode)
   
-  if (modes[ii] == "msm") {
-    infectedExp <- pldhivTemp$value/(1 - propUndiagnosed$msm_best)
-    infectedExpMin <- pldhivTemp$lower/(1 - propUndiagnosed$msm_lower)
-    infectedExpMax <- pldhivTemp$upper/(1 - propUndiagnosed$msm_upper)
+  if (mode == "msm") {
+    infectedExp <- pldhivTemp$value / (1 - propUndiagnosed$msm_best)
+    infectedExpMin <- pldhivTemp$lower / (1 - propUndiagnosed$msm_lower)
+    infectedExpMax <- pldhivTemp$upper / (1 - propUndiagnosed$msm_upper)
   } else {
-    infectedExp <- pldhivTemp$value/(1 - propUndiagnosed$non_msm_best)
-    infectedExpMin <- pldhivTemp$lower/(1 - propUndiagnosed$non_msm_lower)
-    infectedExpMax <- pldhivTemp$upper/(1 - propUndiagnosed$non_msm_upper)
-    
+    infectedExp <- pldhivTemp$value / (1 - propUndiagnosed$non_msm_best)
+    infectedExpMin <- pldhivTemp$lower / 
+      (1 - propUndiagnosed$non_msm_lower)
+    infectedExpMax <- pldhivTemp$upper / 
+      (1 - propUndiagnosed$non_msm_upper)
   }
   
   # Store results 
-  hivundiag <- rbind(hivundiag,data_frame(stage = "infected", 
-                                          year = allYears, 
-                                          population = modes[ii],  
-                                          value = infectedExp,
-                                          lower = infectedExpMin,
-                                          upper = infectedExpMax))
+  hivUndiag <- rbind(hivUndiag, data_frame(stage = "infected", 
+                                           year = allYears, 
+                                           population = mode,  
+                                           value = infectedExp,
+                                           lower = infectedExpMin,
+                                           upper = infectedExpMax))
 }               
 
-### Now calculate for each population group
-for (ii in 1:npops) {
-  pldhivTemp <- filter(hivdiagnosed, stage == "pldhiv" & population == pops[ii])
+# Calculate undiagnosed for each population group -------------------------
+for (pop in pops) {
+  pldhivTemp <- filter(hivDiagnosed, stage == "pldhiv", 
+                       population == pop)
   
   # Use overall undiagnosed proportion for non-indigenous and other cob. 
   # For indigenous, bornssa, born sea use non_msm undiagnosed proportion
-  if (pops[ii] == "non-indigenous" | pops[ii] == "othercob") {
-    infectedPop <- pldhivTemp$value/(1 - undiagAll)
-    infectedPopMin <- pldhivTemp$lower/(1 - undiagAllMin)
-    infectedPopMax <- pldhivTemp$upper/(1 - undiagAllMax)
+  if (pop == "non-indigenous" | pop == "othercob") {
+    infectedPop <- pldhivTemp$value / (1 - undiagAll)
+    infectedPopMin <- pldhivTemp$lower / (1 - undiagAllMin)
+    infectedPopMax <- pldhivTemp$upper / (1 - undiagAllMax)
   } else {
-    infectedPop <- pldhivTemp$value/(1 - propUndiagnosed$non_msm_best)
-    infectedPopMin <- pldhivTemp$lower/(1 - propUndiagnosed$non_msm_lower)
-    infectedPopMax <- pldhivTemp$upper/(1 - propUndiagnosed$non_msm_upper)
+    infectedPop <- pldhivTemp$value / (1 - propUndiagnosed$non_msm_best)
+    infectedPopMin <- pldhivTemp$lower / 
+      (1 - propUndiagnosed$non_msm_lower)
+    infectedPopMax <- pldhivTemp$upper/  
+      (1 - propUndiagnosed$non_msm_upper)
   }
   
   # Store results 
-  hivundiag <- rbind(hivundiag,data_frame(stage = "infected", 
-                                          year = allYears, 
-                                          population = pops[ii], 
-                                          value = infectedPop,
-                                          lower = infectedPopMin,
-                                          upper = infectedPopMax))
+  hivUndiag <- rbind(hivUndiag, data_frame(stage = "infected", 
+                                           year = allYears, 
+                                           population = pop, 
+                                           value = infectedPop,
+                                           lower = infectedPopMin,
+                                           upper = infectedPopMax))
 }
 
-### Now calculate for each gender
+# Calculate undiagnosed for each gender ----------------------------------
 hivGenUndiag <- data.frame(stage = character(), 
-                         year = double(),
-                         population = character(),
-                         estimate = double(),
-                         lower = double(),
-                         upper = double())
+                           year = double(),
+                           population = character(),
+                           estimate = double(),
+                           lower = double(),
+                           upper = double())
 
-for (ii in 1:ngenders) {
-  pldhivTemp <- filter(hivDiagGender, stage == "pldhiv" & population == genders[ii])
+for (gender in genders) {
+  pldhivTemp <- filter(hivDiagGender, stage == "pldhiv", 
+                       population == gender)
   
   # Use overall undiagnosed proportion for non-indigenous and other cob. 
   # For indigenous, bornssa, born sea use non_msm undiagnosed proportion
-#   if (genders[ii] == "male") {
-    infectedPop <- pldhivTemp$value/(1 - undiagAll)
-    infectedPopMin <- pldhivTemp$lower/(1 - undiagAllMin)
-    infectedPopMax <- pldhivTemp$upper/(1 - undiagAllMax)
+  #   if (genders[ii] == "male") {
+  infectedPop <- pldhivTemp$value / (1 - undiagAll)
+  infectedPopMin <- pldhivTemp$lower / (1 - undiagAllMin)
+  infectedPopMax <- pldhivTemp$upper / (1 - undiagAllMax)
 #   } else {
-#     infectedPop <- pldhivTemp$value/(1 - propUndiagnosed$non_msm_best)
-#     infectedPopMin <- pldhivTemp$lower/(1 - propUndiagnosed$non_msm_lower)
-#     infectedPopMax <- pldhivTemp$upper/(1 - propUndiagnosed$non_msm_upper)
+#     infectedPop <- pldhivTemp$value / (1 - propUndiagnosed$non_msm_best)
+#     infectedPopMin <- pldhivTemp$lower / (1 - 
+#       propUndiagnosed$non_msm_lower)
+#     infectedPopMax <- pldhivTemp$upper / (1 - 
+#       propUndiagnosed$non_msm_upper)
 #   }
   
   # Store results 
   hivGenUndiag <- rbind(hivGenUndiag, data_frame(stage = "infected", 
                                           year = allYears, 
-                                          population = genders[ii], 
+                                          population = gender, 
                                           value = infectedPop,
                                           lower = infectedPopMin,
                                           upper = infectedPopMax))
 }
 
 # Merged with gender PLDHIV and extract 2014 results
-genderTemp <- rbind(hivGenUndiag,hivDiagGender)
+genderTemp <- rbind(hivGenUndiag, hivDiagGender)
 genderTemp <- filter(genderTemp, year == 2014)
 
 # Write to file for Skye
 
-
-
-### Finally bind to overall results
+# Finally bind to overall results ----------------------------------------
 if (bindCascade) {
-  hivcascade <- rbind(hivcascade,hivundiag)
+  hivCascade <- rbind(hivCascade,hivUndiag)
 }
 
 ```
@@ -1437,7 +1507,7 @@ uniqueDiags <- c(hivResults$uniquecases[1], diff(hivResults$uniquecases))
 propLinked <- hivLinkedAll$linked / uniqueDiags
 
 # Look at the trend since 2000
-propl <- data.frame(year = allYears, proportion = proplinked)
+propl <- data.frame(year = allYears, proportion = propLinked)
 lmlinked <- lm(proportion ~ year, data = filter(propl, year > 2000))
 predictlinked <- predict(lmlinked, data.frame(year = allYears))
 
@@ -1488,23 +1558,23 @@ if (includeLinked) {
     mutate(totallinked = cumsum(linked)) %>%
     filter(yeardiagnosis <= analysisYear) 
   
-  for (ii in 1:(nstates - 1)) {
-    tempLinked <- filter(hivLinkedState, state == states[ii])
+  for (region in states) {
+    tempLinked <- filter(hivLinkedState, state == region)
     tempLinked <- FillMissing(allYears, tempLinked$yeardiagnosis, 
                               tempLinked$totallinked)
     
     cumLinked <- tempLinked$value
     
     # State migration rates
-    migStateRate <- filter(hivMigrate, state == states[ii])$rate
-    migStateRateMin <- filter(hivMigrate, state == states[ii])$lower
-    migStateRateMax <- filter(hivMigrate, state == states[ii])$upper
+    migStateRate <- filter(hivMigrate, state == region)$rate
+    migStateRateMin <- filter(hivMigrate, state == region)$lower
+    migStateRateMax <- filter(hivMigrate, state == region)$upper
     
     # State departures
-    depStateRate <- filter(hivinterstate, state == states[ii])$departrate
+    depStateRate <- filter(hivInterstate, state == region)$departrate
     
     # State arrivals
-    arrStateRate <- filter(hivinterstate, state == states[ii])$arriverate
+    arrStateRate <- filter(hivInterstate, state == region)$arriverate
     
     # Do the state calculation and range
     linkedState <- LivingDiagnosed(cumLinked, deathRate, migStateRate,
@@ -1519,7 +1589,7 @@ if (includeLinked) {
     # Store state results 
     hivLinkCare <- rbind(hivLinkCare, data_frame(stage = "linked", 
                                                  year = allYears, 
-                                                 population = states[ii], 
+                                                 population = region, 
                                                  value = linkedState,
                                                  lower = linkedStateMin,
                                                  upper = linkedStateMax))
@@ -1534,8 +1604,8 @@ if (includeLinked) {
     mutate(totallinked = cumsum(linked)) %>%
     filter(yeardiagnosis <= analysisYear) 
   
-  for (ii in 1:nmodes) {
-    tempLinked <- filter(hivLinkedExp, expgroup == modes[ii])
+  for (modes in modes) {
+    tempLinked <- filter(hivLinkedExp, expgroup == mode)
     tempLinked <- FillMissing(allYears, tempLinked$yeardiagnosis, 
                               tempLinked$totallinked)
     
@@ -1554,7 +1624,7 @@ if (includeLinked) {
     # Store the state results
     hivLinkCare <- rbind(hivLinkCare, data_frame(stage = "linked", 
                                                  year = allYears, 
-                                                 population = modes[ii], 
+                                                 population = mode, 
                                                  value = linkedExp,
                                                  lower = linkedExpMin,
                                                  upper = linkedExpMax))
@@ -1575,11 +1645,13 @@ if (includeLinked) {
 # the  national overall estimates we use previously generated estimates
 # produced by the script 0-ArtAnalysis.Rmd. 
 
+# Note values are all data estimates except for the year 2012 for the 
+# national data which is replaced by a fitted value
+
 # Load all the data we need
 artEstimates <- read.csv(file.path(dataFolder, paste("ART_Estimates-", 
     toString(analysisYear), ".csv", sep = "")))
 
-  
 # Reload Prospection PBS data to get gender and state estimates
 prospectionData <- read.csv(file.path(dataFolder, 
   paste("pharmdash_HIVpatients", toString(analysisYear), 
@@ -1659,251 +1731,280 @@ if (bindCascade) {
 
 # Do some plots if required -----------------------------------------------
 if (plots) {
-  tplot1 <- ggplot(data = relTreat, aes(x = year, y = fit)) + 
-    geom_point(data = s100data, aes(x = year, y =  relative), color = "black", size = 4) + 
+  treatPlot1 <- ggplot(data = relTreat, aes(x = year, y = fit)) + 
+    geom_point(data = s100data, aes(x = year, y =  relative), 
+               color = "black", size = 4) + 
     geom_line(color = "red") +
     geom_line(aes(y = lwr), color = "blue", linetype = "dashed") +
     geom_line(aes(y = upr), color = "blue", linetype = "dashed") +
     scale_x_continuous(breaks = seq(2005, analysisYear, by =2)) +
     ylim(c(0,1.5)) +  
     ylab("Relative number on treatment") + xlab("Year") + 
-    ggtitle("Fitted number on ART relative to 2012 (based on s100 spending)") + 
-    opts
+    ggtitle("Fitted number on ART relative to 2012 
+            (based on s100 spending)") + 
+    plotOpts
   
-  tplot2 <- ggplot(data = filter(hivtreated, population == "all"), aes(x = year, y = value)) +
+  treatPlot2 <- ggplot(data = filter(hivTreated, population == "all"), 
+                       aes(x = year, y = value)) +
     geom_line(color = "red") + 
     geom_line(aes(y = lower), color = "blue", linetype = "dashed") + 
     geom_line(aes(y = upper), color = "blue", linetype = "dashed") + 
-    geom_point(data = filter(hivtreated, population == "all" & year >= 2013), 
-               color = "black", size = 4) +
+    geom_point(data = filter(hivTreated, population == "all", 
+                             year >= 2013), color = "black", size = 4) +
     scale_x_continuous(breaks = seq(2005, analysisYear, by =2)) +
     ylim(0,NA) + 
     ylab("Number on treatment") + xlab("Year") + 
     ggtitle("National number on ART") + 
-    opts
+    plotOpts
   
   # Save to file 
-  png(paste(outputFolder, "/figures/treatment_rate.png",sep =""), 
-      width = 15, height = 5, units = "in", res = 300)
-  grid.arrange(tplot1, tplot2, ncol = 2)
-  dev.off() 
-  
+  treatPlot <- grid.arrange(treatPlot1, treatPlot2, ncol = 2)
+  ggsave(file.path(figuresFolder, "treatment_rate.png"),
+         plot = treatPlot, width = 15, height = 5)
 }
-
 ```
 
 ## Number retained in care
 
 ```{r retained}
-# Calculate the number retained in care during the year. This uses a mixture of 
-# data sets from MBS and AHOD plus the number of people recieving treatment. 
+# Calculate the number retained in care during the year. This uses a 
+# mixture of data sets from MBS and AHOD plus the number of people 
+# recieving treatment. 
 
 # Initialize final results data frame using hivtreated
-hivretained <- data.frame(stage = character(), 
+hivRetained <- data.frame(stage = character(), 
                          year = double(),
                          population = character(),
                          value = double(),
                          lower = double(),
                          upper = double())
 
-# Load all the data we need
-mbsFolder <- file.path(path.expand("~"), "Research", "!Evaluation_Modelling","data")
-
-cd4data <- read.csv(file.path(mbsFolder, "MBS_Data_71139-clean.csv"))
-vlnoARTdata <- read.csv(file.path(mbsFolder, "MBS_Data_69378-clean.csv"))
-vlARTdata <- read.csv(file.path(mbsFolder, "MBS_Data_69381-clean.csv"))
-
-# Reload ahodData
-ahodData <- read.csv(file.path(dataFolder, 
-                               paste("ahod", toString(analysisYear), 
-                                     ".csv", sep = "")))
-
-# Filter, select and gather the data we need
-cd4data <- cd4data %>%
-  filter(sex == "all" & age == "all") %>%
-  select(-sex, -age) %>%
-  gather("state", "n", 2:10) %>%
-  filter(year <= analysisYear)
-
-vlnoARTdata <- vlnoARTdata %>%
-  filter(sex == "all" & age == "all") %>%
-  select(-sex, -age) %>%
-  gather("state", "n", 2:10) %>%
-  filter(year <= analysisYear)
-
-vlARTdata <- vlARTdata %>%
-  filter(sex == "all" & age == "all") %>%
-  select(-sex, -age) %>%
-  gather("state", "n", 2:10) %>%
-  filter(year <= analysisYear)
-
-# Clean up the AHOD data on number of tests 
-
-# Some of the people of unknown modes have missing data
-replaceVars <- c("medCd4_noRx", "meanCd4_noRx", "medVL_noRx", "meanVL_noRx", "meanCd4_Rx")
-for (ii in 1:nrow(ahodData)) {
-  if (is.na(ahodData$medCd4_noRx[ii])) {
-    ahodData$medCd4_noRx[ii] <- filter(ahodData, year == ahodData$year[ii] &
-                                         state == "all" & 
-                                         mode == ahodData$mode[ii])$medCd4_noRx
-    ahodData$meanCd4_noRx[ii] <- filter(ahodData, year == ahodData$year[ii] & 
-                                          state == "all" &
-                                          mode == ahodData$mode[ii])$meanCd4_noRx
-    ahodData$medVL_noRx[ii] <- filter(ahodData, year == ahodData$year[ii] & 
-                                        state == "all" &
-                                        mode == ahodData$mode[ii])$medVL_noRx
-    ahodData$meanVL_noRx[ii] <- filter(ahodData, year == ahodData$year[ii] & 
-                                         state == "all" &
-                                         mode == ahodData$mode[ii])$meanVL_noRx
-    ahodData$meanCd4_Rx[ii] <- filter(ahodData, year == ahodData$year[ii] & 
-                                        state == "all" &
-                                        mode == ahodData$mode[ii])$meanCd4_Rx
-  }
-}
-
-# Calculate averages across populations
-
-# ahodTests <- ahodData %>% 
-#   group_by(year, state) %>%
-#   summarise(npeople = sum(n_id),
-#             nvltests = sum(meanVL_noRx * n_id),
-#             avevltests = nvltests/npeople,
-#             ncd4Rxtests = sum(meanCd4_Rx * n_id),
-#             avecd4Rxtests = ncd4Rxtests/npeople,
-#             ncd4tests = sum(meanCd4_noRx * n_id),
-#             avecd4tests = ncd4tests/npeople) %>%
-#   filter(year <= analysisYear)
-
-ahodTests <- ahodData %>%
-  filter(mode == "all") %>%
-  select(-mode) %>%
-  filter(year <= analysisYear)
-
-### Do the calculations for all
-treatYears <- filter(hivtreated, population == "all")$year
-treatValue <- filter(hivtreated, population == "all")$value
-treatLower <- filter(hivtreated, population == "all")$lower
-treatUpper <- filter(hivtreated, population == "all")$upper
-
-if (useCD4) {
-  # Using CD4 data
-  numTreated <- filter(hivtreated, population == "all" & 
-                         year %in% treatYears)$value
-  aveCd4_Rx <- filter(ahodTests, state == "all" & 
-                        year %in% treatYears)$meanCd4_Rx
-  aveCd4_noRx <- filter(ahodTests, state == "all" & 
-                          year %in% treatYears)$meanCd4_noRx
-  numCd4Tests <- filter(cd4data, state == "all" & year %in% treatYears)$n
-
-  receivedCare <- (numCd4Tests - numTreated * aveCd4_Rx)/aveCd4_noRx
+if (useClinic) {
+  # Use McMahon et al data for 2014 onwards
+  # Hardcoded: value, lower, upper.  Lower and upper ranges correspond 
+  # to the range for the percentage retained after follow-up in McMahon 
+  # et al., Clinic Network Collaboration and Patient Tracing to Maximize 
+  # Retention in HIV Care, PLOS One, May 26, 2015.
+  vicClinicData <- c(0.95, 0.914, 0.988)
   
+  # Calculated retained in care post 2014 for all the main populations
+  mainPops <- c("all", "nsw", "vic", "qld", "msm", "non-indigenous")
+  
+  hivRetained <- hivDiagnosed %>%
+    filter(year >= 2013, population %in% mainPops) %>%
+    mutate(retained = value * vicClinicData[1],
+           retain_lower = lower * vicClinicData[2],
+           retain_upper = upper * vicClinicData[3]) %>%
+    select(-value, -lower, -upper) %>%
+    rename(value = retained, lower = retain_lower, upper = retain_upper)
 } else {
-  # Use VL estimates
-  avevlTests <- filter(ahodTests, state == "all" & 
-                         year %in% treatYears)$meanVL_noRx
-  numvlTests <- filter(vlnoARTdata, state == "all" & year %in% treatYears)$n
+  # Use old Medicare testing data approach --------------------------------
   
-  receivedCare <- (numvlTests/avevlTests)
-}
-
-
-# Bind to hivretained
-hivretained <- rbind(hivretained, data.frame(stage = "retained", 
-                         year = treatYears,
-                         population = "all",
-                         value = receivedCare + treatValue,
-                         lower = receivedCare + treatLower,
-                         upper = receivedCare + treatUpper))
-
-
-### Do the calculations for each state
-# Loop through states and calculate number suppressed. 
-states <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas")
-nstates <- length(states)
-availableStates <- c("all", "nsw", "vic", "qld")
-
-for (ii in 1:nstates) {
+  # NOTE: this approach does not appear to produce reliable results and
+  # is needs to be reviewed in detail and tidied up. 
   
-  treatValue <- filter(hivtreated, population == states[ii])$value
-  treatLower <- filter(hivtreated, population == states[ii])$lower
-  treatUpper <- filter(hivtreated, population == states[ii])$upper
+  # Load all the data we need
+  mbsFolder <- file.path(path.expand("~"), "Research",
+                         "!Evaluation_Modelling","data")
   
-  numTreated <- filter(hivtreated, population == states[ii] & 
-                         year %in% treatYears)$value
-  numCd4Tests <- filter(cd4data, state == states[ii] & 
-                          year %in% treatYears)$n
+  cd4data <- read.csv(file.path(mbsFolder, "MBS_Data_71139-clean.csv"))
+  vlnoARTdata <- read.csv(file.path(mbsFolder, "MBS_Data_69378-clean.csv"))
+  vlARTdata <- read.csv(file.path(mbsFolder, "MBS_Data_69381-clean.csv"))
   
-  if (useCD4) { 
-    # Use CD4 results - warning produces negative numbers for some states 
-    # due to number of tests calculations
-    if (states[ii] %in% availableStates) {
-      
-      aveCd4_Rx <- filter(ahodTests, state == states[ii] & 
-                            year %in% treatYears)$meanCd4_Rx
-      if (any(is.na(aveCd4_Rx))){
-        naindex <- is.na(aveCd4_Rx)
-        temp <- filter(ahodTests, state == "all" & 
-                         year %in% treatYears)$meanCd4_Rx
-        aveCd4_Rx[naindex] <- temp[naindex]
-      }
-      
-      aveCd4_noRx <- filter(ahodTests, state == states[ii] & 
-                              year %in% treatYears)$meanCd4_noRx
-      if (any(is.na(aveCd4_noRx))){
-        naindex <- is.na(aveCd4_noRx)
-        temp <- filter(ahodTests, state == "all" & 
-                         year %in% treatYears)$meanCd4_noRx
-        aveCd4_noRx[naindex] <- temp[naindex]
-      }
-      
-    } else {  
-      # Not available so use all data
-      aveCd4_Rx <- filter(ahodTests, state == "all" & 
-                            year %in% treatYears)$meanCd4_Rx
-      aveCd4_noRx <- filter(ahodTests, state == "all" & 
-                              year %in% treatYears)$meanCd4_noRx
+  # Reload ahodData
+  ahodData <- read.csv(file.path(dataFolder, 
+                                 paste("ahod", toString(analysisYear), 
+                                       ".csv", sep = "")))
+  
+  # Filter, select and gather the data we need
+  cd4data <- cd4data %>%
+    filter(sex == "all" & age == "all") %>%
+    select(-sex, -age) %>%
+    gather("state", "n", 2:10) %>%
+    filter(year <= analysisYear)
+  
+  vlnoARTdata <- vlnoARTdata %>%
+    filter(sex == "all" & age == "all") %>%
+    select(-sex, -age) %>%
+    gather("state", "n", 2:10) %>%
+    filter(year <= analysisYear)
+  
+  vlARTdata <- vlARTdata %>%
+    filter(sex == "all" & age == "all") %>%
+    select(-sex, -age) %>%
+    gather("state", "n", 2:10) %>%
+    filter(year <= analysisYear)
+  
+  # Clean up the AHOD data on number of tests 
+  
+  # Some of the people of unknown modes have missing data
+  replaceVars <- c("medCd4_noRx", "meanCd4_noRx", "medVL_noRx", 
+                   "meanVL_noRx", "meanCd4_Rx")
+  for (ii in 1:nrow(ahodData)) {
+    if (is.na(ahodData$medCd4_noRx[ii])) {
+      ahodData$medCd4_noRx[ii] <- filter(ahodData, 
+        year == ahodData$year[ii], state == "all", 
+        mode == ahodData$mode[ii])$medCd4_noRx
+      ahodData$meanCd4_noRx[ii] <- filter(ahodData, 
+        year == ahodData$year[ii], state == "all", 
+        mode == ahodData$mode[ii])$meanCd4_noRx
+      ahodData$medVL_noRx[ii] <- filter(ahodData, 
+        year == ahodData$year[ii], state == "all", 
+        mode == ahodData$mode[ii])$medVL_noRx
+      ahodData$meanVL_noRx[ii] <- filter(ahodData, 
+        year == ahodData$year[ii], state == "all", 
+        mode == ahodData$mode[ii])$meanVL_noRx
+      ahodData$meanCd4_Rx[ii] <- filter(ahodData, 
+        year == ahodData$year[ii], state == "all",
+        mode == ahodData$mode[ii])$meanCd4_Rx
     }
+  }
   
+  # Calculate averages across populations
+  
+  # ahodTests <- ahodData %>% 
+  #   group_by(year, state) %>%
+  #   summarise(npeople = sum(n_id),
+  #             nvltests = sum(meanVL_noRx * n_id),
+  #             avevltests = nvltests/npeople,
+  #             ncd4Rxtests = sum(meanCd4_Rx * n_id),
+  #             avecd4Rxtests = ncd4Rxtests/npeople,
+  #             ncd4tests = sum(meanCd4_noRx * n_id),
+  #             avecd4tests = ncd4tests/npeople) %>%
+  #   filter(year <= analysisYear)
+  
+  ahodTests <- ahodData %>%
+    filter(mode == "all") %>%
+    select(-mode) %>%
+    filter(year <= analysisYear)
+  
+  ### Do the calculations for all
+  treatYears <- filter(hivtreated, population == "all")$year
+  treatValue <- filter(hivtreated, population == "all")$value
+  treatLower <- filter(hivtreated, population == "all")$lower
+  treatUpper <- filter(hivtreated, population == "all")$upper
+  
+  if (useCD4) {
+    # Using CD4 data
+    numTreated <- filter(hivtreated, population == "all" & 
+                           year %in% treatYears)$value
+    aveCd4_Rx <- filter(ahodTests, state == "all" & 
+                          year %in% treatYears)$meanCd4_Rx
+    aveCd4_noRx <- filter(ahodTests, state == "all" & 
+                            year %in% treatYears)$meanCd4_noRx
+    numCd4Tests <- filter(cd4data, state == "all" & year %in% treatYears)$n
+    
     receivedCare <- (numCd4Tests - numTreated * aveCd4_Rx)/aveCd4_noRx
     
   } else {
-    # Use VL testing data 
-    numvlTests <- filter(vlnoARTdata, state == states[ii] & 
-                           year %in% treatYears)$n
-  
-    # Work out average VL tests for each state if available and non-NA
-    if (states[ii] %in% availableStates) {
-      avevlTests <- filter(ahodTests, state == states[ii] & 
-                             year %in% treatYears)$meanVL_noRx
-      if (any(is.na(avevlTests))){
-        naindex <- is.na(avevlTests)
-        tempTests <- filter(ahodTests, state == "all" & 
-                              year %in% treatYears)$meanVL_noRx
-        avevlTests[naindex] <- tempTests[naindex]
-      }     
-    } else {
-      # Not available so use all data
-      avevlTests <- filter(ahodTests, state == "all" & 
-                             year %in% treatYears)$meanVL_noRx
-    }
-  
+    # Use VL estimates
+    avevlTests <- filter(ahodTests, state == "all", 
+                         year %in% treatYears)$meanVL_noRx
+    numvlTests <- filter(vlnoARTdata, 
+                         state == "all", 
+                         year %in% treatYears)$n
+    
     receivedCare <- (numvlTests/avevlTests)
   }
+  
+  
   # Bind to hivretained
   hivretained <- rbind(hivretained, data.frame(stage = "retained", 
-                         year = treatYears,
-                         population = states[ii],
-                         value = receivedCare + treatValue,
-                         lower = receivedCare + treatLower,
-                         upper = receivedCare + treatUpper))
-  
-}
+    year = treatYears, population = "all",
+    value = receivedCare + treatValue,
+    lower = receivedCare + treatLower,
+    upper = receivedCare + treatUpper))
 
-# TODO: calculate by mode of exposure and country of birth
+  # Do the calculations for each state ------------------------------------
+  
+  # Loop through states and calculate number suppressed. 
+  states <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas")
+  # nstates <- length(states)
+  availableStates <- c("all", "nsw", "vic", "qld")
+  
+  for (region in states) {
+    treatValue <- filter(hivtreated, population == region)$value
+    treatLower <- filter(hivtreated, population == region)$lower
+    treatUpper <- filter(hivtreated, population == region)$upper
+    
+    numTreated <- filter(hivtreated, population == region & 
+                           year %in% treatYears)$value
+    numCd4Tests <- filter(cd4data, state == region & 
+                            year %in% treatYears)$n
+    
+    if (useCD4) { 
+      # Use CD4 results - warning produces negative numbers for some states 
+      # due to number of tests calculations
+      if (region %in% availableStates) {
+        
+        aveCd4_Rx <- filter(ahodTests, state == region & 
+                              year %in% treatYears)$meanCd4_Rx
+        if (any(is.na(aveCd4_Rx))){
+          naindex <- is.na(aveCd4_Rx)
+          temp <- filter(ahodTests, state == "all" & 
+                           year %in% treatYears)$meanCd4_Rx
+          aveCd4_Rx[naindex] <- temp[naindex]
+        }
+        
+        aveCd4_noRx <- filter(ahodTests, state == region & 
+                                year %in% treatYears)$meanCd4_noRx
+        if (any(is.na(aveCd4_noRx))){
+          naindex <- is.na(aveCd4_noRx)
+          temp <- filter(ahodTests, state == "all" & 
+                           year %in% treatYears)$meanCd4_noRx
+          aveCd4_noRx[naindex] <- temp[naindex]
+        }
+        
+      } else {  
+        # Not available so use all data
+        aveCd4_Rx <- filter(ahodTests, state == "all" & 
+                              year %in% treatYears)$meanCd4_Rx
+        aveCd4_noRx <- filter(ahodTests, state == "all" & 
+                                year %in% treatYears)$meanCd4_noRx
+      }
+      
+      receivedCare <- (numCd4Tests - numTreated * aveCd4_Rx)/aveCd4_noRx
+      
+    } else {
+      # Use VL testing data 
+      numvlTests <- filter(vlnoARTdata, state == region & 
+                             year %in% treatYears)$n
+      
+      # Work out average VL tests for each state if available and non-NA
+      if (states[ii] %in% availableStates) {
+        avevlTests <- filter(ahodTests, state == region & 
+                               year %in% treatYears)$meanVL_noRx
+        if (any(is.na(avevlTests))){
+          naindex <- is.na(avevlTests)
+          tempTests <- filter(ahodTests, state == "all" & 
+                                year %in% treatYears)$meanVL_noRx
+          avevlTests[naindex] <- tempTests[naindex]
+        }     
+      } else {
+        # Not available so use all data
+        avevlTests <- filter(ahodTests, state == "all" & 
+                               year %in% treatYears)$meanVL_noRx
+      }
+      
+      receivedCare <- (numvlTests/avevlTests)
+    }
+    # Bind to hivretained
+    hivretained <- rbind(hivretained, 
+                         data.frame(stage = "retained", 
+                                    year = treatYears,
+                                    population = region,
+                                    value = receivedCare + treatValue,
+                                    lower = receivedCare + treatLower,
+                                    upper = receivedCare + treatUpper))
+    
+  }
+  
+  # TODO: calculate by mode of exposure and country of birth
+}
 
 # Finally bind to overall results
 if (bindCascade) {
-  hivcascade <- rbind(hivcascade, hivretained)
+  hivcascade <- rbind(hivCascade, hivRetained)
 }
 
 ```
@@ -1916,20 +2017,19 @@ if (bindCascade) {
 
 # Initialize final results data frame
 hivsuppressed <- data.frame(stage = character(), 
-                         year = double(),
-                         population = character(),
-                         value = double(),
-                         lower = double(),
-                         upper = double())
+                            year = double(),
+                            population = character(),
+                            value = double(),
+                            lower = double(),
+                            upper = double())
 
 # Load all the data we need
 ahodData <- read.csv(file.path(dataFolder, 
-                               paste("ahod", toString(analysisYear), 
-                                     ".csv", sep = "")))
+  paste("ahod", toString(analysisYear), ".csv", sep = "")))
 
 # Extract the viral suppression data
 propSuppressed <- ahodData %>%
-#   filter(state == "all") %>%
+# filter(state == "all") %>%
   select(one_of(c("year", "state", "mode", "n_id")), 
          starts_with("n_rx"), -n_rx) %>% 
   group_by(year, state) %>%
@@ -1952,10 +2052,10 @@ propSuppressed <- ahodData %>%
 states <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas", "all")
 availableStates <- c("all", "nsw", "vic", "qld")
 
-for (ii in seq(along = states)) {
+for (region in states) {
   # Proportion suppressed
-  if(states[ii] %in% availableStates) {
-    tempDf <- filter(propSuppressed, state == states[ii])
+  if(region %in% availableStates) {
+    tempDf <- filter(propSuppressed, state == region)
   } else {
     tempDf <- filter(propSuppressed, state == "all")
   }
@@ -1965,14 +2065,15 @@ for (ii in seq(along = states)) {
   tempPropMax <- tempDf$prop1000
   
   # Number treated 
-  tempTreat <- filter(hivtreated, population == states[ii])$value
-  tempTreatMin <- filter(hivtreated, population == states[ii])$lower
-  tempTreatMax <- filter(hivtreated, population == states[ii])$upper
+  tempTreat <- filter(hivTreated, population == region)$value
+  tempTreatMin <- filter(hivTreated, population == region)$lower
+  tempTreatMax <- filter(hivTreated, population == region)$upper
   
   nyears <- length(tempDf$year)
   
   # Number suppressed
-  hivsuppressed <- rbind(hivsuppressed, data.frame(stage = "suppressed",  
+  hivSuppressed <- rbind(hivSuppressed, 
+                         data.frame(stage = "suppressed",  
                          year = tempDf$year,
                          population = states[ii],
                          value = tempTreat * tempProp,
@@ -1980,12 +2081,12 @@ for (ii in seq(along = states)) {
                          upper = tempTreatMax * tempPropMax)) 
 }
 
-### TODO: number suppressed by exposure and country of birth. Once we work out
-# how to do it
+### TODO: number suppressed by exposure and country of birth. 
+# Once we work out how to do it
 
 # Finally bind to overall results
 if (bindCascade) {
-  hivcascade <- rbind(hivcascade, hivsuppressed)
+  hivCascade <- rbind(hivCascade, hivSuppressed)
 }
 
 ```
@@ -2012,11 +2113,11 @@ if (saveCascade) {
     toString(analysisYear), sep = ""))
   
   # Write to csv
-  write.csv(hivcascade, file = paste(saveString, ".csv", sep =""), 
+  write.csv(hivCascade, file = paste(saveString, ".csv", sep =""), 
             row.names = FALSE)
   
   # Save as R object
-  save(hivcascade,file = paste(saveString, ".rda", sep =""))
+  save(hivCascade, file = paste(saveString, ".rda", sep =""))
 }
 
 ```

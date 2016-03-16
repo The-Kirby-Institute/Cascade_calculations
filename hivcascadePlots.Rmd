@@ -374,8 +374,6 @@ if (pubPlots) {
 # Create  a series of plot related to linkag to care
 
 
-
-
 ```
 
 
