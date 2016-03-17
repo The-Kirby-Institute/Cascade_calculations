@@ -63,8 +63,6 @@ suppressedUpper <- filter(hivCascade, year >= 2005,
                           population == "all", 
                           stage == "suppressed")$upper
 
-
-
 ```
 
 ```{r baselinepop}
@@ -74,19 +72,11 @@ suppressedUpper <- filter(hivCascade, year >= 2005,
 load(file.path(resultsFolder, paste("plhivFixedDr-",
                     toString(resultsYear), ".rda", sep = "")))
 
-# Calculate relative size of plhiv if deathrate stays high
-
+# Calculate relative size of plhiv if deathrate stays high due to ART
+# proportion staying at the 2005 level.
 relPopBase <- filter(fixedResults, year >= 2005)$plhiv / 
   filter(hivCascade, year >= 2005, population == "all", 
          stage == "infected")$value
-
-print(relPopBase)
-# Estimate upper and lower bounds of baseline population
-plhivLowerBase <- relPopBase * plhivLower
-
-
-plhivUpperBase <- relPopBase * plhivUpper
-
 ```
 
 ## load diagnoses data for 2005-2014
@@ -94,7 +84,13 @@ plhivUpperBase <- relPopBase * plhivUpper
 ```{r loaddiags}
 # Load national diagnoses data from the ASR from 2005-2014
 
+# TODO: Upate this automatically
+
 diagnoses <- c(953, 987, 947, 901, 942, 907, 979, 1064, 1028, 1081)
+
+plhiv <- filter(hivCascade, year >= 2005,
+                     population == "all", 
+                     stage == "infected")$value
 
 ```
 
@@ -131,6 +127,9 @@ efficacySample <- (1 - reductionSample)
 predInc <- matrix(0, samples, nyears)
 predIncBase <- matrix(0, samples, nyears)
 
+predBeta <- matrix(0, samples, nyears)
+predBetaBase <- matrix(0, samples, nyears)
+
 for (ii in 1:samples) {
   
   # Efficacy for this simulation - status quo and expansion scenario
@@ -147,14 +146,15 @@ for (ii in 1:samples) {
   # Results same in both scenarios
   predInc[ii, 1] <-  diagnoses[1]
   predIncBase[ii, 1] <- diagnoses[1]
-
+  
+  predBeta[ii, 1] <-  diagnoses[1] / plhivSampleBase
+  predBetaBase[ii, 1] <- predBeta[ii, 1]
+  
   for (jj in 2:nyears) {
     
     # Sample required parameters from ranges
     plhivSample <- runif(1, plhivLower[jj], plhivUpper[jj])
-    # plhivSampleBase <- runif(1, plhivLowerBase[jj], plhivUpperBase[jj])
     plhivSampleBase <- relPopBase[jj] * plhivSample
-    # plhivSampleBase <- plhivSample
     suppressedSample <- runif(1, suppressedLower[jj], suppressedUpper[jj])
     
     # Now calculate estimate change in incidence and beta over time
@@ -162,6 +162,10 @@ for (ii in 1:samples) {
     predInc[ii, jj] <- beta0 * plhivSample * (1-propSample * effSample) 
     predIncBase[ii, jj] <- beta0 * plhivSampleBase * 
       (1-propSampleBase * effSample)
+    
+    # Now calculate corresponding Beta value
+    predBeta[ii, jj] <- predInc[ii, jj] / plhivSample
+    predBetaBase[ii, jj] <- predIncBase[ii, jj] / plhivSampleBase
   }
 }
 ```
@@ -196,6 +200,20 @@ results <- allResults %>%
 # Add diagnoses
 results$diagnoses <- diagnoses
 
+# Beta results 
+betaResults <- TidyLongitudinal(predBeta, 2005)
+
+resultsBeta <- betaResults %>% 
+  group_by(year) %>%
+  summarise(average = mean(value), 
+            median = median(value),
+            iqrlower = median - IQR(value) / 2,
+            iqrupper = median + IQR(value) / 2,
+            max = max(value),
+            min = min(value))
+
+resultsBeta$estimate <- diagnoses / plhiv
+
 ```
 
 * Plot the output
@@ -216,17 +234,39 @@ incPlot <- ggplot(data = results, aes(x = year)) +
   scale_colour_manual(name = "", 
                       breaks = c("art_exp", "diagnoses", "status_quo"),
                       values = c(asrcols[2], asrcols[1], "black"),
-                      labels = c("ART expansion and IQR", 
+                      labels = c("ART expansion", 
                                  "Annual notifications", 
                                  "Maintain 2005 ART coverage"),
                       guide = guide_legend(reverse = TRUE)) +
   xlab("Year") + ylab("New infections") +
-  plotOpts + theme(legend.position = "right") 
+  plotOpts + theme(legend.position = c(0.5, 0.2)) 
 
   # Save the plot
   ggsave(file.path(figuresFolder, "ART_impact.png"), 
        plot = incPlot,
-       width = 15, height = 8, units = "cm")
+       width = 10, height = 8, units = "cm")
+  
+  # Create a plot for Beta overtime
+  betaPlot <- ggplot(data = resultsBeta, aes(x = year)) + 
+    geom_ribbon(aes(ymin = iqrlower, ymax = iqrupper), 
+                fill = asrcols[2], alpha = 0.4)  +
+    geom_line(aes(y = median, colour = "art_exp")) +
+    geom_line(aes(y = estimate, colour = "diagnoses")) + 
+    geom_point(aes(y = estimate), colour = asrcols[1], size = 2) +
+    expand_limits(y = 0) +
+    scale_colour_manual(name = "", 
+                      breaks = c("art_exp", "diagnoses"),
+                      values = c(asrcols[2], asrcols[1]),
+                      labels = c("With ART expansion", 
+                                 "From annual notifications"),
+                      guide = guide_legend(reverse = TRUE)) +
+    xlab("Year") + ylab("Transmission risk") +
+    plotOpts + theme(legend.position = c(0.5, 0.2))
+  
+  # Save the plot
+  ggsave(file.path(figuresFolder, "ART_impact_beta.png"), 
+       plot = betaPlot,
+       width = 10, height = 8, units = "cm")
 
 ```
 
