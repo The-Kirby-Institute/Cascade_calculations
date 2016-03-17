@@ -877,13 +877,13 @@ if(cascadeImpact) {
   start <- end - 10 + 1
   
   deathRateFix <- deathRate
-  deathRateFix[start:end] <- deathRate[start]
+  deathRateFix[start:end] <- max(deathRate[start:end])
   
   deathRateFix_min <- deathRate_min
-  deathRateFix_min[start:end] <- deathRate_min[start]
+  deathRateFix_min[start:end] <- max(deathRate_min[start:end])
   
   deathRateFix_max <- deathRate_max
-  deathRateFix_max[start:end] <- deathRate_max[start]
+  deathRateFix_max[start:end] <- max(deathRate_max[start:end])
   
   # Store final death rate
   hivDeathRate <- data.frame(year = allYears,
@@ -979,11 +979,11 @@ pldhivAllMax <- LivingDiagnosed(cumDiagnoses, deathRateMin,
 if(cascadeImpact) {
   
   pldhivFix <- LivingDiagnosed(cumDiagnoses, deathRateFix, migrationRate)
-  pldhivFixMin <- LivingDiagnosed(cumDiagnoses, deathRateFix_min,
-                                  migrationRate)
+  pldhivFixMin <- LivingDiagnosed(cumDiagnoses, deathRateFix_max,
+                                  migrationRateMax)
   
-  pldhivFixMax <- LivingDiagnosed(cumDiagnoses, deathRateFix_max,
-                                  migrationRate)
+  pldhivFixMax <- LivingDiagnosed(cumDiagnoses, deathRateFix_min,
+                                  migrationRateMin)
 }
 
 # Store results
