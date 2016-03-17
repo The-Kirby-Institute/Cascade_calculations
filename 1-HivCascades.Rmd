@@ -37,12 +37,12 @@ startYear <- 1990
 # Script options ------------------------------------------------------
 
 plots <- FALSE       # TRUE if we want to plot things
-bindCascade <- TRUE  # TRUE if we want to store all the cascade results 
+bindCascade <- FALSE  # TRUE if we want to store all the cascade results 
                      # one data frame
 
-saveCascade <- TRUE       # save final cascade dataframe
-saveNotifications <- TRUE # save cleaned notifications set
-saveResults <- TRUE       # save information national annual notifications
+saveCascade <- FALSE       # save final cascade dataframe
+saveNotifications <- FALSE # save cleaned notifications set
+saveResults <- FALSE       # save information national annual notifications
 
 # PLDHIV 
 nationalUniques <- TRUE # use proportion from National estimates for 
@@ -54,6 +54,8 @@ indigKnown <- TRUE # only use notifications with indigenous classification
 permDeparts <- TRUE # use national permant departures for 
                     # overseas migration
 
+cascadeImpact <- TRUE # save PLHIV estimates with deathrate fixed to value
+                      # from 10 years ago
 # PLHIV
 # Given issues with undiagnosed estimates use hardcoded estimates from 
 # 2013 ASR
@@ -869,11 +871,26 @@ deathRate_max[1:indexLinkage] <- linkageMortalityMax[1:indexLinkage]
 deathRate_max[(indexLinkage+1):length(deathRate)] <- filter(ahodDeaths, 
   state == "all")$upper # 
 
-# Store final death rate
-hivDeathRate <- data.frame(year = allYears,
-                           deathrate = deathRate,
-                           deathrate_min = deathRate_min,
-                           deathrate_max = deathRate_max)
+# Fix last 10 years if we are doing cascade impact calculations
+if(cascadeImpact) {
+  end <-length(deathRate)
+  start <- end - 10 + 1
+  
+  deathRateFix <- deathRate
+  deathRateFix[start:end] <- deathRate[start]
+  
+  deathRateFix_min <- deathRate_min
+  deathRateFix_min[start:end] <- deathRate_min[start]
+  
+  deathRateFix_max <- deathRate_max
+  deathRateFix_max[start:end] <- deathRate_max[start]
+  
+  # Store final death rate
+  hivDeathRate <- data.frame(year = allYears,
+                             deathrate = deathRate,
+                             deathrate_min = deathRate_min,
+                             deathrate_max = deathRate_max)
+} 
 
 # Store national results
 hivResults$osrate <- allMigrate$rate
@@ -957,6 +974,17 @@ pldhivAllMin <- LivingDiagnosed(cumDiagnoses, deathRateMax,
                                 migrationRateMax) 
 pldhivAllMax <- LivingDiagnosed(cumDiagnoses, deathRateMin,
                                 migrationRateMin) 
+
+# If doing Cascade impact
+if(cascadeImpact) {
+  
+  pldhivFix <- LivingDiagnosed(cumDiagnoses, deathRateFix, migrationRate)
+  pldhivFixMin <- LivingDiagnosed(cumDiagnoses, deathRateFix_min,
+                                  migrationRate)
+  
+  pldhivFixMax <- LivingDiagnosed(cumDiagnoses, deathRateFix_max,
+                                  migrationRate)
+}
 
 # Store results
 nyears <- length(allYears)
@@ -1348,6 +1376,25 @@ pldhivTemp <- filter(hivDiagnosed, stage == "pldhiv", population == "all")
 infectedAll <- pldhivTemp$value / (1 - undiagAll)
 infectedAllMin <- pldhivTemp$lower / (1 - undiagAllMin)
 infectedAllMax <- pldhivTemp$upper / (1 - undiagAllMax)
+
+# Caculate PLHIV for fixed deathrate and save
+if(cascadeImpact) {
+  infectedFix <- pldhivFix  / (1 - undiagAll)
+  infectedFixMin <- pldhivFixMin / (1 - undiagAllMin)
+  infectedFixMax <- pldhivFixMax / (1 - undiagAllMax)
+  
+  # Save results
+  fixedResults <- data.frame(year = allYears,
+                             plhiv = infectedFix,
+                             lower = infectedFixMin,
+                             upper = infectedFixMax)
+  
+  # Save dataframe as an R data file
+  saveString <- file.path(outputFolder, paste("plhivFixedDr-", 
+    toString(analysisYear), sep = ""))
+  
+  save(fixedResults, file = paste(saveString, ".rda", sep =""))
+}
 
 # Store overall results
 hivUndiag <- rbind(hivUndiag, data_frame(stage = "infected", 
