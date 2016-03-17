@@ -37,12 +37,12 @@ startYear <- 1990
 # Script options ------------------------------------------------------
 
 plots <- FALSE       # TRUE if we want to plot things
-bindCascade <- FALSE  # TRUE if we want to store all the cascade results 
+bindCascade <- TRUE  # TRUE if we want to store all the cascade results 
                      # one data frame
 
-saveCascade <- FALSE       # save final cascade dataframe
-saveNotifications <- FALSE # save cleaned notifications set
-saveResults <- FALSE       # save information national annual notifications
+saveCascade <- TRUE       # save final cascade dataframe
+saveNotifications <- TRUE # save cleaned notifications set
+saveResults <- TRUE       # save information national annual notifications
 
 # PLDHIV 
 nationalUniques <- TRUE # use proportion from National estimates for 
@@ -1723,8 +1723,8 @@ hivTreated$upper <- NA
 
 # Sort out artEstimates
 artEstimates <- artEstimates %>%
-  select(year, all, fitmin, fitmax, rel, rellower, relupper) %>%
-  rename(value = all, lower = fitmin, upper = fitmax, 
+  select(year, alladjust, fitmin, fitmax, rel, rellower, relupper) %>%
+  rename(value = alladjust, lower = fitmin, upper = fitmax, 
          trend = rel, trendlwr = rellower, trendupr = relupper) %>%
   mutate(population = "all") %>%
   select(population, everything())

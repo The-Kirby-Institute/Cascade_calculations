@@ -281,10 +281,14 @@ if (pubPlots) {
   # Alternatively could just plot deaths in PLDHIV which is easy (what I 
   # decided to do below)
   
-  # Extract PLDHIV for 
+  # Extract PLDHIV and PLHIV for plot calculculations 
   pldhiv <- hivCascade %>%
     filter(stage == "pldhiv", population == "all") %>%
     select(-stage, -population) 
+  
+  plhiv <- hivCascade %>%
+    filter(stage == "infected", population == "all") %>%
+    select(-stage, -population)
   
   # Generate the death data we want calculating the cumulative number of 
   # deaths after 2003 
@@ -352,8 +356,8 @@ if (pubPlots) {
     select(year, artcov, artcov_min, artcov_max)
     
   # plot art coverage
-  coveragePlot <- ggplot(data = treatData, aes(x = year, y = 100*artcov)) +
-    geom_ribbon(aes(ymin = 100*artcov_min, ymax = 100*artcov_max), 
+  coveragePlot <- ggplot(data = treatData, aes(x = year, y = 100 * artcov)) +
+    geom_ribbon(aes(ymin = 100 * artcov_min, ymax = 100 * artcov_max), 
               fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
     scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
@@ -366,6 +370,37 @@ if (pubPlots) {
       toString(startYear), "-", toString(resultsYear), 
       saveFormat, sep = "")),
       plot = coveragePlot, width = 7.5, height = 6, units = "cm")
+  
+   # Suppresed percentage plot ---------------------------------------------
+  
+  # Do our calculations and sort out data we want to plot
+  suppressData <- hivCascade %>%
+    filter(stage == "suppressed", population == "all") %>%
+    rename(susvalue = value, suslower = lower, susupper = upper) %>%
+    select(-population, -stage) %>%
+    left_join(plhiv, ., by = "year") %>%
+    filter(year >= startYear, year <= resultsYear) %>%
+    mutate(suscov = susvalue / value,
+           suscov_min = suslower / upper, 
+           suscov_max = susupper / lower) %>%
+    select(year, suscov, suscov_min, suscov_max)
+    
+  # plot art coverage
+  suppressPlot <- ggplot(data = suppressData, 
+                         aes(x = year, y = 100 * suscov)) +
+    geom_ribbon(aes(ymin = 100 * suscov_min, ymax = 100 * suscov_max), 
+              fill = asrcols[2], alpha = 0.4) + 
+    geom_line(color = asrcols[2])  +
+    scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
+    ylim(c(0, 100)) +
+    ylab("PLHIV suppressed (%)") + xlab("Year") +  
+    plotOpts
+  
+  # Save plots
+  ggsave(file.path(figFolder, paste("Suppression_coverage_", 
+      toString(startYear), "-", toString(resultsYear), 
+      saveFormat, sep = "")),
+      plot = suppressPlot, width = 7.5, height = 6, units = "cm")
 }
 ```
 
@@ -542,7 +577,8 @@ if (pubPlots) {
   allCd4 <- gather(allCd4, "category", "cd4", 2:4)
   
   # Creat the plot
-  aveCd4Plot <- ggplot(data = allCd4, aes(x = year, y = cd4, color = category)) + 
+  aveCd4Plot <- ggplot(data = allCd4, aes(x = year, y = cd4, 
+                                          color = category)) + 
     geom_line() +
     scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
     scale_colour_manual(name = "",
