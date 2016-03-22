@@ -10,10 +10,10 @@ FillMissing <- function(years, yearsValues, avalValues) {
   #   yearDiagnoses: A vector of years we have data for. 
   #   cumulativeDiagnoses : A vector with the available values.
   # Returns:
-  #   filledDiagnoses: A data frame with all years and 
-  #       values filled in for missing years.
+  #   FillMissing: A data frame with all years and 
+  #     values filled in for missing years.
   #
-  # ------------------------------------------------------ 
+  # -----------------------------------------------------------------------
   
   # Initialize output dataframe
   fillmissing <- data.frame(year = years, value = rep(NA,length(years)))
