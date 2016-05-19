@@ -94,7 +94,7 @@ load(file.path(resultsFolder, paste("HIVcascadeEstimates-",
                     toString(analysisYear), ".rda", sep = "")))
 
 # Extract PLDHIV for overall population
-pldhiv <- hivcascade %>%
+pldhiv <- hivCascade %>%
   filter(stage == "pldhiv", population == "all") %>%
   select(-stage, -population)
                     
@@ -126,7 +126,7 @@ rownames(ageDeath) <- ageList
 colnames(ageDeath) <- yearList
 
 # Calculate estimated number of unique diagnoses
-unqiueDiags <- c(hivresults$uniquecases[1], diff(hivresults$uniquecases))
+unqiueDiags <- c(hivResults$uniquecases[1], diff(hivResults$uniquecases))
 
 # Now loop through all the notifications and put age in the right place
 for (ii in 1:nyears) {
@@ -135,7 +135,7 @@ for (ii in 1:nyears) {
   # Sort out diagnoses ----------------------------------------------------
   
   # Extract diagnoses in this year and age at diagnosis
-  yearDiags <- hivset %>% 
+  yearDiags <- hivSet %>% 
     filter(yeardiagnosis == year) %>%
     select(agehiv)
   
@@ -161,7 +161,7 @@ for (ii in 1:nyears) {
   # Sort out deaths -----------------------------------------------------
   
   # Extract deaths in this year and age at death
-  yearDeaths <- hivset %>% 
+  yearDeaths <- hivSet %>% 
     filter(yeardeath == year) %>%
     mutate(agedeath = agehiv + (yeardeath - yeardiagnosis)) %>%
     select(agedeath)
@@ -183,7 +183,7 @@ for (ii in 1:nyears) {
 # Estimate the total number of deaths each year using the death rates
 
 # Calculate estimated number of deaths each year using the deathrate
-estimateDeaths <- pldhiv$value * hivresults$deathrate
+estimateDeaths <- pldhiv$value * hivResults$deathrate
 
 # Determine the difference in deaths between the estimate and the known 
 # deaths - if there are negative numbers it is okay because we will end
@@ -265,7 +265,7 @@ for (ii in 2:nyears) {
     # migration rate
     agePldhiv[jj, ii] <- agePldhiv[jj, ii - 1] + ageDiag[jj, ii] - 
       ageDeath[jj, ii - 1] - unknownAgeDeaths[jj] - 
-      agePldhiv[jj, ii - 1] * hivresults$osrate[ii-1] - 
+      agePldhiv[jj, ii - 1] * hivResults$osrate[ii-1] - 
       agePldhiv[jj, ii - 1] * ageRate[jj] + ageUp
     
     # For low numbers the previous calculation could give number less
