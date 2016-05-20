@@ -176,9 +176,9 @@ nsamples <- 10000  # ensure big enough to get enough samples out after
                    # filtering
 simMatrix <- matrix(0,nsamples, length(xdata))
 
-aSample <- runif(nsamples,aRange[1],aRange[2])
-bSample <- runif(nsamples,bRange[1],bRange[2])
-dSample <- runif(nsamples,dRange[1],dRange[2])
+aSample <- runif(nsamples, aRange[1], aRange[2])
+bSample <- runif(nsamples, bRange[1], bRange[2])
+dSample <- runif(nsamples, dRange[1], dRange[2])
 
 for (ii in 1:nsamples) {
   simMatrix[ii,] <- fitFunc(xdata,aSample[ii], bSample[ii], 
