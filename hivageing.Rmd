@@ -307,8 +307,10 @@ for (ii in 1:nyears) {
   
   # Adjust age bins to remove duplicates normalizing to the number
   # of unique cases 
-  ageDiagFemale[, ii] <- agebins * unqiueDiagsFemale[ii]/sum(agebins) 
-
+  if (sum(agebins) > 0) {
+    ageDiagFemale[, ii] <- agebins * unqiueDiagsFemale[ii]/sum(agebins) 
+  }
+  
   # Sort out deaths -----------------------------------------------------
   
   # Extract deaths in this year and age at death
@@ -350,7 +352,7 @@ estimateDeathsFemale <- filter(hivDiagGender,
 # raise questions about using AHOD rates if there are less deaths than
 # recorded! 
 unknownDeaths <- estimateDeaths - colSums(ageDeath)
-unknownDeathsMales <- estimateDeathsMale - colSums(ageDeathMale)
+unknownDeathsMale <- estimateDeathsMale - colSums(ageDeathMale)
 unknownDeathsFemale <- estimateDeathsFemale - colSums(ageDeathFemale)
 
 # Distribute deaths to age groups based on the ABS death rates for
@@ -364,7 +366,7 @@ absDeathRates <- read.csv(file.path(absFolder,
                           sep =""), as.is = c(1,2))
 
 absDeathRatesAll <- filter(absDeathRates, sex == "male")
-absDeathRatesMales <- filter(absDeathRates, sex == "male")
+absDeathRatesMale <- filter(absDeathRates, sex == "male")
 absDeathRatesFemale <- filter(absDeathRates, sex == "female")
 
 ```
@@ -382,16 +384,24 @@ agePldhiv <- matrix(0, nages, nyears)
 rownames(agePldhiv) <- ageList
 colnames(agePldhiv) <- yearList
 
+agePldhivMale <- matrix(0, nages, nyears)
+rownames(agePldhivMale) <- ageList
+colnames(agePldhivMale) <- yearList
+
+agePldhivFemale <- matrix(0, nages, nyears)
+rownames(agePldhivFemale) <- ageList
+colnames(agePldhivFemale) <- yearList
+
 # Add first years diagnoses
 agePldhiv[, 1] <- ageDiag[, 1]
-
-
-
-
+agePldhivMale[, 1] <- ageDiagMale[, 1]
+agePldhivFemale[, 1] <- ageDiagFemale[, 1]
 
 
 # Loop through each year and age and tally up number of PLDHIV in each 
 # age group
+
+# Overall ----------------------------------------------------------------
 for (ii in 2:nyears) {
   
   # Extract abs death rates for this year
@@ -400,7 +410,8 @@ for (ii in 2:nyears) {
   } else if (yearsVec[ii - 1] >= 2011) {
     absDeaths <- filter(absDeathRatesAll, year == 2011)$deathrate
   } else {
-    absDeaths <- filter(absDeathRatesAll, year == yearsVec[ii - 1])$deathrate
+    absDeaths <- filter(absDeathRatesAll, 
+                        year == yearsVec[ii - 1])$deathrate
   }
   
   # Adjust numbers per 1000 to rate and remove deaths for those aged 0
@@ -443,11 +454,119 @@ for (ii in 2:nyears) {
   }
 }
 
+# Males ----------------------------------------------------------------
+for (ii in 2:nyears) {
+  
+  # Extract abs death rates for this year
+  if (yearsVec[ii - 1] <= 2000) {
+    absDeaths <- filter(absDeathRatesMale, year == 2000)$deathrate
+  } else if (yearsVec[ii - 1] >= 2011) {
+    absDeaths <- filter(absDeathRatesMale, year == 2011)$deathrate
+  } else {
+    absDeaths <- filter(absDeathRatesMale, 
+                        year == yearsVec[ii - 1])$deathrate
+  }
+  
+  # Adjust numbers per 1000 to rate and remove deaths for those aged 0
+  absDeaths <- absDeaths/1000
+  absDeaths <- absDeaths[2:length(absDeaths)]
+  
+  # Use ABS deathrate to estimate expected deaths in each age group
+  deathsABSrate <- absDeaths * agePldhivMale[, ii - 1]
+  
+  # Calculate adjustment factor so deaths across age groups matchs
+  # unknown death - can be negative if unknownDeaths is negative equates
+  # to adding people rather than removing them. This keeps things 
+  # consistent with estimated total deaths.
+  adjustFactor <- unknownDeathsMale[ii - 1] / sum(deathsABSrate)
+  unknownAgeDeaths <- adjustFactor * deathsABSrate
+  
+  for (jj in 1:nages) {
+    
+    # Calculate number of people moving up in age
+    if (jj == 1) {
+      # If in first age group no-one ages from younger group
+      ageUp <- 0
+    } else {
+      ageUp <- agePldhivMale[jj - 1, ii - 1] * ageRate[jj-1]
+    }
+    
+    # Update current age group for current year - assuming same 
+    # overseas migration rate for each age group equal to overall 
+    # migration rate
+    agePldhivMale[jj, ii] <- agePldhivMale[jj, ii - 1] + 
+      ageDiagMale[jj, ii] - 
+      ageDeathMale[jj, ii - 1] - unknownAgeDeaths[jj] - 
+      agePldhivMale[jj, ii - 1] * hivResults$osrate[ii-1] - 
+      agePldhivMale[jj, ii - 1] * ageRate[jj] + ageUp
+    
+    # For low numbers the previous calculation could give number less
+    # than zero. In this case replace with zero
+    if (agePldhivMale[jj, ii] < 0) {
+      agePldhivMale[jj, ii] <- 0
+    }
+  }
+}
 
+# Females ----------------------------------------------------------------
+for (ii in 2:nyears) {
+  
+  # Extract abs death rates for this year
+  if (yearsVec[ii - 1] <= 2000) {
+    absDeaths <- filter(absDeathRatesFemale, year == 2000)$deathrate
+  } else if (yearsVec[ii - 1] >= 2011) {
+    absDeaths <- filter(absDeathRatesFemale, year == 2011)$deathrate
+  } else {
+    absDeaths <- filter(absDeathRatesFemale, 
+                        year == yearsVec[ii - 1])$deathrate
+  }
+  
+  # Adjust numbers per 1000 to rate and remove deaths for those aged 0
+  absDeaths <- absDeaths/1000
+  absDeaths <- absDeaths[2:length(absDeaths)]
+  
+  # Use ABS deathrate to estimate expected deaths in each age group
+  deathsABSrate <- absDeaths * agePldhivFemale[, ii - 1]
+  
+  # Calculate adjustment factor so deaths across age groups matchs
+  # unknown death - can be negative if unknownDeaths is negative equates
+  # to adding people rather than removing them. This keeps things 
+  # consistent with estimated total deaths.
+  if (sum(deathsABSrate) > 0) {
+    adjustFactor <- unknownDeathsFemale[ii - 1] / sum(deathsABSrate)
+    unknownAgeDeaths <- adjustFactor * deathsABSrate
+  } else {
+    unknownAgeDeaths <- 0 * deathsABSrate
+  }
+  
+  for (jj in 1:nages) {
+    
+    # Calculate number of people moving up in age
+    if (jj == 1) {
+      # If in first age group no-one ages from younger group
+      ageUp <- 0
+    } else {
+      ageUp <- agePldhivFemale[jj - 1, ii - 1] * ageRate[jj-1]
+    }
+    
+    # Update current age group for current year - assuming same 
+    # overseas migration rate for each age group equal to overall 
+    # migration rate
+    agePldhivFemale[jj, ii] <- agePldhivFemale[jj, ii - 1] + 
+      ageDiagFemale[jj, ii] - 
+      ageDeathFemale[jj, ii - 1] - unknownAgeDeaths[jj] - 
+      agePldhivFemale[jj, ii - 1] * hivResults$osrate[ii-1] - 
+      agePldhivFemale[jj, ii - 1] * ageRate[jj] + ageUp
+    
+    # For low numbers the previous calculation could give number less
+    # than zero. In this case replace with zero
+    if (agePldhivFemale[jj, ii] < 0) {
+      agePldhivFemale[jj, ii] <- 0
+    }
+  }
+}
 
-
-
-# Tidy up agePldhiv so it has the bins we want to plot
+# Tidy up agePldhiv so it has the bins we want to plot -------------------
 ageBins <- c("a<15", "a15-19", "a20-24", "a25-29", 
              "a30-34", "a35-39", "a40-44", "a45-49", "a50-54", "a55-59", 
              "a60-64", "a65-69", "a70+")
@@ -456,6 +575,17 @@ binPldhiv <- matrix(0, length(ageBins), nyears)
 binPldhiv[2:12,] <- agePldhiv[4:14,]
 binPldhiv[1,] <- colSums(agePldhiv[1:3,])
 binPldhiv[13,] <- colSums(agePldhiv[15:18,])
+
+binPldhivMale <- matrix(0, length(ageBins), nyears)
+binPldhivMale[2:12,] <- agePldhivMale[4:14,]
+binPldhivMale[1,] <- colSums(agePldhivMale[1:3,])
+binPldhivMale[13,] <- colSums(agePldhivMale[15:18,])
+
+binPldhivFemale <- matrix(0, length(ageBins), nyears)
+binPldhivFemale[2:12,] <- agePldhivFemale[4:14,]
+binPldhivFemale[1,] <- colSums(agePldhivFemale[1:3,])
+binPldhivFemale[13,] <- colSums(agePldhivFemale[15:18,])
+
 
 ```
 
