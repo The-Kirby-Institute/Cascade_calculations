@@ -104,7 +104,7 @@ load(file.path(resultsFolder, paste("HIVcascadeEstimates-",
 
 # Extract PLDHIV for overall population to 
 pldhiv <- hivCascade %>%
-  filter(stage == "pldhiv", population == "male") %>%
+  filter(stage == "pldhiv", population == "all") %>%
   select(-stage, -population)
                     
 ```
@@ -278,7 +278,6 @@ for (ii in 1:nyears) {
 
 # Female ----------------------------------------------------------------
 for (ii in 1:nyears) {
-  print(ii)
   year <- 1980 + ii - 1
   
   # Sort out diagnoses ---------------------------------------------------
@@ -327,7 +326,6 @@ for (ii in 1:nyears) {
   # deathbins <- as.vector(c(sum(deathbins[1:3]), 
   #                          deathbins[4:length(deathbins)]))
   
-  print(ii)
   ageDeathFemale[, ii] <- deathbins
 }
 
@@ -336,8 +334,14 @@ for (ii in 1:nyears) {
 ```{r extradeaths, echo = FALSE, messages = FALSE, include=FALSE}
 # Estimate the total number of deaths each year using the death rates
 
-# Calculate estimated number of deaths each year using the deathrate
+# Calculate estimated number of deaths each year using the deathrate 
+# Assume same hiv deathrate for all genders
 estimateDeaths <- pldhiv$value * hivResults$deathrate
+estimateDeathsMale <- filter(hivDiagGender, population == "male")$value *
+  hivResults$deathrate
+estimateDeathsFemale <- filter(hivDiagGender, 
+                                population == "female")$value *
+  hivResults$deathrate
 
 # Determine the difference in deaths between the estimate and the known 
 # deaths - if there are negative numbers it is okay because we will end
@@ -346,6 +350,8 @@ estimateDeaths <- pldhiv$value * hivResults$deathrate
 # raise questions about using AHOD rates if there are less deaths than
 # recorded! 
 unknownDeaths <- estimateDeaths - colSums(ageDeath)
+unknownDeathsMales <- estimateDeathsMale - colSums(ageDeathMale)
+unknownDeathsFemale <- estimateDeathsFemale - colSums(ageDeathFemale)
 
 # Distribute deaths to age groups based on the ABS death rates for
 # each group - (TODO): May replace with AHOD death rates if available
@@ -357,7 +363,9 @@ absDeathRates <- read.csv(file.path(absFolder,
                           "ABS_deathrate_sex_age.csv", 
                           sep =""), as.is = c(1,2))
 
-absDeathRates <- filter(absDeathRates, sex == "male")
+absDeathRatesAll <- filter(absDeathRates, sex == "male")
+absDeathRatesMales <- filter(absDeathRates, sex == "male")
+absDeathRatesFemale <- filter(absDeathRates, sex == "female")
 
 ```
 
@@ -365,6 +373,9 @@ absDeathRates <- filter(absDeathRates, sex == "male")
 # Calculate the number in each age group 
 
 yearsVec <- 1980:analysisYear
+
+# Create an aging rate vector 
+ageRate <- c(rep(0.2, nages - 1), 0)
 
 # Initialize results matrix
 agePldhiv <- matrix(0, nages, nyears)
@@ -374,8 +385,10 @@ colnames(agePldhiv) <- yearList
 # Add first years diagnoses
 agePldhiv[, 1] <- ageDiag[, 1]
 
-# Create an aging rate vector 
-ageRate <- c(rep(0.2, nages - 1), 0)
+
+
+
+
 
 # Loop through each year and age and tally up number of PLDHIV in each 
 # age group
@@ -383,11 +396,11 @@ for (ii in 2:nyears) {
   
   # Extract abs death rates for this year
   if (yearsVec[ii - 1] <= 2000) {
-    absDeaths <- filter(absDeathRates, year == 2000)$deathrate
+    absDeaths <- filter(absDeathRatesAll, year == 2000)$deathrate
   } else if (yearsVec[ii - 1] >= 2011) {
-    absDeaths <- filter(absDeathRates, year == 2011)$deathrate
+    absDeaths <- filter(absDeathRatesAll, year == 2011)$deathrate
   } else {
-    absDeaths <- filter(absDeathRates, year == yearsVec[ii - 1])$deathrate
+    absDeaths <- filter(absDeathRatesAll, year == yearsVec[ii - 1])$deathrate
   }
   
   # Adjust numbers per 1000 to rate and remove deaths for those aged 0
@@ -429,6 +442,10 @@ for (ii in 2:nyears) {
     }
   }
 }
+
+
+
+
 
 # Tidy up agePldhiv so it has the bins we want to plot
 ageBins <- c("a<15", "a15-19", "a20-24", "a25-29", 
