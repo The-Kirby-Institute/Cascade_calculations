@@ -1250,7 +1250,7 @@ for (pop in pops) {
 hivDiagGender <- data.frame(stage = character(), 
                          year = double(),
                          population = character(),
-                         estimate = double(),
+                         value = double(),
                          lower = double(),
                          upper = double())
 
@@ -2159,7 +2159,8 @@ if (saveResults) {
   
   # Save as R object
   save(hivResults, file = paste(saveString, ".rda", sep =""))
-  save(hivGender, file = paste(saveString, "_gender.rda", sep =""))
+  save(hivGender, hivDiagGender, 
+       file = paste(saveString, "_gender.rda", sep =""))
 }
 
 # Save final HIV cascades data frame
