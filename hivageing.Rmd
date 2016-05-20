@@ -28,17 +28,20 @@ PLDHIV by age using AIDS diagnoses and the overall mortality rate for the
 Australian population using ABS data [@murray2010hivaging]. In this 
 analysis we count the number of deaths recorded in the registry since the
 start of the epidemic. Up to 2003 we use the results from a linkage study 
-with the National Death Index [@nakhaee2009changes] to estimate the number 
-of missing deaths each year. Overall this linkage study estimated 23.5% of 
+with the National Death Index [@nakhaee2009changes] to estimate the number
+of missing deaths each year. Overall this linkage study estimated 23.5% of
 deaths in PLDHIV were missing from the HIV registry. After 2003, we 
 estimated the number of deaths using the overall death rates from AHOD
-(NOTE: could potentially use AHOD death rates by age but I don't have 
-these at the moment and numbers could be too small for some age groups).
+(NOTE: could potentially use AHOD death rates by age but the numbers are
+likely to be too small for some age groups).
 
-Deaths missing from the HIV registry were allocated to age groups based on
-the age-specific death rates from the ABS. The ABS provides age-specific 
-death rates from 2000 to 2011 for males and 
-females in the general population [ABS website](http://www.abs.gov.au/ausstats/abs@.nsf/Lookup/by%20Subject/4125.0~Jan%202013~Main%20Features~Death%20rate~3210). This rates from 2000 to 2013, Figure 1 shows an example from the year 2011. 
+Deaths missing from the HIV registry or estimated using an overall death 
+rate are allocated to age groups based on the age-specific death rates 
+from the ABS. The ABS provides age-specific death rates from 2000 to 2011 
+for males and females in the general population (http://www.abs.gov.au/ausstats/abs@.nsf/Lookup/by%20Subject/4125.0~Jan%202013~Main%20Features~Death%20rate~3210). 
+Figure 1 shows an example from the year 2011. For this analysis we are 
+essentially incresing these general population rates to take into account 
+HIV infection. 
 
 **Figure 1** - Age-specific death rates in the general population in 2011.
 ```{r Insert mortality plot, echo = FALSE, messages = FALSE, fig.width = 5}
@@ -46,9 +49,11 @@ knitr::include_graphics("misc/ABS_2011_Deathrate.png")
 ```
 
 As we are using the relative death rate to allocate estimated deaths where
-the age at death is unknown we use male age-death rates (as they have a
-similar shape to the female death rates), the 2000 death rates for all
-years up to 2000 and the 2011 death rates for all years after 2011. 
+the age at death is unknown we use male age-death rates for the overall
+population  (as they have a similar shape to the female death rates),  
+the 2000 death rates for all years up to 2000 and the 2011 death rates for
+all years after 2011. We assume the same HIV related death rate for males
+and females from AHOD.  
 
 ```{r initialization, echo = FALSE, messages = FALSE, include=FALSE}
 # Set working directory to source file location
@@ -732,10 +737,17 @@ if (savePlots) {
 
 # Results
 
+Figures 2-4 and Tables 1-6 show the age distribution for PLDHIV overall
+and by sex. Note the sum of the male and female estimates may not equal 
+the overall estimate as we excluded transgender people and diagnoses with 
+missing data. 
+
+## For overall population of PLDHIV
+
 **Figure 2** - Number and proportion of PLDHIV by age-group in Australia 
 from 1986 to 2014.  
 ```{r insertyplots1, echo=FALSE, messages = FALSE, warning = FALSE, results = "hide"}
-print(grid.arrange(barPlot, propPlot, ncol = 2, widths = c(1, 1.2)))
+print(grid.arrange(barPlotAll, propPlotAll, ncol = 2, widths = c(1, 1.2)))
 ```
 
 ```{r create tables,echo=FALSE, messages = FALSE, warning = FALSE}
@@ -770,5 +782,90 @@ kable(propTable, digits = 3,
 ```
 
 \pagebreak
+
+## For male population of PLDHIV
+
+**Figure 3** - Number and proportion of male PLDHIV by age-group 
+in Australia from 1986 to 2014.  
+```{r insertyplots3, echo=FALSE, messages = FALSE, warning = FALSE, results = "hide"}
+print(grid.arrange(barPlotMale, propPlotMale, ncol = 2, 
+                   widths = c(1, 1.2)))
+```
+
+```{r create tables (male),echo=FALSE, messages = FALSE, warning = FALSE}
+# Create dataframes to present as tables 
+
+pldhivTableMale <- pldhivTidyMale %>%
+  filter(year >= 2005) %>%
+  spread(year, number)
+
+propTableMale <- apply(pldhivTableMale[,2:ncol(pldhivTableMale)], 2, 
+  function(x) x/sum(x)) %>%
+  as.data.frame()
+
+propTableMale$age <- pldhivTableMale$age 
+propTableMale <- select(propTableMale, age, everything())
+
+```
+
+\pagebreak
+
+**Table 3** - Number of male PLDHIV by age-group in Australia from 2005 to 2014. Rounded to nearest integer.
+```{r Insert number table (male), echo=FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+kable(pldhivTableMale, digits = 0, format.args = list(big.mark = ","))
+```
+
+\pagebreak
+
+**Table 4** - Proportion of male PLDHIV by age-group in Australia from 2005 to 2014. Rounded to three decimal places.
+```{r Insert proportion table (male), echo=FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+kable(propTableMale, digits = 3,
+      format.args = list(justify = "centre"))
+```
+
+\pagebreak
+
+## For female population of PLDHIV
+
+**Figure 4** - Number and proportion of female PLDHIV by age-group 
+in Australia from 1986 to 2014.  
+```{r insertyplots4 , echo=FALSE, messages = FALSE, warning = FALSE, results = "hide"}
+print(grid.arrange(barPlotFemale, propPlotFemale, ncol = 2, 
+                   widths = c(1, 1.2)))
+```
+
+```{r create tables (female),echo=FALSE, messages = FALSE, warning = FALSE}
+# Create dataframes to present as tables 
+
+pldhivTableFemale <- pldhivTidyFemale %>%
+  filter(year >= 2005) %>%
+  spread(year, number)
+
+propTableFemale <- apply(pldhivTableFemale[,2:ncol(pldhivTableFemale)], 
+                         2, function(x) x/sum(x)) %>% 
+                   as.data.frame()
+
+propTableFemale$age <- pldhivTableFemale$age 
+propTableFemale <- select(propTableMale, age, everything())
+
+```
+
+\pagebreak
+
+**Table 5** - Number of female PLDHIV by age-group in Australia from 2005 to 2014. Rounded to nearest integer.
+```{r Insert number table (female), echo=FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+kable(pldhivTableFemale, digits = 0, format.args = list(big.mark = ","))
+```
+
+\pagebreak
+
+**Table 6** - Proportion of female PLDHIV by age-group in Australia from 2005 to 2014. Rounded to three decimal places.
+```{r Insert proportion table (female), echo=FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+kable(propTableFemale, digits = 3,
+      format.args = list(justify = "centre"))
+```
+
+\pagebreak
+
 
 # References
