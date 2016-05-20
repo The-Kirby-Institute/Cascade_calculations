@@ -586,7 +586,6 @@ binPldhivFemale[2:12,] <- agePldhivFemale[4:14,]
 binPldhivFemale[1,] <- colSums(agePldhivFemale[1:3,])
 binPldhivFemale[13,] <- colSums(agePldhivFemale[15:18,])
 
-
 ```
 
 ```{r plotresults, echo = FALSE, messages = FALSE, include=FALSE} 
@@ -597,6 +596,13 @@ graphics.off()
 # age group numbering with labels
 pldhivTidy <- TidyLongitudinal(binPldhiv, 1980, firstCol = "age")
 pldhivTidy$age <- rep(sub("a", "", ageBins), nyears)
+
+pldhivTidyMale <- TidyLongitudinal(binPldhivMale, 1980, firstCol = "age")
+pldhivTidyMale$age <- rep(sub("a", "", ageBins), nyears)
+
+pldhivTidyFemale <- TidyLongitudinal(binPldhivFemale, 1980, 
+                                     firstCol = "age")
+pldhivTidyFemale$age <- rep(sub("a", "", ageBins), nyears)
 
 # Setup some ploting variables
 startYear <- 1986
@@ -611,14 +617,23 @@ if (plotGray) {
 
 xValues <- seq(startYear, analysisYear, by = 7)
 
-
 # Get the data we want to plot
 pldhivTidy <- pldhivTidy %>%
   filter(year >= startYear) %>%
   rename(number = value)
 
+pldhivTidyMale <- pldhivTidyMale %>%
+  filter(year >= startYear) %>%
+  rename(number = value)
+
+pldhivTidyFemale <- pldhivTidyFemale %>%
+  filter(year >= startYear) %>%
+  rename(number = value)
+
+# Overall Plots ----------------------------------------------------------
+
 # Now do the barplot of number of PLDHIV
-barPlot <- ggplot(data = pldhivTidy, aes(x = year, y = number, 
+barPlotAll <- ggplot(data = pldhivTidy, aes(x = year, y = number, 
   fill = age)) + geom_bar(stat = "identity") + 
   xlab("Year") + ylab("Number of PLDHIV") +
   scale_fill_manual(values = mainColours, name = "Age",
@@ -628,7 +643,7 @@ barPlot <- ggplot(data = pldhivTidy, aes(x = year, y = number,
                    legend.text = element_text(size = 8))
 
 # Now do the barplot of proportions
-propPlot <- ggplot(data = pldhivTidy, aes(x = year, y = number, 
+propPlotAll <- ggplot(data = pldhivTidy, aes(x = year, y = number, 
   fill = age)) + geom_bar(stat="identity", position = "fill") + 
   xlab("Year") + ylab("Proportion of PLDHIV") +
   scale_fill_manual(values = mainColours, name = "Age",
@@ -637,18 +652,80 @@ propPlot <- ggplot(data = pldhivTidy, aes(x = year, y = number,
   plotOpts + theme(legend.position = "right",
                    legend.text = element_text(size = 8))
 
-# Print figures to separate windows
+# Male Plots ----------------------------------------------------------
+
+# Now do the barplot of number of PLDHIV
+barPlotMale <- ggplot(data = pldhivTidyMale, aes(x = year, y = number, 
+  fill = age)) + geom_bar(stat = "identity") + 
+  xlab("Year") + ylab("Number of PLDHIV (males)") +
+  scale_fill_manual(values = mainColours, name = "Age",
+                     guide = guide_legend(reverse=TRUE)) + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "",
+                   legend.text = element_text(size = 8))
+
+# Now do the barplot of proportions
+propPlotMale <- ggplot(data = pldhivTidyMale, aes(x = year, y = number, 
+  fill = age)) + geom_bar(stat="identity", position = "fill") + 
+  xlab("Year") + ylab("Proportion of PLDHIV (males)") +
+  scale_fill_manual(values = mainColours, name = "Age",
+                    guide = guide_legend(reverse=TRUE)) + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "right",
+                   legend.text = element_text(size = 8))
+
+# Female Plots ----------------------------------------------------------
+
+# Now do the barplot of number of PLDHIV
+barPlotFemale <- ggplot(data = pldhivTidyFemale, 
+                        aes(x = year, y = number, 
+  fill = age)) + geom_bar(stat = "identity") + 
+  xlab("Year") + ylab("Number of PLDHIV (females)") +
+  scale_fill_manual(values = mainColours, name = "Age",
+                     guide = guide_legend(reverse=TRUE)) + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "",
+                   legend.text = element_text(size = 8))
+
+# Now do the barplot of proportions
+propPlotFemale <- ggplot(data = pldhivTidyFemale, 
+                         aes(x = year, y = number, 
+  fill = age)) + geom_bar(stat="identity", position = "fill") + 
+  xlab("Year") + ylab("Proportion of PLDHIV (females)") +
+  scale_fill_manual(values = mainColours, name = "Age",
+                    guide = guide_legend(reverse=TRUE)) + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "right",
+                   legend.text = element_text(size = 8))
+
+
+
+# Save figures -----------------------------------------------------------
 if (savePlots) {
-  png(file.path(figFolder, paste("PLDHIV_Age.png",sep ="")), 
-    width = 5, height = 4, units = "in", res = 300)
-  barPlotLeg <- barPlot + theme(legend.position = "right")
-  print(barPlotLeg)
-  dev.off()
+  units = "cm"
+  width = 12.5
+  height = 10
   
-  png(file.path(figFolder, paste("PLDHIV_Age_Proportion.png",sep ="")), 
-    width = 6, height = 4, units = "in", res = 300)
-  print(propPlot)
-  dev.off()
+  ggsave(file.path(figFolder, paste("PLDHIV_Age_All.png", 
+         sep ="")), plot = barPlotAll, width = width, height = height,
+         units = units)
+  ggsave(file.path(figFolder, paste("PLDHIV_Age_Proportion_All.png", 
+         sep ="")), plot = propPlotAll, width = width, height = height, 
+         units = units)
+  
+  ggsave(file.path(figFolder, paste("PLDHIV_Age_Male.png", 
+         sep ="")), plot = barPlotMale, width = width, height = height,
+         units = units)
+  ggsave(file.path(figFolder, paste("PLDHIV_Age_Proportion_Male.png", 
+         sep ="")), plot = propPlotAll, width = width, height = height, 
+         units = units)
+  
+  ggsave(file.path(figFolder, paste("PLDHIV_Age_Female.png", sep ="")),
+         plot = barPlotFemale, width = width, height = height, 
+         units = units)
+  ggsave(file.path(figFolder, paste("PLDHIV_Age_Proportion_Female.png", 
+         sep ="")), plot = propPlotFemale, width = width, height = height,
+         units = units)
 }
 
 ```
