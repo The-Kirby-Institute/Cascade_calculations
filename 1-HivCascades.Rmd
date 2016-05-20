@@ -2159,6 +2159,7 @@ if (saveResults) {
   
   # Save as R object
   save(hivResults, file = paste(saveString, ".rda", sep =""))
+  save(hivGender, file = paste(saveString, "_gender.rda", sep =""))
 }
 
 # Save final HIV cascades data frame
