@@ -1,0 +1,307 @@
+---
+title: "HIV diagnosis and care cascade for Australia"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    source_code: embed
+    theme: simplex
+runtime: shiny
+---
+    
+```{r setup, include = FALSE}
+library(dplyr)
+library(knitr)
+library(tidyr)
+library(readr)
+library(ggplot2)
+library(flexdashboard)
+library(shiny)
+library(maps)
+library(plotly)
+library(treemap)
+
+startYear <- 2005
+endYear <- 2014
+# resultsYear <- 2014
+
+# Load HIV cascade data
+inputFile <- file.path("output", paste("HIVcascadeEstimates-", 
+  toString(endYear), ".csv", sep = ""))
+hivCascade <- read_csv(inputFile)
+
+# Load Australia map data by state
+ozdata <- read_csv("ozdata.csv")
+
+```
+
+```{r tidy up data, include = FALSE}    
+# Exclude linked to care if it exists
+hivCascade <- filter(hivCascade, !(stage == "linked"))
+
+# Plot specs
+stages <- c("infected", "pldhiv",  
+            "retained", "numART", "suppressed")
+stageNames <- c("Living with HIV", "Diagnosed", 
+                  "Retained in care", "Receiving ART", "Suppressed virus")
+stageNamesNeat <- c("Living \n with HIV", "Diagnosed", 
+                      "Retained \n in care", 
+                      "Receiving \n ART", "Suppressed \n virus")
+
+# Final results we want
+resultsAll <- filter(hivCascade,
+                     population == "all",
+                     year >= startYear)
+
+cascadeYear <- reactive({
+  resultsAllYear <- filter(resultsAll, year == input$resultsYear)
+  return(resultsAllYear)
+})
+
+```
+
+```{r plot options, include = FALSE}
+plotOpts <- theme_bw() + theme(text = element_text(face = "bold", 
+                                  size = 12, colour = "black"),
+                               axis.text.x = element_text(face = "plain",
+                                  size = 10, colour = "black"),
+                               axis.text.y = element_text(face = "plain",
+                                  size = 10, colour = "black"),
+                               axis.line = element_line(colour = "black"),
+                               axis.ticks = element_line(colour = "black"),
+                               legend.position = "top",
+                               legend.background = element_rect(),
+                               legend.key = element_blank(),
+                               panel.grid.major = element_blank(), 
+                               panel.grid.minor = element_blank(), 
+                               panel.background = element_blank(), 
+                               panel.border = element_rect(colour = "black"),
+                               axis.line = element_line(colour = "black"),
+                               plot.title=element_text(size = 12, 
+                                                       face="bold"),
+                               strip.background = element_blank())
+
+# Colour scheme used in ASR
+asrcols <- c("#621C20", "#AB2322", "#A63603", "#D95728", "#E97164")
+
+```
+        
+
+Explore Cascade
+==========================================================================
+
+Inputs {.sidebar}
+--------------------------------------------------------------------------
+
+HIV diagnosis and care cascade for Australia. 
+
+```{r}    
+numericInput("resultsYear", "Select year", value = 2014,
+    min = startYear, max = endYear)
+
+selectInput("jurisdiction", "Select jurisdiction",
+            choices = c("All", "ACT", "NSW", "NT", "QLD", "SA", 
+                        "TAS","VIC", "WA"), 
+            selected = "All")
+
+
+selectInput("population", "Select population",
+            choices = c("All", "bornsea", "bornssa", "hetero",
+                        "indigenous", "msm", 
+                        "non-indigenous","othercob", "otherexp",
+                        "pwid"), 
+            selected = "All")
+
+selectInput("stage", "Select cascade stage",
+            choices = stageNames, 
+            selected = "All")
+
+```
+
+row 
+--------------------------------------------------------------------------
+
+### People undiagnosed {.value-box}
+```{r}
+renderValueBox({
+  nUndiagnosed <- filter(cascadeYear(), stage == "infected")$value -
+    filter(cascadeYear(), stage == "pldhiv")$value
+  valueBox(
+    value = round(nUndiagnosed, digits = -1),
+    color = asrcols[1]
+  )
+})
+```
+
+### Diagnosed people not on ART {.value-box}
+```{r}
+renderValueBox({
+  nUntreated <- filter(cascadeYear(), stage == "pldhiv")$value -
+    filter(cascadeYear(), stage == "numART")$value
+  valueBox(
+    value = round(nUntreated, digits = -1),
+    color = asrcols[2]
+  )
+})
+```
+
+### People with unsuppressed virus {.value-box}
+```{r}
+renderValueBox({
+  nUnsuppressed <- filter(cascadeYear(), stage == "numART")$value -
+    filter(cascadeYear(), stage == "suppressed")$value
+  valueBox(
+    value = round(nUnsuppressed, digits = -1),
+    color = asrcols[5]
+  )
+})
+```
+
+row 
+--------------------------------------------------------------------------
+
+### Number of PLHIV by Jurisdiction
+
+```{r}
+# Produce a map with each state and territory coloured based on number
+# of PLHIV
+
+states <- c("all", "nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act")
+
+renderPlotly({
+  mapData <- hivCascade %>%
+    filter(population %in% tail(states, -1), stage == "infected",
+           year == input$resultsYear) %>%
+    select(population, value) %>%
+    rename(state = population)
+  
+  ozdata$state <- tolower(ozdata$state)
+ 
+  
+  ozplhiv <- right_join(ozdata, mapData, by = "state")
+  ozplhiv$text <- with(ozplhiv, paste("State: ", toupper(state),
+                                    " Number: ", round(value)))
+  
+  mapPlot <- ggplot(data = ozplhiv, 
+                    aes(x = long, y = lat, group = state)) +
+    geom_polygon(aes(fill = value, text = text)) + 
+    scale_fill_gradient(name = "Number of\n PLHIV", 
+                        low = asrcols[5], high = asrcols[1]) +
+    theme_void()
+
+  ggplotly(mapPlot, tooltip = "text")
+})
+```
+
+### HIV Diagnosis and Care Cascade 
+    
+```{r}
+
+# Plot a bar chart for the results year 
+renderPlot({ggplot(data = cascadeYear(),
+                   aes(x = stage, y = value)) +
+  geom_bar(stat = "identity", color = asrcols,
+           fill = asrcols, width = 0.8) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1,
+                color = "black", size = 1.1) +
+  scale_x_discrete(limits = stages, labels = stageNamesNeat) +
+  ylab("Number of people") + xlab("") +
+  plotOpts
+})
+```
+
+   
+### HIV Cascade Estimates and Range
+    
+```{r}
+# Produce a table of the results year cascade
+renderTable({
+  tableResults <- cascadeYear() %>%
+  select( -year, -population) %>%
+  rename(Stage = stage, Estimate = value, 
+         Lower = lower, Upper = upper) %>%
+  slice(c(2, 1, 4, 3, 5))
+
+  tableResults$Stage <- stageNames
+  
+  tableResults
+  })
+```
+   
+row 
+--------------------------------------------------------------------------
+    
+### Number of PLHIV by exposure   
+
+```{r}
+riskpops <- c("all", "msm", "hetero", "pwid", "otherexp")
+
+renderPlot({
+  riskData <- hivCascade %>%
+    filter(population %in% tail(riskpops, -1), stage == "infected",
+           year == input$resultsYear) %>%
+    select(population, value) %>%
+    rename(group = population)
+
+  
+  riskPlot <- treemap(riskData, index = c("group"),
+                      vSize = "value", vColor = "value",
+                      palette = asrcols, title = "Mode of exposure")
+  
+  riskPlot
+  # ggplotly(mapPlot, tooltip = "text")
+})
+
+```
+
+    
+### HIV Cascade Stage Over Time
+
+```{r}
+
+selectedStage <- "pldhiv"
+
+yLabels <- c("infected" = "Number of PLHIV",
+             "pldhiv" = "Number diagnosed",
+             "numART" = "Number on ART",
+             "suppressed" = "Number with VL < 400")
+
+plotStages <- c("infected", "pldhiv", "numART", "suppressed")
+
+# Set base plotting data
+plotData <- filter(resultsAll, stage %in% plotStages)
+
+stageData <- filter(plotData, stage == selectedStage)
+
+# Plot the stage over time
+renderPlot({ggplot(data = stageData, aes(x = year, y = value)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper),
+              fill = asrcols[2], alpha = 0.4) +
+  geom_line(color = asrcols[2]) +
+  scale_x_continuous(breaks = c(startYear,
+                                  input$resultsYear),
+                     limits = c(startYear,
+                                  input$resultsYear)) +
+  expand_limits(y = 0) +
+  ylab(yLabels[selectedStage]) + xlab("Year") +
+  plotOpts
+})
+
+```
+
+### HIV Cascade Stage Estimates and Range
+
+```{r}
+
+renderTable({
+  stageResults <- resultsAll %>%
+    filter(stage == selectedStage, year <= input$resultsYear) %>%
+    select(-population, -stage) %>%
+    rename(Estimate = value, Lower = lower, Upper = upper, Year = year)
+  
+  stageResults
+})
+
+```
+
+About
+=====
