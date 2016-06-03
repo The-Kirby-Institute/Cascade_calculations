@@ -131,7 +131,7 @@ restructuring of the input data file)
 - Fix small initial rendering issue when you change tabs
 
 Application author: [Richard T. Gray](http://kirby.unsw.edu.au/people/dr-richard-gray), 
-[The Kirby Instiute, UNSW Australia](http://kirby.unsw.edu.au/)
+[The Kirby Institute, UNSW Australia](http://kirby.unsw.edu.au/)
 
 row 
 --------------------------------------------------------------------------
