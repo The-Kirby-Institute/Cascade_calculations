@@ -1,12 +1,14 @@
 ---
 title: "HIV diagnosis and care cascade for Australia"
-output: 
+resource_files:
+- HIVcascadeEstimates-2014.csv
+runtime: shiny
+output:
   flexdashboard::flex_dashboard:
     orientation: rows
-    vertical_layout: fill
     source_code: https://github.com/leftygray/Cascade_calculations/dashboards
     theme: simplex
-runtime: shiny
+    vertical_layout: fill
 ---
     
 <!-- Learn more about flexdashboard at https://rstudio.github.io/flexdashboard -->    
