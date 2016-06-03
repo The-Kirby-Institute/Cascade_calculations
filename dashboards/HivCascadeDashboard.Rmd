@@ -99,7 +99,7 @@ Inputs {.sidebar}
 This dashboard provides an interface for exploring the HIV diagnosis and 
 care cascade for Australia. On this tab you can explore the cascade for 
 each year from 2003 by jurisdiction and population. The change in the 
-cascade estimates over time for each satge can be explored on the 
+cascade estimates over time for each stage can be explored on the 
 **Change over time** tab. A detailed description of the methods used to 
 generate these estimates is available on the **About** tab.
 
@@ -125,7 +125,7 @@ selectInput("population", "Select population (not working yet)",
 **Things to do**
 
 - Put ACT on the map!
-- Implement jursidiction and population selections (requires a 
+- Implement jurisdiction and population selections (requires a 
 restructuring of the input data file)
 - Add button to download CSV data file
 - Fix small initial rendering issue when you change tabs
@@ -276,7 +276,7 @@ Inputs {.sidebar}
 --------------------------------------------------------------------------
 
 This tab is used to explore the change in the cascade and 
-individual satges over time. 
+individual stages over time. 
 
 ```{r}    
 renderUI({numericInput("startStageYear", "Select start year", 
@@ -473,7 +473,7 @@ ABS since 1976 in series 340102)
 and the estimated resident population (ABS series 310104) to calculate an 
 overall migration rate. Since 1981 this rate has risen from around 0.1% to 
 0.4% of the resident population leaving Australia permanently. Due to the 
-requirement for ongoing care and treatment (which is not subsidised in many
+requirement for ongoing care and treatment (which is not subsidized in many
 countries) we assumed a range in the annual overseas migration rate between
 zero and the overall rate of permanent departure with a best estimate in 
 the middle. 
