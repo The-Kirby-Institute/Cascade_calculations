@@ -6,7 +6,7 @@ runtime: shiny
 output:
   flexdashboard::flex_dashboard:
     orientation: rows
-    source_code: https://github.com/leftygray/Cascade_calculations/dashboards
+    source_code: https://github.com/leftygray/Cascade_calculations/tree/master/dashboards
     theme: simplex
     vertical_layout: fill
 ---
