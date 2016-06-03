@@ -4,10 +4,12 @@ output:
   flexdashboard::flex_dashboard:
     orientation: rows
     vertical_layout: fill
-    source_code: embed
+    source_code: https://github.com/leftygray/Cascade_calculations/dashboards
     theme: simplex
 runtime: shiny
 ---
+    
+<!-- Learn more about flexdashboard at https://rstudio.github.io/flexdashboard -->    
     
 ```{r setup, include = FALSE}
 library(dplyr)
@@ -21,17 +23,17 @@ library(maps)
 library(plotly)
 library(treemap)
 
-startYear <- 2005
+# Years of validity - to initialize start and end years
+startYear <- 2005 
 endYear <- 2014
-# resultsYear <- 2014
 
 # Load HIV cascade data
-inputFile <- file.path("output", paste("HIVcascadeEstimates-", 
+inputFile <- file.path(paste("HIVcascadeEstimates-", 
   toString(endYear), ".csv", sep = ""))
 hivCascade <- read_csv(inputFile)
 
 # Load Australia map data by state - mising ACT!!
-ozdata <- read_csv("data/ozdata.csv")
+ozdata <- read_csv("ozdata.csv")
 
 ```
 
@@ -92,7 +94,12 @@ Annual cascade
 Inputs {.sidebar}
 --------------------------------------------------------------------------
 
-HIV diagnosis and care cascade for Australia. 
+This dashboard provides an interface for exploring the HIV diagnosis and 
+care cascade for Australia. On this tab you can explore the cascade for 
+each year from 2003 by jurisdiction and population. The change in the 
+cascade estimates over time for each satge can be explored on the 
+**Change over time** tab. A detailed description of the methods used to 
+generate these estimates is available on the **About** tab.
 
 ```{r}    
 numericInput("resultsYear", "Select year", value = 2014,
@@ -112,6 +119,17 @@ selectInput("population", "Select population (not working yet)",
             selected = "All")
 
 ```
+
+**Things to do**
+
+- Put ACT on the map!
+- Implement jursidiction and population selections (requires a 
+restructuring of the input data file)
+- Add button to download CSV data file
+- Fix small initial rendering issue when you change tabs
+
+Application author: [Richard T. Gray](http://kirby.unsw.edu.au/people/dr-richard-gray), 
+[The Kirby Instiute, UNSW Australia](http://kirby.unsw.edu.au/)
 
 row 
 --------------------------------------------------------------------------
@@ -255,7 +273,8 @@ Change over time
 Inputs {.sidebar}
 --------------------------------------------------------------------------
 
-Stages
+This tab is used to explore the change in the cascade and 
+individual satges over time. 
 
 ```{r}    
 renderUI({numericInput("startStageYear", "Select start year", 
@@ -275,6 +294,7 @@ selectInput("stage", "Select cascade stage",
 
 row 
 ---------------------------------------------------------------------------
+
 
 ### PLHIV Over Time
 
