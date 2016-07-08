@@ -434,7 +434,8 @@ if (pubPlots) {
     group_by(expgroup, yeardiagnosis) %>% 
     summarise(notifications = n()) %>%
     mutate(totalnotifications = cumsum(notifications)) %>%
-    filter(yeardiagnosis <= resultsYear, yeardiagnosis >= startYear - 1) %>%
+    filter(yeardiagnosis <= resultsYear, 
+           yeardiagnosis >= startYear - 1) %>%
     mutate(cumcases = totalnotifications * propUnique) %>%
     mutate(uniquecases = c(NA, diff(cumcases))) %>%
     filter(yeardiagnosis >= startYear) %>%
@@ -462,8 +463,8 @@ if (pubPlots) {
     filter(expgroup == "hetero") %>%
     select(-expgroup)
     
-  # Create the plots - plot after 1984 to exclude small numbers early in the 
-  # epidemic
+  # Create the plots - plot after 1984 to exclude small numbers 
+  # early in the epidemic
   
   linkPlot <- ggplot(data = filter(hivResults, yeardiagnosis >= 1984),
                      aes(x = yeardiagnosis, y = 100 * proplinked)) + 
@@ -507,7 +508,8 @@ if (pubPlots) {
     rename(year = yeardiagnosis) %>%
     filter(!is.na(cd4date)) %>%
     # Convert string dates to date format and calculate number of days
-    mutate(dayslinked = as.numeric(as.Date(cd4date) - as.Date(datediagnosis))) %>%
+    mutate(dayslinked = as.numeric(as.Date(cd4date) -
+                                     as.Date(datediagnosis))) %>%
     # Some days are negative probably to errors in the data exclude
     filter(dayslinked >= 0) 
   
@@ -522,7 +524,8 @@ if (pubPlots) {
   
   # Plot distributions
   linkDist <- ggplot(data = linkDays, aes(x = dayslinked)) + 
-    geom_freqpoly(binwidth = 7, aes(colour = "all")) + # bin days into weeks
+    # bin days into weeks
+    geom_freqpoly(binwidth = 7, aes(colour = "all")) + 
     geom_freqpoly(data = msmLinkDays, 
                   aes(x = dayslinked, colour = "msm"), 
                   binwidth = 7) +
@@ -549,22 +552,29 @@ if (pubPlots) {
   
   # Average CD4 count -----------------------------------------------------
   
-  # Create data frames and do the calculations for each population group 
-  allCd4 <- hivSet %>% 
+  # Create data frames and do the calculations for each population group
+  # Need to remove those previoulsy diagnosed overseas first as they maybe
+  # on treatment and have a higher CD4 count. Do this by converting NAs to
+  # a number and then filter out those previously diagnosed.
+  cd4Set <- hivSet
+  cd4Set[is.na(cd4Set$previ_diag_overseas), ]$previ_diag_overseas <- 2
+  cd4Set <- filter(cd4Set, previ_diag_overseas != 1) 
+  
+  allCd4 <- cd4Set %>% 
     select(yeardiagnosis, expgroup, cd4count) %>%
     group_by(yeardiagnosis) %>%
     summarise(all = mean(cd4count, na.rm = TRUE)) %>% 
     filter(yeardiagnosis <= resultsYear, yeardiagnosis >= startYear) %>%
     rename(year = yeardiagnosis)
   
-  msmCd4 <- hivSet %>% 
+  msmCd4 <- cd4Set %>% 
     select(yeardiagnosis, expgroup, cd4count) %>%
     filter(expgroup == "msm") %>%
     group_by(yeardiagnosis) %>%
     summarise(msm = mean(cd4count, na.rm = TRUE)) %>% 
     filter(yeardiagnosis <= resultsYear, yeardiagnosis >= startYear)
     
-  nonMsmCd4 <- hivSet %>% 
+  nonMsmCd4 <- cd4Set %>% 
     select(yeardiagnosis, expgroup, cd4count) %>%
     filter(expgroup != "msm") %>%
     group_by(yeardiagnosis) %>%
