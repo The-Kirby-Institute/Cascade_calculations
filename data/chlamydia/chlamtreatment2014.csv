@@ -1,0 +1,13 @@
+stage,context,urban,regional,remote,notes_sources,Reference
+notifications,all,0.69,0.26,0.05,Notifications data,
+diagnoses,shc,0.14,0.14,0.14,(Bourne et al. 2013),"Bourne C, et al. What proportion of sexually transmissible infections and HIV are diagnosed in New South Wales' public sexual health services compared with other services? Sexual Health. 2013;10(2):119-23."
+diagnoses,gp,0.81,0.81,0.81,(Grulich et al. 2003),"Grulich A, et al. Sex in Australia: sexually transmissible infection and blood-borne virus history in a representative sample of adults. Australian and New Zealand Journal of Public Health. 2003;27(2):234-41"
+diagnoses,other,0.05,0.05,0.05,(Grulich et al. 2003) ‘Alternative practitioner’ & ‘other’,"Grulich A, et al. Sex in Australia: sexually transmissible infection and blood-borne virus history in a representative sample of adults. Australian and New Zealand Journal of Public Health. 2003;27(2):234-41"
+treated,nsw_shc,0.99,1,0.96,(Guy et al. 2012),"Guy R, et al. The impact of sexually transmissible infection programs in remote Aboriginal communities in Australia: a systematic review. Sexual Health. 2012;9 (3):205-12."
+treated,nt_phc,NA,NA,0.85,(Foster et al. 2014),"Foster et al. Does being in a regional area impact on the timeliness of treatment?  Australian Sexual Health Conference. 2014; Sydney, NSW: Australasian Society for HIV Medicine; 6."
+retested,shc,0.22,0.17,NA,ACCESS; Remote data not forthcoming,
+retested,gp,0.29,0.2,NA,ACCESS; Remote data not forthcoming,
+retested,primary_care,NA,NA,0.2,STRIVE,
+positive,shc,0.23,0.22,NA,ACCESS; Remote data not forthcoming,
+positive,gp,0.04,0.11,NA,ACCESS; Remote data not forthcoming,
+positive,primary_care,NA,NA,0.05,STRIVE,

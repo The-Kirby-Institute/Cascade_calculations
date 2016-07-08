@@ -1,5 +1,9 @@
 *.url
-data/
+data/*.csv
+data/HIV/
+data/raw/
+data/Archive/
+data/backprojection-clean/
 docs/
 output/
 references/
