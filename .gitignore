@@ -4,6 +4,8 @@ data/HIV/
 data/raw/
 data/Archive/
 data/backprojection-clean/
+data/chlamydia/chlamtests*.csv
+data/chlamydia/chlamretests*.csv
 docs/
 output/
 references/
