@@ -22,25 +22,30 @@ estimates are described at the end of the document.
 rm(list=ls()) 
 options(scipen=999)  # To get rid of scientific notation
 
-# Load libraries used
-require(readxl)
-require(dplyr)
-require(tidyr)
-
-require(ggplot2)
-require(RColorBrewer)
-require(Hmisc)
-require(knitr)
-
 # Set working directory 
-setwd(file.path(path.expand("~"),"Research","!Evaluation_Modelling",
+setwd(file.path(path.expand("~"), "Research", "!Evaluation_Modelling",
                 "project_care_cascades"))
 
 # Details of results and outputs folders
 basePath <- getwd()
-docFolder <- file.path(basePath,"docs")
-figFolder <- file.path(basePath,"output","figures")
-resultsFolder <- file.path(basePath,"output")
+docFolder <- file.path(basePath, "docs")
+dataFolder <- file.path(basePath, "data", "chlamydia")
+figFolder <- file.path(basePath, "output", "figures")
+resultsFolder <- file.path(basePath, "output")
+
+# Source useful functions
+source(file.path(basePath, "code", "FormatData.R"), echo=TRUE)
+source(file.path(basePath, "code", "LoadLibrary.R"), echo=TRUE)
+
+# Load libraries used
+LoadLibrary(readxl)
+LoadLibrary(dplyr)
+LoadLibrary(tidyr)
+
+LoadLibrary(ggplot2)
+LoadLibrary(RColorBrewer)
+LoadLibrary(Hmisc)
+LoadLibrary(knitr)
 
 # Current time for appending to outputs
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
@@ -50,24 +55,22 @@ resultsYear <- 2014 # Year of cascade we will plot
                     
 saveplots <- FALSE # Save plots as separate files
 
-# Function to format data and range into thousands
-source(file.path(basePath, "code", "FormatData.R"), echo=TRUE)
 ```
 
 ```{r loadresults, echo = FALSE, messages = FALSE, include=FALSE}
 # Load hiv cascade dataframe
-notificationsFile <- file.path(basePath, "data",
+notificationsFile <- file.path(dataFolder,
   paste("chlamnotifications", toString(resultsYear), ".csv", sep = ""))
 
-incidenceFile <- file.path(basePath, "data", paste("chlamincidence",
+incidenceFile <- file.path(dataFolder, paste("chlamincidence",
   toString(resultsYear), ".csv", sep = ""))
 
-treatFile <- file.path(basePath, "data", paste("chlamtreatment", 
+treatFile <- file.path(dataFolder, paste("chlamtreatment", 
   toString(resultsYear), ".csv", sep = ""))
 
 notifications <-  read.csv(notificationsFile)
 incidence <- read.csv(incidenceFile)
-treatment <- read.csv(treatFile)
+treatment <- read.csv(treatFile) 
 
 ```
 
@@ -85,7 +88,7 @@ currentInc <- incidence %>%
 
 # Current treatment data
 currentTreat <- treatment %>%
-  select(-notes_sources, -Reference)
+  select(-source, -reference)
 
 ```
 
@@ -95,7 +98,7 @@ chlamcascade <- data.frame(stage = character(), sex = character(),
              estimate = numeric(), lower = numeric(), 
              upper = numeric())
 
-# New infections
+# New infections ---------------------------------------------------------
 maleInc <- rowMeans(currentInc[, 2:3])
 maleIncLower <- currentInc[, 2]
 maleIncUpper <- currentInc[, 3]
@@ -110,7 +113,7 @@ chlamcascade <- rbind(chlamcascade,
                                 lower = c(maleIncLower, femaleIncLower), 
                                 upper = c(maleIncUpper, femaleIncUpper)))
 
-# Diagnoses
+# Diagnoses --------------------------------------------------------------
 maleDiags <- sum(currentDiags[, 2:4])
 femaleDiags <- sum(currentDiags[, 5:7])
 chlamcascade <- rbind(chlamcascade, 
@@ -120,13 +123,17 @@ chlamcascade <- rbind(chlamcascade,
                                  lower = NA, 
                                  upper = NA))
 
-# Weights for calculations
+# Weights for calculations based on notifications ------------------------
 weightsDF <- filter(currentTreat, stage == "notifications")
-weights <- c(weightsDF$urban, weightsDF$regional, weightsDF$remote)
+weights <- weightsDF$proportion # urban, regional, remote
+names(weights) <- c("urban", "regional", "remote")
 
-# Proportion treated
+# Proportion treated -----------------------------------------------------
+# Simply take the mean of the estimates for remote areas
 treatedDF <- filter(currentTreat, stage == "treated")
-propTreated <- colMeans(treatedDF[, 3:5], na.rm = TRUE)
+propTreatedRemote <- mean(filter(treatedDF, 
+                                 region == "remote")$proportion)
+propTreated <- c(treatedDF$proportion[1:2], propTreatedRemote)
 propTreated <- sum(propTreated * weights)
 
 # Hard coded ranges based on propTreated value - +/- 10%
@@ -147,23 +154,68 @@ chlamcascade <- rbind(chlamcascade,
                       lower =  c(maleTreated[2], femaleTreated[2]), 
                       upper = c(maleTreated[3], femaleTreated[3])))
 
-# Retesting
+# Retesting --------------------------------------------------------------
 retestDF <- filter(currentTreat, stage == "retested")
-diagnosesProp <- filter(currentTreat, stage == "diagnoses")$urban
-diagnosesProp[3] <- 1 # Replace for remote 
 
-propReTest <- colSums(retestDF[, 3:5] * diagnosesProp, na.rm = TRUE)
-propReTest <- sum(propReTest * weights)
+# shc, gp, other
+diagnosesProp <- filter(currentTreat, stage == "diagnoses")$proportion
+
+# Re-order and add the gp and other together (for non-clinic settings)
+# TODO: Think about whether this adding makes sense
+diagnosesProp <- c(diagnosesProp[2] + diagnosesProp[3], diagnosesProp[1])
+names(diagnosesProp) <- c("gp", "shc")
+
+# Males
+propReTestMale <- unname(weights["urban"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "males", region == "urban", 
+         context == "shc")$proportion + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "males", region == "urban", 
+         context == "gp")$proportion) + 
+  weights["regional"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "males", region == "regional", 
+         context == "shc")$proportion + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "males", region == "regional", 
+         context == "gp")$proportion) + 
+  weights["remote"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "males", region == "remote", 
+         context == "shc")$proportion + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "males", region == "remote", 
+         context == "gp")$proportion))
+
+# Females
+propReTestFemale <- unname(weights["urban"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "females", region == "urban", 
+         context == "shc")$proportion + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "females", region == "urban", 
+         context == "gp")$proportion) + 
+  weights["regional"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "females", region == "regional", 
+         context == "shc")$proportion + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "females", region == "regional", 
+         context == "gp")$proportion) + 
+  weights["remote"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "females", region == "remote", 
+         context == "shc")$proportion + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "females", region == "remote", 
+         context == "gp")$proportion))
 
 # Hard coded ranges based on propTreated value - +/- 10%
-propReTestMin <- 0.2 # propReTest * 0.9
+propReTestMin <- 0.15 # propReTest * 0.9
 propReTestMax <- 0.3 # min(1, propReTest * 1.1)
 
-maleRetested <- filter(chlamcascade, stage == "notifications",
-  sex == "male")$estimate * c(propReTest, propReTestMin, propReTestMax)
+maleRetested <- filter(chlamcascade, stage == "treated",
+  sex == "male")$estimate * c(propReTestMale, propReTestMin,
+                              propReTestMax)
 
-femaleRetested <- filter(chlamcascade, stage == "notifications",
-  sex == "female")$estimate * c(propReTest, propReTestMin, propReTestMax)
+femaleRetested <- filter(chlamcascade, stage == "treated",
+  sex == "female")$estimate * c(propReTestFemale, propReTestMin,
+                                propReTestMax)
 
 chlamcascade <- rbind(chlamcascade, data.frame(stage = "retested",
                   sex = c("male", "female"), 
@@ -171,28 +223,28 @@ chlamcascade <- rbind(chlamcascade, data.frame(stage = "retested",
                   lower =  c(maleRetested[2], femaleRetested[2]), 
                   upper = c(maleRetested[3], femaleRetested[3])))
 
-# Retested positive 
-positiveDF <- filter(currentTreat, stage == "positive")
-propPositive <- colSums(positiveDF[, 3:5] * diagnosesProp, na.rm = TRUE)
-propNegative <- 1- sum(propPositive * weights)
-
-# Hard coded ranges based on propNegative value - +/- 10%
-propNegativeMin <- propNegative * 0.9
-propNegativeMax <- min(propNegative * 1.1,1)
-
-maleNegative <- filter(chlamcascade, stage == "retested", 
-  sex == "male")$estimate * c(propNegative, propNegativeMin,
-                              propNegativeMax)
-
-femaleNegative <- filter(chlamcascade, stage == "retested", 
-  sex == "female")$estimate * c(propNegative, propNegativeMin,
-                                propNegativeMax)
-
-chlamcascade <- rbind(chlamcascade, data.frame(stage = "negative",
-                  sex = c("male", "female"), 
-                  estimate = c(maleNegative[1], femaleNegative[1]),
-                  lower =  c(maleNegative[2], femaleNegative[2]), 
-                  upper = c(maleNegative[3], femaleNegative[3])))
+# Retested positive ------------------------------------------------------
+# positiveDF <- filter(currentTreat, stage == "positive")
+# propPositive <- colSums(positiveDF[, 3:5] * diagnosesProp, na.rm = TRUE)
+# propNegative <- 1- sum(propPositive * weights)
+# 
+# # Hard coded ranges based on propNegative value - +/- 10%
+# propNegativeMin <- propNegative * 0.9
+# propNegativeMax <- min(propNegative * 1.1,1)
+# 
+# maleNegative <- filter(chlamcascade, stage == "retested", 
+#   sex == "male")$estimate * c(propNegative, propNegativeMin,
+#                               propNegativeMax)
+# 
+# femaleNegative <- filter(chlamcascade, stage == "retested", 
+#   sex == "female")$estimate * c(propNegative, propNegativeMin,
+#                                 propNegativeMax)
+# 
+# chlamcascade <- rbind(chlamcascade, data.frame(stage = "negative",
+#                   sex = c("male", "female"), 
+#                   estimate = c(maleNegative[1], femaleNegative[1]),
+#                   lower =  c(maleNegative[2], femaleNegative[2]), 
+#                   upper = c(maleNegative[3], femaleNegative[3])))
 
 ```
 
