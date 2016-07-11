@@ -96,7 +96,7 @@ currentTreat <- treatment %>%
 # Initialize output data frame
 chlamcascade <- data.frame(stage = character(), sex = character(),
              estimate = numeric(), lower = numeric(), 
-             upper = numeric())
+             upper = numeric(), percentprevious = numeric())
 
 # New infections ---------------------------------------------------------
 maleInc <- rowMeans(currentInc[, 2:3])
@@ -111,7 +111,8 @@ chlamcascade <- rbind(chlamcascade,
                                 sex = c("male", "female"), 
                                 estimate = c(maleInc, femaleInc),
                                 lower = c(maleIncLower, femaleIncLower), 
-                                upper = c(maleIncUpper, femaleIncUpper)))
+                                upper = c(maleIncUpper, femaleIncUpper),
+                      percentprevious = c(NA, NA)))
 
 # Diagnoses --------------------------------------------------------------
 maleDiags <- sum(currentDiags[, 2:4])
@@ -120,9 +121,11 @@ chlamcascade <- rbind(chlamcascade,
                       data.frame(stage = "notifications",
                                  sex = c("male", "female"), 
                                  estimate = c(maleDiags, femaleDiags),
-                                 lower = NA, 
-                                 upper = NA))
-
+                                 lower = NA, #c(maleDiags, femaleDiags), 
+                                 upper = NA, #c(maleDiags, femaleDiags),
+                        percentprevious = 100 * c(maleDiags / maleInc,
+                                             femaleDiags / femaleInc)))
+                      
 # Weights for calculations based on notifications ------------------------
 weightsDF <- filter(currentTreat, stage == "notifications")
 weights <- weightsDF$proportion # urban, regional, remote
@@ -148,11 +151,13 @@ femaleTreated <- filter(chlamcascade, stage == "notifications",
   propTreatedMax)
 
 chlamcascade <- rbind(chlamcascade, 
-                      data.frame(stage = "treated",
+                  data.frame(stage = "treated",
                       sex = c("male", "female"), 
                       estimate = c(maleTreated[1], femaleTreated[1]),
                       lower =  c(maleTreated[2], femaleTreated[2]), 
-                      upper = c(maleTreated[3], femaleTreated[3])))
+                      upper = c(maleTreated[3], femaleTreated[3]),
+                    percentprevious = 100 * c(maleTreated[1] / maleDiags,
+                                  femaleTreated[1] / femaleDiags)))
 
 # Retesting --------------------------------------------------------------
 retestDF <- filter(currentTreat, stage == "retested")
@@ -185,6 +190,44 @@ propReTestMale <- unname(weights["urban"] * (diagnosesProp["shc"] *
   filter(retestDF,  sex == "males", region == "remote", 
          context == "gp")$proportion))
 
+propReTestMaleLower <- unname(weights["urban"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "males", region == "urban", 
+         context == "shc")$prop_lower + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "males", region == "urban", 
+         context == "gp")$prop_lower) + 
+  weights["regional"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "males", region == "regional", 
+         context == "shc")$prop_lower + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "males", region == "regional", 
+         context == "gp")$prop_lower) + 
+  weights["remote"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "males", region == "remote", 
+         context == "shc")$prop_lower + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "males", region == "remote", 
+         context == "gp")$prop_lower))
+
+propReTestMaleUpper <- unname(weights["urban"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "males", region == "urban", 
+         context == "shc")$prop_upper + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "males", region == "urban", 
+         context == "gp")$prop_upper) + 
+  weights["regional"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "males", region == "regional", 
+         context == "shc")$prop_upper + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "males", region == "regional", 
+         context == "gp")$prop_upper) + 
+  weights["remote"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "males", region == "remote", 
+         context == "shc")$prop_upper + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "males", region == "remote", 
+         context == "gp")$prop_upper))
+
 # Females
 propReTestFemale <- unname(weights["urban"] * (diagnosesProp["shc"] * 
   filter(retestDF, sex == "females", region == "urban", 
@@ -205,23 +248,66 @@ propReTestFemale <- unname(weights["urban"] * (diagnosesProp["shc"] *
   filter(retestDF,  sex == "females", region == "remote", 
          context == "gp")$proportion))
 
-# Hard coded ranges based on propTreated value - +/- 10%
-propReTestMin <- 0.15 # propReTest * 0.9
-propReTestMax <- 0.3 # min(1, propReTest * 1.1)
+propReTestFemaleLower <- unname(weights["urban"] * 
+                                  (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "females", region == "urban", 
+         context == "shc")$prop_lower + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "females", region == "urban", 
+         context == "gp")$prop_lower) + 
+  weights["regional"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "females", region == "regional", 
+         context == "shc")$prop_lower + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "females", region == "regional", 
+         context == "gp")$prop_lower) + 
+  weights["remote"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "females", region == "remote", 
+         context == "shc")$prop_lower + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "females", region == "remote", 
+         context == "gp")$prop_lower))
 
-maleRetested <- filter(chlamcascade, stage == "treated",
-  sex == "male")$estimate * c(propReTestMale, propReTestMin,
-                              propReTestMax)
+propReTestFemaleUpper <- unname(weights["urban"] * 
+                                  (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "females", region == "urban", 
+         context == "shc")$prop_upper + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "females", region == "urban", 
+         context == "gp")$prop_upper) + 
+  weights["regional"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "females", region == "regional", 
+         context == "shc")$prop_upper + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "females", region == "regional", 
+         context == "gp")$prop_upper) + 
+  weights["remote"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == "females", region == "remote", 
+         context == "shc")$prop_upper + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == "females", region == "remote", 
+         context == "gp")$prop_upper))
 
-femaleRetested <- filter(chlamcascade, stage == "treated",
-  sex == "female")$estimate * c(propReTestFemale, propReTestMin,
-                                propReTestMax)
 
+# Now calculated the number retested
+maleRetested <- as.numeric(filter(chlamcascade, stage == "treated",
+  sex == "male")[, c("estimate", "lower", "upper")] * 
+  c(propReTestMale, propReTestMaleLower,
+                              propReTestMaleUpper))
+
+femaleRetested <- as.numeric(filter(chlamcascade, stage == "treated",
+  sex == "female")[, c("estimate", "lower", "upper")] * 
+  c(propReTestFemale, propReTestFemaleLower,
+                                propReTestFemaleUpper))
+
+# Store in our cascade
 chlamcascade <- rbind(chlamcascade, data.frame(stage = "retested",
                   sex = c("male", "female"), 
                   estimate = c(maleRetested[1], femaleRetested[1]),
                   lower =  c(maleRetested[2], femaleRetested[2]), 
-                  upper = c(maleRetested[3], femaleRetested[3])))
+                  upper = c(maleRetested[3], femaleRetested[3]),
+              percentprevious = 100 * c(maleRetested[1] / maleTreated[1],
+                                  femaleRetested[1] / femaleTreated[1])))
 
 # Retested positive ------------------------------------------------------
 # positiveDF <- filter(currentTreat, stage == "positive")
@@ -259,7 +345,7 @@ plotopts <- theme_bw() +
   axis.text.y = element_text(face = "plain", size = 10, colour = "black"),
   axis.line = element_line(colour  = "black"),
   axis.ticks = element_line(colour = "black"),
-  legend.position = "top",
+  legend.position = "bottom",
   legend.background = element_rect(),
   legend.key = element_blank(),
   panel.grid.major = element_blank(), 
@@ -272,45 +358,57 @@ plotopts <- theme_bw() +
 )
 
 # Setup colours
-# Palette with black and grey:
-cbPalette <- c("#000000","#999999", "#E69F00", "#56B4E9", "#009E73", 
-               "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-
-maincols <- brewer.pal(4,"Set1")
+asrcols <- c("males" = "#2C4452", 
+             "females" = "#2B97B0")
 
 ```
 
 ```{r barchart, echo = FALSE, messages = FALSE, include=FALSE}
 # Create bar chart plot for Chlamydia cascade
-stages <- c("New infections", "Notifications", 
-            "Received treatment after diagnosis", 
-            "Retested within 1-4 months", 
-            "Remain uninfected at retest")
+stages <- c("infections" = "New infections", 
+            "notifications" = "Notifications", 
+            "treated" = "Received treatment following diagnosis", 
+            "retested" = "Completed follow-up")
 
-stagesNeat <- c("New \n infections", 
-                "Notifications", 
-                "Received \n treatment \n after \n diagnosis", 
-                "Retested \n within \n 1-4 months", 
-                "Remain \n uninfected \n at retest")
+stagesNeat <- c("infections" = "New \n infections", 
+                "notifications" = "Notifications", 
+                "treated" = "Received \n treatment \n following \n diagnosis", 
+                "retested" = "Completed \n follow-up")
 
 # Plot the bar chart -----------------------------------------------------
-plotCascade <- ggplot(data = chlamcascade, 
+
+# First sort out sex as a factor to order the bars
+plotcascade <- chlamcascade
+plotcascade$sex <- factor(plotcascade$sex, levels = c("male", "female"))
+
+texty <- plotcascade$upper
+
+plotCascade <- ggplot(data = plotcascade, 
                       aes(x = stage, y = estimate, fill = sex)) + 
   geom_bar(position = "dodge", stat = "identity") + 
   geom_errorbar(aes(ymin = lower, ymax = upper), 
                 position = position_dodge(width = 0.9),
                 width = 0.2, color = "black", size = 1.2) +
-  scale_fill_manual(values = c("red", "blue"), name = "", 
-                    labels = c("Female", "Male")) + 
+  geom_text(aes(label = ifelse(is.na(percentprevious), "",
+                  paste0(format(percentprevious, digits = 3), "%")), 
+                y = texty + 10000), 
+            position = position_dodge(width = 0.9),
+            fontface = "bold", family = "Times") +
+  scale_fill_manual(name = "", 
+                    values = unname(asrcols[c("males", "females")]), 
+                    labels = c("Males", "Females"),
+                    breaks = c("male", "female"),
+                    limits = c("male", "female")) + 
   scale_x_discrete(labels = stagesNeat) +
   ylab("Number of people") + xlab("") +  
-  plotopts
+  plotopts 
 
 # Print plot in separate window and save
 if (saveplots) {
-  windows(width=7,height=5)
-  print(plotCascade)
-  ggsave(paste(figFolder,"chlamcascade.png"),width=7,height=5)
+  ggsave(file.path(figFolder, paste0("chlamcascade-", 
+                toString(resultsYear), ".png")), 
+         plot = plotCascade, 
+         width = 7, height = 5, dpi = 300)
 }
 
 ```
