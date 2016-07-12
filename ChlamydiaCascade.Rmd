@@ -345,7 +345,7 @@ plotopts <- theme_bw() +
   axis.text.y = element_text(face = "plain", size = 10, colour = "black"),
   axis.line = element_line(colour  = "black"),
   axis.ticks = element_line(colour = "black"),
-  legend.position = "bottom",
+  legend.position = "top",
   legend.background = element_rect(),
   legend.key = element_blank(),
   panel.grid.major = element_blank(), 
@@ -382,6 +382,7 @@ plotcascade <- chlamcascade
 plotcascade$sex <- factor(plotcascade$sex, levels = c("male", "female"))
 
 texty <- plotcascade$upper
+texty[3:4] <- plotcascade$estimate[3:4]
 
 plotCascade <- ggplot(data = plotcascade, 
                       aes(x = stage, y = estimate, fill = sex)) + 
@@ -393,7 +394,7 @@ plotCascade <- ggplot(data = plotcascade,
                   paste0(format(percentprevious, digits = 3), "%")), 
                 y = texty + 10000), 
             position = position_dodge(width = 0.9),
-            fontface = "bold", family = "Times") +
+            fontface = "bold") +
   scale_fill_manual(name = "", 
                     values = unname(asrcols[c("males", "females")]), 
                     labels = c("Males", "Females"),
