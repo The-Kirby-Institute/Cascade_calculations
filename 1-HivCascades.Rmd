@@ -31,7 +31,7 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Primary script parameters
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
-analysisYear <- 2014
+analysisYear <- 2015
 startYear <- 1990
 
 # Script options ------------------------------------------------------
@@ -448,7 +448,8 @@ numberUniqueAll <- numUnique(dobAll, allYears, ignore)
 hivResults$uniquecases <- numberUniqueAll
 
 # Add variable for proportion unique - due to statistical calculations 
-# proportion mybe slightly higher than one. In those cases round down to 1.
+# proportion mybe slightly higher than one. In those cases round down to
+# 1.
 hivResults$propunique <- 
   hivResults$uniquecases / hivResults$totalnotifications
   hivResults[hivResults$propunique > 1, ]$propunique <- 1
@@ -465,7 +466,8 @@ for (region in states) {
                     dob, yeardiagnosis)
   
   # Calculate number unique
-  numberUnique <- numUnique(dobTemp, unique(dobTemp$yeardiagnosis), ignore)
+  numberUnique <- numUnique(dobTemp, unique(dobTemp$yeardiagnosis),
+                            ignore)
   
   # Store state results
   hivState[hivState$state == region, ]$uniquecases <- numberUnique
@@ -480,7 +482,8 @@ for (region in states) {
 
 # Calculate proportion unique if not doing national estimates
 if (!nationalUniques) {
-  hivState$propunique <- hivState$uniquecases / hivState$totalnotifications
+  hivState$propunique <- hivState$uniquecases /
+    hivState$totalnotifications
   hivState[hivState$propunique > 1, ]$propunique <- 1
 }
 
@@ -497,14 +500,15 @@ for (mode in modes) {
   dobTemp <- arrange(dobTemp, yeardiagnosis)
   
   # Calculate number unique
-  numberUnique <- numUnique(dobTemp, unique(dobTemp$yeardiagnosis), ignore)
+  numberUnique <- numUnique(dobTemp, unique(dobTemp$yeardiagnosis),
+                            ignore)
   
   # Store exposure results
   hivExpNat[hivExpNat$expgroup == mode, ]$uniquecases <- numberUnique
   
   # Replace proportion unique if using national estimates
   if (nationalUniques) {
-    expYears <- hivExpNat[hivExpNat$expgroup == mode,]$yeardiagnosis
+    expYears <- hivExpNat[hivExpNat$expgroup == mode, ]$yeardiagnosis
     hivExpNat[hivExpNat$expgroup == mode, ]$propunique <- 
       filter(hivResults, yeardiagnosis %in% expYears)$propunique
   } 
@@ -531,7 +535,7 @@ for (gender in genders) {
     filter(hivResults, yeardiagnosis %in% genYears)$propunique
 }
 
-# Plot if required --------------------------------------------------------
+# Plot if required -------------------------------------------------------
 if (plots) {
   graphics.off()
   
@@ -570,16 +574,19 @@ Sort out population movement rates
 # Load all the data sets we need - the ABS data is stored in a different 
 # folder
 absFolder <- file.path(path.expand("~"), 
-                       "Research","!Evaluation_Modelling","data")
+                       "Research", "!Evaluation_Modelling", "data")
  
-absMigration <- read.csv(file.path(absFolder, "ABS_migration_clean.csv", 
-                                sep =""),as.is = 1)
-absDeparts <- read.csv(file.path(absFolder, "ABS_departures_clean.csv", 
-                                sep =""),as.is = 1)
-absInterstate <- read.csv(file.path(absFolder, "ABS_interstate_clean.csv", 
-                                sep =""),as.is = 1)
+absMigration <- read.csv(file.path(absFolder, 
+  paste0("ABS_migration_clean-", toString(analysisYear), ".csv")), 
+  as.is = 1)
+absDeparts <- read.csv(file.path(absFolder, 
+  paste0("ABS_departures_clean-", toString(analysisYear), ".csv")),
+  as.is = 1)
+absInterstate <- read.csv(file.path(absFolder, 
+  paste0("ABS_interstate_clean-", toString(analysisYear), ".csv")), 
+  as.is = 1)
 
-# Depending on data used calculate departure rate for each state ----------
+# Depending on data used calculate departure rate for each state ---------
 
 states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act", "all")
 # nstates <- length(states)
@@ -592,8 +599,8 @@ allPredicts <- data.frame(year = numeric(),
 
 if (permDeparts) {
   # Use permanent departures
-  absDeparts <- mutate(absDeparts, migrate = departures / erp)
-  mrate <- absDeparts$migrate
+  # absDeparts <- mutate(absDeparts, migrate = departures / erp)
+  mrate <- (absDeparts$rate_permanent + absDeparts$overall_rate) / 2
   
   # mrate is missing a value for 1980 assume same value as 1981
   mrate <- c(mrate[1], mrate)
@@ -601,10 +608,10 @@ if (permDeparts) {
   # Fill in the state values
   for (state in states) {
     allPredicts <- rbind(allPredicts, data.frame(year = allYears, 
-                                                 state = state,
-                                                 rate = mrate/2, 
-                                                 lower = 0, 
-                                                 upper = mrate))
+                                      state = state,
+                                      rate = mrate, 
+                                      lower = absDeparts$rate_permanent, 
+                                      upper = absDeparts$overall_rate))
   }
   
   # Store results in final data frame
@@ -686,7 +693,7 @@ if (permDeparts) {
     }
 }
 
-# Calculate interstate rates ----------------------------------------------
+# Calculate interstate rates ---------------------------------------------
 
 # At this stage just calculate the best fit.
 # Don't worry about upper and lower bounds.
@@ -759,8 +766,9 @@ Sort out deathrates
 
 # Load all the data sets we use for this estimate - use the parameter 
 # column as row names for easier subsetting
-hivParams <- read.csv(file.path(dataFolder, "individualHIVparameters.csv", 
-                                sep = ""), as.is = 1)
+hivParams <- read.csv(file.path(dataFolder,
+                                "individualHIVparameters.csv"), 
+                      as.is = 1)
 hivParams <- select(hivParams, parameter, value)
 
 for (ii in 1:nrow(hivParams)) {
@@ -768,9 +776,16 @@ for (ii in 1:nrow(hivParams)) {
 }
 
 # Load AHOD data to calculate mortality and do some simple cleaning
+
+
+# WARNING --- TEMP HACK AS I DON'T HAVE 2015 DATA YET
+tempYear <- 2014
 ahodData <- read.csv(file.path(dataFolder, 
-                               paste("ahod", toString(analysisYear), 
+                               paste("ahod", toString(tempYear), 
                                      ".csv", sep = "")))
+temp2015 <- filter(ahodData, year == 2014) %>%
+  mutate(year = 2015)
+ahodData <- bind_rows(ahodData, temp2015)
 
 # Load backprojection estimates for comparison
 # bpdeaths <- read.csv(file.path(dataFolder, "projectedDeaths.csv", 
@@ -804,7 +819,7 @@ hivDeaths <- rbind(hivDeaths, c(1980, 0, 0, 0, 0))
 hivDeaths <- rbind(hivDeaths, c(1982, 0, 0, 0, 0))
 hivDeaths <- arrange(hivDeaths, yeardeath)
 
-# Now calculate mortality rate for linkage data ---------------------------
+# Now calculate mortality rate for linkage data --------------------------
 cumDiagnoses <- hivResults$uniquecases # totalnotifications #uniquecases
 deaths <- hivDeaths$inflated_deaths
 deaths_min <- hivDeaths$inflated_deaths_lower
@@ -1101,7 +1116,8 @@ numUnknown$msm <- filter(propExpDiags, population == "msm")$propval *
   numUnknown$value
 numUnknown$pwid <- filter(propExpDiags, population == "pwid")$propval *
   numUnknown$value 
-numUnknown$hetero <- filter(propExpDiags, population == "hetero")$propval *
+numUnknown$hetero <- filter(propExpDiags, 
+                            population == "hetero")$propval *
   numUnknown$value 
 numUnknown$otherexp <- filter(propExpDiags, 
   population == "otherexp")$propval * numUnknown$value 
@@ -1189,7 +1205,8 @@ for (pop in pops) {
       # Use proportionally known diagnoses
       popPiags <- filter(hivCob, 
                          countrygroup == "australia")$proptotalknown
-      popYears <- filter(hivCob, countrygroup == "australia")$yeardiagnosis
+      popYears <- filter(hivCob, 
+                         countrygroup == "australia")$yeardiagnosis
       
       aborigDiags <- filter(hivAborig, 
                             aboriggroup == "indigenous")$proptotalknown
