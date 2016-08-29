@@ -604,14 +604,16 @@ if (permDeparts) {
   
   # mrate is missing a value for 1980 assume same value as 1981
   mrate <- c(mrate[1], mrate)
+  lmrate <- c(absDeparts$rate_permanent[1], absDeparts$rate_permanent)
+  umrate <- c(absDeparts$overall_rate[1], absDeparts$overall_rate)
   
   # Fill in the state values
   for (state in states) {
     allPredicts <- rbind(allPredicts, data.frame(year = allYears, 
                                       state = state,
                                       rate = mrate, 
-                                      lower = absDeparts$rate_permanent, 
-                                      upper = absDeparts$overall_rate))
+                                      lower = lmrate, 
+                                      upper = umrate))
   }
   
   # Store results in final data frame
@@ -851,6 +853,50 @@ for (ii in 2:length(annDiags)) {
 linkageMortality <- deaths / numLiving
 linkageMortalityMin <- deaths_min/numLiving_max
 linkageMortalityMax <- deaths_max/numLiving_min
+
+# NSW death rates -------------------------------------------------------
+# For NSW use NSW death data
+nswData <- read.csv(file.path(dataFolder, 
+                               paste0("nswDeaths-",
+                                      toString(analysisYear), 
+                                     ".csv")))
+nswLiving <- rep(NA, nrow(nswData))
+nswLiving_min <- rep(NA, nrow(nswData))
+nswLiving_max <- rep(NA, nrow(nswData))
+
+nswLiving[1] <- 0
+nswLiving_min[1] <- 0
+nswLiving_max[1] <- 0
+
+nswMigrate <- filter(hivMigrate, state == "nsw") 
+nswInterstate <- filter(hivInterstate, state == "nsw")
+nswArriveRate <- nswInterstate$arrivals / nswInterstate$erp
+
+nswDiagnoses <- filter(hivState, state == "nsw")$propunique *
+  filter(hivState, state == "nsw")$totalnotifications
+nswDeaths <- nswData$total
+nswDeaths_min <- 0.9 * nswData$total
+nswDeaths_max <- 1.1 * nswData$total
+nswDiags <- c(nswDiagnoses[1], diff(nswDiagnoses))
+
+for (ii in 2:nrow(nswData)) {
+  nswLiving[ii] <- nswLiving[ii-1] + nswDiags[ii] - nswDeaths[ii-1] 
+    - nswLiving[ii-1] * nswMigrate$rate[ii-1] + (nswArriveRate[ii-1] -
+    nswInterstate$departrate[ii-1]) * nswLiving[ii-1]
+  nswLiving_min[ii] <- nswLiving_min[ii-1] + nswDiags[ii] -
+    nswDeaths_max[ii-1] - nswLiving_min[ii-1] * nswMigrate$upper[ii-1] +
+    (nswArriveRate[ii-1] - nswInterstate$departrate[ii-1]) *
+    nswLiving_min[ii-1]
+  nswLiving_max[ii] <- nswLiving_max[ii-1] + nswDiags[ii] -
+    nswDeaths_min[ii-1] - nswLiving_max[ii-1] * nswMigrate$lower[ii-1] +
+    (nswArriveRate[ii-1] - nswInterstate$departrate[ii-1]) *
+    nswLiving_max[ii-1]
+}
+
+nswMortality <- nswDeaths / nswLiving
+nswMortality[1] <- 0
+nswMortalityMin <- nswDeaths_min/nswLiving_min
+nswMortalityMax <- nswDeaths_max/nswLiving_max
 
 #Append AHOD mortality ---------------------------------------
 
