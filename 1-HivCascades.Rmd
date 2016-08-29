@@ -440,7 +440,7 @@ ignore <- c(1,15)
 # Store number unique diagnoses cumulatively and annually. For annual 
 # unique cases assume all the first years of disgnoses are unique. 
 
-# Do calculations for all notifications first -----------------------------
+# Do calculations for all notifications first-----------------------------
 dobAll <- select(hivSet, dob, yeardiagnosis) # Overall
 numberUniqueAll <- numUnique(dobAll, allYears, ignore)
 
@@ -463,7 +463,9 @@ hivState$propunique <- rep(NA, nrow(hivState))
 for (region in states) {
   # Dob vector
   dobTemp <- select(subhivset(hivSet, region = region), 
-                    dob, yeardiagnosis)
+                    dob, yeardiagnosis) %>% 
+    arrange(yeardiagnosis) %>%
+    tbl_df()
   
   # Calculate number unique
   numberUnique <- numUnique(dobTemp, unique(dobTemp$yeardiagnosis),
@@ -496,8 +498,9 @@ hivExpNat$propunique <- rep(NA, nrow(hivExpNat))
 for (mode in modes) {
   # Dob vector
   dobTemp <- select(subhivset(hivSet, mode = mode), dob,
-                    yeardiagnosis)
-  dobTemp <- arrange(dobTemp, yeardiagnosis)
+                    yeardiagnosis) %>%
+    arrange(yeardiagnosis) %>%
+    tbl_df()
   
   # Calculate number unique
   numberUnique <- numUnique(dobTemp, unique(dobTemp$yeardiagnosis),
@@ -781,17 +784,10 @@ for (ii in 1:nrow(hivParams)) {
 
 
 # WARNING --- TEMP HACK AS I DON'T HAVE 2015 DATA YET
-tempYear <- 2014
+# tempYear <- 2015
 ahodData <- read.csv(file.path(dataFolder, 
                                paste("ahod", toString(tempYear), 
                                      ".csv", sep = "")))
-temp2015 <- filter(ahodData, year == 2014) %>%
-  mutate(year = 2015)
-ahodData <- bind_rows(ahodData, temp2015)
-
-# Load backprojection estimates for comparison
-# bpdeaths <- read.csv(file.path(dataFolder, "projectedDeaths.csv", 
-#                                 sep =""),as.is = 1)
 
 # Extract number of known deaths and store in a central data frame
 hivDeaths <- hivData %>% 
