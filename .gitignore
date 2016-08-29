@@ -19,5 +19,7 @@ cascadeIncidence_files/
 AcquisitionCalculation.xlsx
 Rplots.pdf
 dashboards/*.csv
+*.xlsm
+*.lnk
 
 dashboards/rsconnect/
