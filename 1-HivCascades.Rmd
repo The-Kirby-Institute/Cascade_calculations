@@ -603,7 +603,7 @@ allPredicts <- data.frame(year = numeric(),
 if (permDeparts) {
   # Use permanent departures
   # absDeparts <- mutate(absDeparts, migrate = departures / erp)
-  mrate <- (absDeparts$rate_permanent + absDeparts$overall_rate) / 2
+  mrate <- (absDeparts$rate_permanent + absDeparts$overall_rate) / 2 / 2
   
   # mrate is missing a value for 1980 assume same value as 1981
   mrate <- c(mrate[1], mrate)
@@ -786,7 +786,7 @@ for (ii in 1:nrow(hivParams)) {
 # WARNING --- TEMP HACK AS I DON'T HAVE 2015 DATA YET
 # tempYear <- 2015
 ahodData <- read.csv(file.path(dataFolder, 
-                               paste("ahod", toString(tempYear), 
+                               paste("ahod", toString(analysisYear), 
                                      ".csv", sep = "")))
 
 # Extract number of known deaths and store in a central data frame

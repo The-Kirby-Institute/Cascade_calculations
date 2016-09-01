@@ -297,7 +297,7 @@ if (pubPlots) {
   deathData <- hivResults %>%
     rename(year = yeardiagnosis) %>%  
     select(year, deathrate, drlower, drupper) %>%
-    inner_join(pldhiv, ., by = "year") %>%          # add pldhiv data frame
+    inner_join(pldhiv, ., by = "year") %>%        # add pldhiv data frame
     mutate(estdeaths = cumsum(value * deathrate),  # do the calculations
            estdeaths_min = cumsum(lower * drlower),
            estdeaths_max = cumsum(upper * drupper)) %>%
