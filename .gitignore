@@ -6,6 +6,7 @@ data/Archive/
 data/backprojection-clean/
 data/chlamydia/chlamtests*.csv
 data/chlamydia/chlamretests*.csv
+data/chlamydia/CT\ notifications_2015_National_Estimate-2016-09-27.xlsx
 docs/
 output/
 references/
