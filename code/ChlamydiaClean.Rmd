@@ -51,7 +51,7 @@ LoadLibrary(tidyr)
 LoadLibrary(utils)
 
 # Primary script parameters - data year 
-dataYear <- 2014
+dataYear <- 2015
 
 ```
 
@@ -213,13 +213,18 @@ write.csv(finalNotifications, file = file.path(cleanDataFolder,
 ```{r tests}
 
 LoadLibrary(haven)
+LoadLibrary(readstata13)
 
 # Raw testing file
 rawdata <- file.path(dataPath, paste0("CHLAMYDIA_MBS-", 
                                     toString(dataYear), ".dta"))
 
 # Load raw testing data
-chlamtests <- read_dta(rawdata)
+if (dataYear < 2015) {
+  chlamtests <- read_dta(rawdata)
+} else {
+  chlamtests <- read.dta13(rawdata)
+}
 
 # Clean up data ----------------------------------------------------------
 

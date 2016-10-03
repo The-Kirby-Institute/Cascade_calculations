@@ -51,7 +51,7 @@ LoadLibrary(knitr)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2014 # Year of cascade we will plot      
+resultsYear <- 2015 # Year of cascade we will plot      
                     
 saveplots <- FALSE # Save plots as separate files
 
@@ -545,7 +545,8 @@ randomised community trial which reported 20% of 15-29 year olds diagnosed
 with chlamydia retested 1-4 months after treatment. Taking a weighted 
 average by multiplying the notifications breakdown across regions by the 
 diagnoses breakdown across contexts we estimate 
-`r 100*round(propReTest, 3)`% of people diagnosed with chlamydia are 
+`r #100*round(propReTest, 3)`
+% of people diagnosed with chlamydia are 
 retested after treatment. We assumed a range from 20% (corresponding to the
 percentage retested in remote areas) to 30%. Assuming the same retesting 
 proportion and range for males and females and multiplying by the number of
@@ -561,8 +562,11 @@ so we used results from the STRIVE study which reported 5% of 15-29 year
 olds who retested for chlamydia were positive. Taking a weighted average by
 multiplying the notifications breakdown across regions by the diagnoses 
 breakdown across contexts we estimate 
-`r 100*round(sum(propPositive * weights), 3)`% of people were positive at 
-their retest overall. This means `r 100*round(propNegative, 3)`% of 15-29 
+`r #100*round(sum(propPositive * weights), 3)`
+% of people were positive at 
+their retest overall. This means 
+`r #100*round(propNegative, 3)`
+% of 15-29 
 year olds remained uninfected at retesting. We assumed a relative range of 
 $\pm$ 10% in the proportion negative at retest. Assuming the same 
 uninfected at retest proportion and range for males and females and 
