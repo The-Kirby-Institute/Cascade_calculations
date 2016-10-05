@@ -602,13 +602,20 @@ allPredicts <- data.frame(year = numeric(),
 
 if (permDeparts) {
   # Use permanent departures
-  # absDeparts <- mutate(absDeparts, migrate = departures / erp)
-  mrate <- (absDeparts$rate_permanent + absDeparts$overall_rate) / 2 / 2
+  absDeparts <- mutate(absDeparts, migrate = permanent / erp)
+  mrate <- absDeparts$migrate
+  # WARNING: where migration rates experimented on
+  # mrate <- (absDeparts$rate_permanent + absDeparts$overall_rate) / 2 / 2
   
   # mrate is missing a value for 1980 assume same value as 1981
   mrate <- c(mrate[1], mrate)
-  lmrate <- c(absDeparts$rate_permanent[1], absDeparts$rate_permanent)
-  umrate <- c(absDeparts$overall_rate[1], absDeparts$overall_rate)
+  lmrate <- 0
+  umrate <- mrate
+  mrate <- mrate / 2
+  
+  # WARNING: where migration rates experimented on
+  # lmrate <- c(absDeparts$rate_permanent[1], absDeparts$rate_permanent)
+  # umrate <- c(absDeparts$overall_rate[1], absDeparts$overall_rate)
   
   # Fill in the state values
   for (state in states) {
@@ -762,10 +769,9 @@ Sort out deathrates
 
 ```{r deaths}
 # To calculate the number of deaths each year we calculate an overall 
-# deathrate with an uncertainty range. This is used to work out the number 
-# of people diagnosed with HIV. 
-
-# The estimate of the death rate uses a number of methods. Firstly uses the 
+# deathrate with an uncertainty range. This is used to work out the number
+# of people diagnosed with HIV. The estimate of the death rate uses a
+# number of methods. Firstly uses the 
 # 2003 linkage results and the number of known deaths to estimate the
 # deathrate up to 2003. It then uses AHOD mortality rates from 2003.
 
@@ -1199,6 +1205,49 @@ modes <- keyGroups
 pops <- c("non-indigenous", "indigenous", "bornssa", "bornsea","othercob")
 # npops <- length(pops)
 
+# First do a quick calculation to work out proportion of  all
+# notifications which are indigenous to adjust mortality and migration
+# rates. 
+
+if (indigKnown) {
+  # Use known indigenous diagnoses
+  aborigDiags <- filter(hivAborig, 
+                        aboriggroup == "indigenous")$totalnotifications
+  aborigYears <- filter(hivAborig, 
+                        aboriggroup == "indigenous")$yeardiagnosis
+  
+  fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
+  aborigDiags <- fillAborigDiags$value
+  
+} else {
+  # Use proportionally known diagnoses
+  popDiags <- filter(hivCob, 
+                     countrygroup == "australia")$proptotalknown
+  popYears <- filter(hivCob, 
+                     countrygroup == "australia")$yeardiagnosis
+  
+  aborigDiags <- filter(hivAborig, 
+                        aboriggroup == "indigenous")$proptotalknown
+  aborigYears <- filter(hivAborig, 
+                        aboriggroup == "indigenous")$yeardiagnosis
+  
+  fillPopDiags <- FillMissing(allYears, popYears, popDiags)
+  fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
+  
+  aborigDiags <- cumDiagnoses * 
+    fillPopDiags$value * 
+    fillAborigDiags$value
+}
+
+nonAborigDiags <- cumDiagnoses - aborigDiags
+
+nonAborigMortality <- deathRate * ((1-aborigMortality) *
+                      fillAborigDiags$value + 
+                      nonAborigDiags) / nonAborigDiags
+
+nonAborigMigration <- migrationRate * cumDiagnoses / nonAborigDiags
+  
+
 for (pop in pops) {
   # Set up cumDiags for each population use the overall cumdiagnoses 
   # For Australian born we have to also consider indigenous status
@@ -1245,7 +1294,7 @@ for (pop in pops) {
       
     } else {
       # Use proportionally known diagnoses
-      popPiags <- filter(hivCob, 
+      popDiags <- filter(hivCob, 
                          countrygroup == "australia")$proptotalknown
       popYears <- filter(hivCob, 
                          countrygroup == "australia")$yeardiagnosis
@@ -1264,7 +1313,7 @@ for (pop in pops) {
     }
     
   } else {
-    popYiags <- filter(hivCob, countrygroup == pop)$proptotalknown
+    popDiags <- filter(hivCob, countrygroup == pop)$proptotalknown
     popyears <- filter(hivCob, countrygroup == pop)$yeardiagnosis
     
     fillPopDiags <- FillMissing(allYears, popYears, popDiags)
@@ -1281,7 +1330,9 @@ for (pop in pops) {
   mortalityMultiplierMax <- ifelse(pop == "indigenous", 
                                    aborigMortalityMax, 1)
   
-  # If non-Indigenous then no need to adjust dethar 
+  # If non-Indigenous then no need to adjust death rate to account 
+  # for higher indigenous rate. Use notifications proportion for 
+  # calculation. 
   pldhivPop <- LivingDiagnosed(cumPopDiags, 
                                mortalityMultiplier * deathRate,
                                migrationRate)
