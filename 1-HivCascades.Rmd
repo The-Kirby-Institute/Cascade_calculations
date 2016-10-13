@@ -1146,7 +1146,7 @@ for (region in statesDiag) {
   
   pldhivStateMax <- LivingDiagnosed(propStayUpper * cumStateDiags,
                                     deathRateMin, migStateRateMin,
-                                    arrStateRate,epStateRate, pldhivAll)                                   
+                                    arrStateRate, depStateRate, pldhivAll)                                   
   
   # Store the state results
   hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
@@ -1365,7 +1365,7 @@ for (pop in pops) {
     
   } else {
     popDiags <- filter(hivCob, countrygroup == pop)$proptotalknown
-    popyears <- filter(hivCob, countrygroup == pop)$yeardiagnosis
+    popYears <- filter(hivCob, countrygroup == pop)$yeardiagnosis
     
     fillPopDiags <- FillMissing(allYears, popYears, popDiags)
     cumPopDiags <- cumDiagnoses * fillPopDiags$value
@@ -1393,20 +1393,20 @@ for (pop in pops) {
                                     aborigMortalityMin * deathRateMin,
                                     rep(0, nyears))
   } else {
-    pldhivPop <- LivingDiagnosed(nonAborigMigrationFactor * 
-                                   propStay * cumPopDiags, 
+    pldhivPop <- LivingDiagnosed((1-nonAborigMigrationFactor * 
+                                   (1-propStay)) * cumPopDiags, 
                                  nonAborigMortalityFactor * deathRate,
                                  nonAborigMigrationFactor * migrationRate)
     
-    pldhivPopMin <- LivingDiagnosed(nonAborigMigrationFactor * 
-                                      propStayLower * cumPopDiags, 
+    pldhivPopMin <- LivingDiagnosed((1-nonAborigMigrationFactor * 
+                                   (1-propStayLower)) * cumPopDiags, 
                                     nonAborigMortalityFactor * 
                                       deathRateMax,
                                     nonAborigMigrationFactor * 
                                       migrationRateMax)
     
-    pldhivPopMax <- LivingDiagnosed(nonAborigMigrationFactor *
-                                      propStayUpper * cumPopDiags, 
+    pldhivPopMax <- LivingDiagnosed((1-nonAborigMigrationFactor * 
+                                   (1-propStayUpper)) * cumPopDiags, 
                                     nonAborigMortalityFactor * 
                                       deathRateMin,
                                     nonAborigMigrationFactor *
