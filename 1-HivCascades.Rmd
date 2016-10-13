@@ -2344,27 +2344,22 @@ ahodData <- read.csv(file.path(dataFolder,
 # Extract the viral suppression data
 propSuppressed <- ahodData %>%
 # filter(state == "all") %>%
-  select(one_of(c("year", "state", "mode", "n_id")), 
+  select(one_of(c("year", "state", "population", "n_id")), 
          starts_with("n_rx"), -n_rx) %>% 
   group_by(year, state) %>%
   summarise(n = sum(n_id),
-            n50 = sum(n_rx50), 
-            n200 = sum(n_rx200),
-            n400 = sum(n_rx400),
-            n1000 = sum(n_rx1000)) %>%
-  mutate(prop50 = n50/n, 
-         prop400 = n400/n,
-         prop200 = n200/n,
-         prop1000 = n1000/n) %>%
+            n200 = sum(n_rx200)) %>%
+  mutate(prop200 = n200/n) %>%
+  # Added 95% confidence interval
+  mutate(prop200lower = prop200 - qnorm(0.975) * 
+           sqrt(prop200 * (1 - prop200) / n),
+         prop200upper = prop200 + qnorm(0.975) * 
+           sqrt(prop200 * (1 - prop200) / n)) %>%
   filter(year <= analysisYear)
 
 dataStart <- min(propSuppressed$year)
 
 # TODO: by exposure mode
-# propSuppressedMode <- ahodData %>%
-#   select(one_of(c("year", "state", "mode", "n_id")), 
-#          starts_with("n_rx"), -n_rx) %>% 
-#   group_by(year, mode)
 
 # Loop through states and calculate number suppressed. 
 states <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas", "all")
@@ -2378,9 +2373,9 @@ for (region in states) {
     tempDf <- filter(propSuppressed, state == "all")
   }
   
-  tempProp <- tempDf$prop400
-  tempPropMin <- tempDf$prop50
-  tempPropMax <- tempDf$prop1000
+  tempProp <- tempDf$prop200
+  tempPropMin <- tempDf$prop200lower
+  tempPropMax <- tempDf$prop200upper
   
   # Number treated 
   treatDf <- filter(hivTreated, population == region, year >= dataStart)
