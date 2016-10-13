@@ -1491,66 +1491,99 @@ hivUndiag <- data.frame(stage = character(),
 
 # Sort out proportion undiagnosed -----------------------------------------
 
-# Read in back projected undiagnosed estimates
-propUndiagnosed <- read.csv(file.path(dataFolder, 
-  paste("projectedUndiagnosed", toString(analysisYear), ".csv", 
-        sep = "")), as.is = 1)
+# Read in back projected undiagnosed estimates from ECDC HIV Modelling Tool
+propUndiagnosed <- read_excel(file.path(dataFolder, 
+  paste0("ecdc_undiagnosed_percentage-", toString(analysisYear), ".xlsx")))
 
 # Only keep required years
 propUndiagnosed <- filter(propUndiagnosed, year %in% allYears) 
 
-if (useOldPropUndiagnosed) {
-  # Replace 2013 & 2014 estimates with COUNT and 2014 ASR supplement 
-  # non-MSM estimates
-  # COUNT: 8.9% (95% CI: 5.8-13.5%)
-  # Non-MSM: 20% (range 12-23%) across states
-  hardCodeYears <- analysisYear - 2013 + 1
-  hardCode <- c(0.09, 0.06, 0.14, 0.2, 0.15, 0.25)
- 
-  propUndiagnosed[propUndiagnosed$year >= 2013, 2:7] <-  
-    matrix(hardCode, nrow = hardCodeYears, ncol = length(hardCode), 
-           byrow = TRUE)
-}
+# Convert percentages to proportions
+propUndiagnosed[, 4:6] <- propUndiagnosed[, 4:6] / 100
 
-# Estimate proportion MSM and non-MSM for weighting
-propMSM <- filter(hivExpNat, expgroup == "msm")$proptotalnotifications
-propHetero <- filter(hivExpNat, 
-                     expgroup == "hetero")$proptotalnotifications
-propPwid <- filter(hivExpNat, expgroup == "pwid")$proptotalnotifications
-propOther <- filter(hivExpNat, 
-                    expgroup == "otherexp")$proptotalnotifications
+# Estimate proportion MSM and non-MSM for indigenous population
+aborigMSM <- hivSet %>%
+  filter(aboriggroup == "indigenous") %>%
+  group_by(yeardiagnosis, expgroup) %>%
+  summarise(notifications = n()) %>%
+  ungroup() %>% 
+  group_by(expgroup) %>% 
+  mutate(totalnotifications = cumsum(notifications)) %>%
+  ungroup() %>%
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = notifications / sum(notifications)) %>%
+  mutate(proptotalnotifications = 
+           totalnotifications / sum(totalnotifications)) %>% 
+  filter(yeardiagnosis <= analysisYear) %>%
+  select(yeardiagnosis, expgroup, proptotalnotifications)
 
-# Fill in missing data years - simply assume proportion is same previous 
-# year
-propMSM <- FillMissing(allYears, filter(hivExpNat,
-  expgroup == "msm")$yeardiagnosis, propMSM)
+propAborigMSM <- filter(aborigMSM, 
+                        expgroup == "msm")$proptotalnotifications
 
-propHetero <- FillMissing(allYears, 
-  filter(hivExpNat, expgroup == "hetero")$yeardiagnosis, propHetero)
+propAborigMSM <- c(0, 0, 0, 0, propAborigMSM) # add zeros for 1980-83
 
-propPwid <- FillMissing(allYears, 
-  filter(hivExpNat, expgroup == "pwid")$yeardiagnosis, propPwid)
+# Calculate best and range for undiagnosed -- best is the midpoint between 
+# estimates when previoulsly diagnosed overseas notifications are included
+# or excluded
 
-propOther <- FillMissing(allYears, 
-  filter(hivExpNat, expgroup == "otherexp")$yeardiagnosis, propOther)
+undiagAll <- (filter(propUndiagnosed, group == "all", 
+                     overseas_included == "yes")$estimate +
+                filter(propUndiagnosed, group == "all", 
+                       overseas_included == "no")$estimate) / 2
 
-# Estimate overall non-MSM undiagnosed proportion
-propNonMSM <- 1 - propMSM$value
+undiagAllMin <- filter(propUndiagnosed, group == "all", 
+                       overseas_included == "no")$lower
 
-# Weighted undiagnosed proportion
-undiagAll <- propMSM$value * propUndiagnosed$msm_best + 
-            propNonMSM * propUndiagnosed$non_msm_best
+undiagAllMax <- filter(propUndiagnosed, group == "all", 
+                       overseas_included == "yes")$upper
 
-# undiagAllMin <- apply(rbind(propUndiagnosed$msm_lower, 
-#   propUndiagnosed$non_msm_lower),2,min)                
-# undiagAllMax <- apply(rbind(propUndiagnosed$msm_upper, 
-#   propUndiagnosed$non_msm_upper),2,max)
+# MSM
+undiagMSM <- (filter(propUndiagnosed, group == "msm", 
+                     overseas_included == "yes")$estimate +
+                filter(propUndiagnosed, group == "msm", 
+                       overseas_included == "no")$estimate) / 2
 
-undiagAllMin <- propMSM$value * propUndiagnosed$msm_lower + 
-            propNonMSM * propUndiagnosed$non_msm_lower
+undiagMSMMin <- filter(propUndiagnosed, group == "msm", 
+                       overseas_included == "no")$lower
 
-undiagAllMax <- propMSM$value * propUndiagnosed$msm_upper + 
-            propNonMSM * propUndiagnosed$non_msm_upper
+undiagMSMMax <- filter(propUndiagnosed, group == "msm", 
+                       overseas_included == "yes")$upper
+
+# Hetero
+undiagHetero <- (filter(propUndiagnosed, group == "hetero", 
+                     overseas_included == "yes")$estimate +
+                filter(propUndiagnosed, group == "hetero", 
+                       overseas_included == "no")$estimate) / 2
+
+undiagHeteroMin <- filter(propUndiagnosed, group == "hetero", 
+                       overseas_included == "no")$lower
+
+undiagHeteroMax <- filter(propUndiagnosed, group == "hetero", 
+                       overseas_included == "yes")$upper
+
+# PWID
+undigaPWID <- (filter(propUndiagnosed, group == "pwid", 
+                     overseas_included == "yes")$estimate +
+                filter(propUndiagnosed, group == "pwid", 
+                       overseas_included == "no")$estimate) / 2
+
+undiagPwidMin <- filter(propUndiagnosed, group == "pwid", 
+                       overseas_included == "no")$lower
+
+undiagPwidMax <- filter(propUndiagnosed, group == "pwid", 
+                       overseas_included == "yes")$upper
+
+# Non-MSM
+undiagNonMSM <- (filter(propUndiagnosed, group == "non-msm", 
+                     overseas_included == "yes")$estimate +
+                filter(propUndiagnosed, group == "non-msm", 
+                       overseas_included == "no")$estimate) / 2
+
+undiagNonMsmMin <- filter(propUndiagnosed, group == "non-msm", 
+                       overseas_included == "no")$lower
+
+undiagNonMsmMax <- filter(propUndiagnosed, group == "non-msm", 
+                       overseas_included == "yes")$upper
 
 # Estimate number of people living with HIV overall -----------------------
 
@@ -1612,16 +1645,23 @@ for (mode in modes) {
                        population == mode)
   
   if (mode == "msm") {
-    infectedExp <- pldhivTemp$value / (1 - propUndiagnosed$msm_best)
-    infectedExpMin <- pldhivTemp$lower / (1 - propUndiagnosed$msm_lower)
-    infectedExpMax <- pldhivTemp$upper / (1 - propUndiagnosed$msm_upper)
+    infectedExp <- pldhivTemp$value / (1 - undiagMSM)
+    infectedExpMin <- pldhivTemp$lower / (1 - undiagMSMMin)
+    infectedExpMax <- pldhivTemp$upper / (1 - undiagMSMMax)
+  } else if (mode == "pwid") {
+    infectedExp <- pldhivTemp$value / (1 - undiagPWID)
+    infectedExpMin <- pldhivTemp$lower / (1 - undiagPwidMin)
+    infectedExpMax <- pldhivTemp$upper / (1 - undiagPwidMax)
+  } else if (mode == "hetero") {
+    infectedExp <- pldhivTemp$value / (1 - undiagHetero)
+    infectedExpMin <- pldhivTemp$lower / (1 - undiagHeteroMin)
+    infectedExpMax <- pldhivTemp$upper / (1 - undiagHeteroMax)
   } else {
-    infectedExp <- pldhivTemp$value / (1 - propUndiagnosed$non_msm_best)
-    infectedExpMin <- pldhivTemp$lower / 
-      (1 - propUndiagnosed$non_msm_lower)
-    infectedExpMax <- pldhivTemp$upper / 
-      (1 - propUndiagnosed$non_msm_upper)
-  }
+    # Other exposure -- assume same as all
+    infectedExp <- pldhivTemp$value / (1 - undiagAll)
+    infectedExpMin <- pldhivTemp$lower / (1 - undiagAllMin)
+    infectedExpMax <- pldhivTemp$upper / (1 - undiagAllMax)
+  }  
   
   # Store results 
   hivUndiag <- rbind(hivUndiag, data_frame(stage = "infected", 
@@ -1639,16 +1679,26 @@ for (pop in pops) {
   
   # Use overall undiagnosed proportion for non-indigenous and other cob. 
   # For indigenous, bornssa, born sea use non_msm undiagnosed proportion
-  if (pop == "non-indigenous" | pop == "othercob") {
+  if (pop == "non-indigenous" | pop == "othercob" | pop = "bornsea") {
     infectedPop <- pldhivTemp$value / (1 - undiagAll)
     infectedPopMin <- pldhivTemp$lower / (1 - undiagAllMin)
     infectedPopMax <- pldhivTemp$upper / (1 - undiagAllMax)
+  } else if (pop == "bornssa"){
+    infectedPop <- pldhivTemp$value / (1 - undiagHetero)
+    infectedPopMin <- pldhivTemp$lower / (1 - undiagHeteroMin)
+    infectedPopMax <- pldhivTemp$upper / (1 - undiagHeteroMax)
   } else {
-    infectedPop <- pldhivTemp$value / (1 - propUndiagnosed$non_msm_best)
-    infectedPopMin <- pldhivTemp$lower / 
-      (1 - propUndiagnosed$non_msm_lower)
-    infectedPopMax <- pldhivTemp$upper/  
-      (1 - propUndiagnosed$non_msm_upper)
+    # Indigenous and need to do a weighted calculation
+    undiagIndig <- propAborigMSM * undiagMSM + 
+      (1 - propAborigMSM) * undiagNonMSM
+    undiagIndigMin <- propAborigMSM * undiagMSMMin + 
+      (1 - propAborigMSM) * undiagNonMsmMin
+    undiagIndigMax <- propAborigMSM * undiagMSMMax + 
+      (1 - propAborigMSM) * undiagNonMsmMax
+    
+    infectedPop <- pldhivTemp$value / (1 - undiagIndig)
+    infectedPopMin <- pldhivTemp$lower / (1 - undiagIndigMin)
+    infectedPopMax <- pldhivTemp$upper / (1 - undiagIndigMax)
   }
   
   # Store results 
@@ -1672,19 +1722,19 @@ for (gender in genders) {
   pldhivTemp <- filter(hivDiagGender, stage == "pldhiv", 
                        population == gender)
   
-  # Use overall undiagnosed proportion for non-indigenous and other cob. 
-  # For indigenous, bornssa, born sea use non_msm undiagnosed proportion
-  #   if (genders[ii] == "male") {
-  infectedPop <- pldhivTemp$value / (1 - undiagAll)
-  infectedPopMin <- pldhivTemp$lower / (1 - undiagAllMin)
-  infectedPopMax <- pldhivTemp$upper / (1 - undiagAllMax)
-#   } else {
-#     infectedPop <- pldhivTemp$value / (1 - propUndiagnosed$non_msm_best)
-#     infectedPopMin <- pldhivTemp$lower / (1 - 
-#       propUndiagnosed$non_msm_lower)
-#     infectedPopMax <- pldhivTemp$upper / (1 - 
-#       propUndiagnosed$non_msm_upper)
-#   }
+  if (gender == "male") {
+    infectedPop <- pldhivTemp$value / (1 - undiagMSM)
+    infectedPopMin <- pldhivTemp$lower / (1 - undiagMSMMin)
+    infectedPopMax <- pldhivTemp$upper / (1 - undiagMSMMax)
+  } else if (gender == "female") {
+    infectedPop <- pldhivTemp$value / (1 - undiagNonMSM)
+    infectedPopMin <- pldhivTemp$lower / (1 - undiagNonMsmMin)
+    infectedPopMax <- pldhivTemp$upper / (1 - undiagNonMsmMax)
+  } else {
+    infectedPop <- pldhivTemp$value / (1 - undiagAll)
+    infectedPopMin <- pldhivTemp$lower / (1 - undiagAllMin)
+    infectedPopMax <- pldhivTemp$upper / (1 - undiagAllMax)
+  }
   
   # Store results 
   hivGenUndiag <- rbind(hivGenUndiag, data_frame(stage = "infected", 
@@ -1698,6 +1748,9 @@ for (gender in genders) {
 # Merged with gender PLDHIV and extract 2014 results
 genderTemp <- rbind(hivGenUndiag, hivDiagGender)
 genderTemp <- filter(genderTemp, year == 2014)
+
+# Store gender results 
+hivUndiag <- rbind(hivUndiag, hivGenUndiag)
 
 # Write to file for Skye
 
@@ -2022,7 +2075,7 @@ if (useClinic) {
   mainPops <- c("all", "nsw", "vic", "qld", "msm", "non-indigenous")
   
   hivRetained <- hivDiagnosed %>%
-    filter(year >= 2013, population %in% mainPops) %>%
+    filter(year >= 2014, population %in% mainPops) %>%
     mutate(retained = value * vicClinicData[1],
            retain_lower = lower * vicClinicData[2],
            retain_upper = upper * vicClinicData[3]) %>%
