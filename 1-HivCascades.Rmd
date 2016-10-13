@@ -43,6 +43,7 @@ bindCascade <- TRUE  # TRUE if we want to store all the cascade results
 saveCascade <- TRUE       # save final cascade dataframe
 saveNotifications <- TRUE # save cleaned notifications set
 saveResults <- TRUE       # save information national annual notifications
+savePldhiv <- TRUE        # save PLDHIV estimates separately
 
 # PLDHIV 
 nationalUniques <- TRUE # use proportion from National estimates for 
@@ -329,6 +330,16 @@ hivGender <- hivSet %>%
   mutate(totalnotifications  = cumsum(notifications)) %>% 
   filter(yeardiagnosis <= analysisYear)
 
+# tempGender <- hivGender %>%
+#   select(-notifications) %>%  
+#   spread(sex, totalnotifications)
+# 
+# tempGender[is.na(tempGender)] <- 0
+# 
+# tempGender <- tempGender %>%  
+#   mutate(propmale = male/(female + male + transgender + unknown)) %>%
+#   select(yeardiagnosis, propmale)
+
 # Create some useful diagnoses data plots ---------------------------------
 if (plots) {
   graphics.off()
@@ -604,18 +615,39 @@ if (permDeparts) {
   # Use permanent departures
   absDeparts <- mutate(absDeparts, migrate = permanent / erp)
   mrate <- absDeparts$migrate
-  # WARNING: where migration rates experimented on
-  # mrate <- (absDeparts$rate_permanent + absDeparts$overall_rate) / 2 / 2
+
   
-  # mrate is missing a value for 1980 assume same value as 1981
-  mrate <- c(mrate[1], mrate)
-  lmrate <- 0
-  umrate <- mrate
-  mrate <- mrate / 2
-  
-  # WARNING: where migration rates experimented on
-  # lmrate <- c(absDeparts$rate_permanent[1], absDeparts$rate_permanent)
-  # umrate <- c(absDeparts$overall_rate[1], absDeparts$overall_rate)
+  if (analysisYear <= 2014) {
+    # Keep methdology for 2014 cascade for replication purposes
+    
+    # mrate is missing a value for 1980 assume same value as 1981
+    mrate <- c(mrate[1], mrate)
+    lmrate <- 0
+    umrate <- mrate
+    mrate <-  mrate / 2
+    
+  } else{
+    # Change in methodlogy for migration rates from 2015.
+    
+    # Hard coded adjustment factor to account for age > 15 years and 
+    # sex
+    relativeRate <- c(1.2499, 1.2499,	1.2499,	1.240169381, 1.235807895,
+                      1.235391781, 1.236048319,	1.236375068, 1.236578904,
+                      1.235863902, 1.23556672, 1.235166515,	1.234926588,
+                      1.234456001, 1.234217118, 1.233938271, 1.233473343,
+                      1.232885687, 1.23528249, 1.234803523, 1.234243908,
+                      1.231400608, 1.231146313, 1.230567577, 1.22257888,
+                      1.211940692, 1.20153294, 1.191640652, 1.180852205,
+                      1.170562151, 1.160456052,	1.150374872, 1.140323439,
+                      1.130276173,	1.12031362)
+    
+    mrate <- relativeRate * mrate
+    
+    # mrate is missing a value for 1980 assume same value as 1981
+    mrate <- c(mrate[1], mrate)
+    lmrate <- 0
+    umrate <- 2 * mrate
+  }
   
   # Fill in the state values
   for (state in states) {
@@ -1205,9 +1237,9 @@ modes <- keyGroups
 pops <- c("non-indigenous", "indigenous", "bornssa", "bornsea","othercob")
 # npops <- length(pops)
 
-# First do a quick calculation to work out proportion of  all
-# notifications which are indigenous to adjust mortality and migration
-# rates. 
+# First do a quick calculation to work out proportion of cumulative
+# notifications (as an approximation for PLDHIV) which are indigenous to 
+# adjust mortality and migration rates. 
 
 if (indigKnown) {
   # Use known indigenous diagnoses
@@ -1241,11 +1273,11 @@ if (indigKnown) {
 
 nonAborigDiags <- cumDiagnoses - aborigDiags
 
-nonAborigMortality <- deathRate * ((1-aborigMortality) *
+nonAborigMortalityFactor <- ((1-aborigMortality) *
                       fillAborigDiags$value + 
                       nonAborigDiags) / nonAborigDiags
 
-nonAborigMigration <- migrationRate * cumDiagnoses / nonAborigDiags
+nonAborigMigrationFactor <- cumDiagnoses / nonAborigDiags
   
 
 for (pop in pops) {
@@ -1324,26 +1356,41 @@ for (pop in pops) {
   
   # Do the Pop calculation and range - if indigenous adjust mortality rate 
   # appropriately
-  mortalityMultiplier <- ifelse(pop == "indigenous", aborigMortality, 1)
-  mortalityMultiplierMin <- ifelse(pop == "indigenous", 
-                                   aborigMortalityMin, 1)
-  mortalityMultiplierMax <- ifelse(pop == "indigenous", 
-                                   aborigMortalityMax, 1)
-  
-  # If non-Indigenous then no need to adjust death rate to account 
-  # for higher indigenous rate. Use notifications proportion for 
-  # calculation. 
-  pldhivPop <- LivingDiagnosed(cumPopDiags, 
-                               mortalityMultiplier * deathRate,
-                               migrationRate)
-  
-  pldhivPopMin <- LivingDiagnosed(cumPopDiags, 
-                                  mortalityMultiplierMin * deathRateMax,
-                                  migrationRateMax)
-  
-  pldhivPopMax <- LivingDiagnosed(cumPopDiags, 
-                                  mortalityMultiplierMax * deathRateMin,
-                                  migrationRateMin)
+  # mortalityMultiplier <- ifelse(pop == "indigenous", aborigMortality, 1)
+  # mortalityMultiplierMin <- ifelse(pop == "indigenous", 
+  #                                  aborigMortalityMin, 1)
+  # mortalityMultiplierMax <- ifelse(pop == "indigenous", 
+  #                                  aborigMortalityMax, 1)
+
+  if (pop == "indigenous") {
+    pldhivPop <- LivingDiagnosed(cumPopDiags, 
+                                 aborigMortality * deathRate,
+                                 rep(0, nyears))
+    
+    pldhivPopMin <- LivingDiagnosed(cumPopDiags, 
+                                    aborigMortalityMax * deathRateMax,
+                                    rep(0, nyears))
+    
+    pldhivPopMax <- LivingDiagnosed(cumPopDiags, 
+                                    aborigMortalityMin * deathRateMin,
+                                    rep(0, nyears))
+  } else {
+    pldhivPop <- LivingDiagnosed(cumPopDiags, 
+                                 nonAborigMortalityFactor * deathRate,
+                                 nonAborigMigrationFactor * migrationRate)
+    
+    pldhivPopMin <- LivingDiagnosed(cumPopDiags, 
+                                    nonAborigMortalityFactor * 
+                                      deathRateMax,
+                                    nonAborigMigrationFactor * 
+                                      migrationRateMax)
+    
+    pldhivPopMax <- LivingDiagnosed(cumPopDiags, 
+                                    nonAborigMortalityFactor * 
+                                      deathRateMin,
+                                    nonAborigMigrationFactor *
+                                      migrationRateMin)
+  }
   
   # Store the population results
   hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
@@ -2257,7 +2304,7 @@ if (bindCascade) {
 ```
 
 ```{r cleanup}
-# Save HIV results dataframe 
+# Save HIV results dataframe
 if (saveResults) {
   # Directory and file name
   saveString <- file.path(outputFolder, 
@@ -2271,6 +2318,20 @@ if (saveResults) {
   save(hivResults, file = paste(saveString, ".rda", sep =""))
   save(hivGender, hivDiagGender, 
        file = paste(saveString, "_gender.rda", sep =""))
+}
+
+# Save PLDHIV stage - used for the ECDC model estimates
+if (savePldhiv) {
+  # Directory and file name
+  saveString <- file.path(outputFolder, 
+    paste("HIVpldhivEstimates-", toString(analysisYear), sep = ""))
+  
+  # Write to csv
+  write.csv(hivDiagnosed, file = paste(saveString, ".csv", sep =""), 
+            row.names = FALSE)
+  
+  # Save as R object
+  save(hivDiagnosed, file = paste(saveString, ".rda", sep =""))
 }
 
 # Save final HIV cascades data frame
