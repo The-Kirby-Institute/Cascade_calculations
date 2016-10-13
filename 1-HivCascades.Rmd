@@ -1034,6 +1034,11 @@ if (plots) {
 ```{r livingdiags}
 # This chunk now estimates the number of people living with diagnosed HIV. 
 
+# Hard coded initial migration values based on NSW data post-diagnosis
+propStay <- 0.98
+propStayLower <- 0.96
+propStayUpper <- 1
+
 # Initialize final results data frame
 hivDiagnosed <- data.frame(stage = character(), 
                            year = double(),
