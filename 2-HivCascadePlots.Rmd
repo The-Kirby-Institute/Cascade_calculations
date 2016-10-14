@@ -42,7 +42,7 @@ source(file.path(basePath, "code", "FormatData.R"), echo=TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2014  # year of cascade we will plot
+resultsYear <- 2015  # year of cascade we will plot
 minYear <- 10        # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE    # save plots as separate files
@@ -670,20 +670,20 @@ for (ii in seq(along = states)){
                         labels = c("iPharmacies", "PBS")) +
       scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
       ylab("Number of people") + xlab("") +  
-      plotopts  
+      plotOpts  
   } else {
     plotbarState <- ggplot(data = resultsStatesYear, 
                            aes(x = stage, y = value)) + 
-      geom_bar(stat = "identity", color = maincols[2], 
-               fill = maincols[2], width = 0.6) +
+      geom_bar(stat = "identity", color = asrcols[2], 
+               fill = asrcols[2], width = 0.6) +
       geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
                     color = "black", size = 1.2) +
       scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
       ylab("Number of people") + xlab("") +  
-      plotopts
+      plotOpts
   }
   # Save if required
-  if (saveplots) {
+  if (savePlots) {
     png(file.path(figFolder, paste("HIVcascade-", states[ii] ,"-", 
                                    toString(resultsYear), ".png",sep ="")),
         width = 5, height = 5, units = "in", res = 300)
@@ -695,12 +695,12 @@ for (ii in seq(along = states)){
 
 **Figure 1** -- The HIV care and treatment cascade for Australia in `r resultsYear`.
 ```{r insertplot1, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3}
-print(plotbarAll)
+print(plotBarAll)
 ```
 
 <!--- **Figure 2** -- The HIV care and treatment cascade stages `r resultsYear - minYear`-`r resultsYear`. --->
 ```{r insertplot2, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3.5}
-# print(plotstagesAll)
+# print(plotStagesAll)
 ```
 
 ```{r createtable1, echo = FALSE, messages = FALSE, include = FALSE}
@@ -715,7 +715,7 @@ finalTable$estimate <- NA
 if (excludeCare) {
   skip <- NULL #c(3)
 } else {
-  skip <- c(4,5)
+  skip <- NULL # c(3, 4)
 }
 
 for (ii in 1:nrow(tableAll)){
@@ -732,14 +732,14 @@ for (ii in 1:nrow(tableAll)){
 if (excludeCare) { 
   finalTable[1:4,] <- finalTable[c(2, 1, 3, 4),]
 } else {
-  finalTable[1:6,] <- finalTable[c(2, 1, 3, 5, 4, 6),]
+  finalTable[1:5,] <- finalTable[c(2, 1, 4, 3, 5),]
 }
 
 # Remove NA from final range
 # finalTable[finalTable$stage == "numART",]$stimate <- "-"
 
 # Rename first column
-finalTable$stage <- stageNames
+finalTable$stage <- stageNames[c(1, 2, 4, 5, 6)]
 
 # Rename columns
 finalTable <- rename(finalTable, "Cascade stage" = stage, 
@@ -758,45 +758,56 @@ kable(finalTable, align = c("l", "c", "c"))
 # Create bar charts of current year's cascade for each state
 states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act")
 
-# resultsState <- filter(hivCascade, population %in% states & year >= (resultsYear - minYear))
-resultsStatesYear <- filter(hivCascade, population %in% states & year == resultsYear)
+resultsStatesYear <- filter(hivCascade, population %in% states, 
+                            year == resultsYear, stage != "retained")
 
 resultsStatesYear$stage <- factor(resultsStatesYear$stage)
+excludeCare <- TRUE
 if (excludeCare) {
   levels(resultsStatesYear$stage) <- c("Living with HIV", "Receiving ART", 
                                 "Diagnosed", "Suppressed virus")
-  resultsStatesYear <- within(resultsStatesYear, stage <- factor(stage, levels(stage)[c(1, 3, 2, 4)]))  
+  resultsStatesYear <- within(resultsStatesYear, 
+                              stage <- factor(stage, 
+                                      levels(stage)[c(1, 3, 2, 4)]))  
 } else {
- levels(resultsStatesYear$stage) <- c("Living with HIV", "Linked to care", 
-                              "Receiving ART", "Diagnosed", 
+ levels(resultsStatesYear$stage) <- c("Diagnosed", "Living with HIV", 
+                              "Receiving ART", 
                               "Retained in care", "Suppressed virus")
   resultsStatesYear <- within(resultsStatesYear, stage <- 
-                                factor(stage, levels(stage)[c(1, 4, 2, 5, 3, 6)])) 
+                          factor(stage, levels(stage)[c(1, 3, 4, 2, 5)])) 
   
 }
+excludeCare <- FALSE
 
 # Set up state factor levels
 resultsStatesYear$population <- factor(resultsStatesYear$population)
-levels(resultsStatesYear$population) <- c("ACT", "NSW", "Northern Territory",
-                                          "Queensland", "South Australia", "Tasmania",
+levels(resultsStatesYear$population) <- c("ACT", "NSW", 
+                                          "Northern Territory",
+                                          "Queensland", "South Australia",
+                                          "Tasmania",
                                           "Victoria", "Western Australia")
 
 resultsStatesYear <- within(resultsStatesYear, 
-    population <- factor(population, levels(population)[c(2, 7, 4, 8, 5, 1, 6, 3)]))
+    population <- factor(population, 
+                         levels(population)[c(2, 7, 4, 8, 5, 1, 6, 3)]))
 
 
 ### Plot the bar charts
-plotbarAllStates <- ggplot(data = resultsStatesYear, aes(x = stage, y = value)) + 
-  geom_bar(stat = "identity", color = maincols[2], fill = maincols[2], width = 0.6) +
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, color = "black", size = 1.2) +
+plotbarAllStates <- ggplot(data = resultsStatesYear, 
+                           aes(x = stage, y = value)) + 
+  geom_bar(stat = "identity", color = asrcols[2], 
+           fill = asrcols[2], width = 0.6) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
+                color = "black", size = 1.2) +
   facet_wrap(~ population, scales = "free") + 
-  scale_x_discrete(labels = "") + 
+  scale_x_discrete(labels = NULL) + 
   ylab("Number of people") + xlab("") +  
-  plotopts
+  plotOpts
 
 # Save if required
-if (saveplots) {
-  png(file.path(figFolder, paste("HIVcascade-States-", toString(resultsYear), ".png",sep ="")), 
+if (savePlots) {
+  png(file.path(figFolder, paste("HIVcascade-States-",
+                                 toString(resultsYear), ".png",sep ="")), 
         width = 8, height = 6, units = "in", res = 300)
   print(plotbarAllStates)
   dev.off()
@@ -815,7 +826,8 @@ print(plotbarAllStates)
 # Create bar charts of current year's cascade for each state
 states <- c("nsw", "vic", "qld", "wa", "sa", "act", "tas", "nt", "all")
 
-stateTable <- filter(hivCascade, population %in% states & year == resultsYear)
+stateTable <- filter(hivCascade, 
+                     population %in% states & year == resultsYear)
 
 # Convert population from factor to character
 index <- sapply(stateTable, is.factor)
@@ -827,14 +839,15 @@ finalTable <- stateTable %>%
 finalTable$estimate <- NA
 
 # Convert lower and upper into a range string
-
 for (ii in 1:nrow(stateTable)){
   if (stateTable$stage[ii] == "linked") {
-    finalTable$estimate[ii] <- FormatData(stateTable$value[ii], places = -1)
+    finalTable$estimate[ii] <- FormatData(stateTable$value[ii], 
+                                          places = -1)
   } else {
     finalTable$estimate[ii] <- FormatData(stateTable$value[ii], 
                                            stateTable$lower[ii], 
-                                           stateTable$upper[ii], places = -1)
+                                           stateTable$upper[ii], 
+                                          places = -1)
   }
 }
 
@@ -844,11 +857,12 @@ if (excludeCare) {
                                 "Diagnosed", "Suppressed virus")
   finalTable <- within(finalTable, stage <- factor(stage, levels(stage)[c(1, 3, 2, 4)]))  
 } else {
- levels(finalTable$stage) <- c("Living with HIV", "Linked to care", 
+ levels(finalTable$stage) <- c("Living with HIV", 
                               "Receiving ART", "Diagnosed", 
                               "Retained in care", "Suppressed virus")
   finalTable <- within(finalTable, stage <- 
-                                factor(stage, levels(stage)[c(1, 4, 2, 3, 5, 6)])) 
+                                factor(stage, 
+                                       levels(stage)[c(1, 3, 4, 2, 5)])) 
   
 }
 
@@ -856,13 +870,13 @@ if (excludeCare) {
 finalTable <- spread(finalTable, stage, estimate)
 
 # Reorder columns and rows
-if (!excludeCare) {
-  finalTable <- finalTable[,c(1, 2, 5, 3, 6, 4, 7)]
-}
-finalTable <- finalTable[c(3, 8, 5, 9, 6, 1, 7, 4, 2),]
+# if (!excludeCare) {
+#   finalTable <- finalTable[,c(1, 2, 5, 3, 6, 4, 7)]
+# }
+# finalTable <- finalTable[c(3, 8, 5, 9, 6, 1, 7, 4, 2),]
 
 # Reformat names
-colnames(finalTable) <- c("State", stageNames)
+colnames(finalTable) <- c("State", stageNames[c(1:2, 4:6)])
 finalTable$State <- toupper(states)
 finalTable$State[9] <- "National"
 
@@ -871,7 +885,7 @@ finalTable$State[9] <- "National"
 **Table 2** -- The HIV care and treatment cascade estimates for each State and Territory in `r resultsYear`. The table shows the cascade estimates with ranges in brackets for each State and Territory.
 
 ```{r inserttable2, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
-kable(finalTable, align = c("l", "c", "c", "c", "c", "c", "c"))
+kable(finalTable, align = c("l", "c", "c", "c", "c", "c"))
 ```
 
 # Key population group estimates
@@ -887,8 +901,11 @@ popNames <- c("Non-indigenous \n Australians", "Indigenous \n Australians",
               "Other country \n of birth") 
 
 # Extract the results
-expResults <- filter(hivCascade, population %in% modes & year == resultsYear & stage != "linked")
-popResults <- filter(hivCascade, population %in% pops & year == resultsYear & stage != "linked")
+expResults <- filter(hivCascade, population %in% modes, 
+                     year == resultsYear, 
+                     stage != "linked", stage != "retained")
+popResults <- filter(hivCascade, population %in% pops, year == resultsYear,
+                     stage != "linked", stage != "retained")
 
 # Create the plots
 plotModeBar <- ggplot(data = expResults, aes(x = population, y = value, fill = stage)) + 
@@ -899,7 +916,7 @@ plotModeBar <- ggplot(data = expResults, aes(x = population, y = value, fill = s
   scale_fill_brewer(palette = "Set1", name = "", labels = c("Living with HIV", "Diagnosed")) + 
   scale_x_discrete(limits = modes, labels = modeNames) + 
   ylab("Number of people") + xlab("") +  
-  plotopts
+  plotOpts
 
 plotPopBar <- ggplot(data = popResults, aes(x = population, y = value, fill = stage)) + 
   geom_bar(position = "dodge", stat = "identity") + 
@@ -909,10 +926,10 @@ plotPopBar <- ggplot(data = popResults, aes(x = population, y = value, fill = st
   scale_fill_brewer(palette = "Set1", name = "", labels = c("Living with HIV", "Diagnosed")) + 
   scale_x_discrete(limits = pops, labels = popNames) + 
   ylab("Number of people") + xlab("") +  
-  plotopts
+  plotOpts
 
 # Save if required
-if (saveplots) {
+if (savePlots) {
   png(file.path(figFolder, paste("HIVcascade-Modes-", toString(resultsYear), ".png",sep ="")), 
         width = 6, height = 4, units = "in", res = 300)
   print(plotModeBar)
@@ -941,13 +958,13 @@ finalTable$Range <- NA
 
 # Convert lower and upper into a range string
 for (ii in 1:nrow(tableExp)){
-  finalTable$Range[ii] <-paste("(", toString(tableExp$lower[ii]), "-", 
-                                     toString(tableExp$upper[ii]),")", sep = "")
+  finalTable$Range[ii] <-paste0("(", toString(tableExp$lower[ii]), "-", 
+                                     toString(tableExp$upper[ii]),")")
 }
 
 # Manually reorder rows
 finalTable <- arrange(finalTable, population, stage)
-finalTable <- finalTable[c(3,4,1,2,7,8,5,6),]
+finalTable <- finalTable[c(3, 4, 1, 2, 7, 8, 5, 6),]
 
 # Rename first column
 finalTable[finalTable$stage == "infected",]$stage <- "Living with HIV"
@@ -961,7 +978,8 @@ finalTable[finalTable$population == "otherexp",]$population <- "Other"
 
 # Rename columns
 finalTableExp <- rename(finalTable, "Cascade stage" = stage, 
-                     "Population by exposure" = population, Estimate = value)
+                     "Population by exposure" = population, 
+                     Estimate = value)
 
 ```
 
@@ -991,7 +1009,7 @@ for (ii in 1:nrow(tablePop)){
 
 # Manually reorder rows
 finalTable <- arrange(finalTable, population, stage)
-finalTable <- finalTable[c(7,8,5,6,1,2,3,4,9,10),]
+finalTable <- finalTable[c(7, 8, 5, 6, 1, 2, 3, 4, 9, 10),]
 
 # Rename first column
 finalTable[finalTable$stage == "infected",]$stage <- "Living with HIV"
