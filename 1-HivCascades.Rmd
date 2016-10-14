@@ -1562,7 +1562,7 @@ undiagHeteroMax <- filter(propUndiagnosed, group == "hetero",
                        overseas_included == "yes")$upper
 
 # PWID
-undigaPWID <- (filter(propUndiagnosed, group == "pwid", 
+undiagPWID <- (filter(propUndiagnosed, group == "pwid", 
                      overseas_included == "yes")$estimate +
                 filter(propUndiagnosed, group == "pwid", 
                        overseas_included == "no")$estimate) / 2
@@ -1679,7 +1679,7 @@ for (pop in pops) {
   
   # Use overall undiagnosed proportion for non-indigenous and other cob. 
   # For indigenous, bornssa, born sea use non_msm undiagnosed proportion
-  if (pop == "non-indigenous" | pop == "othercob" | pop = "bornsea") {
+  if (pop == "non-indigenous" | pop == "othercob" | pop == "bornsea") {
     infectedPop <- pldhivTemp$value / (1 - undiagAll)
     infectedPopMin <- pldhivTemp$lower / (1 - undiagAllMin)
     infectedPopMax <- pldhivTemp$upper / (1 - undiagAllMax)
