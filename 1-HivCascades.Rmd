@@ -1945,7 +1945,8 @@ prospectionData <- read.csv(file.path(dataFolder,
 # Tidy up the prospection data
 hivTreatedPbs <- prospectionData %>%
   filter(gender == "all") %>%
-  select(-gender) 
+  select(-gender) %>%
+  tbl_df()
 
 yearNames <- strsplit(toString(2013:analysisYear), ", ")[[1]]
 
@@ -1954,6 +1955,22 @@ hivTreatedPbs <- gather(hivTreatedPbs,"year", "value",
                         2:ncol(hivTreatedPbs))
 hivTreatedPbs$year <- as.numeric(as.character(hivTreatedPbs$year))
 
+# Append overall gender data 
+genderTreatedPbs <- prospectionData %>%
+  filter(gender %in% c("m", "f"), state == "all") %>%
+  select(-state) %>%
+  mutate(gender = c("male", "female")) %>%
+  tbl_df()
+
+colnames(genderTreatedPbs) <- c("population", yearNames)
+
+genderTreatedPbs <- gather(genderTreatedPbs,"year", "value",
+                        2:ncol(genderTreatedPbs))
+genderTreatedPbs$year <- as.numeric(as.character(genderTreatedPbs$year))
+
+hivTreatedPbs <- bind_rows(hivTreatedPbs, genderTreatedPbs)
+
+# Set-up range columns
 hivTreatedPbs$lower <- NA
 hivTreatedPbs$upper <- NA
 
@@ -1974,17 +1991,18 @@ hivTreated <- rbind(filter(select(artEstimates, -contains("trend")),
 # Add stage column
 hivTreated$stage <- "numART"
 
+# Calculate number on treatment for states and genders --------------------
+
 # Use the relative rates to number in states
 
-states <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act")
+populations <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act", 
+            "male", "female")
 
-# Calculate number on treatment for states --------------------------------
-
-# since 2000-2012
-for (region in states) {
+# Estimate state values for 2000-2012 using artEstimate trends (up to 2014)
+for (pop in populations) {
   # Extract final year data 
-  treatFinal <- filter(hivTreated, population == region,
-                       year %in% c(2013, 2014))
+  treatFinal <- filter(hivTreated, population == pop,
+                       year %in% c(2013:2014))
   
   # index positions
   indexFinal <- nrow(artEstimates)
@@ -1997,7 +2015,7 @@ for (region in states) {
   tempUpr <- tempFit * artEstimates$trendupr
   
   # Create a data frame 
-  tempDf <- data_frame(population = region, year = 2000:2014,
+  tempDf <- data_frame(population = pop, year = 2000:2014,
                        value = tempFit, lower = tempLwr, upper = tempUpr, 
                        stage = "numART")
   
@@ -2010,27 +2028,27 @@ hivTreated <- hivTreated %>%
   arrange(population, year) %>%
   filter(year <= analysisYear)
 
-# calculate uncertainty in Prospection data
+
+# calculate uncertainty in Prospection data -------------------------------
 popData <- read_excel(file.path(dataFolder, "ABS_population_sizes.xlsx"),
                       sheet = 2)
 source(file.path(Rcode, "pharmDashError.R"), echo=TRUE)
 
-
-# Loop through years and regions appenidng lower and upper
+# Loop through years and regions appending lower and upper
 prospectionYears <- c(2013, 2014, 2015)
-regions <- c(states, "all")
+regions <- c(populations, "all")
 
 for (nyear in prospectionYears) {
- for (state in regions) {
-   numArt <- filter(hivTreated, year == nyear, population == state)$value
-   numPop <- filter(popData, year == nyear, population == state)$erp
+ for (pop in regions) {
+   numArt <- filter(hivTreated, year == nyear, population == pop)$value
+   numPop <- filter(popData, year == nyear, population == pop)$erp
    
    error <- PharmDashError(numPop, numArt)
    
    hivTreated[(hivTreated$year == nyear & 
-                 hivTreated$population == state) , ]$lower <- error$lower
+                 hivTreated$population == pop) , ]$lower <- error$lower
    hivTreated[(hivTreated$year == nyear & 
-                 hivTreated$population == state) , ]$upper <- error$upper
+                 hivTreated$population == pop) , ]$upper <- error$upper
    
    } 
 }
@@ -2091,7 +2109,7 @@ hivRetained <- data.frame(stage = character(),
                          upper = double())
 
 if (useClinic) {
-  # Use McMahon et al data for 2014 onwards
+  # Use McMahon et al data for 2013 onwards
   # Hardcoded: value, lower, upper.  Lower and upper ranges correspond 
   # to the range for the percentage retained after follow-up in McMahon 
   # et al., Clinic Network Collaboration and Patient Tracing to Maximize 
@@ -2099,10 +2117,11 @@ if (useClinic) {
   vicClinicData <- c(0.95, 0.914, 0.988)
   
   # Calculated retained in care post 2014 for all the main populations
-  mainPops <- c("all", "nsw", "vic", "qld", "msm", "non-indigenous")
+  mainPops <- c("all", "nsw", "vic", "qld", "msm", "non-indigenous",
+                "male", "female")
   
   hivRetained <- hivDiagnosed %>%
-    filter(year >= 2014, population %in% mainPops) %>%
+    filter(year >= 2013, population %in% mainPops) %>%
     mutate(retained = value * vicClinicData[1],
            retain_lower = lower * vicClinicData[2],
            retain_upper = upper * vicClinicData[3]) %>%
@@ -2223,7 +2242,7 @@ if (useClinic) {
   
   
   # Bind to hivretained
-  hivretained <- rbind(hivretained, data.frame(stage = "retained", 
+  hivRetained <- rbind(hivRetained, data.frame(stage = "retained", 
     year = treatYears, population = "all",
     value = receivedCare + treatValue,
     lower = receivedCare + treatLower,
@@ -2303,7 +2322,7 @@ if (useClinic) {
       receivedCare <- (numvlTests/avevlTests)
     }
     # Bind to hivretained
-    hivretained <- rbind(hivretained, 
+    hivRetained <- rbind(hivRetained, 
                          data.frame(stage = "retained", 
                                     year = treatYears,
                                     population = region,
@@ -2355,22 +2374,44 @@ propSuppressed <- ahodData %>%
            sqrt(prop200 * (1 - prop200) / n),
          prop200upper = prop200 + qnorm(0.975) * 
            sqrt(prop200 * (1 - prop200) / n)) %>%
-  filter(year <= analysisYear)
+  filter(year <= analysisYear) %>%
+  ungroup() %>%
+  rename(population = state)
 
-dataStart <- min(propSuppressed$year)
+# Append male and female data
+propSuppressed <- ahodData %>%
+  select(one_of(c("year", "state", "population", "n_id")), 
+         starts_with("n_rx"), -n_rx) %>% 
+  filter(population %in% c("MALE", "FEMALE"), state == "all") %>%
+  mutate(population = tolower(population)) %>%
+  select(-state) %>%
+  group_by(year, population) %>%
+  summarise(n = sum(n_id),
+            n200 = sum(n_rx200)) %>%
+  mutate(prop200 = n200/n) %>%
+  # Added 95% confidence interval
+  mutate(prop200lower = prop200 - qnorm(0.975) * 
+           sqrt(prop200 * (1 - prop200) / n),
+         prop200upper = prop200 + qnorm(0.975) * 
+           sqrt(prop200 * (1 - prop200) / n)) %>%
+  filter(year <= analysisYear) %>%
+  bind_rows(propSuppressed, .)
+
+dataStart <- min(propSuppressed$year) 
 
 # TODO: by exposure mode
 
-# Loop through states and calculate number suppressed. 
-states <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas", "all")
-availableStates <- c("all", "nsw", "vic", "qld")
+# Loop through populations and calculate number suppressed. 
+populations <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas",
+                 "all", "male", "female")
+availablePops <- c("all", "nsw", "vic", "qld", "male", "female")
 
-for (region in states) {
+for (pop in populations) {
   # Proportion suppressed
-  if(region %in% availableStates) {
-    tempDf <- filter(propSuppressed, state == region)
+  if(pop %in% availablePops) {
+    tempDf <- filter(propSuppressed, population == pop)
   } else {
-    tempDf <- filter(propSuppressed, state == "all")
+    tempDf <- filter(propSuppressed, population == "all")
   }
   
   tempProp <- tempDf$prop200
@@ -2378,7 +2419,7 @@ for (region in states) {
   tempPropMax <- tempDf$prop200upper
   
   # Number treated 
-  treatDf <- filter(hivTreated, population == region, year >= dataStart)
+  treatDf <- filter(hivTreated, population == pop, year >= dataStart)
   tempTreat <- treatDf$value
   tempTreatMin <- treatDf$lower
   tempTreatMax <- treatDf$upper
@@ -2389,7 +2430,7 @@ for (region in states) {
   hivSuppressed <- rbind(hivSuppressed, 
                          data.frame(stage = "suppressed",  
                          year = tempDf$year,
-                         population = region,
+                         population = pop,
                          value = tempTreat * tempProp,
                          lower = tempTreatMin * tempPropMin,
                          upper = tempTreatMax * tempPropMax)) 
@@ -2404,6 +2445,34 @@ if (bindCascade) {
 }
 
 ```
+
+```{r }
+# This chunck is used to replace current estimates with estimates for 
+# specific populations obtained separately for a specific time period.
+
+# Replace hard coded estimates
+if (replaceValues) {
+  
+# Load hard coded estimates
+
+  
+# Loop through 
+for (ii in nrow()) {
+  hivCascade %>%
+    filter(population == temp$population[ii], 
+           stage == temp$stage[ii],
+           year == temp$year[ii]) %>%
+    mutate(value = temp$value[ii],
+           lower = temp$lower[ii],
+           upper = temp$upper[ii])
+  
+}
+  
+  
+}
+
+```
+
 
 ```{r cleanup}
 # Save HIV results dataframe
