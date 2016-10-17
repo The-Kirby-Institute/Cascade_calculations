@@ -71,7 +71,7 @@ useCD4 <- FALSE # use CD4 AHOD and testing data for retained in care if
                 # we don't use McMahon data
 
 # Treated
-addTempRes <- FALSE # Add estimates for temporary residents on ART
+addTempRes <- TRUE # Add estimates for temporary residents on ART
 
 # Overall
 replaceValues <- FALSE # Replace with specific estimates
@@ -2482,27 +2482,35 @@ if (bindCascade) {
 
 ```{r replace values}
 # This chunck is used to replace current estimates with estimates for 
-# specific populations obtained separately for a specific time period.
+# specific populations obtained separately for a specific time period. 
+# These values are read in from a csv file. 
 
 # Replace hard coded estimates
 if (replaceValues) {
   
 # Load hard coded estimates
-
+  hardCodeValues <- read.csv(file.path(dataFolder,
+                                   "Hard_coded_estimates.csv"))
   
-# Loop through 
-for (ii in 1:nrow()) {
-  hivCascade %>%
-    filter(population == temp$population[ii], 
-           stage == temp$stage[ii],
-           year == temp$year[ii]) %>%
-    mutate(value = temp$value[ii],
-           lower = temp$lower[ii],
-           upper = temp$upper[ii])
-  
-}
-  
-  
+  # Replace with updated values
+  for (ii in 1:nrow(hardCodeValues)) {
+    hivCascade <- hivCascade %>%
+      mutate(value = ifelse(population == hardCodeValues$population[ii] &
+                            year == hardCodeValues$year[ii] &
+                            stage == hardCodeValues$stage[ii], 
+                            hardCodeValues$value[ii],
+                            value),
+             lower = ifelse(population == hardCodeValues$population[ii] &
+                            year == hardCodeValues$year[ii] &
+                            stage == hardCodeValues$stage[ii], 
+                            hardCodeValues$lower[ii],
+                            lower),
+             upper = ifelse(population == hardCodeValues$population[ii] &
+                            year == hardCodeValues$year[ii] &
+                            stage == hardCodeValues$stage[ii], 
+                            hardCodeValues$upper[ii],
+                            upper))
+  }
 }
 
 ```
