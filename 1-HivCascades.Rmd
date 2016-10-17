@@ -70,6 +70,12 @@ useClinic <- TRUE # use McMahon et al clinic data  for retained in care
 useCD4 <- FALSE # use CD4 AHOD and testing data for retained in care if
                 # we don't use McMahon data
 
+# Treated
+addTempRes <- FALSE # Add estimates for temporary residents on ART
+
+# Overall
+replaceValues <- FALSE # Replace with specific estimates
+
 ```
 
 ```{r functions}
@@ -1939,8 +1945,8 @@ artEstimates <- read.csv(file.path(dataFolder, "ART_Estimates-2014.csv"))
 
 # Reload Prospection PBS data to get gender and state estimates
 prospectionData <- read.csv(file.path(dataFolder, 
-  paste("pharmdash_HIVpatients", toString(analysisYear), 
-    ".csv", sep = "")), as.is = c(1, 2))
+  paste0("pharmdash_HIVpatients", toString(analysisYear), 
+    ".csv")), as.is = c(1, 2))
 
 # Tidy up the prospection data
 hivTreatedPbs <- prospectionData %>%
@@ -2051,6 +2057,34 @@ for (nyear in prospectionYears) {
                  hivTreated$population == pop) , ]$upper <- error$upper
    
    } 
+}
+
+# Add medicare ineligibles
+if (addTempRes) {
+  
+  # Load the temporary resident estimates
+  tempResArt <- read.csv(file.path(dataFolder,
+                                   "ART_medicare_ineligible.csv"))
+  
+  # Replace with updated values
+  for (ii in 1:nrow(tempResArt)) {
+    hivTreated <- hivTreated %>%
+      mutate(value = ifelse(population == tempResArt$population[ii] &
+                            year == tempResArt$year[ii] &
+                            stage == "numART", 
+                            value + tempResArt$value[ii],
+                            value),
+             lower = ifelse(population == tempResArt$population[ii] &
+                            year == tempResArt$year[ii] &
+                            stage == "numART", 
+                            lower + tempResArt$lower[ii],
+                            lower),
+             upper = ifelse(population == tempResArt$population[ii] &
+                            year == tempResArt$year[ii] &
+                            stage == "numART", 
+                            upper + tempResArt$upper[ii],
+                            upper))
+  }
 }
 
 # Finally bind to overall results
@@ -2446,7 +2480,7 @@ if (bindCascade) {
 
 ```
 
-```{r }
+```{r replace values}
 # This chunck is used to replace current estimates with estimates for 
 # specific populations obtained separately for a specific time period.
 
@@ -2457,7 +2491,7 @@ if (replaceValues) {
 
   
 # Loop through 
-for (ii in nrow()) {
+for (ii in 1:nrow()) {
   hivCascade %>%
     filter(population == temp$population[ii], 
            stage == temp$stage[ii],
