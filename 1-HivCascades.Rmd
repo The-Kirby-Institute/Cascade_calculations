@@ -801,6 +801,15 @@ hivInterstate <- mutate(hivInterstate, arriverate = arrivals / intererp)
 # Gives indication of rate people move interstate nationally
 hivInterstate[hivInterstate$state == "all", ]$arriverate <- 
   hivInterstate[hivInterstate$state == "all", ]$departrate
+
+# Add a net leaving rate relative to state ERP -- useful for separate 
+# state calculations 
+hivInterstate <- mutate(hivInterstate, 
+                        netrate = (departures - arrivals) / erp)
+
+
+
+
 ```
 
 Sort out deathrates
@@ -825,10 +834,6 @@ for (ii in 1:nrow(hivParams)) {
 }
 
 # Load AHOD data to calculate mortality and do some simple cleaning
-
-
-# WARNING --- TEMP HACK AS I DON'T HAVE 2015 DATA YET
-# tempYear <- 2015
 ahodData <- read.csv(file.path(dataFolder, 
                                paste("ahod", toString(analysisYear), 
                                      ".csv", sep = "")))
@@ -895,7 +900,7 @@ linkageMortalityMin <- deaths_min/numLiving_max
 linkageMortalityMax <- deaths_max/numLiving_min
 
 # NSW death rates -------------------------------------------------------
-# For NSW use NSW death data
+
 nswData <- read.csv(file.path(dataFolder, 
                                paste0("nswDeaths-",
                                       toString(analysisYear), 
@@ -2533,18 +2538,29 @@ if (saveResults) {
        file = paste(saveString, "_gender.rda", sep =""))
 }
 
-# Save PLDHIV stage - used for the ECDC model estimates
+# Save PLDHIV stage and hivInterstate - used for the ECDC model estimates
 if (savePldhiv) {
-  # Directory and file name
-  saveString <- file.path(outputFolder, 
+  # Directory and file name - PLDHIV
+  saveStringPldhiv <- file.path(outputFolder, 
     paste("HIVpldhivEstimates-", toString(analysisYear), sep = ""))
   
   # Write to csv
-  write.csv(hivDiagnosed, file = paste(saveString, ".csv", sep =""), 
+  write.csv(hivDiagnosed, file = paste(saveStringPldhiv, ".csv", sep =""), 
             row.names = FALSE)
   
   # Save as R object
-  save(hivDiagnosed, file = paste(saveString, ".rda", sep =""))
+  save(hivDiagnosed, file = paste(saveStringPldhiv, ".rda", sep =""))
+  
+  # Directory and file name - hivInterstate
+  saveStringInter<- file.path(outputFolder, 
+    paste("HIVinterstateEstimates-", toString(analysisYear), sep = ""))
+  
+  # Write to csv
+  write.csv(hivInterstate, file = paste(saveStringInter, ".csv", sep =""), 
+            row.names = FALSE)
+  
+  # Save as R object
+  save(hivInterstate, file = paste(saveStringInter, ".rda", sep =""))
 }
 
 # Save final HIV cascades data frame
