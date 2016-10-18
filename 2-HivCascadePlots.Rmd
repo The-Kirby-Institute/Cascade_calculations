@@ -164,7 +164,7 @@ if (pubPlots) {
   
 }
 
-# Save if required ---------------------------------------------------------
+# Save if required -------------------------------------------------------
 if (savePlots) {
   graphics.off()
   
@@ -723,8 +723,9 @@ for (ii in 1:nrow(tableAll)){
     finalTable$estimate[ii] <- FormatData(tableAll$value[ii], places = -1)
   } else {
     finalTable$estimate[ii] <- FormatData(tableAll$value[ii], 
-                                           tableAll$lower[ii], 
-                                           tableAll$upper[ii], places = -1)
+                                          tableAll$lower[ii], 
+                                          tableAll$upper[ii], 
+                                          places = -1)
   }
 }
 
@@ -764,8 +765,10 @@ resultsStatesYear <- filter(hivCascade, population %in% states,
 resultsStatesYear$stage <- factor(resultsStatesYear$stage)
 excludeCare <- TRUE
 if (excludeCare) {
-  levels(resultsStatesYear$stage) <- c("Living with HIV", "Receiving ART", 
-                                "Diagnosed", "Suppressed virus")
+  levels(resultsStatesYear$stage) <- c("Living with HIV",
+                                       "Receiving ART", 
+                                       "Diagnosed", 
+                                       "Suppressed virus")
   resultsStatesYear <- within(resultsStatesYear, 
                               stage <- factor(stage, 
                                       levels(stage)[c(1, 3, 2, 4)]))  
@@ -891,7 +894,7 @@ kable(finalTable, align = c("l", "c", "c", "c", "c", "c"))
 # Key population group estimates
 
 ```{r subpops, echo = FALSE, messages = FALSE, include=FALSE}
-# Create bar charts of pLHIV for exposure groups and country of birth
+# Create bar charts of PLHIV for exposure groups and country of birth
 # Set up our population groupings
 modes <- c("msm", "hetero", "pwid", "otherexp")
 modeNames <- c("MSM", "Heterosexual", "PWID", "Other exposure") 
@@ -1031,6 +1034,129 @@ finalTablePop <- rename(finalTable, "Cascade stage" = stage,
 **Table 4** -- Number of people living with HIV by country of birth in `r resultsYear`.
 ```{r inserttable4, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
 kable(finalTablePop, align = c("l", "l", "c", "c"))
+```
+
+# HIV cascades for males and females in the overall population
+
+```{r Male and female cascades, echo = FALSE, messages = FALSE, include = FALSE}
+#Create cascade bar charts for males and females
+stages <- c("infected", "pldhiv", "retained", "numART",
+                  "suppressed")
+stageNames <- c("Living with HIV", "Diagnosed",
+                "Retained in care", "Receiving ART", 
+                "Suppressed virus")
+stageNamesNeat <- c("Living \n with HIV", "Diagnosed", 
+                    "Retained \n in care", 
+                    "Receiving \n ART", "Suppressed \n virus")
+
+# Sort out the data we want
+genderAll <- filter(hivCascade, 
+                     population %in% c("male", "female"),
+                     year >= startYear)
+
+genderAllYear <- filter(genderAll, year == resultsYear)
+
+# Plot a bar chart for males and females for the results year ------------
+plotBarMale <- ggplot(data = filter(genderAllYear, population == "male"),
+                     aes(x = stage, y = value)) + 
+  geom_bar(stat = "identity", color = asrcols, 
+           fill = asrcols, width = 0.8) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
+                color = "black", size = 1.1) +
+  scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
+  ylab("Number of males") + xlab("") +  
+  plotOpts
+
+plotBarFemale <- ggplot(data = filter(genderAllYear, 
+                                      population == "female"),
+                     aes(x = stage, y = value)) + 
+  geom_bar(stat = "identity", color = asrcols, 
+           fill = asrcols, width = 0.8) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
+                color = "black", size = 1.1) +
+  scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
+  ylab("Number of females") + xlab("") +  
+  plotOpts
+
+# Save plots if required
+if (savePlots) {
+  graphics.off()
+  
+  if (excludeCare) {
+    width = 10
+  } else {
+    width = 12
+  } 
+  
+  ggsave(file.path(figFolder, paste("HIVcascade-male-", 
+    toString(resultsYear), saveFormat, sep = "")), 
+    plot = plotBarMale, width =  12, height = 10, units = "cm")
+
+  ggsave(file.path(figFolder, paste("HIVcascade-female-", 
+    toString(resultsYear), saveFormat, sep = "")), 
+    plot = plotBarFemale, width =  12, height = 10, units = "cm")
+} 
+
+```
+
+```{r createtable5, echo = FALSE, messages = FALSE, include = FALSE}
+# Create tables for male and female cascades 
+tableGender <- genderAllYear %>%
+  select(-year)
+
+
+genderTable <- select(tableGender, stage, population)
+genderTable$estimate <- NA
+
+# Convert lower and upper into a range string
+if (excludeCare) {
+  skip <- NULL #c(3)
+} else {
+  skip <- NULL # c(3, 4)
+}
+
+for (ii in 1:nrow(tableGender)){
+  if (ii %in% skip) {
+    genderTable$estimate[ii] <- FormatData(tableGender$value[ii], 
+                                           places = -1)
+  } else {
+    genderTable$estimate[ii] <- FormatData(tableGender$value[ii], 
+                                          tableGender$lower[ii], 
+                                          tableGender$upper[ii], 
+                                          places = -1)
+  }
+}
+
+# Reorder rows
+genderTable <- genderTable %>%
+  arrange(population) %>%
+  spread(population, estimate)
+
+if (excludeCare) { 
+  genderTable[1:4,] <- genderTable[c(2, 1, 3, 4),]
+} else {
+  genderTable[1:5,] <- genderTable[c(1, 3, 4, 2, 5),]
+}
+
+
+# Rename first column
+genderTable$stage <- stageNames
+
+# Rename columns
+genderTable <- rename(genderTable, "Cascade stage" = stage, 
+                      "Female estimate (range)" = female,
+                      "Male estimate (range)" = male)
+
+```
+
+**Figure 6** -- National HIV cascades for males and females in `r resultsYear`.
+```{r insertplot6, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=7}
+print(grid.arrange(plotBarFemale, plotBarMale))
+```
+
+**Table 5** -- Estimates and range for each stage of the HIV care and treatment cascade for Australian males and feamles in `r resultsYear`.
+```{r inserttable5, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+kable(genderTable, align = c("l", "c", "c"))
 ```
 
 # Methods and data sources
