@@ -136,12 +136,28 @@ weightsDF <- filter(currentTreat, stage == "notifications")
 weights <- weightsDF$proportion # urban, regional, remote
 names(weights) <- c("urban", "regional", "remote")
 
+weightsClinicDF <- filter(currentTreat, stage == "diagnoses")
+weightsClinic <- weightsClinicDF$proportion # urban, regional, remote
+names(weightsClinic) <- c("shc", "gp", "other")
+
 # Proportion treated -----------------------------------------------------
 # Simply take the mean of the estimates for remote areas
 treatedDF <- filter(currentTreat, stage == "treated")
+
+propTreatedUrban <- weightsClinic["gp"] * 
+  filter(treatedDF, region == "urban", context == "gp")$proportion + 
+  (1 - weightsClinic["gp"]) * 
+  filter(treatedDF, region == "urban", context == "other")$proportion
+
+propTreatedRegion <- weightsClinic["gp"] * 
+  filter(treatedDF, region == "regional", context == "gp")$proportion + 
+  (1 - weightsClinic["gp"]) * 
+  filter(treatedDF, region == "regional", context == "other")$proportion
+
 propTreatedRemote <- mean(filter(treatedDF, 
                                  region == "remote")$proportion)
-propTreated <- c(treatedDF$proportion[1:2], propTreatedRemote)
+
+propTreated <- c(propTreatedUrban, propTreatedRegion, propTreatedRemote)
 propTreated <- sum(propTreated * weights)
 
 # Hard coded ranges based on propTreated value - +/- 10%
