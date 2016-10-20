@@ -1537,61 +1537,51 @@ propAborigMSM <- c(0, 0, 0, 0, propAborigMSM) # add zeros for 1980-83
 # estimates when previoulsly diagnosed overseas notifications are included
 # or excluded
 
-undiagAll <- (filter(propUndiagnosed, group == "all", 
-                     overseas_included == "yes")$estimate +
-                filter(propUndiagnosed, group == "all", 
-                       overseas_included == "no")$estimate) / 2
+undiagAll <- filter(propUndiagnosed, group == "all", 
+                     overseas_included == "yes")$estimate 
 
 undiagAllMin <- filter(propUndiagnosed, group == "all", 
-                       overseas_included == "no")$lower
+                       overseas_included == "yes")$lower
 
 undiagAllMax <- filter(propUndiagnosed, group == "all", 
                        overseas_included == "yes")$upper
 
 # MSM
-undiagMSM <- (filter(propUndiagnosed, group == "msm", 
-                     overseas_included == "yes")$estimate +
-                filter(propUndiagnosed, group == "msm", 
-                       overseas_included == "no")$estimate) / 2
+undiagMSM <- filter(propUndiagnosed, group == "msm", 
+                     overseas_included == "yes")$estimate
 
 undiagMSMMin <- filter(propUndiagnosed, group == "msm", 
-                       overseas_included == "no")$lower
+                       overseas_included == "yes")$lower
 
 undiagMSMMax <- filter(propUndiagnosed, group == "msm", 
                        overseas_included == "yes")$upper
 
 # Hetero
-undiagHetero <- (filter(propUndiagnosed, group == "hetero", 
-                     overseas_included == "yes")$estimate +
-                filter(propUndiagnosed, group == "hetero", 
-                       overseas_included == "no")$estimate) / 2
+undiagHetero <- filter(propUndiagnosed, group == "hetero", 
+                     overseas_included == "yes")$estimate 
 
 undiagHeteroMin <- filter(propUndiagnosed, group == "hetero", 
-                       overseas_included == "no")$lower
+                       overseas_included == "yes")$lower
 
 undiagHeteroMax <- filter(propUndiagnosed, group == "hetero", 
                        overseas_included == "yes")$upper
 
 # PWID
-undiagPWID <- (filter(propUndiagnosed, group == "pwid", 
-                     overseas_included == "yes")$estimate +
-                filter(propUndiagnosed, group == "pwid", 
-                       overseas_included == "no")$estimate) / 2
+undiagPWID <- filter(propUndiagnosed, group == "pwid", 
+                     overseas_included == "yes")$estimate 
 
 undiagPwidMin <- filter(propUndiagnosed, group == "pwid", 
-                       overseas_included == "no")$lower
+                       overseas_included == "yes")$lower
 
 undiagPwidMax <- filter(propUndiagnosed, group == "pwid", 
                        overseas_included == "yes")$upper
 
 # Non-MSM
-undiagNonMSM <- (filter(propUndiagnosed, group == "non-msm", 
-                     overseas_included == "yes")$estimate +
-                filter(propUndiagnosed, group == "non-msm", 
-                       overseas_included == "no")$estimate) / 2
+undiagNonMSM <- filter(propUndiagnosed, group == "non-msm", 
+                     overseas_included == "yes")$estimate 
 
 undiagNonMsmMin <- filter(propUndiagnosed, group == "non-msm", 
-                       overseas_included == "no")$lower
+                       overseas_included == "yes")$lower
 
 undiagNonMsmMax <- filter(propUndiagnosed, group == "non-msm", 
                        overseas_included == "yes")$upper
