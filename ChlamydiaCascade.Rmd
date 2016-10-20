@@ -51,8 +51,8 @@ LoadLibrary(knitr)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2015 # Year of cascade we will plot      
-                    
+resultsYears <- c(2013:2015) # Year of cascade we will plot      
+saveCascade <- TRUE                    
 saveplots <- FALSE # Save plots as separate files
 
 ```
@@ -60,13 +60,13 @@ saveplots <- FALSE # Save plots as separate files
 ```{r loadresults, echo = FALSE, messages = FALSE, include=FALSE}
 # Load hiv cascade dataframe
 notificationsFile <- file.path(dataFolder,
-  paste("chlamnotifications", toString(resultsYear), ".csv", sep = ""))
+  paste("chlamnotifications", toString(tail(resultsYears, 1)), ".csv", sep = ""))
 
 incidenceFile <- file.path(dataFolder, paste("chlamincidence",
-  toString(resultsYear), ".csv", sep = ""))
+  toString(tail(resultsYears, 1)), ".csv", sep = ""))
 
 treatFile <- file.path(dataFolder, paste("chlamtreatment", 
-  toString(resultsYear), ".csv", sep = ""))
+  toString(tail(resultsYears, 1)), ".csv", sep = ""))
 
 notifications <-  read.csv(notificationsFile)
 incidence <- read.csv(incidenceFile)
@@ -77,14 +77,14 @@ treatment <- read.csv(treatFile)
 ```{r extractResults, echo = FALSE, messages = FALSE, include=FALSE}
 # Extract the actual results we want - resultsYear for 15-29 year olds
 currentDiags <- notifications %>% 
-  filter(year == resultsYear) %>%
+  filter(year %in% resultsYears) %>%
   select(-male...15.yrs, -male.30.34.yrs, -male...34.yrs, -male.all, 
          -female...15.yrs, -female.30.34.yrs, -female...34.yrs,
          -female.all)
 
 # Current incidence
 currentInc <- incidence %>% 
-  filter(year == resultsYear)
+  filter(year %in% resultsYears)
 
 # Current treatment data
 currentTreat <- treatment %>%
@@ -93,6 +93,8 @@ currentTreat <- treatment %>%
 ```
 
 ```{r calculations, echo = FALSE, messages = FALSE, include=FALSE}
+nyears <- length(resultsYears)
+
 # Initialize output data frame
 chlamcascade <- data.frame(stage = character(), sex = character(),
              estimate = numeric(), lower = numeric(), 
@@ -108,23 +110,26 @@ femaleIncUpper <- currentInc[, 5]
 
 chlamcascade <- rbind(chlamcascade, 
                       data.frame(stage = "infections",
-                                sex = c("male", "female"), 
-                                estimate = c(maleInc, femaleInc),
-                                lower = c(maleIncLower, femaleIncLower), 
-                                upper = c(maleIncUpper, femaleIncUpper),
-                      percentprevious = c(NA, NA)))
+                                 year = rep(resultsYears, 2),
+                                 sex = rep(c("male", "female"), each = 3),
+                                 estimate = c(maleInc, femaleInc),
+                                 lower = c(maleIncLower, femaleIncLower), 
+                                 upper = c(maleIncUpper, femaleIncUpper),
+                                 percentprevious = c(NA, NA)))
 
 # Diagnoses --------------------------------------------------------------
-maleDiags <- sum(currentDiags[, 2:4])
-femaleDiags <- sum(currentDiags[, 5:7])
+maleDiags <- rowSums(currentDiags[, 2:4])
+femaleDiags <- rowSums(currentDiags[, 5:7])
 chlamcascade <- rbind(chlamcascade, 
                       data.frame(stage = "notifications",
-                                 sex = c("male", "female"), 
+                                 year = rep(resultsYears, 2),
+                                 sex = rep(c("male", "female"), each = 3), 
                                  estimate = c(maleDiags, femaleDiags),
                                  lower = NA, #c(maleDiags, femaleDiags), 
                                  upper = NA, #c(maleDiags, femaleDiags),
-                        percentprevious = 100 * c(maleDiags / maleInc,
-                                             femaleDiags / femaleInc)))
+                                 percentprevious = 100 * 
+                                   c(maleDiags / maleInc, 
+                                     femaleDiags / femaleInc)))
                       
 # Weights for calculations based on notifications ------------------------
 weightsDF <- filter(currentTreat, stage == "notifications")
@@ -143,21 +148,24 @@ propTreated <- sum(propTreated * weights)
 propTreatedMin <- 0.9 # propTreated * 0.9
 propTreatedMax <- min(1, propTreated * 1.1)
 
-maleTreated <- filter(chlamcascade, stage == "notifications", 
-  sex == "male")$estimate * c(propTreated, propTreatedMin, propTreatedMax)
+maleTreated <- as.matrix(filter(chlamcascade, stage == "notifications", 
+  sex == "male")$estimate) %*% t(as.matrix(c(propTreated, propTreatedMin,
+                                             propTreatedMax)))
 
-femaleTreated <- filter(chlamcascade, stage == "notifications", 
-  sex == "female")$estimate * c(propTreated, propTreatedMin,
-  propTreatedMax)
+femaleTreated <- as.matrix(filter(chlamcascade, stage == "notifications", 
+  sex == "female")$estimate) %*% t(as.matrix(c(propTreated, propTreatedMin,
+  propTreatedMax)))
 
 chlamcascade <- rbind(chlamcascade, 
                   data.frame(stage = "treated",
-                      sex = c("male", "female"), 
-                      estimate = c(maleTreated[1], femaleTreated[1]),
-                      lower =  c(maleTreated[2], femaleTreated[2]), 
-                      upper = c(maleTreated[3], femaleTreated[3]),
-                    percentprevious = 100 * c(maleTreated[1] / maleDiags,
-                                  femaleTreated[1] / femaleDiags)))
+                             year = rep(resultsYears, 2),
+                             sex = rep(c("male", "female"), each = 3), 
+                             estimate = c(maleTreated[, 1], femaleTreated[, 1]),
+                             lower =  c(maleTreated[, 2], femaleTreated[, 2]), 
+                             upper = c(maleTreated[, 3], femaleTreated[, 3]),
+                             percentprevious = 100 * 
+                               c(maleTreated[, 1] / maleDiags,
+                                 femaleTreated[, 1] / femaleDiags)))
 
 # Retesting --------------------------------------------------------------
 retestDF <- filter(currentTreat, stage == "retested")
@@ -290,24 +298,26 @@ propReTestFemaleUpper <- unname(weights["urban"] *
 
 
 # Now calculated the number retested
-maleRetested <- as.numeric(filter(chlamcascade, stage == "treated",
-  sex == "male")[, c("estimate", "lower", "upper")] * 
-  c(propReTestMale, propReTestMaleLower,
-                              propReTestMaleUpper))
+maleRetested <- as.data.frame(t(apply(filter(chlamcascade, stage == "treated",
+  sex == "male")[, c("estimate", "lower", "upper")], 1, 
+  function(x) x * c(propReTestMale, propReTestMaleLower, propReTestMaleUpper))))
 
-femaleRetested <- as.numeric(filter(chlamcascade, stage == "treated",
-  sex == "female")[, c("estimate", "lower", "upper")] * 
-  c(propReTestFemale, propReTestFemaleLower,
-                                propReTestFemaleUpper))
+femaleRetested <- as.data.frame(t(apply(filter(chlamcascade, stage == "treated",
+  sex == "female")[, c("estimate", "lower", "upper")], 1, 
+  function(x) x * c(propReTestFemale, propReTestFemaleLower,
+                    propReTestFemaleUpper))))
 
 # Store in our cascade
-chlamcascade <- rbind(chlamcascade, data.frame(stage = "retested",
-                  sex = c("male", "female"), 
-                  estimate = c(maleRetested[1], femaleRetested[1]),
-                  lower =  c(maleRetested[2], femaleRetested[2]), 
-                  upper = c(maleRetested[3], femaleRetested[3]),
-              percentprevious = 100 * c(maleRetested[1] / maleTreated[1],
-                                  femaleRetested[1] / femaleTreated[1])))
+chlamcascade <- rbind(chlamcascade, 
+                      data.frame(stage = "retested",
+                                 year = rep(resultsYears, 2),
+                                 sex = rep(c("male", "female"), each = 3),
+                  estimate = c(maleRetested$estimate, femaleRetested$estimate),
+                  lower =  c(maleRetested$lower, femaleRetested$lower), 
+                  upper = c(maleRetested$upper, femaleRetested$upper),
+              percentprevious = 100 * 
+                c(maleRetested$estimate / maleTreated[, 1],
+                  femaleRetested$estimate / femaleTreated[, 1])))
 
 # Retested positive ------------------------------------------------------
 # positiveDF <- filter(currentTreat, stage == "positive")
@@ -331,6 +341,14 @@ chlamcascade <- rbind(chlamcascade, data.frame(stage = "retested",
 #                   estimate = c(maleNegative[1], femaleNegative[1]),
 #                   lower =  c(maleNegative[2], femaleNegative[2]), 
 #                   upper = c(maleNegative[3], femaleNegative[3])))
+
+if (saveCascade) {
+  saveString <- paste0("chlamydia_cascade-", 
+                       toString(tail(resultsYears, 1)), ".csv")
+  
+  write.csv(chlamcascade, file = file.path(resultsFolder, saveString), 
+            row.names = FALSE)
+}
 
 ```
 
