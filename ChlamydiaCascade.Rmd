@@ -214,43 +214,47 @@ propReTestMale <- unname(weights["urban"] * (diagnosesProp["shc"] *
   filter(retestDF,  sex == "males", region == "remote", 
          context == "gp")$proportion))
 
-propReTestMaleLower <- unname(weights["urban"] * (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "males", region == "urban", 
-         context == "shc")$prop_lower + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "males", region == "urban", 
-         context == "gp")$prop_lower) + 
-  weights["regional"] * (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "males", region == "regional", 
-         context == "shc")$prop_lower + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "males", region == "regional", 
-         context == "gp")$prop_lower) + 
-  weights["remote"] * (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "males", region == "remote", 
-         context == "shc")$prop_lower + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "males", region == "remote", 
-         context == "gp")$prop_lower))
+propReTestMaleLower <- min(filter(retestDF, sex == "males")$proportion)
 
-propReTestMaleUpper <- unname(weights["urban"] * (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "males", region == "urban", 
-         context == "shc")$prop_upper + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "males", region == "urban", 
-         context == "gp")$prop_upper) + 
-  weights["regional"] * (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "males", region == "regional", 
-         context == "shc")$prop_upper + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "males", region == "regional", 
-         context == "gp")$prop_upper) + 
-  weights["remote"] * (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "males", region == "remote", 
-         context == "shc")$prop_upper + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "males", region == "remote", 
-         context == "gp")$prop_upper))
+# propReTestMaleLower <- unname(weights["urban"] * (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "males", region == "urban", 
+#          context == "shc")$prop_lower + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "males", region == "urban", 
+#          context == "gp")$prop_lower) + 
+#   weights["regional"] * (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "males", region == "regional", 
+#          context == "shc")$prop_lower + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "males", region == "regional", 
+#          context == "gp")$prop_lower) + 
+#   weights["remote"] * (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "males", region == "remote", 
+#          context == "shc")$prop_lower + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "males", region == "remote", 
+#          context == "gp")$prop_lower))
+
+propReTestMaleUpper <- max(filter(retestDF, sex == "males")$proportion)
+
+# propReTestMaleUpper <- unname(weights["urban"] * (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "males", region == "urban", 
+#          context == "shc")$prop_upper + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "males", region == "urban", 
+#          context == "gp")$prop_upper) + 
+#   weights["regional"] * (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "males", region == "regional", 
+#          context == "shc")$prop_upper + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "males", region == "regional", 
+#          context == "gp")$prop_upper) + 
+#   weights["remote"] * (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "males", region == "remote", 
+#          context == "shc")$prop_upper + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "males", region == "remote", 
+#          context == "gp")$prop_upper))
 
 # Females
 propReTestFemale <- unname(weights["urban"] * (diagnosesProp["shc"] * 
@@ -272,45 +276,49 @@ propReTestFemale <- unname(weights["urban"] * (diagnosesProp["shc"] *
   filter(retestDF,  sex == "females", region == "remote", 
          context == "gp")$proportion))
 
-propReTestFemaleLower <- unname(weights["urban"] * 
-                                  (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "females", region == "urban", 
-         context == "shc")$prop_lower + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "females", region == "urban", 
-         context == "gp")$prop_lower) + 
-  weights["regional"] * (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "females", region == "regional", 
-         context == "shc")$prop_lower + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "females", region == "regional", 
-         context == "gp")$prop_lower) + 
-  weights["remote"] * (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "females", region == "remote", 
-         context == "shc")$prop_lower + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "females", region == "remote", 
-         context == "gp")$prop_lower))
+propReTestFemaleLower <- min(filter(retestDF, sex == "females")$proportion)
 
-propReTestFemaleUpper <- unname(weights["urban"] * 
-                                  (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "females", region == "urban", 
-         context == "shc")$prop_upper + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "females", region == "urban", 
-         context == "gp")$prop_upper) + 
-  weights["regional"] * (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "females", region == "regional", 
-         context == "shc")$prop_upper + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "females", region == "regional", 
-         context == "gp")$prop_upper) + 
-  weights["remote"] * (diagnosesProp["shc"] * 
-  filter(retestDF, sex == "females", region == "remote", 
-         context == "shc")$prop_upper + 
-  diagnosesProp["gp"] * 
-  filter(retestDF,  sex == "females", region == "remote", 
-         context == "gp")$prop_upper))
+# propReTestFemaleLower <- unname(weights["urban"] * 
+#                                   (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "females", region == "urban", 
+#          context == "shc")$prop_lower + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "females", region == "urban", 
+#          context == "gp")$prop_lower) + 
+#   weights["regional"] * (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "females", region == "regional", 
+#          context == "shc")$prop_lower + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "females", region == "regional", 
+#          context == "gp")$prop_lower) + 
+#   weights["remote"] * (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "females", region == "remote", 
+#          context == "shc")$prop_lower + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "females", region == "remote", 
+#          context == "gp")$prop_lower))
+
+propReTestFemaleUpper <- max(filter(retestDF, sex == "females")$proportion)
+
+# propReTestFemaleUpper <- unname(weights["urban"] * 
+#                                   (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "females", region == "urban", 
+#          context == "shc")$prop_upper + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "females", region == "urban", 
+#          context == "gp")$prop_upper) + 
+#   weights["regional"] * (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "females", region == "regional", 
+#          context == "shc")$prop_upper + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "females", region == "regional", 
+#          context == "gp")$prop_upper) + 
+#   weights["remote"] * (diagnosesProp["shc"] * 
+#   filter(retestDF, sex == "females", region == "remote", 
+#          context == "shc")$prop_upper + 
+#   diagnosesProp["gp"] * 
+#   filter(retestDF,  sex == "females", region == "remote", 
+#          context == "gp")$prop_upper))
 
 
 # Now calculated the number retested
