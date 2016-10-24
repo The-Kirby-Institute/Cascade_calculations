@@ -1161,87 +1161,192 @@ kable(genderTable, align = c("l", "c", "c"))
 
 # Methods and data sources
 
-The following sections describe the methods and data sources used to produce the estimates for each stage of the cascade.
+The following sections describe the methods and data sources used to
+produce the estimates for each stage of the cascade.
 
 ## Estimating the number of people with diagnosed infection
 
-To estimate the number of people living with diagnosed HIV infection (PLDHIV) we performed a simple
-calculation using annual notifications, estimated mortality rates, and overseas
-migration rates.  
+To estimate the number of people living with diagnosed HIV infection
+(PLDHIV) we performed a simple calculation using annual notifications,
+estimated mortality rates, and overseas migration rates.  
 
-Annual HIV notifications data was provided by Australia's National HIV registry. Due to incomplete or
-inaccurate recording of name codes the registry contains multiple reports for some individuals. To
-estimate the number of duplicates we applied a statistical technique which has previously been applied
-to Australia's National HIV Registry [@nakhaee2009changes]. This calculation estimated the number of duplicate
-notifications annually resulting in 8.4% duplicate cases by 2014 with the majority of duplicates
-occurring early in the epidemic.  
+Annual HIV notifications data was provided by Australia's National HIV
+registry. Due to incomplete or inaccurate recording of name codes the
+registry contains multiple reports for some individuals. To estimate the 
+number of duplicates we applied a statistical technique which has 
+previously been applied to Australia's National HIV Registry
+[@nakhaee2009changes]. This calculation estimated the number of duplicate
+notifications annually resulting in 8.1% duplicate cases by 2015 with the
+majority of duplicates occurring early in the epidemic.  
 
-We combined two approaches to estimate the number of deaths among people diagnosed 
-with HIV infection. To estimate the number of deaths up to 2003 we used a linkage 
-study conducted between Australia's National Death Index and the National HIV Registry 
-for cases to the end of 2003 [@nakhaee2009changes]. This study calculated HIV- and AIDS-related
-deaths and also
-calculated standardized mortality ratios for people with HIV during different ART eras. It identified
-8,519 deaths among people diagnosed with HIV or AIDS to the end of 2003. Of these deaths, 6,900 were recorded in the HIV registry meaning 19% of all deaths were missing from the registry. Due to the back dating of deaths in the HIV registry after 2003, we used this percentage to inflated the number of recorded deaths in the registry until the end of 2003 (inflating the 7,102 deaths recorded to the end of 2003 to 8,768 deaths overall) and estimated the overall average mortality rate for PLDHIV prior to 2003. After 2003 we used annual mortality rates from the Australian HIV Observational Database (AHOD) [@ahod2014report]. Over 2004-2014, similar annual mortality rates were estimated for the AHOD cohort regardless of whether people were retained, lost or returned to follow up. We used the annual overall mortality rate from AHOD as the best estimate and the 95% confidence interval as a range in our calculations for the number of PLDHIV. 
+We combined two approaches to estimate the number of deaths among people
+diagnosed with HIV infection. To estimate the number of deaths up to 2003 
+we used a linkage study conducted between Australia's National Death Index
+and the National HIV Registry for cases to the end of 2003
+[@nakhaee2009changes]. This study calculated HIV- and AIDS-related
+deaths and also calculated standardized mortality ratios for people with 
+HIV during different ART eras. It identified
+8,519 deaths among people diagnosed with HIV or AIDS to the end of 2003. 
+Of these deaths, 6,900 were recorded in the HIV registry meaning 19% of 
+all deaths were missing from the registry. Due to the back dating of 
+deaths in the HIV registry after 2003, we used this percentage to inflated
+the number of recorded deaths in the registry until the end of 2003 
+(inflating the 7,102 deaths recorded to the end of 2003 to 8,768 deaths 
+overall) and estimated the overall average mortality rate for PLDHIV prior
+to 2003. After 2003 we used annual mortality rates from the Australian HIV
+Observational Database (AHOD) [@ahod2014report]. Over 2004-2015, similar 
+annual mortality rates were estimated for the AHOD cohort regardless of 
+whether people were retained, lost or returned to follow up. We used the 
+annual overall mortality rate from AHOD as the best estimate and the 95% 
+confidence interval as a range in our calculations for the number of 
+PLDHIV. 
 
 We also considered the impact of overseas migration. As people are not
-included in the HIV registry until they have been diagnosed in Australia (even if they have been
-diagnosed previously overseas) we did not consider the entry of people living with diagnosed HIV. We
-estimated an overseas migration rate for PLDHIV using data from the Australian Bureau of Statistics (ABS
-). Given there is likely to be a flux of people leaving temporarily and returning to Australia (some of
-which may still receive care and treatment while overseas), we used data on the annual number of people
-in the overall population who permanently leave Australia (provided by the ABS since 1976 in series 340102)
-and the estimated resident population (ABS series 310104) to calculate an overall migration rate. Since 1981 this rate has risen from around 0.1% to 0.4% of the resident population leaving Australia permanently. Due to the requirement for ongoing care and treatment (which is not subsidised in many countries) we assumed a range in the annual overseas migration rate between zero and the overall rate of permanent departure with a best estimate in the middle. 
+included in the HIV registry until they have been diagnosed in Australia 
+(even if they have been diagnosed previously overseas) we did not consider
+the entry of people living with diagnosed HIV. 
 
-Our overall estimate of the number of PLDHIV in Australia each year is obtained by adding the number of unique notifications to the previous year's estimate and subtracting the number of deaths and permanent overseas migrants using the mortality and migration rates. 
+We estimated an overseas migration rate for PLDHIV using data from the 
+Australian Bureau of Statistics (ABS) and recent follow-up data of people 
+recently diagnosed in NSW [ref NSW data report]. NSW Health has followed
+up all people diagnosed with HIV during 2013-2014 and reported up to 4% of
+people move overseas soon after their diagnosis. As this data is for 
+recent diagnoses in recent years we assume this is an upper bound and 
+reduce the number of PLDHIV by 2% overall with a range of 0-4% to reflect
+this initial migration. As 
+there is likely to be a flux of people leaving temporarily and returning 
+to Australia (some of which may still receive care and treatment while 
+overseas), we used data on the annual number of people in the overall 
+population who permanently leave Australia (provided by the ABS since 1976
+in series 340102) and the estimated resident population (ABS series 
+310104) to calculate an overall annual migration rate. Since 1981 this 
+rate has risen from around 0.1% to 0.4% of the resident population leaving
+Australia permanently. The permanent rate of departure is the lower bound 
+of the overall rate Australia residents leave Australia for longer than 12
+months, however, PLDHIV require ongoing care and treatment (which is not 
+subsidised in many countries) so we assume the permanent rate of departure
+is a reasonable estimate for the PLDHIV population. Overall we assumed a 
+range in the annual overseas migration rate between zero and the overall 
+rate of permanent departure with a best estimate in the middle. 
 
-### State and territory and sub-population estimates
+Our overall estimate of the number of PLDHIV in Australia each year is 
+obtained by adding the number of unique notifications to the previous 
+year's estimate and subtracting the number of deaths and overseas migrants
+using the mortality and migration rates. 
 
-We also provided HIV estimates for the number of PLHIV and PLDHIV for each state and territory, mode of
-exposure, region of birth, and Aboriginal and Torres Strait Islander status. 
+### Sub-population estimates
+We also provided HIV estimates for the number of PLHIV and PLDHIV for each
+mode of exposure, region of birth, and Aboriginal and
+Torres Strait Islander status. 
 
-For these sub-population calculations we assumed the proportion of duplicates, overseas migration
-rate, and HIV mortality rate for each population equals the values for the overall population.
-Mortality rates were adjusted for the Indigenous and non-Indigenous Australian born population to
-reflect the higher overall mortality in Aboriginal and Torres Strait Islanders as reported by the ABS 
-(http://www.abs.gov.au/ausstats/abs@.nsf/mf/3302.0).
-
-To produce HIV cascades for each state we also considered population movement between states. The ABS
-provides estimates for interstate arrivals and departures (series 3101016). Using this data and estimated resident population in each state, we estimated the rate people leave each state and territory and the rate people enter from the other jurisdictions. We assumed PLDHIV move between states
-at the same rate as the overall population as the provision of care and treatment is maintained across
-jurisdictions. 
+For these sub-population calculations we assumed the proportion of 
+duplicates, overseas migration rate, and HIV mortality rate for each 
+population equals the values for the overall population. Mortality and 
+migration rates were adjusted for the Indigenous and non-Indigenous 
+Australian born population to reflect the higher overall mortality in 
+Aboriginal and Torres Strait Islanders as reported by the ABS 
+(http://www.abs.gov.au/ausstats/abs@.nsf/mf/3302.0). We also assumed no 
+Indigenous people living with diagnosed HIV move overseas. 
 
 ## Estimating the number of people living with HIV
 
-To estimate the overall number of MSM living with HIV (PLHIV), both diagnosed and undiagnosed,
-we estimated the the proportion of MSM and non-MSM PLHIV who are undiagnosed. For MSM we used empirical
-data from the COUNT study conducted alongside routine behavioural surveillance surveys in which gay and
-homosexually active men from Sydney, Melbourne, Canberra and Perth recruited from a range of gay
-community sites in 2013 - 2014. In this study 8.9% of participants had previously undiganosed HIV (95%
-CI 5.8-13.5%). For non-MSM we used results from a statistical back projection method  which reported
-20% of non-MSM living with HIV are undiagnosed [@wand2010increasing, @mallitt2012incidence]. For 
-non-MSM we assumed a range of 15 to 25%.  
+To estimate the overall number of people living with HIV (PLHIV), both 
+diagnosed and undiagnosed, we used the European Center for Disease Control
+(ECDC) HIV Modelling Tool to estimate the proportion of PLHIV who are 
+undiagnosed [@van2015estimating, @ecdc2016hivtool]. 
 
-Multiplying the proportion of MSM and non-MSM undiagnosed by the proportion of all diagnoses attributed
-to male homosexual contact and other exposure gives a weighted average for the overall population of
-PLHIV who are undiagnosed of 12.3%. We assumed a range of 9% to 17%. The overall prevalence of 
-HIV in Australia was then estimated by inflating the calculated number of people living with diagnosed
-infection by the estimated level of undiagnosed infection.
+The ECDC tool is a multi-state back-calculation model using notifications 
+data and estimates for the rate of CD4 decline to fit diagnoses rates over
+time, producing estimates for HIV incidence, time between infection and 
+diagnosis, and the undiagnosed population by CD4 count strata, using 
+surveillance data on new HIV and AIDS diagnoses. To run the model 
+notifications data is split by CD4 strata, whether the patient had AIDS at
+the time of diagnosis, and optional risk of exposure categories. Diagnoses
+rates can be adjusted to reflect changes over time and whether PLHIV are 
+more likely to be diagnosed at later stages of infection. 
 
-### State and territory and sub-population estimates
+For the cascade estimates we divided all annual notifications into those 
+attributed to male-to-male sex (representing gay and bisexual men) , 
+heterosexual contact, injecting drug use, and other. We ran the ECDC tool 
+for each exposure category as well as overall (with all groups combined) 
+and excluding male-to-male sex. The tool's diagnosis rate options where 
+adjusted to best fit the CD4 count at diagnosis data. 
 
-We applied the national estimates for the proportion of MSM and non-MSM undiagnosed with HIV to each state and territory and sub-population--- with the non-MSM estimates were used for all non-MSM sub-populations. 
+For validation we compared the model estimates for undiagnosed gay and 
+bisexual men (GBM) with empirical data from the COUNT study. This study 
+was conducted alongside routine behavioural surveillance surveys in which 
+gay and homosexually active men from Sydney, Melbourne, Canberra and Perth
+recruited from a range of gay community sites in 2013 - 2014. In this 
+study 8.9% of participants had previously undiganosed HIV (95%
+CI 5.8-13.5%). This is closely matched by the ECDC tool estimated 
+percentage undiagnosed in 2014 for GBM of 8.4% (range: 7.6-9.2%).
+
+The overall prevalence of HIV in Australia was then estimated by inflating
+the calculated number of people living with diagnosed infection by the 
+estimated level of undiagnosed infection.
+
+### Sub-population estimates
+
+We applied the appropriate ECDC HIV Modelling Tool outputs to estimate the
+proportion of PLHIV in  each sub-population who are undiagnosed. For
+Indigenous populations we use the percentage undiagnosed for GBM and 
+non-GBM weighted according to the breakdown in cumulative notifications, 
+as the Indigenous population has a lower proportion of notifications attributed to male-to-male sex. 
+
+## Estimating the number retained in care
+
+To estimate the number of PLHIV retained in care we used available 
+clinical data on the proportion of HIV+ attending a clinic who receive an 
+annual CD4 or VL test. An issue with clinic data is people can appear to 
+be lost to follow-up, and hence not in care, when they have just 
+transferred to another clinic. A recent study in a network of the six main
+HIV clinical care sites in Victoria estimated 91.4-98.8% of HIV-positive 
+patents were retained in care [@mcmahon2015clinic]. This estimate was 
+obtained by cross-referencing of clinical data between sites and phone 
+tracing individuals who had accessed care between February 2011 
+and June 2013 but who had not accessed care between June 2013 and February
+2014. We assume these results are broadly representative of HIV-positive 
+patients in Australia and assume a best estimate of 95% of PLDHIV retained
+in care with a range equal to the range for percentage retained after 
+follow-up [@mcmahon2015clinic].
 
 ## Estimating antiretroviral treatment coverage
 
-We estimated the number of people receiving ART using a 10% sample of Pharmaceutical Benefits Scheme (PBS) patient level script claims data provided by the company Prospection. This is a randomised patient level, de-identified PBS script claims data set from 2006-present. Currently the data set has 170 million script claims and 3 million patients. It includes all PBS listed drugs with HIV 
-indications. Our estimate is the number of unique patients in the PBS data set who filled in at least one script in the 12 months prior to the end of December 2014 multiplied by 10. We assumed that 10% of the Australian population were sampled to estimate the uncertainty range (which equates to approximately $\pm$ 5%)
+We estimated the number of people receiving ART using a 10% sample of 
+Pharmaceutical Benefits Scheme (PBS) patient level script claims data 
+provided by the company Prospection. This is a randomised patient level, 
+de-identified PBS script claims data set from 2006-present. Currently the 
+data set has 170 million script claims and 3 million patients. It includes
+all PBS listed drugs with HIV indications. Our estimate is the number of
+unique patients in the PBS data set who filled in at least one script in
+the 12 months prior to the end of December 2015 multiplied by 10. We 
+assumed that 10% of the Australian population were sampled to estimate the
+uncertainty range as a 95% confidence interval (which equates to
+approximately $\pm$ 5%).
+
+To the PBS number we added an estimate for the number of HIV+ temporary 
+residents taking ART --- as temporary residents are Medicare ineligible 
+and hence not counted in the 10% sample. It is estimated there are 450 
+HIV+ temporary residents living in Australia at any one time 
+[@petoumenos2015subsidized]. The Australian HIV Observational Database 
+Temporary Access Study (ATRAS) enrolled 180 HIV+ temporary residents in 
+clinical care. At the start of the study only 63% of ATRAS patients were 
+receiving ART from alternative sources, after two years (at the end of the
+study) 95% were on ART [@petoumenos2015subsidized]. Assuming the 
+percentage on treatment at enrollment in ATRAS represents the background 
+treatment coverage for the HIV+ temporary residents not in ATRAS, we 
+calculate 341 HIV+ temporary residents are on ART with an assumed range of
+300-400 patients. 
 
 ## Estimating levels of virological suppression
 
-We define virological suppression as less than 400 viral copies per ml. The proportion of people
-on ART with viral suppression is taken to be the proportion of people recorded in the Australian
-HIV Observational Database (AHOD) who had less than 400 copies per ml at their last viral load
-test.Uncertainty bounds were taken to be the proportion of people recorded in AHOD who had less than 1000 copies per ml and 50 copies per ml at their last viral load test. We estimate the number of PLHIV on ART with viral suppression by multiplying this proportion and range by estimated the number of people receiving ART. 
+We define virological suppression as less than 200 viral copies per ml. 
+The proportion of people on ART with viral suppression is taken to be the 
+proportion of people recorded in the Australian HIV Observational Database
+(AHOD) who had less than 200 copies per ml at their last viral load
+test. Uncertainty bounds were estimated by calculating the 95% confidence 
+interval for this proportion. We estimate the number of PLHIV on ART with
+viral suppression by multiplying this proportion and range by the 
+estimated number of people receiving ART. 
 
 # References
