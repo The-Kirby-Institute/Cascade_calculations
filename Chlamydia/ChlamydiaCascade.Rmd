@@ -22,12 +22,12 @@ estimates are described at the end of the document.
 rm(list=ls()) 
 options(scipen=999)  # To get rid of scientific notation
 
-# Set working directory 
-setwd(file.path(path.expand("~"), "Research", "!Evaluation_Modelling",
-                "project_care_cascades"))
+# Set session working directory manually to source file location
+# setwd(file.path(path.expand("~"), "Research", "!Evaluation_Modelling",
+#                "project_care_cascades"))
 
 # Details of results and outputs folders
-basePath <- getwd()
+basePath <- dirname(getwd()) #getwd()
 docFolder <- file.path(basePath, "docs")
 dataFolder <- file.path(basePath, "data", "chlamydia")
 figFolder <- file.path(basePath, "output", "figures")

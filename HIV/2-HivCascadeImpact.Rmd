@@ -16,17 +16,15 @@ final output document.
 rm(list=ls()) 
 
 # Setup directories
-basePath <- file.path(path.expand("~"), "Research", 
-                      "!Evaluation_Modelling", "project_care_cascades")
-Rcode <- file.path(basePath, "code") 
-dataFolder <- file.path(basePath,"data") 
+basePath <- dirname(getwd()) 
+dataFolder <- file.path(basePath, "data", "HIV")
 resultsFolder <- file.path(basePath,"output") 
-figuresFolder <- file.path(resultsFolder,"figures", "hiv_cascade")
+figuresFolder <- file.path(basePath, "output","figures","hiv_cascade") #figuresFolder <- file.path(resultsFolder,"figures", "hiv_cascade")
 
 resultsYear <- 2014
 
 # Set working directory
-setwd(basePath)
+#setwd(basePath)
 
 # Load standard libraries and options ----------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)

@@ -12,18 +12,18 @@ available for 2013-2014. We only estimate the number on treatment since
 
 ```{r initialization} 
 # Set working directory to source file loaction
+#setwd(file.path(path.expand("~"), "Research", "!Evaluation_Modelling",
+#                "project_care_cascades"))
 
 # Clear workspace
 rm(list=ls())
 
 # Various directories
-basePath <- getwd()
-dataFolder <- file.path(path.expand("~"), "Research", 
-                      "!Evaluation_Modelling", 
-                      "project_care_cascades","data")
-outputFolder <- file.path(basePath, "data")
+basePath <- dirname(getwd()) #getwd()
+dataFolder <- file.path(basePath, "data", "HIV")
+#outputFolder <- file.path(basePath, "data")
 figFolder <- file.path(basePath, "output","figures")
-# resultsFolder <- file.path(basePath, "output")
+resultsFolder <- file.path(basePath, "output")
 Rcode <- file.path(basePath, "code") 
 
 # Load standard libraries, key functions and options

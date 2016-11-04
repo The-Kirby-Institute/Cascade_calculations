@@ -20,15 +20,14 @@ rm(list=ls())
 options(scipen=999)  # To get rid of scientific notation
 
 # Setup directories
-basePath <- file.path(path.expand("~"), "Research", 
-                      "!Evaluation_Modelling", "project_care_cascades")
+basePath <- dirname(getwd()) 
 Rcode <- file.path(basePath, "code") 
 docFolder <- file.path(basePath,"docs")
-figFolder <- file.path(basePath,"output", "figures", "hiv_cascade")
+figFolder <- file.path(basePath, "output","figures","hiv_cascade") #figFolder <- file.path(basePath,"output", "figures", "hiv_cascade")
 resultsFolder <- file.path(basePath,"output")
 
 # Set working directory
-setwd(basePath)
+#setwd(basePath)
 
 # Load standard libraries and options ----------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
