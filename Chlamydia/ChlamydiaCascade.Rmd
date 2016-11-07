@@ -327,12 +327,17 @@ chlamcascade <- rbind(chlamcascade,
                       data.frame(stage = "retested",
                                  year = rep(resultsYears, 2),
                                  sex = rep(c("male", "female"), each = 3),
-                  estimate = c(maleRetested$estimate, femaleRetested$estimate),
-                  lower =  c(maleRetested$lower, femaleRetested$lower), 
-                  upper = c(maleRetested$upper, femaleRetested$upper),
-              percentprevious = 100 * 
-                c(maleRetested$estimate / maleTreated[, 1],
-                  femaleRetested$estimate / femaleTreated[, 1])))
+                                 estimate = c(maleRetested$estimate,
+                                              femaleRetested$estimate),
+                                 lower =  c(maleRetested$lower,
+                                            femaleRetested$lower), 
+                                 upper = c(maleRetested$upper,
+                                           femaleRetested$upper),
+                                 percentprevious = 100 * 
+                                   c(maleRetested$estimate / 
+                                       maleTreated[, 1],
+                                     femaleRetested$estimate /
+                                       femaleTreated[, 1])))
 
 # Retested positive ------------------------------------------------------
 # positiveDF <- filter(currentTreat, stage == "positive")
@@ -396,7 +401,9 @@ asrcols <- c("males" = "#2C4452",
 
 ```
 
-```{r barchart, echo = FALSE, messages = FALSE, include=FALSE}
+```{r barchart, echo = FALSE, messages = FALSE}
+saveplots <- TRUE
+
 # Create bar chart plot for Chlamydia cascade
 stages <- c("infections" = "New infections", 
             "notifications" = "Notifications", 
@@ -404,9 +411,9 @@ stages <- c("infections" = "New infections",
             "retested" = "Completed follow-up")
 
 stagesNeat <- c("infections" = "New \n infections", 
-                "notifications" = "Notifications", 
-                "treated" = "Received \n treatment \n following \n diagnosis", 
-                "retested" = "Completed \n follow-up")
+            "notifications" = "Notifications", 
+            "treated" = "Received \n treatment \n following \n diagnosis",
+            "retested" = "Completed \n follow-up")
 
 # Plot the bar chart -----------------------------------------------------
 
@@ -417,17 +424,19 @@ plotcascade$sex <- factor(plotcascade$sex, levels = c("male", "female"))
 texty <- plotcascade$upper
 texty[3:4] <- plotcascade$estimate[3:4]
 
-plotCascade <- ggplot(data = plotcascade, 
+# Overall cascade
+allCascade <- ggplot(data = filter(plotcascade, 
+                                    year == tail(resultsYears, 1)),
                       aes(x = stage, y = estimate, fill = sex)) + 
   geom_bar(position = "dodge", stat = "identity") + 
   geom_errorbar(aes(ymin = lower, ymax = upper), 
                 position = position_dodge(width = 0.9),
                 width = 0.2, color = "black", size = 1.2) +
-  geom_text(aes(label = ifelse(is.na(percentprevious), "",
-                  paste0(format(percentprevious, digits = 3), "%")), 
-                y = texty + 10000), 
-            position = position_dodge(width = 0.9),
-            fontface = "bold") +
+  # geom_text(aes(label = ifelse(is.na(percentprevious), "",
+  #                 paste0(format(percentprevious, digits = 3), "%")),
+  #               y = texty + 10000),
+  #           position = position_dodge(width = 0.9),
+  #           fontface = "bold") +
   scale_fill_manual(name = "", 
                     values = unname(asrcols[c("males", "females")]), 
                     labels = c("Males", "Females"),
@@ -437,17 +446,51 @@ plotCascade <- ggplot(data = plotcascade,
   ylab("Number of people") + xlab("") +  
   plotopts 
 
+# Male cascade over 2013-2015
+maleCascade <- ggplot(data = filter(plotcascade, sex == "male"), 
+                      aes(x = stage, y = estimate, 
+                          fill = factor(year))) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), 
+                position = position_dodge(width = 0.9),
+                width = 0.2, color = "black", size = 1.2) +
+  scale_fill_manual(name = "", values = brewer.pal(3, "Blues")) +
+  scale_x_discrete(labels = stagesNeat) +
+  ylab("Number of people") + xlab("") +  
+  plotopts 
+
+# Female cascade over 2013-2015    
+femaleCascade <- ggplot(data = filter(plotcascade, sex == "female"), 
+                      aes(x = stage, y = estimate, 
+                          fill = factor(year))) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), 
+                position = position_dodge(width = 0.9),
+                width = 0.2, color = "black", size = 1.2) +
+  scale_fill_manual(name = "", values = brewer.pal(3, "Blues")) +
+  scale_x_discrete(labels = stagesNeat) +
+  ylab("Number of people") + xlab("") +  
+  plotopts
+   
 # Print plot in separate window and save
 if (saveplots) {
-  ggsave(file.path(figFolder, paste0("chlamcascade-", 
-                toString(resultsYear), ".png")), 
-         plot = plotCascade, 
+  ggsave(file.path(figFolder, paste0("chlamcascade-all-", 
+                toString(tail(resultsYears, 1)), ".png")), 
+         plot = allCascade, 
+         width = 7, height = 5, dpi = 300)
+  
+  ggsave(file.path(figFolder, paste0("chlamcascade-males-", 
+                toString(tail(resultsYears, 1)), ".png")), 
+         plot = maleCascade, 
+         width = 7, height = 5, dpi = 300)
+  
+  ggsave(file.path(figFolder, paste0("chlamcascade-females-", 
+                toString(tail(resultsYears, 1)), ".png")), 
+         plot = femaleCascade, 
          width = 7, height = 5, dpi = 300)
 }
 
 ```
-
-<!--- Start of main document --->
 
 # Chlamydia diagnosis and care cascade
 
