@@ -14,11 +14,11 @@ substr(R.Version()$version.string,1,15)`) (see
 rm(list=ls()) 
 
 # Setup directories
-basePath <- dirname(getwd()) #getwd()
-Rcode <- file.path(basePath, "code") 
-dataFolder <- file.path(basePath,"data", "HIV") 
-outputFolder <- file.path(basePath,"output") 
-figuresFolder <- file.path(basePath, "output","figures", "hiv_cascade") #figuresFolder <- file.path(outputFolder,"figures", "hiv_cascade")
+basePath <- getwd() #dirname(getwd())
+Rcode <- file.path(dirname(getwd()), "code") 
+dataFolder <- file.path(basePath, "data")
+outputFolder <- file.path(basePath, "output")
+figuresFolder <- file.path(basePath, "output","figures")
 
 # Set working directory
 #setwd(basePath)

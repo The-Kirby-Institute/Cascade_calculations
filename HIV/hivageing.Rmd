@@ -62,9 +62,9 @@ and females from AHOD.
 rm(list=ls())
 
 # Various directories - set working directory to soruce file location. 
-basePath <- dirname(getwd()) #getwd()
-dataFolder <- file.path(basePath, "data", "HIV")
-docFolder <- file.path(basePath, "docs")
+basePath <- getwd() #dirname(getwd()) 
+dataFolder <- file.path(basePath, "data")
+docFolder <- file.path(basePath,"docs")
 figFolder <- file.path(basePath, "output","figures")
 resultsFolder <- file.path(basePath, "output")
 

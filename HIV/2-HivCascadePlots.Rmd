@@ -20,11 +20,11 @@ rm(list=ls())
 options(scipen=999)  # To get rid of scientific notation
 
 # Setup directories
-basePath <- dirname(getwd()) 
-Rcode <- file.path(basePath, "code") 
+basePath <- getwd() #dirname(getwd())
+Rcode <- file.path(dirname(getwd()), "code")
 docFolder <- file.path(basePath,"docs")
-figFolder <- file.path(basePath, "output","figures","hiv_cascade") #figFolder <- file.path(basePath,"output", "figures", "hiv_cascade")
-resultsFolder <- file.path(basePath,"output")
+figFolder <- file.path(basePath, "output","figures")
+resultsFolder <- file.path(basePath, "output")
 
 # Set working directory
 #setwd(basePath)
