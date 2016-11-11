@@ -139,6 +139,32 @@ deduplicateFile <- function(pop, state, mode, years) {
                     toString(tail(years,1)),sep="")
 }
 
+# Function is replace current estimates with estimates for 
+# specific populations obtained separately for a specific time period. 
+# These values are read in from a csv file. 
+
+replaceEstimates <- function(cascade, hardcode) {  
+  # Replace with updated values
+  for (ii in 1:nrow(hardcode)) {
+    tempCascade <- cascade %>%
+      mutate(value = ifelse(population == hardcode$population[ii] &
+                              year == hardcode$year[ii] &
+                              stage == hardcode$stage[ii], 
+                            hardcode$value[ii],
+                            value),
+             lower = ifelse(population == hardcode$population[ii] &
+                              year == hardcode$year[ii] &
+                              stage == hardcode$stage[ii], 
+                            hardCodeValues$lower[ii],
+                            lower),
+             upper = ifelse(population == hardcode$population[ii] &
+                              year == hardcode$year[ii] &
+                              stage == hardcode$stage[ii], 
+                            hardcode$upper[ii],
+                            upper))
+  }
+}
+
 ```
 
 ## Estimate cumulative HIV notifications 
@@ -148,6 +174,15 @@ deduplicateFile <- function(pop, state, mode, years) {
 hivData <- read.csv(file.path(dataFolder, paste("hivnotifications",
                     toString(analysisYear), ".csv", sep = ""))) #, 
 #                     as.is = c(1:3, 6, 9, 11, 16:18))
+
+
+if (replaceValues) {
+  # Replace with hard coded estimates where necessary
+  
+  # Load hard coded estimates
+  hardCodeValues <- read.csv(file.path(dataFolder,
+                                       "Hard_coded_estimates.csv"))
+}
 
 # Setup overarching analysis                   
 years <- startYear:analysisYear # Years to calculate and plot 
@@ -2508,41 +2543,6 @@ for (pop in populations) {
 # Finally bind to overall results
 if (bindCascade) {
   hivCascade <- rbind(hivCascade, hivSuppressed)
-}
-
-```
-
-```{r replace values}
-# This chunck is used to replace current estimates with estimates for 
-# specific populations obtained separately for a specific time period. 
-# These values are read in from a csv file. 
-
-# Replace hard coded estimates
-if (replaceValues) {
-  
-# Load hard coded estimates
-  hardCodeValues <- read.csv(file.path(dataFolder,
-                                   "Hard_coded_estimates.csv"))
-  
-  # Replace with updated values
-  for (ii in 1:nrow(hardCodeValues)) {
-    hivCascade <- hivCascade %>%
-      mutate(value = ifelse(population == hardCodeValues$population[ii] &
-                            year == hardCodeValues$year[ii] &
-                            stage == hardCodeValues$stage[ii], 
-                            hardCodeValues$value[ii],
-                            value),
-             lower = ifelse(population == hardCodeValues$population[ii] &
-                            year == hardCodeValues$year[ii] &
-                            stage == hardCodeValues$stage[ii], 
-                            hardCodeValues$lower[ii],
-                            lower),
-             upper = ifelse(population == hardCodeValues$population[ii] &
-                            year == hardCodeValues$year[ii] &
-                            stage == hardCodeValues$stage[ii], 
-                            hardCodeValues$upper[ii],
-                            upper))
-  }
 }
 
 ```
