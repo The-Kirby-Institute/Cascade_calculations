@@ -1050,9 +1050,18 @@ if (analysisYear <= 2014) {
   propStayLower <- 1
   propStayUpper <- 1
 } else {
+  # Calculate proportion overseas
+  propOs <- 1-filter(hivCob, countrygroup == "australia")$proptotalknown
+  
+  propStayNSW <- propOs * 0.96
+  propStayLowerNSW <- propOs *0.92
+  propStayUpperNSW <- 1
+  
   propStay <- 0.98
   propStayLower <- 0.96
   propStayUpper <- 1
+  
+  
 } 
 # Initialize final results data frame
 hivDiagnosed <- data.frame(stage = character(), 
@@ -1081,28 +1090,34 @@ migrationRateMin <- filter(hivMigrate, state == "all")$lower
 migrationRateMax <- filter(hivMigrate, state == "all")$upper
 
 # Calculate number living with diagnosed HIV and range
-pldhivAll <- LivingDiagnosed(propStay * cumDiagnoses, deathRate,
-                             migrationRate)
+pldhivAll <- LivingDiagnosed(cumDiagnoses, deathRate,
+                             migrationRate, propStay)
 
 # Use max rates for min estimate because they are removal rates 
 # and vice versa
-pldhivAllMin <- LivingDiagnosed(propStayLower * cumDiagnoses, deathRateMax,
-                                migrationRateMax) 
-pldhivAllMax <- LivingDiagnosed(propStayUpper * cumDiagnoses, deathRateMin,
-                                migrationRateMin) 
+pldhivAllMin <- LivingDiagnosed(cumDiagnoses,
+                                deathRateMax,
+                                migrationRateMax,
+                                propStayLower) 
+pldhivAllMax <- LivingDiagnosed(cumDiagnoses,
+                                deathRateMin,
+                                migrationRateMin,
+                                propStayUpper) 
 
 # If doing Cascade impact
 if(cascadeImpact) {
   
-  pldhivFix <- LivingDiagnosed(propStay * cumDiagnoses, deathRateFix,
-                               migrationRate)
-  pldhivFixMin <- LivingDiagnosed(propStayLower * cumDiagnoses,
+  pldhivFix <- LivingDiagnosed(cumDiagnoses, deathRateFix,
+                               migrationRate, propStay)
+  pldhivFixMin <- LivingDiagnosed(propStayLower, cumDiagnoses,
                                   deathRateFix_max,
-                                  migrationRateMax)
+                                  migrationRateMax,
+                                  propStayLower)
   
-  pldhivFixMax <- LivingDiagnosed(propStayUpper * cumDiagnoses,
+  pldhivFixMax <- LivingDiagnosed(cumDiagnoses,
                                   deathRateFix_min,
-                                  migrationRateMin)
+                                  migrationRateMin,
+                                  propStayUpper)
 }
 
 # Store results
@@ -1120,6 +1135,18 @@ statesDiag <- head(states, -1)
 
 for (region in statesDiag) {
   stateYears <- filter(hivState, state == region)$yeardiagnosis
+  
+  if (region == "nsw") {
+    stateStay <- propStayNSW
+    stateStayLower <- propStayLowerNSW
+    stateStayUpper <- propStayUpperNSW
+    
+    
+  } else {
+    stateStay <- propStay 
+    stateStayLower <- propStayLower 
+    stateStayUpper <- propStayUpper 
+  }
   
   if (nationalUniques) {
     stateDiags <- filter(hivState, 
@@ -1144,19 +1171,24 @@ for (region in statesDiag) {
   arrStateRate <- filter(hivInterstate, state == region)$arriverate
   
   # Do the state calculation and range
-  pldhivState <- LivingDiagnosed(propStay * cumStateDiags, deathRate,
-                                 migStateRate, arrStateRate, depStateRate,
+  pldhivState <- LivingDiagnosed(cumStateDiags, deathRate,
+                                 migStateRate, stateStay, arrStateRate,
+                                 depStateRate,
                                  pldhivAll)
                                  
   
-  pldhivStateMin <- LivingDiagnosed(propStayLower * cumStateDiags,
+  pldhivStateMin <- LivingDiagnosed(cumStateDiags,
                                     deathRateMax, migStateRateMax,
-                                    arrStateRate, depStateRate, pldhivAll)
+                                    stateStayLower,
+                                    arrStateRate, depStateRate,
+                                    pldhivAll)
                                     
   
-  pldhivStateMax <- LivingDiagnosed(propStayUpper * cumStateDiags,
+  pldhivStateMax <- LivingDiagnosed(cumStateDiags,
                                     deathRateMin, migStateRateMin,
-                                    arrStateRate, depStateRate, pldhivAll)                                   
+                                    stateStayUpper,
+                                    arrStateRate, depStateRate,
+                                    pldhivAll)                                   
   
   # Store the state results
   hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
@@ -1188,15 +1220,17 @@ for (mode in modes) {
   # Exp migration rates, death rates, assumed to be same overall
   
   # Do the Exp calculation and range
-  pldhivExp <- LivingDiagnosed(propStay * cumExpDiags, deathRate,
-                               migrationRate)
+  pldhivExp <- LivingDiagnosed(cumExpDiags, deathRate,
+                               migrationRate, propStay)
   
-  pldhivExpMin <- LivingDiagnosed(propStayLower * cumExpDiags,
+  pldhivExpMin <- LivingDiagnosed(cumExpDiags,
                                   deathRateMax,
-                                  migrationRateMax)
-  pldhivExpMax <- LivingDiagnosed(propStayUpper * cumExpDiags,
+                                  migrationRateMax,
+                                  propStayLower)
+  pldhivExpMax <- LivingDiagnosed(cumExpDiags,
                                   deathRateMin,
-                                  migrationRateMin)
+                                  migrationRateMin,
+                                  propStayUpper)
   
   # Store the state results
   hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
@@ -1314,7 +1348,8 @@ for (pop in pops) {
   # For Australian born we have to also consider indigenous status
   if (pop == "non-indigenous") {
     # Non-indigenous estimates
-    popDiags <- filter(hivCob, countrygroup == "australia")$proptotalknown
+    popDiags <- filter(hivCob, 
+                       countrygroup == "australia")$proptotalknown
     popYears <- filter(hivCob, countrygroup == "australia")$yeardiagnosis
     fillPopDiags <- FillMissing(allYears, popYears, popDiags)
   
@@ -1406,7 +1441,8 @@ for (pop in pops) {
     pldhivPop <- LivingDiagnosed((1-nonAborigMigrationFactor * 
                                    (1-propStay)) * cumPopDiags, 
                                  nonAborigMortalityFactor * deathRate,
-                                 nonAborigMigrationFactor * migrationRate)
+                                 nonAborigMigrationFactor *
+                                   migrationRate)
     
     pldhivPopMin <- LivingDiagnosed((1-nonAborigMigrationFactor * 
                                    (1-propStayLower)) * cumPopDiags, 
@@ -1456,16 +1492,19 @@ for (gender in genders) {
   # Exp migration rates, death rates, assumed to be same overall
   
   # Do the Exp calculation and range
-  pldhivGen <- LivingDiagnosed(propStay * cumGenDiags, 
-                               deathRate, migrationRate)
+  pldhivGen <- LivingDiagnosed(cumGenDiags, 
+                               deathRate, migrationRate,
+                               propStay)
   
-  pldhivGenMin <- LivingDiagnosed(propStayLower * cumGenDiags, 
+  pldhivGenMin <- LivingDiagnosed(cumGenDiags,  
                                   deathRateMax,
-                                  migrationRateMax)
+                                  migrationRateMax,
+                                  propStayLower)
   
-  pldhivGenMax <- LivingDiagnosed(propStayUpper * cumGenDiags, 
+  pldhivGenMax <- LivingDiagnosed(cumGenDiags, 
                                   deathRateMin, 
-                                  migrationRateMin)
+                                  migrationRateMin,
+                                  propStayUpper)
   
   # Store the state results
   hivDiagGender <- rbind(hivDiagGender, data_frame(stage = "pldhiv", 
