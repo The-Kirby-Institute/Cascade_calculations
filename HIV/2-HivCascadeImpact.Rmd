@@ -16,10 +16,10 @@ final output document.
 rm(list=ls()) 
 
 # Setup directories
-basePath <- dirname(getwd()) 
-dataFolder <- file.path(basePath, "data", "HIV")
+basePath <- getwd() #dirname(getwd()) 
+dataFolder <- file.path(basePath, "data")
 resultsFolder <- file.path(basePath,"output") 
-figuresFolder <- file.path(basePath, "output","figures","hiv_cascade") #figuresFolder <- file.path(resultsFolder,"figures", "hiv_cascade")
+figuresFolder <- file.path(basePath, "output","figures")
 
 resultsYear <- 2014
 

@@ -14,11 +14,11 @@ substr(R.Version()$version.string,1,15)`) (see
 rm(list=ls()) 
 
 # Setup directories
-basePath <- dirname(getwd()) #getwd()
-Rcode <- file.path(basePath, "code") 
-dataFolder <- file.path(basePath,"data", "HIV") 
-outputFolder <- file.path(basePath,"output") 
-figuresFolder <- file.path(basePath, "output","figures", "hiv_cascade") #figuresFolder <- file.path(outputFolder,"figures", "hiv_cascade")
+basePath <- getwd() #dirname(getwd())
+Rcode <- file.path(dirname(getwd()), "code") 
+dataFolder <- file.path(basePath, "data")
+outputFolder <- file.path(basePath, "output")
+figuresFolder <- file.path(basePath, "output","figures")
 
 # Set working directory
 #setwd(basePath)
@@ -73,7 +73,7 @@ useCD4 <- FALSE # use CD4 AHOD and testing data for retained in care if
 addTempRes <- TRUE # Add estimates for temporary residents on ART
 
 # Overall
-replaceValues <- FALSE # Replace with specific estimates
+replaceValues <- TRUE # Replace with specific estimates
 
 ```
 
@@ -135,8 +135,36 @@ numUnique <- function(dobframe, years,ignore, file = NA) {
 
 # Function to create file name for deduplicted output
 deduplicateFile <- function(pop, state, mode, years) {
-  filename <- paste(basePath, "/output/uniquehiv-", state, "_", mode, "_",
-                    toString(tail(years,1)),sep="")
+  filename <- paste(basePath, "/output/uniquehiv-", state, "_", mode, 
+                    "_", toString(tail(years,1)),sep="")
+}
+
+# Function is replace current estimates with estimates for 
+# specific populations obtained separately for a specific time period. 
+# These values are read in from a csv file. 
+
+replaceEstimates <- function(cascade, hardcode) {  
+  # Replace with updated values
+  for (ii in 1:nrow(hardcode)) {
+    cascade <- cascade %>%
+      mutate(value = ifelse(population == hardcode$population[ii] &
+                              year == hardcode$year[ii] &
+                              stage == hardcode$stage[ii], 
+                            hardcode$value[ii],
+                            value),
+             lower = ifelse(population == hardcode$population[ii] &
+                              year == hardcode$year[ii] &
+                              stage == hardcode$stage[ii], 
+                            hardCodeValues$lower[ii],
+                            lower),
+             upper = ifelse(population == hardcode$population[ii] &
+                              year == hardcode$year[ii] &
+                              stage == hardcode$stage[ii], 
+                            hardcode$upper[ii],
+                            upper))
+  }
+  
+  return(cascade)
 }
 
 ```
@@ -148,6 +176,14 @@ deduplicateFile <- function(pop, state, mode, years) {
 hivData <- read.csv(file.path(dataFolder, paste("hivnotifications",
                     toString(analysisYear), ".csv", sep = ""))) #, 
 #                     as.is = c(1:3, 6, 9, 11, 16:18))
+
+if (replaceValues) {
+  # Replace with hard coded estimates where necessary
+  
+  # Load hard coded estimates
+  hardCodeValues <- read.csv(file.path(dataFolder,
+                                       "Hard_coded_estimates.csv"))
+}
 
 # Setup overarching analysis                   
 years <- startYear:analysisYear # Years to calculate and plot 
@@ -1050,6 +1086,14 @@ if (analysisYear <= 2014) {
   propStayLower <- 1
   propStayUpper <- 1
 } else {
+  # Calculate proportion overseas
+  propAus <- filter(hivCob, countrygroup == "australia")$proptotalknown
+  
+  propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.0504)
+  propStayLowerNSW <-  propAus * (1 - 2 * 0.0072) + (1 - propAus) * 
+    (1 - 2 * 0.0504)
+  propStayUpperNSW <- 1
+  
   propStay <- 0.98
   propStayLower <- 0.96
   propStayUpper <- 1
@@ -1081,28 +1125,34 @@ migrationRateMin <- filter(hivMigrate, state == "all")$lower
 migrationRateMax <- filter(hivMigrate, state == "all")$upper
 
 # Calculate number living with diagnosed HIV and range
-pldhivAll <- LivingDiagnosed(propStay * cumDiagnoses, deathRate,
-                             migrationRate)
+pldhivAll <- LivingDiagnosed(cumDiagnoses, deathRate,
+                             migrationRate, propStay)
 
 # Use max rates for min estimate because they are removal rates 
 # and vice versa
-pldhivAllMin <- LivingDiagnosed(propStayLower * cumDiagnoses, deathRateMax,
-                                migrationRateMax) 
-pldhivAllMax <- LivingDiagnosed(propStayUpper * cumDiagnoses, deathRateMin,
-                                migrationRateMin) 
+pldhivAllMin <- LivingDiagnosed(cumDiagnoses,
+                                deathRateMax,
+                                migrationRateMax,
+                                propStayLower) 
+pldhivAllMax <- LivingDiagnosed(cumDiagnoses,
+                                deathRateMin,
+                                migrationRateMin,
+                                propStayUpper) 
 
 # If doing Cascade impact
 if(cascadeImpact) {
   
-  pldhivFix <- LivingDiagnosed(propStay * cumDiagnoses, deathRateFix,
-                               migrationRate)
-  pldhivFixMin <- LivingDiagnosed(propStayLower * cumDiagnoses,
+  pldhivFix <- LivingDiagnosed(cumDiagnoses, deathRateFix,
+                               migrationRate, propStay)
+  pldhivFixMin <- LivingDiagnosed(propStayLower, cumDiagnoses,
                                   deathRateFix_max,
-                                  migrationRateMax)
+                                  migrationRateMax,
+                                  propStayLower)
   
-  pldhivFixMax <- LivingDiagnosed(propStayUpper * cumDiagnoses,
+  pldhivFixMax <- LivingDiagnosed(cumDiagnoses,
                                   deathRateFix_min,
-                                  migrationRateMin)
+                                  migrationRateMin,
+                                  propStayUpper)
 }
 
 # Store results
@@ -1120,6 +1170,18 @@ statesDiag <- head(states, -1)
 
 for (region in statesDiag) {
   stateYears <- filter(hivState, state == region)$yeardiagnosis
+  
+  if (region == "nsw") {
+    stateStay <- propStayNSW
+    stateStayLower <- propStayLowerNSW
+    stateStayUpper <- propStayUpperNSW
+    
+    
+  } else {
+    stateStay <- propStay 
+    stateStayLower <- propStayLower 
+    stateStayUpper <- propStayUpper 
+  }
   
   if (nationalUniques) {
     stateDiags <- filter(hivState, 
@@ -1144,19 +1206,24 @@ for (region in statesDiag) {
   arrStateRate <- filter(hivInterstate, state == region)$arriverate
   
   # Do the state calculation and range
-  pldhivState <- LivingDiagnosed(propStay * cumStateDiags, deathRate,
-                                 migStateRate, arrStateRate, depStateRate,
+  pldhivState <- LivingDiagnosed(cumStateDiags, deathRate,
+                                 migStateRate, stateStay, arrStateRate,
+                                 depStateRate,
                                  pldhivAll)
                                  
   
-  pldhivStateMin <- LivingDiagnosed(propStayLower * cumStateDiags,
+  pldhivStateMin <- LivingDiagnosed(cumStateDiags,
                                     deathRateMax, migStateRateMax,
-                                    arrStateRate, depStateRate, pldhivAll)
+                                    stateStayLower,
+                                    arrStateRate, depStateRate,
+                                    pldhivAll)
                                     
   
-  pldhivStateMax <- LivingDiagnosed(propStayUpper * cumStateDiags,
+  pldhivStateMax <- LivingDiagnosed(cumStateDiags,
                                     deathRateMin, migStateRateMin,
-                                    arrStateRate, depStateRate, pldhivAll)                                   
+                                    stateStayUpper,
+                                    arrStateRate, depStateRate,
+                                    pldhivAll)                                   
   
   # Store the state results
   hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
@@ -1188,15 +1255,17 @@ for (mode in modes) {
   # Exp migration rates, death rates, assumed to be same overall
   
   # Do the Exp calculation and range
-  pldhivExp <- LivingDiagnosed(propStay * cumExpDiags, deathRate,
-                               migrationRate)
+  pldhivExp <- LivingDiagnosed(cumExpDiags, deathRate,
+                               migrationRate, propStay)
   
-  pldhivExpMin <- LivingDiagnosed(propStayLower * cumExpDiags,
+  pldhivExpMin <- LivingDiagnosed(cumExpDiags,
                                   deathRateMax,
-                                  migrationRateMax)
-  pldhivExpMax <- LivingDiagnosed(propStayUpper * cumExpDiags,
+                                  migrationRateMax,
+                                  propStayLower)
+  pldhivExpMax <- LivingDiagnosed(cumExpDiags,
                                   deathRateMin,
-                                  migrationRateMin)
+                                  migrationRateMin,
+                                  propStayUpper)
   
   # Store the state results
   hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
@@ -1314,7 +1383,8 @@ for (pop in pops) {
   # For Australian born we have to also consider indigenous status
   if (pop == "non-indigenous") {
     # Non-indigenous estimates
-    popDiags <- filter(hivCob, countrygroup == "australia")$proptotalknown
+    popDiags <- filter(hivCob, 
+                       countrygroup == "australia")$proptotalknown
     popYears <- filter(hivCob, countrygroup == "australia")$yeardiagnosis
     fillPopDiags <- FillMissing(allYears, popYears, popDiags)
   
@@ -1406,7 +1476,8 @@ for (pop in pops) {
     pldhivPop <- LivingDiagnosed((1-nonAborigMigrationFactor * 
                                    (1-propStay)) * cumPopDiags, 
                                  nonAborigMortalityFactor * deathRate,
-                                 nonAborigMigrationFactor * migrationRate)
+                                 nonAborigMigrationFactor *
+                                   migrationRate)
     
     pldhivPopMin <- LivingDiagnosed((1-nonAborigMigrationFactor * 
                                    (1-propStayLower)) * cumPopDiags, 
@@ -1456,16 +1527,19 @@ for (gender in genders) {
   # Exp migration rates, death rates, assumed to be same overall
   
   # Do the Exp calculation and range
-  pldhivGen <- LivingDiagnosed(propStay * cumGenDiags, 
-                               deathRate, migrationRate)
+  pldhivGen <- LivingDiagnosed(cumGenDiags, 
+                               deathRate, migrationRate,
+                               propStay)
   
-  pldhivGenMin <- LivingDiagnosed(propStayLower * cumGenDiags, 
+  pldhivGenMin <- LivingDiagnosed(cumGenDiags,  
                                   deathRateMax,
-                                  migrationRateMax)
+                                  migrationRateMax,
+                                  propStayLower)
   
-  pldhivGenMax <- LivingDiagnosed(propStayUpper * cumGenDiags, 
+  pldhivGenMax <- LivingDiagnosed(cumGenDiags, 
                                   deathRateMin, 
-                                  migrationRateMin)
+                                  migrationRateMin,
+                                  propStayUpper)
   
   # Store the state results
   hivDiagGender <- rbind(hivDiagGender, data_frame(stage = "pldhiv", 
@@ -1482,6 +1556,14 @@ hivDiagnosed <- rbind(hivDiagnosed, hivDiagGender)
 # Finally bind to overall results -----------------------------------------
 if (bindCascade) {
   hivCascade <- rbind(hivCascade, hivDiagnosed)
+}
+
+# Replace values with hard coded if necessary
+if (replaceValues) {
+  tempHardCode <- filter(hardCodeValues, stage == "pldhiv")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+  }
 }
 
 ```
@@ -1503,7 +1585,8 @@ hivUndiag <- data.frame(stage = character(),
 
 # Read in back projected undiagnosed estimates from ECDC HIV Modelling Tool
 propUndiagnosed <- read_excel(file.path(dataFolder, 
-  paste0("ecdc_undiagnosed_percentage-", toString(analysisYear), ".xlsx")))
+  paste0("ecdc_undiagnosed_percentage-", toString(analysisYear),
+         ".xlsx")))
 
 # Only keep required years
 propUndiagnosed <- filter(propUndiagnosed, year %in% allYears) 
@@ -1759,6 +1842,14 @@ if (bindCascade) {
   hivCascade <- rbind(hivCascade, hivUndiag)
 }
 
+# Replace values with hard coded if necessary
+if (replaceValues) {
+  tempHardCode <- filter(hardCodeValues, stage == "infected")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+  }
+}
+
 ```
 
 ## Number linked to care
@@ -1920,6 +2011,15 @@ if (includeLinked) {
     hivCascade <- rbind(hivCascade, hivLinkCare)
   }
 }
+
+# Replace values with hard coded if necessary
+if (replaceValues) {
+  tempHardCode <- filter(hardCodeValues, stage == "linked")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+  }
+}
+
 ```
 
 ## Number taking ART
@@ -2030,7 +2130,8 @@ hivTreated <- hivTreated %>%
 
 
 # calculate uncertainty in Prospection data -------------------------------
-popData <- read_excel(file.path(dataFolder, "ABS_population_sizes.xlsx"),
+popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
+                                "ABS_population_sizes.xlsx"),
                       sheet = 2)
 source(file.path(Rcode, "pharmDashError.R"), echo=TRUE)
 
@@ -2119,6 +2220,15 @@ if (plots) {
   ggsave(file.path(figuresFolder, "treatment_rate.png"),
          plot = treatPlot, width = 15, height = 5)
 }
+
+# Replace values with hard coded if necessary
+if (replaceValues) {
+  tempHardCode <- filter(hardCodeValues, stage == "numART")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+  }
+}
+
 ```
 
 ## Number retained in care
@@ -2368,6 +2478,14 @@ if (bindCascade) {
   hivCascade <- rbind(hivCascade, hivRetained)
 }
 
+# Replace values with hard coded if necessary
+if (replaceValues) {
+  tempHardCode <- filter(hardCodeValues, stage == "retained")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+  }
+}
+
 ```
 
 ### Number with suppressed virus
@@ -2447,7 +2565,8 @@ for (pop in populations) {
   tempPropMax <- tempDf$prop200upper
   
   # Number treated 
-  treatDf <- filter(hivTreated, population == pop, year >= dataStart)
+  treatDf <- filter(hivCascade, stage == "numART", 
+                    population == pop, year >= dataStart)
   tempTreat <- treatDf$value
   tempTreatMin <- treatDf$lower
   tempTreatMax <- treatDf$upper
@@ -2472,38 +2591,11 @@ if (bindCascade) {
   hivCascade <- rbind(hivCascade, hivSuppressed)
 }
 
-```
-
-```{r replace values}
-# This chunck is used to replace current estimates with estimates for 
-# specific populations obtained separately for a specific time period. 
-# These values are read in from a csv file. 
-
-# Replace hard coded estimates
+# Replace values with hard coded if necessary
 if (replaceValues) {
-  
-# Load hard coded estimates
-  hardCodeValues <- read.csv(file.path(dataFolder,
-                                   "Hard_coded_estimates.csv"))
-  
-  # Replace with updated values
-  for (ii in 1:nrow(hardCodeValues)) {
-    hivCascade <- hivCascade %>%
-      mutate(value = ifelse(population == hardCodeValues$population[ii] &
-                            year == hardCodeValues$year[ii] &
-                            stage == hardCodeValues$stage[ii], 
-                            hardCodeValues$value[ii],
-                            value),
-             lower = ifelse(population == hardCodeValues$population[ii] &
-                            year == hardCodeValues$year[ii] &
-                            stage == hardCodeValues$stage[ii], 
-                            hardCodeValues$lower[ii],
-                            lower),
-             upper = ifelse(population == hardCodeValues$population[ii] &
-                            year == hardCodeValues$year[ii] &
-                            stage == hardCodeValues$stage[ii], 
-                            hardCodeValues$upper[ii],
-                            upper))
+  tempHardCode <- filter(hardCodeValues, stage == "suppressed")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
   }
 }
 

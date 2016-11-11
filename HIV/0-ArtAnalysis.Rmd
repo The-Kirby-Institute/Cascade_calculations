@@ -19,12 +19,12 @@ available for 2013-2014. We only estimate the number on treatment since
 rm(list=ls())
 
 # Various directories
-basePath <- dirname(getwd()) #getwd()
-dataFolder <- file.path(basePath, "data", "HIV")
+basePath <- getwd() #dirname(getwd())
+dataFolder <- file.path(basePath, "data")
 #outputFolder <- file.path(basePath, "data")
 figFolder <- file.path(basePath, "output","figures")
 resultsFolder <- file.path(basePath, "output")
-Rcode <- file.path(basePath, "code") 
+Rcode <- file.path(dirname(getwd()), "code") 
 
 # Load standard libraries, key functions and options
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
