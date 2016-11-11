@@ -146,7 +146,7 @@ deduplicateFile <- function(pop, state, mode, years) {
 replaceEstimates <- function(cascade, hardcode) {  
   # Replace with updated values
   for (ii in 1:nrow(hardcode)) {
-    tempCascade <- cascade %>%
+    cascade <- cascade %>%
       mutate(value = ifelse(population == hardcode$population[ii] &
                               year == hardcode$year[ii] &
                               stage == hardcode$stage[ii], 
@@ -164,7 +164,7 @@ replaceEstimates <- function(cascade, hardcode) {
                             upper))
   }
   
-  return(tempCascade)
+  return(cascade)
 }
 
 ```
@@ -2130,7 +2130,8 @@ hivTreated <- hivTreated %>%
 
 
 # calculate uncertainty in Prospection data -------------------------------
-popData <- read_excel(file.path(dataFolder, "ABS_population_sizes.xlsx"),
+popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
+                                "ABS_population_sizes.xlsx"),
                       sheet = 2)
 source(file.path(Rcode, "pharmDashError.R"), echo=TRUE)
 
@@ -2564,7 +2565,8 @@ for (pop in populations) {
   tempPropMax <- tempDf$prop200upper
   
   # Number treated 
-  treatDf <- filter(hivTreated, population == pop, year >= dataStart)
+  treatDf <- filter(hivCascade, stage == "numART", 
+                    population == pop, year >= dataStart)
   tempTreat <- treatDf$value
   tempTreatMin <- treatDf$lower
   tempTreatMax <- treatDf$upper
