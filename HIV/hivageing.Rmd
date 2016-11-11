@@ -4,11 +4,11 @@ author: Richard T. Gray
 date: Latest version - `r format(Sys.Date(), format="%B %d %Y")`
 output:
   word_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 8
     pandoc_args: --output="docs/PLDHIV_aging.docx"
     reference_docx: docs/mystyles.docx
-    fig_width: 8
-    fig_height: 4
-    fig_caption: true
 csl: docs/plos.csl
 bibliography: docs/HIVcascades.bib
 ---
@@ -65,6 +65,7 @@ rm(list=ls())
 basePath <- getwd() #dirname(getwd()) 
 dataFolder <- file.path(basePath, "data")
 docFolder <- file.path(basePath,"docs")
+
 figFolder <- file.path(basePath, "output","figures")
 resultsFolder <- file.path(basePath, "output")
 
@@ -81,9 +82,14 @@ LoadLibrary(gridExtra)
 
 # Primary script parameters
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to saved files
-analysisYear <- 2014
+analysisYear <- 2015
 
 # Script options
+region <- "qld"
+calculateGender <- FALSE
+if (region == "all") {
+  calculateGender <- TRUE
+} 
 savePlots <- TRUE
 plotGray <- FALSE # Use grayscale or colour in plots
 # saveResults <- TRUE
@@ -93,25 +99,77 @@ plotGray <- FALSE # Use grayscale or colour in plots
 ```{r loaddresults, echo = FALSE, messages = FALSE, include=FALSE}
 # Load the previously saved hiv notifications data frame - hivSet
 load(file.path(resultsFolder, paste("HIVset-",
-                    toString(analysisYear), ".rda", sep = "")))
+                                    toString(analysisYear), ".rda", 
+                                    sep = "")))
 
 # Load the previously saved hivresults data frame - hivResults
 load(file.path(resultsFolder, paste("HIVresults-",
-                    toString(analysisYear), ".rda", sep = "")))
+                                    toString(analysisYear), ".rda", 
+                                    sep = "")))
 
 # Load the previously saved hivrGender data frame - hivGender
 load(file.path(resultsFolder, paste("HIVresults-",
-                    toString(analysisYear), "_gender.rda", sep = "")))
+                                    toString(analysisYear), "_gender.rda",
+                                    sep = "")))
 
 # Load current hiv cascade - hivCascade
 load(file.path(resultsFolder, paste("HIVcascadeEstimates-",
-                    toString(analysisYear), ".rda", sep = "")))
+                                    toString(analysisYear), ".rda", sep = "")))
+
+# Load current hiv cascade - hivCascade
+load(file.path(resultsFolder, paste("HIVInterstateEstimates-",
+                                    toString(analysisYear), ".rda", sep = "")))
 
 # Extract PLDHIV for overall population to 
-pldhiv <- hivCascade %>%
+pldhivAll <- hivCascade %>%
   filter(stage == "pldhiv", population == "all") %>%
   select(-stage, -population)
-                    
+
+if (region == "all") {
+  pldhiv <- pldhivAll
+  uniquecasesYear <- 0.98 * hivResults$uniquecases 
+} else {
+  
+  pldhiv <- hivCascade %>%
+  filter(stage == "pldhiv", population == region) %>%
+  select(-stage, -population)
+  
+  # Calculate number of notifications each year by region/state
+  hivState <- hivSet %>% group_by(state, yeardiagnosis) %>% 
+    summarise(notifications = n()) %>% 
+    ungroup() %>% 
+    group_by(state) %>%
+    mutate(totalnotifications = cumsum(notifications)) %>%
+    ungroup() %>% 
+    group_by(yeardiagnosis) %>% 
+    mutate(propnotifications = notifications / sum(notifications)) %>%
+    mutate(proptotalnotifications = 
+             totalnotifications / sum(totalnotifications)) %>% 
+    filter(yeardiagnosis <= analysisYear)   
+  
+  stateResults <- hivState %>%
+    filter(state == region) %>%
+    select(-state)
+  
+  if (length(stateResults$totalnotifications) < 36) {
+    numZeros <- 36 - length(stateResults$totalnotifications)
+    totalnotifications <- c(rep(0, numZeros), 
+                                         stateResults$totalnotifications)
+  } else {
+    totalnotifications <- stateResults$totalnotifications
+  }
+  
+  uniquecasesYear <- 0.98 * totalnotifications *
+    hivResults$propunique
+  
+  interstateRate <- filter(hivInterstate, state == region)$netrate
+  interstateArrive <- filter(hivInterstate, state == region)$arriverate
+  interstateDepart <- filter(hivInterstate, state == region)$departrate
+  
+  interstateFactor <- (pldhivAll$value - pldhiv$value) / pldhiv$value
+  interstateFactor[interstateFactor == Inf] <- 0
+}
+
 ```
 
 ```{r organizedata, echo = FALSE, messages = FALSE, include=FALSE}
@@ -161,14 +219,15 @@ colnames(ageDeathFemale) <- yearList
 # Calculate estimated number of unique diagnoses -------------------------
 
 # Overall
-unqiueDiags <- c(hivResults$uniquecases[1], diff(hivResults$uniquecases))
+uniqueCases <- uniquecasesYear
+unqiueDiags <- c(uniqueCases[1], diff(uniqueCases))
 
 # By gender
-uniqueCasesMale <- filter(hivGender, sex == "male")$propunique *
+uniqueCasesMale <- 0.98 * filter(hivGender, sex == "male")$propunique *
   filter(hivGender, sex == "male")$totalnotifications
 unqiueDiagsMale <- c(uniqueCasesMale[1], diff(uniqueCasesMale))
 
-uniqueCasesFemale <- filter(hivGender, sex == "female")$propunique *
+uniqueCasesFemale <- 0.98 * filter(hivGender, sex == "female")$propunique *
   filter(hivGender, sex == "female")$totalnotifications
 
 uniqueCasesFemale <- c(0, 0, 0, 0, uniqueCasesFemale) # append 0 for NA
@@ -188,41 +247,61 @@ for (ii in 1:nyears) {
   # Sort out diagnoses ---------------------------------------------------
   
   # Extract diagnoses in this year and age at diagnosis
-  yearDiags <- hivSet %>% 
-    filter(yeardiagnosis == year) %>%
-    select(agehiv)
+  if (region == "all") {
+    yearDiags <- hivSet %>% 
+      filter(yeardiagnosis == year) %>%
+      select(agehiv)
+  } else {
+    yearDiags <- hivSet %>% 
+      filter(yeardiagnosis == year, state == region) %>%
+      select(agehiv)
+  }
   
   # Now put people in the right age bin
   agebins <- table(AgeCat(yearDiags$agehiv, lower = 0, 
-                           upper = 85, by = 5), useNA = "always")
+                          upper = 85, by = 5), useNA = "always")
   
   # Reallocate NA's
-  probvec <- head(agebins, -1)/sum(head(agebins, -1))
-  reallocate <- sample(length(head(agebins, -1)), tail(agebins, 1), 
-                       replace = TRUE, prob = probvec)
-  
-  agebins[unique(reallocate)] <- agebins[unique(reallocate)] + 
-                                  as.vector(table(reallocate)) 
+  if (sum(is.na(agebins)) > 0) {
+    probvec <- head(agebins, -1)/sum(head(agebins, -1))
+
+
+    reallocate <- sample(length(head(agebins, -1)), tail(agebins, 1),
+                         replace = TRUE, prob = probvec)
+
+    agebins[unique(reallocate)] <- agebins[unique(reallocate)] +
+      as.vector(table(reallocate))
+  }
   
   # Tidy up age bins and add to the agediag matix
   agebins <- head(agebins, -1)
   
   # Adjust age bins to remove duplicates normalizing to the number
   # of unique cases 
-  ageDiag[, ii] <- agebins * unqiueDiags[ii]/sum(agebins) 
-
+  if (sum(agebins) != 0) {
+  ageDiag[, ii] <- agebins * unqiueDiags[ii] / sum(agebins) 
+  } else {
+    ageDiag[, ii] <- 0
+  }
   # Sort out deaths -----------------------------------------------------
   
   # Extract deaths in this year and age at death
+  if (region == "all") {
   yearDeaths <- hivSet %>% 
     filter(yeardeath == year) %>%
     mutate(agedeath = agehiv + (yeardeath - yeardiagnosis)) %>%
     select(agedeath)
+  } else {
+    yearDeaths <- hivSet %>% 
+    filter(yeardeath == year, state == region) %>%
+    mutate(agedeath = agehiv + (yeardeath - yeardiagnosis)) %>%
+    select(agedeath)
+  }
   
   # Now put people in the right age bin -  assume all deaths are complete 
   # so we don't have to reallocate NAs
   deathbins <- table(AgeCat(yearDeaths$agedeath, lower = 0, upper = 85, 
-                           by = 5))
+                            by = 5))
   
   # Tidy up 
   # deathbins <- as.vector(c(sum(deathbins[1:3]), 
@@ -231,109 +310,113 @@ for (ii in 1:nyears) {
   ageDeath[, ii] <- deathbins
 }
 
-# Male ----------------------------------------------------------------
-for (ii in 1:nyears) {
-  year <- 1980 + ii - 1
+if (calculateGender) {
   
-  # Sort out diagnoses ---------------------------------------------------
-  
-  # Extract diagnoses in this year and age at diagnosis
-  yearDiags <- hivSetMale %>% 
-    filter(yeardiagnosis == year) %>%
-    select(agehiv)
-  
-  # Now put people in the right age bin
-  agebins <- table(AgeCat(yearDiags$agehiv, lower = 0, 
-                           upper = 85, by = 5), useNA = "always")
-  
-  # Reallocate NA's
-  probvec <- head(agebins, -1)/sum(head(agebins, -1))
-  reallocate <- sample(length(head(agebins, -1)), tail(agebins, 1), 
-                       replace = TRUE, prob = probvec)
-  
-  agebins[unique(reallocate)] <- agebins[unique(reallocate)] + 
-                                  as.vector(table(reallocate)) 
-  
-  # Tidy up age bins and add to the agediag matix
-  agebins <- head(agebins, -1)
-  
-  # Adjust age bins to remove duplicates normalizing to the number
-  # of unique cases 
-  ageDiagMale[, ii] <- agebins * unqiueDiagsMale[ii]/sum(agebins) 
-
-  # Sort out deaths -----------------------------------------------------
-  
-  # Extract deaths in this year and age at death
-  yearDeaths <- hivSetMale %>% 
-    filter(yeardeath == year) %>%
-    mutate(agedeath = agehiv + (yeardeath - yeardiagnosis)) %>%
-    select(agedeath)
-  
-  # Now put people in the right age bin -  assume all deaths are complete 
-  # so we don't have to reallocate NAs
-  deathbins <- table(AgeCat(yearDeaths$agedeath, lower = 0, upper = 85, 
-                           by = 5))
-  
-  # Tidy up 
-  # deathbins <- as.vector(c(sum(deathbins[1:3]), 
-  #                          deathbins[4:length(deathbins)]))
-  
-  ageDeathMale[, ii] <- deathbins
-}
-
-# Female ----------------------------------------------------------------
-for (ii in 1:nyears) {
-  year <- 1980 + ii - 1
-  
-  # Sort out diagnoses ---------------------------------------------------
-  
-  # Extract diagnoses in this year and age at diagnosis
-  yearDiags <- hivSetFemale %>% 
-    filter(yeardiagnosis == year) %>%
-    select(agehiv)
-  
-  # Now put people in the right age bin
-  agebins <- table(AgeCat(yearDiags$agehiv, lower = 0, 
-                           upper = 85, by = 5), useNA = "always")
-  
-  # Reallocate NA's - Females cause some trouble because of no diagnoses
-  # in some years 
-  if (agebins[19] > 0) {
+  # Male ----------------------------------------------------------------
+  for (ii in 1:nyears) {
+    year <- 1980 + ii - 1
+    
+    # Sort out diagnoses -------------------------------------------------
+    
+    # Extract diagnoses in this year and age at diagnosis
+    yearDiags <- hivSetMale %>% 
+      filter(yeardiagnosis == year) %>%
+      select(agehiv)
+    
+    # Now put people in the right age bin
+    agebins <- table(AgeCat(yearDiags$agehiv, lower = 0, 
+                            upper = 85, by = 5), useNA = "always")
+    
+    # Reallocate NA's
     probvec <- head(agebins, -1)/sum(head(agebins, -1))
     reallocate <- sample(length(head(agebins, -1)), tail(agebins, 1), 
                          replace = TRUE, prob = probvec)
     
     agebins[unique(reallocate)] <- agebins[unique(reallocate)] + 
-                                    as.vector(table(reallocate)) 
+      as.vector(table(reallocate)) 
+    
+    # Tidy up age bins and add to the agediag matix
+    agebins <- head(agebins, -1)
+    
+    # Adjust age bins to remove duplicates normalizing to the number
+    # of unique cases 
+    ageDiagMale[, ii] <- agebins * unqiueDiagsMale[ii]/sum(agebins) 
+    
+    # Sort out deaths -----------------------------------------------------
+    
+    # Extract deaths in this year and age at death
+    yearDeaths <- hivSetMale %>% 
+      filter(yeardeath == year) %>%
+      mutate(agedeath = agehiv + (yeardeath - yeardiagnosis)) %>%
+      select(agedeath)
+    
+    # Now put people in the right age bin -  assume all deaths are complete 
+    # so we don't have to reallocate NAs
+    deathbins <- table(AgeCat(yearDeaths$agedeath, lower = 0, upper = 85, 
+                              by = 5))
+    
+    # Tidy up 
+    # deathbins <- as.vector(c(sum(deathbins[1:3]), 
+    #                          deathbins[4:length(deathbins)]))
+    
+    ageDeathMale[, ii] <- deathbins
   }
   
-  # Tidy up age bins and add to the agediag matix
-  agebins <- head(agebins, -1)
-  
-  # Adjust age bins to remove duplicates normalizing to the number
-  # of unique cases 
-  if (sum(agebins) > 0) {
-    ageDiagFemale[, ii] <- agebins * unqiueDiagsFemale[ii]/sum(agebins) 
+  # Female ----------------------------------------------------------------
+  for (ii in 1:nyears) {
+    year <- 1980 + ii - 1
+    
+    # Sort out diagnoses ---------------------------------------------------
+    
+    # Extract diagnoses in this year and age at diagnosis
+    yearDiags <- hivSetFemale %>% 
+      filter(yeardiagnosis == year) %>%
+      select(agehiv)
+    
+    # Now put people in the right age bin
+    agebins <- table(AgeCat(yearDiags$agehiv, lower = 0, 
+                            upper = 85, by = 5), useNA = "always")
+    
+    # Reallocate NA's - Females cause some trouble because of no diagnoses
+    # in some years 
+    if (agebins[19] > 0) {
+      probvec <- head(agebins, -1)/sum(head(agebins, -1))
+      reallocate <- sample(length(head(agebins, -1)), tail(agebins, 1), 
+                           replace = TRUE, prob = probvec)
+      
+      agebins[unique(reallocate)] <- agebins[unique(reallocate)] + 
+        as.vector(table(reallocate)) 
+    }
+    
+    # Tidy up age bins and add to the agediag matix
+    agebins <- head(agebins, -1)
+    
+    # Adjust age bins to remove duplicates normalizing to the number
+    # of unique cases 
+    if (sum(agebins) > 0) {
+      ageDiagFemale[, ii] <- agebins * unqiueDiagsFemale[ii]/sum(agebins) 
+    }
+    
+    # Sort out deaths -----------------------------------------------------
+    
+    # Extract deaths in this year and age at death
+    yearDeaths <- hivSetFemale %>% 
+      filter(yeardeath == year) %>%
+      mutate(agedeath = agehiv + (yeardeath - yeardiagnosis)) %>%
+      select(agedeath)
+    
+    # Now put people in the right age bin -  assume all deaths are complete 
+    # so we don't have to reallocate NAs
+    deathbins <- table(AgeCat(yearDeaths$agedeath, lower = 0, upper = 85, 
+                              by = 5))
+    
+    # Tidy up 
+    # deathbins <- as.vector(c(sum(deathbins[1:3]), 
+    #                          deathbins[4:length(deathbins)]))
+    
+    ageDeathFemale[, ii] <- deathbins
   }
   
-  # Sort out deaths -----------------------------------------------------
-  
-  # Extract deaths in this year and age at death
-  yearDeaths <- hivSetFemale %>% 
-    filter(yeardeath == year) %>%
-    mutate(agedeath = agehiv + (yeardeath - yeardiagnosis)) %>%
-    select(agedeath)
-  
-  # Now put people in the right age bin -  assume all deaths are complete 
-  # so we don't have to reallocate NAs
-  deathbins <- table(AgeCat(yearDeaths$agedeath, lower = 0, upper = 85, 
-                           by = 5))
-  
-  # Tidy up 
-  # deathbins <- as.vector(c(sum(deathbins[1:3]), 
-  #                          deathbins[4:length(deathbins)]))
-  
-  ageDeathFemale[, ii] <- deathbins
 }
 
 ```
@@ -347,7 +430,7 @@ estimateDeaths <- pldhiv$value * hivResults$deathrate
 estimateDeathsMale <- filter(hivDiagGender, population == "male")$value *
   hivResults$deathrate
 estimateDeathsFemale <- filter(hivDiagGender, 
-                                population == "female")$value *
+                               population == "female")$value *
   hivResults$deathrate
 
 # Determine the difference in deaths between the estimate and the known 
@@ -363,16 +446,19 @@ unknownDeathsFemale <- estimateDeathsFemale - colSums(ageDeathFemale)
 # Distribute deaths to age groups based on the ABS death rates for
 # each group - (TODO): May replace with AHOD death rates if available
 
-# Load deathrates data
+# Load deathrates data from ABS for 2014
 absFolder <- file.path(path.expand("~"), "Research",
                        "!Evaluation_Modelling", "data")
 absDeathRates <- read.csv(file.path(absFolder, 
-                          "ABS_deathrate_sex_age.csv", 
-                          sep =""), as.is = c(1,2))
+                                    "ABS_Deathrate_Age_State_clean-2014.csv", 
+                                    sep =""), as.is = c(1,2))
 
-absDeathRatesAll <- filter(absDeathRates, sex == "male")
-absDeathRatesMale <- filter(absDeathRates, sex == "male")
-absDeathRatesFemale <- filter(absDeathRates, sex == "female")
+absDeathRatesAll <- filter(absDeathRates, gender == "males", 
+                           state == "all") %>% tbl_df()
+absDeathRatesMale <- filter(absDeathRates, gender == "males",
+                            state == "all") %>% tbl_df()
+absDeathRatesFemale <- filter(absDeathRates, gender == "females",
+                              state == "all") %>% tbl_df()
 
 ```
 
@@ -410,10 +496,10 @@ agePldhivFemale[, 1] <- ageDiagFemale[, 1]
 for (ii in 2:nyears) {
   
   # Extract abs death rates for this year
-  if (yearsVec[ii - 1] <= 2000) {
-    absDeaths <- filter(absDeathRatesAll, year == 2000)$deathrate
-  } else if (yearsVec[ii - 1] >= 2011) {
-    absDeaths <- filter(absDeathRatesAll, year == 2011)$deathrate
+  if (yearsVec[ii - 1] <= 2005) {
+    absDeaths <- filter(absDeathRatesAll, year == 2004)$deathrate
+  } else if (yearsVec[ii - 1] >= 2015) {
+    absDeaths <- filter(absDeathRatesAll, year == 2014)$deathrate
   } else {
     absDeaths <- filter(absDeathRatesAll, 
                         year == yearsVec[ii - 1])$deathrate
@@ -421,7 +507,7 @@ for (ii in 2:nyears) {
   
   # Adjust numbers per 1000 to rate and remove deaths for those aged 0
   absDeaths <- absDeaths/1000
-  absDeaths <- absDeaths[2:length(absDeaths)]
+  absDeaths <- absDeaths[3:length(absDeaths)]
   
   # Use ABS deathrate to estimate expected deaths in each age group
   deathsABSrate <- absDeaths * agePldhiv[, ii - 1]
@@ -430,8 +516,12 @@ for (ii in 2:nyears) {
   # unknown death - can be negative if unknownDeaths is negative equates
   # to adding people rather than removing them. This keeps things 
   # consistent with estimated total deaths.
-  adjustFactor <- unknownDeaths[ii - 1] / sum(deathsABSrate)
-  unknownAgeDeaths <- adjustFactor * deathsABSrate
+  if (sum(deathsABSrate) !=0) {
+    adjustFactor <- unknownDeaths[ii - 1] / sum(deathsABSrate)
+    unknownAgeDeaths <- adjustFactor * deathsABSrate
+  } else {
+    unknownAgeDeaths <- rep(0, nages)
+  }
   
   for (jj in 1:nages) {
     
@@ -446,10 +536,24 @@ for (ii in 2:nyears) {
     # Update current age group for current year - assuming same 
     # overseas migration rate for each age group equal to overall 
     # migration rate
-    agePldhiv[jj, ii] <- agePldhiv[jj, ii - 1] + ageDiag[jj, ii] - 
-      ageDeath[jj, ii - 1] - unknownAgeDeaths[jj] - 
-      agePldhiv[jj, ii - 1] * hivResults$osrate[ii-1] - 
-      agePldhiv[jj, ii - 1] * ageRate[jj] + ageUp
+    # agePldhiv[jj, ii] <- agePldhiv[jj, ii - 1] + ageDiag[jj, ii] - 
+    #   ageDeath[jj, ii - 1] - unknownAgeDeaths[jj] - 
+    #   agePldhiv[jj, ii - 1] * hivResults$osrate[ii-1] - 
+    #   agePldhiv[jj, ii - 1] * ageRate[jj] + ageUp
+    
+    if (region != "all") {
+      agePldhiv[jj, ii] <- agePldhiv[jj, ii - 1] + ageDiag[jj, ii] - 
+        ageDeath[jj, ii - 1] - unknownAgeDeaths[jj] - 
+        agePldhiv[jj, ii - 1] * hivResults$osrate[ii-1] - 
+        agePldhiv[jj, ii - 1] * ageRate[jj] + ageUp - 
+        agePldhiv[jj, ii - 1] * interstateDepart[ii-1] +
+        agePldhiv[jj, ii - 1] * interstateArrive[ii-1] * interstateFactor[ii-1]
+    } else {
+      agePldhiv[jj, ii] <- agePldhiv[jj, ii - 1] + ageDiag[jj, ii] - 
+        ageDeath[jj, ii - 1] - unknownAgeDeaths[jj] - 
+        agePldhiv[jj, ii - 1] * hivResults$osrate[ii-1] - 
+        agePldhiv[jj, ii - 1] * ageRate[jj] + ageUp  
+    }
     
     # For low numbers the previous calculation could give number less
     # than zero. In this case repalce with zero
@@ -459,118 +563,121 @@ for (ii in 2:nyears) {
   }
 }
 
-# Males ----------------------------------------------------------------
-for (ii in 2:nyears) {
-  
-  # Extract abs death rates for this year
-  if (yearsVec[ii - 1] <= 2000) {
-    absDeaths <- filter(absDeathRatesMale, year == 2000)$deathrate
-  } else if (yearsVec[ii - 1] >= 2011) {
-    absDeaths <- filter(absDeathRatesMale, year == 2011)$deathrate
-  } else {
-    absDeaths <- filter(absDeathRatesMale, 
-                        year == yearsVec[ii - 1])$deathrate
-  }
-  
-  # Adjust numbers per 1000 to rate and remove deaths for those aged 0
-  absDeaths <- absDeaths/1000
-  absDeaths <- absDeaths[2:length(absDeaths)]
-  
-  # Use ABS deathrate to estimate expected deaths in each age group
-  deathsABSrate <- absDeaths * agePldhivMale[, ii - 1]
-  
-  # Calculate adjustment factor so deaths across age groups matchs
-  # unknown death - can be negative if unknownDeaths is negative equates
-  # to adding people rather than removing them. This keeps things 
-  # consistent with estimated total deaths.
-  adjustFactor <- unknownDeathsMale[ii - 1] / sum(deathsABSrate)
-  unknownAgeDeaths <- adjustFactor * deathsABSrate
-  
-  for (jj in 1:nages) {
-    
-    # Calculate number of people moving up in age
-    if (jj == 1) {
-      # If in first age group no-one ages from younger group
-      ageUp <- 0
-    } else {
-      ageUp <- agePldhivMale[jj - 1, ii - 1] * ageRate[jj-1]
-    }
-    
-    # Update current age group for current year - assuming same 
-    # overseas migration rate for each age group equal to overall 
-    # migration rate
-    agePldhivMale[jj, ii] <- agePldhivMale[jj, ii - 1] + 
-      ageDiagMale[jj, ii] - 
-      ageDeathMale[jj, ii - 1] - unknownAgeDeaths[jj] - 
-      agePldhivMale[jj, ii - 1] * hivResults$osrate[ii-1] - 
-      agePldhivMale[jj, ii - 1] * ageRate[jj] + ageUp
-    
-    # For low numbers the previous calculation could give number less
-    # than zero. In this case replace with zero
-    if (agePldhivMale[jj, ii] < 0) {
-      agePldhivMale[jj, ii] <- 0
-    }
-  }
-}
 
-# Females ----------------------------------------------------------------
-for (ii in 2:nyears) {
-  
-  # Extract abs death rates for this year
-  if (yearsVec[ii - 1] <= 2000) {
-    absDeaths <- filter(absDeathRatesFemale, year == 2000)$deathrate
-  } else if (yearsVec[ii - 1] >= 2011) {
-    absDeaths <- filter(absDeathRatesFemale, year == 2011)$deathrate
-  } else {
-    absDeaths <- filter(absDeathRatesFemale, 
-                        year == yearsVec[ii - 1])$deathrate
-  }
-  
-  # Adjust numbers per 1000 to rate and remove deaths for those aged 0
-  absDeaths <- absDeaths/1000
-  absDeaths <- absDeaths[2:length(absDeaths)]
-  
-  # Use ABS deathrate to estimate expected deaths in each age group
-  deathsABSrate <- absDeaths * agePldhivFemale[, ii - 1]
-  
-  # Calculate adjustment factor so deaths across age groups matchs
-  # unknown death - can be negative if unknownDeaths is negative equates
-  # to adding people rather than removing them. This keeps things 
-  # consistent with estimated total deaths.
-  if (sum(deathsABSrate) > 0) {
-    adjustFactor <- unknownDeathsFemale[ii - 1] / sum(deathsABSrate)
+if (calculateGender) {
+  # Males ----------------------------------------------------------------
+  for (ii in 2:nyears) {
+    
+    # Extract abs death rates for this year
+    if (yearsVec[ii - 1] <= 2005) {
+      absDeaths <- filter(absDeathRatesMale, year == 2004)$deathrate
+    } else if (yearsVec[ii - 1] >= 2015) {
+      absDeaths <- filter(absDeathRatesMale, year == 2014)$deathrate
+    } else {
+      absDeaths <- filter(absDeathRatesMale, 
+                          year == yearsVec[ii - 1])$deathrate
+    }
+    
+    # Adjust numbers per 1000 to rate and remove deaths for those aged 0
+    absDeaths <- absDeaths/1000
+    absDeaths <- absDeaths[3:length(absDeaths)]
+    
+    # Use ABS deathrate to estimate expected deaths in each age group
+    deathsABSrate <- absDeaths * agePldhivMale[, ii - 1]
+    
+    # Calculate adjustment factor so deaths across age groups matchs
+    # unknown death - can be negative if unknownDeaths is negative equates
+    # to adding people rather than removing them. This keeps things 
+    # consistent with estimated total deaths.
+    adjustFactor <- unknownDeathsMale[ii - 1] / sum(deathsABSrate)
     unknownAgeDeaths <- adjustFactor * deathsABSrate
-  } else {
-    unknownAgeDeaths <- 0 * deathsABSrate
+    
+    for (jj in 1:nages) {
+      
+      # Calculate number of people moving up in age
+      if (jj == 1) {
+        # If in first age group no-one ages from younger group
+        ageUp <- 0
+      } else {
+        ageUp <- agePldhivMale[jj - 1, ii - 1] * ageRate[jj-1]
+      }
+      
+      # Update current age group for current year - assuming same 
+      # overseas migration rate for each age group equal to overall 
+      # migration rate
+      agePldhivMale[jj, ii] <- agePldhivMale[jj, ii - 1] + 
+        ageDiagMale[jj, ii] - 
+        ageDeathMale[jj, ii - 1] - unknownAgeDeaths[jj] - 
+        agePldhivMale[jj, ii - 1] * hivResults$osrate[ii-1] - 
+        agePldhivMale[jj, ii - 1] * ageRate[jj] + ageUp
+      
+      # For low numbers the previous calculation could give number less
+      # than zero. In this case replace with zero
+      if (agePldhivMale[jj, ii] < 0) {
+        agePldhivMale[jj, ii] <- 0
+      }
+    }
   }
   
-  for (jj in 1:nages) {
+  # Females ----------------------------------------------------------------
+  for (ii in 2:nyears) {
     
-    # Calculate number of people moving up in age
-    if (jj == 1) {
-      # If in first age group no-one ages from younger group
-      ageUp <- 0
+    # Extract abs death rates for this year
+    if (yearsVec[ii - 1] <= 2005) {
+      absDeaths <- filter(absDeathRatesFemale, year == 2004)$deathrate
+    } else if (yearsVec[ii - 1] >= 2015) {
+      absDeaths <- filter(absDeathRatesFemale, year == 2014)$deathrate
     } else {
-      ageUp <- agePldhivFemale[jj - 1, ii - 1] * ageRate[jj-1]
+      absDeaths <- filter(absDeathRatesFemale, 
+                          year == yearsVec[ii - 1])$deathrate
     }
     
-    # Update current age group for current year - assuming same 
-    # overseas migration rate for each age group equal to overall 
-    # migration rate
-    agePldhivFemale[jj, ii] <- agePldhivFemale[jj, ii - 1] + 
-      ageDiagFemale[jj, ii] - 
-      ageDeathFemale[jj, ii - 1] - unknownAgeDeaths[jj] - 
-      agePldhivFemale[jj, ii - 1] * hivResults$osrate[ii-1] - 
-      agePldhivFemale[jj, ii - 1] * ageRate[jj] + ageUp
+    # Adjust numbers per 1000 to rate and remove deaths for those aged 0
+    absDeaths <- absDeaths/1000
+    absDeaths <- absDeaths[3:length(absDeaths)]
     
-    # For low numbers the previous calculation could give number less
-    # than zero. In this case replace with zero
-    if (agePldhivFemale[jj, ii] < 0) {
-      agePldhivFemale[jj, ii] <- 0
+    # Use ABS deathrate to estimate expected deaths in each age group
+    deathsABSrate <- absDeaths * agePldhivFemale[, ii - 1]
+    
+    # Calculate adjustment factor so deaths across age groups matchs
+    # unknown death - can be negative if unknownDeaths is negative equates
+    # to adding people rather than removing them. This keeps things 
+    # consistent with estimated total deaths.
+    if (sum(deathsABSrate) > 0) {
+      adjustFactor <- unknownDeathsFemale[ii - 1] / sum(deathsABSrate)
+      unknownAgeDeaths <- adjustFactor * deathsABSrate
+    } else {
+      unknownAgeDeaths <- 0 * deathsABSrate
+    }
+    
+    for (jj in 1:nages) {
+      
+      # Calculate number of people moving up in age
+      if (jj == 1) {
+        # If in first age group no-one ages from younger group
+        ageUp <- 0
+      } else {
+        ageUp <- agePldhivFemale[jj - 1, ii - 1] * ageRate[jj-1]
+      }
+      
+      # Update current age group for current year - assuming same 
+      # overseas migration rate for each age group equal to overall 
+      # migration rate
+      agePldhivFemale[jj, ii] <- agePldhivFemale[jj, ii - 1] + 
+        ageDiagFemale[jj, ii] - 
+        ageDeathFemale[jj, ii - 1] - unknownAgeDeaths[jj] - 
+        agePldhivFemale[jj, ii - 1] * hivResults$osrate[ii-1] - 
+        agePldhivFemale[jj, ii - 1] * ageRate[jj] + ageUp
+      
+      # For low numbers the previous calculation could give number less
+      # than zero. In this case replace with zero
+      if (agePldhivFemale[jj, ii] < 0) {
+        agePldhivFemale[jj, ii] <- 0
+      }
     }
   }
+  
 }
-
 # Tidy up agePldhiv so it has the bins we want to plot -------------------
 ageBins <- c("a<15", "a15-19", "a20-24", "a25-29", 
              "a30-34", "a35-39", "a40-44", "a45-49", "a50-54", "a55-59", 
@@ -581,15 +688,18 @@ binPldhiv[2:12,] <- agePldhiv[4:14,]
 binPldhiv[1,] <- colSums(agePldhiv[1:3,])
 binPldhiv[13,] <- colSums(agePldhiv[15:18,])
 
-binPldhivMale <- matrix(0, length(ageBins), nyears)
-binPldhivMale[2:12,] <- agePldhivMale[4:14,]
-binPldhivMale[1,] <- colSums(agePldhivMale[1:3,])
-binPldhivMale[13,] <- colSums(agePldhivMale[15:18,])
-
-binPldhivFemale <- matrix(0, length(ageBins), nyears)
-binPldhivFemale[2:12,] <- agePldhivFemale[4:14,]
-binPldhivFemale[1,] <- colSums(agePldhivFemale[1:3,])
-binPldhivFemale[13,] <- colSums(agePldhivFemale[15:18,])
+if (calculateGender) {
+  
+  binPldhivMale <- matrix(0, length(ageBins), nyears)
+  binPldhivMale[2:12,] <- agePldhivMale[4:14,]
+  binPldhivMale[1,] <- colSums(agePldhivMale[1:3,])
+  binPldhivMale[13,] <- colSums(agePldhivMale[15:18,])
+  
+  binPldhivFemale <- matrix(0, length(ageBins), nyears)
+  binPldhivFemale[2:12,] <- agePldhivFemale[4:14,]
+  binPldhivFemale[1,] <- colSums(agePldhivFemale[1:3,])
+  binPldhivFemale[13,] <- colSums(agePldhivFemale[15:18,])
+}
 
 ```
 
@@ -602,12 +712,14 @@ graphics.off()
 pldhivTidy <- TidyLongitudinal(binPldhiv, 1980, firstCol = "age")
 pldhivTidy$age <- rep(sub("a", "", ageBins), nyears)
 
-pldhivTidyMale <- TidyLongitudinal(binPldhivMale, 1980, firstCol = "age")
-pldhivTidyMale$age <- rep(sub("a", "", ageBins), nyears)
-
-pldhivTidyFemale <- TidyLongitudinal(binPldhivFemale, 1980, 
-                                     firstCol = "age")
-pldhivTidyFemale$age <- rep(sub("a", "", ageBins), nyears)
+if (calculateGender) {
+  pldhivTidyMale <- TidyLongitudinal(binPldhivMale, 1980, firstCol = "age")
+  pldhivTidyMale$age <- rep(sub("a", "", ageBins), nyears)
+  
+  pldhivTidyFemale <- TidyLongitudinal(binPldhivFemale, 1980, 
+                                       firstCol = "age")
+  pldhivTidyFemale$age <- rep(sub("a", "", ageBins), nyears)
+}
 
 # Setup some ploting variables
 startYear <- 1986
@@ -627,29 +739,32 @@ pldhivTidy <- pldhivTidy %>%
   filter(year >= startYear) %>%
   rename(number = value)
 
-pldhivTidyMale <- pldhivTidyMale %>%
-  filter(year >= startYear) %>%
-  rename(number = value)
-
-pldhivTidyFemale <- pldhivTidyFemale %>%
-  filter(year >= startYear) %>%
-  rename(number = value)
+if (calculateGender) {
+  
+  pldhivTidyMale <- pldhivTidyMale %>%
+    filter(year >= startYear) %>%
+    rename(number = value)
+  
+  pldhivTidyFemale <- pldhivTidyFemale %>%
+    filter(year >= startYear) %>%
+    rename(number = value)
+}
 
 # Overall Plots ----------------------------------------------------------
 
 # Now do the barplot of number of PLDHIV
 barPlotAll <- ggplot(data = pldhivTidy, aes(x = year, y = number, 
-  fill = age)) + geom_bar(stat = "identity") + 
+                                            fill = age)) + geom_bar(stat = "identity") + 
   xlab("Year") + ylab("Number of PLDHIV") +
   scale_fill_manual(values = mainColours, name = "Age",
-                     guide = guide_legend(reverse=TRUE)) + 
+                    guide = guide_legend(reverse=TRUE)) + 
   scale_x_continuous(breaks = xValues) + 
   plotOpts + theme(legend.position = "",
                    legend.text = element_text(size = 8))
 
 # Now do the barplot of proportions
 propPlotAll <- ggplot(data = pldhivTidy, aes(x = year, y = number, 
-  fill = age)) + geom_bar(stat="identity", position = "fill") + 
+                                             fill = age)) + geom_bar(stat="identity", position = "fill") + 
   xlab("Year") + ylab("Proportion of PLDHIV") +
   scale_fill_manual(values = mainColours, name = "Age",
                     guide = guide_legend(reverse=TRUE)) + 
@@ -657,21 +772,22 @@ propPlotAll <- ggplot(data = pldhivTidy, aes(x = year, y = number,
   plotOpts + theme(legend.position = "right",
                    legend.text = element_text(size = 8))
 
+if (calculateGender) {
 # Male Plots ----------------------------------------------------------
 
 # Now do the barplot of number of PLDHIV
 barPlotMale <- ggplot(data = pldhivTidyMale, aes(x = year, y = number, 
-  fill = age)) + geom_bar(stat = "identity") + 
+                                                 fill = age)) + geom_bar(stat = "identity") + 
   xlab("Year") + ylab("Number of PLDHIV (males)") +
   scale_fill_manual(values = mainColours, name = "Age",
-                     guide = guide_legend(reverse=TRUE)) + 
+                    guide = guide_legend(reverse=TRUE)) + 
   scale_x_continuous(breaks = xValues) + 
   plotOpts + theme(legend.position = "",
                    legend.text = element_text(size = 8))
 
 # Now do the barplot of proportions
 propPlotMale <- ggplot(data = pldhivTidyMale, aes(x = year, y = number, 
-  fill = age)) + geom_bar(stat="identity", position = "fill") + 
+                                                  fill = age)) + geom_bar(stat="identity", position = "fill") + 
   xlab("Year") + ylab("Proportion of PLDHIV (males)") +
   scale_fill_manual(values = mainColours, name = "Age",
                     guide = guide_legend(reverse=TRUE)) + 
@@ -684,10 +800,10 @@ propPlotMale <- ggplot(data = pldhivTidyMale, aes(x = year, y = number,
 # Now do the barplot of number of PLDHIV
 barPlotFemale <- ggplot(data = pldhivTidyFemale, 
                         aes(x = year, y = number, 
-  fill = age)) + geom_bar(stat = "identity") + 
+                            fill = age)) + geom_bar(stat = "identity") + 
   xlab("Year") + ylab("Number of PLDHIV (females)") +
   scale_fill_manual(values = mainColours, name = "Age",
-                     guide = guide_legend(reverse=TRUE)) + 
+                    guide = guide_legend(reverse=TRUE)) + 
   scale_x_continuous(breaks = xValues) + 
   plotOpts + theme(legend.position = "",
                    legend.text = element_text(size = 8))
@@ -695,7 +811,7 @@ barPlotFemale <- ggplot(data = pldhivTidyFemale,
 # Now do the barplot of proportions
 propPlotFemale <- ggplot(data = pldhivTidyFemale, 
                          aes(x = year, y = number, 
-  fill = age)) + geom_bar(stat="identity", position = "fill") + 
+                             fill = age)) + geom_bar(stat="identity", position = "fill") + 
   xlab("Year") + ylab("Proportion of PLDHIV (females)") +
   scale_fill_manual(values = mainColours, name = "Age",
                     guide = guide_legend(reverse=TRUE)) + 
@@ -703,7 +819,7 @@ propPlotFemale <- ggplot(data = pldhivTidyFemale,
   plotOpts + theme(legend.position = "right",
                    legend.text = element_text(size = 8))
 
-
+}
 
 # Save figures -----------------------------------------------------------
 if (savePlots) {
@@ -712,27 +828,28 @@ if (savePlots) {
   height = 10
   
   ggsave(file.path(figFolder, paste("PLDHIV_Age_All.png", 
-         sep ="")), plot = barPlotAll, width = width, height = height,
+                                    sep ="")), plot = barPlotAll, width = width, height = height,
          units = units)
   ggsave(file.path(figFolder, paste("PLDHIV_Age_Proportion_All.png", 
-         sep ="")), plot = propPlotAll, width = width, height = height, 
+                                    sep ="")), plot = propPlotAll, width = width, height = height, 
          units = units)
   
-  ggsave(file.path(figFolder, paste("PLDHIV_Age_Male.png", 
-         sep ="")), plot = barPlotMale, width = width, height = height,
-         units = units)
-  ggsave(file.path(figFolder, paste("PLDHIV_Age_Proportion_Male.png", 
-         sep ="")), plot = propPlotAll, width = width, height = height, 
-         units = units)
-  
-  ggsave(file.path(figFolder, paste("PLDHIV_Age_Female.png", sep ="")),
-         plot = barPlotFemale, width = width, height = height, 
-         units = units)
-  ggsave(file.path(figFolder, paste("PLDHIV_Age_Proportion_Female.png", 
-         sep ="")), plot = propPlotFemale, width = width, height = height,
-         units = units)
+  if (calculateGender) {
+    ggsave(file.path(figFolder, paste("PLDHIV_Age_Male.png", 
+                                      sep ="")), plot = barPlotMale, width = width, height = height,
+           units = units)
+    ggsave(file.path(figFolder, paste("PLDHIV_Age_Proportion_Male.png", 
+                                      sep ="")), plot = propPlotAll, width = width, height = height, 
+           units = units)
+    
+    ggsave(file.path(figFolder, paste("PLDHIV_Age_Female.png", sep ="")),
+           plot = barPlotFemale, width = width, height = height, 
+           units = units)
+    ggsave(file.path(figFolder, paste("PLDHIV_Age_Proportion_Female.png", 
+                                      sep ="")), plot = propPlotFemale, width = width, height = height,
+           units = units)
+  }
 }
-
 ```
 
 # Results
@@ -747,7 +864,7 @@ missing data.
 **Figure 2** - Number and proportion of PLDHIV by age-group in Australia 
 from 1986 to 2014.  
 ```{r insertyplots1, echo=FALSE, messages = FALSE, warning = FALSE, results = "hide"}
-print(grid.arrange(barPlotAll, propPlotAll, ncol = 2, widths = c(1, 1.2)))
+print(grid.are(barPlotAll, propPlotAll, ncol = 2, widths = c(1, 1.2)))
 ```
 
 ```{r create tables,echo=FALSE, messages = FALSE, warning = FALSE}
@@ -758,7 +875,7 @@ pldhivTable <- pldhivTidy %>%
   spread(year, number)
 
 propTable <- apply(pldhivTable[,2:ncol(pldhivTable)], 2, 
-  function(x) x/sum(x)) %>%
+                   function(x) x/sum(x)) %>%
   as.data.frame()
 
 propTable$age <- pldhivTable$age 
@@ -800,7 +917,7 @@ pldhivTableMale <- pldhivTidyMale %>%
   spread(year, number)
 
 propTableMale <- apply(pldhivTableMale[,2:ncol(pldhivTableMale)], 2, 
-  function(x) x/sum(x)) %>%
+                       function(x) x/sum(x)) %>%
   as.data.frame()
 
 propTableMale$age <- pldhivTableMale$age 
@@ -843,7 +960,7 @@ pldhivTableFemale <- pldhivTidyFemale %>%
 
 propTableFemale <- apply(pldhivTableFemale[,2:ncol(pldhivTableFemale)], 
                          2, function(x) x/sum(x)) %>% 
-                   as.data.frame()
+  as.data.frame()
 
 propTableFemale$age <- pldhivTableFemale$age 
 propTableFemale <- select(propTableMale, age, everything())

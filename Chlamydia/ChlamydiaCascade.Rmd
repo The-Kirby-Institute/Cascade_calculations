@@ -1,15 +1,7 @@
 ---
 title: "Australian Chlamydia Cascade"
-author: 
-  - Richard T. Gray
-  
-date: Date - `r format(Sys.Date(), format="%B %d %Y")`
-output:
-  word_document:
-    pandoc_args: --output="docs/ChlamydiaCascade.docx"
-    reference_docx: docs/mystyles.docx
-csl: docs/plos.csl
-bibliography: docs/ChlamydiaCascade.bib
+author: Richard T. Gray
+output: html_notebook
 ---
 
 This document presents estimates for the diagnosis and care cascade for 
@@ -23,8 +15,7 @@ rm(list=ls())
 options(scipen=999)  # To get rid of scientific notation
 
 # Set session working directory manually to source file location
-# setwd(file.path(path.expand("~"), "Research", "!Evaluation_Modelling",
-#                "project_care_cascades"))
+# setwd(source file location)
 
 # Details of results and outputs folders
 basePath <- dirname(getwd()) #getwd()
@@ -460,13 +451,6 @@ if (saveplots) {
 
 # Chlamydia diagnosis and care cascade
 
-**Figure 1** -- The chlamydia diagnosis and care cascade for 15-29 
-year old Australians in `r resultsYear`.
-
-```{r insertplot1, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height = 4}
-print(plotCascade)
-```
-
 ```{r createTable, echo = FALSE, messages = FALSE, include = FALSE}
 # Create and insert table 
 finalTable <- select(chlamcascade, stage, sex)
@@ -493,127 +477,3 @@ finalTable <- rename(finalTable, "Cascade stage" = stage, "Sex" = sex,
                      "Estimate (range)" = estimate)
 
 ```
-
-**Table 1** -- Estimates and range for each stage of the chlamydia
-diagnosis and care cascade for 15-29 year old Australians in 
-`r resultsYear`.
-
-```{r inserttable1, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
-kable(finalTable, align = c("l", "c", "c"))
-```
-
-# Methods and data sources
-
-The following sections describe the methods and data sources used to
-produce the estimates for each stage of the cascade. 
-
-## Notifications
-
-We obtained the number of chlamydia notifications for 15-29 year old males 
-and females in Australia directly from the National Notifiable Diseases 
-Surveillance System (NNDSS). 
-
-##Estimating new infections
-
-New *Chlamydia trachomatis* infections were estimated using the modelling 
-approach of Ali et al.
-[@ali2015new]. This method uses a Bayesian statistical approach to 
-calibrate model parameters to the 
-notifications data from NNDSS, the number of tests for *Chlamydia 
-trachomatis* obtained by Medicare 
-(item numbers 69316, 69317, and 69319), and annual population estimates for
-each sex and age group 
-published by the Australian Bureau of Statistics (ABS) over 2001-2014. 
-Model outcomes were validated
-through comparison against Chlamydia prevalence among 16-29 year olds 
-measured in 2011 by the 
-Australian Chlamydia Control Effectiveness Pilot (ACCEPt). 
-
-The Ali et al. model outputs 95% credible intervals for the annual number 
-of incident chlamydia cases in 15-19, 20-24, and 25-29 year old males and 
-females. We summed the incident chlamydia cases for each age group to 
-estimate the number of new infections. The range corresponds to the lower 
-and upper bound  of the credible intervals with the midpoint corresponding 
-to our best estimate. 
-
-## Estimating treatment, retesting, and number remaining uninfected
-
-We estimated chlamydia treatment following diagnosis, retesting after 
-treatment, and the number
-negative at retesting using multiple sources describing chlamydia infection
-and care across urban,
-regional, and remote areas and a number of service contexts. 
-
-From the NNDSS notifications data 69%, 25%, and 5% of diagnoses in 15-29 
-year olds occur across urban,
-regional, and remote areas respectively. Based on the Bourne et al. study 
-in 2013, 14% of these
-diagnoses occurred in sexual health clinics [@bourne2013proportion]. We 
-divided the remainder of
-diagnoses into those made in general practice (81%) and other contexts (5%)
-using the Sex in Australia data published in 2003 [@grulich2003sex].    
-
-**Treatment following diagnosis** --- Based on data from NSW sexual health 
-clinics almost all people
-diagnosed with chlamydia in urban and regional areas were treated (ranging 
-from 99-100% of those
-diagnosed) in 2013 [@guy2012impact]. In NSW remote areas the percentage 
-diagnosed is a little lower at 96%
-[@guy2012impact]. The Foster et al. study in 2014 produced a lower estimate
-for remotes areas in the
-Northern Territory of 85% [@foster2014regional].
-Based on this data we assumed 90% of those diagnoses in remote areas are 
-treated. Taking a weighted
-average by multiplying the notifications breakdown across regions by the 
-estimated percentage treated,
-we estimate `r 100*round(propTreated,3)`% of people diagnosed with 
-chlamydia were treated in 2014. We
-assumed a range from 90% (corresponding to the percentage treated in remote
-areas) to 100%. Assuming
-the same treatment proportion and range for males and females and 
-multiplying by the number of
-notifications we estimated the number of 15-29 year old males and females 
-who received treatment after
-diagnosis.  
-
-**Retesting after treatment** --- From the Australian Collaboration for 
-Coordinated Enhanced Sentinel Surveillance of STIs and BBVs (ACCESS), 
-17-22% of 15-29 year olds diagnosed with chlamydia in national urban and 
-regional sexual health clinics were retested for *Chlamydia trachomatis* 
-infection 1-4 months after treatment. In urban and regional general 
-practice the retesting rate is higher ranging from 20 to 29%. For remote 
-areas ACCESS data was unavailable, so we used results from the STRIVE 
-randomised community trial which reported 20% of 15-29 year olds diagnosed 
-with chlamydia retested 1-4 months after treatment. Taking a weighted 
-average by multiplying the notifications breakdown across regions by the 
-diagnoses breakdown across contexts we estimate 
-`r #100*round(propReTest, 3)`
-% of people diagnosed with chlamydia are 
-retested after treatment. We assumed a range from 20% (corresponding to the
-percentage retested in remote areas) to 30%. Assuming the same retesting 
-proportion and range for males and females and multiplying by the number of
-notifications we estimated the number of 15-29 year old males and females 
-who retested for chlamydia after treatment.
-
-**Number remaining uninfected at retesting** --- From ACCESS, 22-23% of 
-15-29 year olds retested for chlamydia in national urban and regional 
-sexual health clinics test positive for *Chlamydia trachomatis* at their 
-retest. In urban and regional general practice the positivity rate is much 
-lower ranging from 4% to 11%. For remote areas ACCESS data was unavailable,
-so we used results from the STRIVE study which reported 5% of 15-29 year 
-olds who retested for chlamydia were positive. Taking a weighted average by
-multiplying the notifications breakdown across regions by the diagnoses 
-breakdown across contexts we estimate 
-`r #100*round(sum(propPositive * weights), 3)`
-% of people were positive at 
-their retest overall. This means 
-`r #100*round(propNegative, 3)`
-% of 15-29 
-year olds remained uninfected at retesting. We assumed a relative range of 
-$\pm$ 10% in the proportion negative at retest. Assuming the same 
-uninfected at retest proportion and range for males and females and 
-multiplying by the number of people who retested within 1-4 months we 
-estimated the number of 15-29 year old males and females who remain 
-uninfected at retest.
-
-# References
