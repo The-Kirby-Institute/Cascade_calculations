@@ -73,7 +73,7 @@ useCD4 <- FALSE # use CD4 AHOD and testing data for retained in care if
 addTempRes <- TRUE # Add estimates for temporary residents on ART
 
 # Overall
-replaceValues <- FALSE # Replace with specific estimates
+replaceValues <- TRUE # Replace with specific estimates
 
 ```
 
@@ -1051,17 +1051,16 @@ if (analysisYear <= 2014) {
   propStayUpper <- 1
 } else {
   # Calculate proportion overseas
-  propOs <- 1-filter(hivCob, countrygroup == "australia")$proptotalknown
+  propAus <- filter(hivCob, countrygroup == "australia")$proptotalknown
   
-  propStayNSW <- propOs * 0.96
-  propStayLowerNSW <- propOs *0.92
+  propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.0504)
+  propStayLowerNSW <-  propAus * (1 - 2 * 0.0072) + (1 - propAus) * 
+    (1 - 2 * 0.0504)
   propStayUpperNSW <- 1
   
   propStay <- 0.98
   propStayLower <- 0.96
   propStayUpper <- 1
-  
-  
 } 
 # Initialize final results data frame
 hivDiagnosed <- data.frame(stage = character(), 

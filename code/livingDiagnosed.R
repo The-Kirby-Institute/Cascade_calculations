@@ -3,14 +3,16 @@
 # R. T. Gray
 
 LivingDiagnosed <- function(cumdiagnoses, deathrate, migration, 
-                            arrivals = NULL, departs = NULL, 
-                            pldhiv = NULL) {
+                            propstay = NULL, arrivals = NULL, 
+                            departs = NULL, pldhiv = NULL) {
   # Calculate the number of people living with diagnosed HIV.
   #
   # Args:
   #   cumdiagnoses: A numeric vector of cumulative diagnoses. 
   #   deathrate: A numeric vector of deathrates.
   #   migration: A numeric vector of rates of migration overseas.
+  #   propstay: A numeric vector with percentage who stay post diagnosis.
+  #     Equal to 1 minus proportion who leave post diagnosis.
   #   arrivals (optional): If specified, a numeric vector of the rate 
   #     people arrive in the population from interstate.
   #   departs (optional):  If specified, is a numeric vector of the rate 
@@ -35,6 +37,10 @@ LivingDiagnosed <- function(cumdiagnoses, deathrate, migration,
   nyears <- length(cumdiagnoses)
   
   # If optional inputs equal to zero convert to vectors
+  if (is.null(propstay)) {
+    propstay <- rep(1, nyears)
+  }
+  
   if (is.null(arrivals)) {
     arrivals <- rep(0, nyears)
   }
@@ -62,7 +68,7 @@ LivingDiagnosed <- function(cumdiagnoses, deathrate, migration,
   # Main program ----------------------------------------------------------
 
   # Calculate annual diagnoses
-  annualdiags <- c(cumdiagnoses[1],diff(cumdiagnoses))
+  annualdiags <- propstay * c(cumdiagnoses[1], diff(cumdiagnoses))
   
   # Initialize output array
   nliving <- rep(NA,nyears)
