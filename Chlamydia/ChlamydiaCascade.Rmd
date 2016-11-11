@@ -421,22 +421,22 @@ stagesNeat <- c("infections" = "New \n infections",
 plotcascade <- chlamcascade
 plotcascade$sex <- factor(plotcascade$sex, levels = c("male", "female"))
 
-texty <- plotcascade$upper
-texty[3:4] <- plotcascade$estimate[3:4]
+# Overall 2015 cascade
+cascade2015 <- filter(plotcascade, year == tail(resultsYears, 1))
+texty <- cascade2015$upper
+texty[3:4] <- cascade2015$estimate[3:4]
 
-# Overall cascade
-allCascade <- ggplot(data = filter(plotcascade, 
-                                    year == tail(resultsYears, 1)),
+allCascade <- ggplot(data = cascade2015,
                       aes(x = stage, y = estimate, fill = sex)) + 
   geom_bar(position = "dodge", stat = "identity") + 
   geom_errorbar(aes(ymin = lower, ymax = upper), 
                 position = position_dodge(width = 0.9),
                 width = 0.2, color = "black", size = 1.2) +
-  # geom_text(aes(label = ifelse(is.na(percentprevious), "",
-  #                 paste0(format(percentprevious, digits = 3), "%")),
-  #               y = texty + 10000),
-  #           position = position_dodge(width = 0.9),
-  #           fontface = "bold") +
+  geom_text(aes(label = ifelse(is.na(percentprevious), "",
+                  paste0(format(percentprevious, digits = 3), "%")),
+                y = texty + 10000),
+            position = position_dodge(width = 0.9),
+            fontface = "bold") +
   scale_fill_manual(name = "", 
                     values = unname(asrcols[c("males", "females")]), 
                     labels = c("Males", "Females"),
@@ -477,7 +477,7 @@ if (saveplots) {
   ggsave(file.path(figFolder, paste0("chlamcascade-all-", 
                 toString(tail(resultsYears, 1)), ".png")), 
          plot = allCascade, 
-         width = 7, height = 5, dpi = 300)
+         width = 5, height = 5, dpi = 300)
   
   ggsave(file.path(figFolder, paste0("chlamcascade-males-", 
                 toString(tail(resultsYears, 1)), ".png")), 
@@ -496,10 +496,10 @@ if (saveplots) {
 
 ```{r createTable, echo = FALSE, messages = FALSE, include = FALSE}
 # Create and insert table 
-finalTable <- select(chlamcascade, stage, sex)
+finalTable <- select(chlamcascade, year, stage, sex)
 finalTable$estimate <- NA
 
-skip <- c(3,4)
+skip <- c(7:12)
 for (ii in 1:nrow(finalTable)){
   if (ii %in% skip) {
     finalTable$estimate[ii] <- FormatData(chlamcascade$estimate[ii], 
@@ -513,10 +513,26 @@ for (ii in 1:nrow(finalTable)){
 }
 
 # Rename first column
-finalTable$stage <- rep(stages, each = 2)
+finalTable$stage <- rep(stages, each = 6)
 
 # Rename columns
 finalTable <- rename(finalTable, "Cascade stage" = stage, "Sex" = sex, 
                      "Estimate (range)" = estimate)
+
+allTable <- filter(finalTable, year == 2015) %>%
+  select(-year)
+
+maleTable <- filter(finalTable, Sex == "male") %>%
+  select(-Sex) %>%
+  spread("Cascade stage", "Estimate (range)") %>%
+  rename(Year = year) %>%
+  select(Year, 3, 4, 5, 2)
+  
+  
+femaleTable <- filter(finalTable, Sex == "female") %>%
+  select(-Sex) %>%
+  spread("Cascade stage", "Estimate (range)") %>%
+  rename(Year = year) %>%
+  select(Year, 3, 4, 5, 2)
 
 ```
