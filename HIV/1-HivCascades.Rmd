@@ -135,8 +135,8 @@ numUnique <- function(dobframe, years,ignore, file = NA) {
 
 # Function to create file name for deduplicted output
 deduplicateFile <- function(pop, state, mode, years) {
-  filename <- paste(basePath, "/output/uniquehiv-", state, "_", mode, "_",
-                    toString(tail(years,1)),sep="")
+  filename <- paste(basePath, "/output/uniquehiv-", state, "_", mode, 
+                    "_", toString(tail(years,1)),sep="")
 }
 
 # Function is replace current estimates with estimates for 
@@ -163,6 +163,8 @@ replaceEstimates <- function(cascade, hardcode) {
                             hardcode$upper[ii],
                             upper))
   }
+  
+  return(tempCascade)
 }
 
 ```
@@ -174,7 +176,6 @@ replaceEstimates <- function(cascade, hardcode) {
 hivData <- read.csv(file.path(dataFolder, paste("hivnotifications",
                     toString(analysisYear), ".csv", sep = ""))) #, 
 #                     as.is = c(1:3, 6, 9, 11, 16:18))
-
 
 if (replaceValues) {
   # Replace with hard coded estimates where necessary
@@ -1557,6 +1558,14 @@ if (bindCascade) {
   hivCascade <- rbind(hivCascade, hivDiagnosed)
 }
 
+# Replace values with hard coded if necessary
+if (replaceValues) {
+  tempHardCode <- filter(hardCodeValues, stage == "pldhiv")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+  }
+}
+
 ```
 
 ## Number undiagnosed
@@ -1576,7 +1585,8 @@ hivUndiag <- data.frame(stage = character(),
 
 # Read in back projected undiagnosed estimates from ECDC HIV Modelling Tool
 propUndiagnosed <- read_excel(file.path(dataFolder, 
-  paste0("ecdc_undiagnosed_percentage-", toString(analysisYear), ".xlsx")))
+  paste0("ecdc_undiagnosed_percentage-", toString(analysisYear),
+         ".xlsx")))
 
 # Only keep required years
 propUndiagnosed <- filter(propUndiagnosed, year %in% allYears) 
@@ -1832,6 +1842,14 @@ if (bindCascade) {
   hivCascade <- rbind(hivCascade, hivUndiag)
 }
 
+# Replace values with hard coded if necessary
+if (replaceValues) {
+  tempHardCode <- filter(hardCodeValues, stage == "infected")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+  }
+}
+
 ```
 
 ## Number linked to care
@@ -1993,6 +2011,15 @@ if (includeLinked) {
     hivCascade <- rbind(hivCascade, hivLinkCare)
   }
 }
+
+# Replace values with hard coded if necessary
+if (replaceValues) {
+  tempHardCode <- filter(hardCodeValues, stage == "linked")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+  }
+}
+
 ```
 
 ## Number taking ART
@@ -2192,6 +2219,15 @@ if (plots) {
   ggsave(file.path(figuresFolder, "treatment_rate.png"),
          plot = treatPlot, width = 15, height = 5)
 }
+
+# Replace values with hard coded if necessary
+if (replaceValues) {
+  tempHardCode <- filter(hardCodeValues, stage == "numART")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+  }
+}
+
 ```
 
 ## Number retained in care
@@ -2441,6 +2477,14 @@ if (bindCascade) {
   hivCascade <- rbind(hivCascade, hivRetained)
 }
 
+# Replace values with hard coded if necessary
+if (replaceValues) {
+  tempHardCode <- filter(hardCodeValues, stage == "retained")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+  }
+}
+
 ```
 
 ### Number with suppressed virus
@@ -2543,6 +2587,14 @@ for (pop in populations) {
 # Finally bind to overall results
 if (bindCascade) {
   hivCascade <- rbind(hivCascade, hivSuppressed)
+}
+
+# Replace values with hard coded if necessary
+if (replaceValues) {
+  tempHardCode <- filter(hardCodeValues, stage == "suppressed")
+  if (nrow(tempHardCode) > 0) {
+    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+  }
 }
 
 ```
