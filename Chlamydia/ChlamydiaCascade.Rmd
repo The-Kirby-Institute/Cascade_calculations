@@ -419,7 +419,8 @@ stagesNeat <- c("infections" = "New \n infections",
 
 # First sort out sex as a factor to order the bars
 plotcascade <- chlamcascade
-plotcascade$sex <- factor(plotcascade$sex, levels = c("male", "female"))
+plotcascade$sex <- factor(plotcascade$sex, 
+                          levels = c("male", "female"))
 
 # Overall 2015 cascade
 cascade2015 <- filter(plotcascade, year == tail(resultsYears, 1))
@@ -471,6 +472,24 @@ femaleCascade <- ggplot(data = filter(plotcascade, sex == "female"),
   scale_x_discrete(labels = stagesNeat) +
   ylab("Number of people") + xlab("") +  
   plotopts
+
+# Overall for 2015
+cascade2015All <- cascade2015 %>%
+  group_by(stage) %>%
+  summarise(estimate = sum(estimate),
+            lower = sum(lower),
+            upper = sum(upper))
+
+allCascadeAll <- ggplot(data = cascade2015All,
+                      aes(x = stage, y = estimate)) + 
+  geom_bar(stat = "identity", colour = asrcols["males"], 
+           fill = asrcols["males"]) + 
+  geom_errorbar(aes(ymin = lower, ymax = upper),
+                width = 0.2, color = "black", size = 1.2) +
+  scale_x_discrete(labels = stagesNeat) +
+  ylab("Number of people") + xlab("") +  
+  plotopts 
+
    
 # Print plot in separate window and save
 if (saveplots) {
@@ -488,6 +507,11 @@ if (saveplots) {
                 toString(tail(resultsYears, 1)), ".png")), 
          plot = femaleCascade, 
          width = 7, height = 5, dpi = 300)
+  
+  ggsave(file.path(figFolder, paste0("chlamcascade-overall-", 
+                toString(tail(resultsYears, 1)), ".png")), 
+         plot = allCascadeAll, 
+         width = 5, height = 5, dpi = 300)
 }
 
 ```
