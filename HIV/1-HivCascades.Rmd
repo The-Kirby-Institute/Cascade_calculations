@@ -54,7 +54,7 @@ indigKnown <- TRUE # only use notifications with indigenous classification
 permDeparts <- TRUE # use national permant departures for 
                     # overseas migration
 
-cascadeImpact <- TRUE # save PLHIV estimates with deathrate fixed to value
+cascadeImpact <- FALSE # save PLHIV estimates with deathrate fixed to value
                       # from 10 years ago
 # PLHIV
 # Given issues with undiagnosed estimates use hardcoded estimates from 
@@ -1087,7 +1087,11 @@ if (analysisYear <= 2014) {
   propStayUpper <- 1
 } else {
   # Calculate proportion overseas
-  propAus <- filter(hivCob, countrygroup == "australia")$proptotalknown
+  propAus <- filter(hivCob, countrygroup == "australia") %>%
+    select(yeardiagnosis, proptotalknown)
+  propAus <- FillMissing(allYears, propAus$yeardiagnosis,
+                         propAus$proptotalknown) 
+  propAus <- propAus$value
   
   propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.0504)
   propStayLowerNSW <-  propAus * (1 - 2 * 0.0072) + (1 - propAus) * 
@@ -1106,7 +1110,7 @@ hivDiagnosed <- data.frame(stage = character(),
                            lower = double(),
                            upper = double())
 
-# First calculate overall number ------------------------------------------
+# First calculate overall number -----------------------------------------
 
 # Setup all our vectors - first by filling in missing cumulative diagnoses
 filledDiagnoses <- FillMissing(allYears, hivResults$yeardiagnosis, 
@@ -1115,9 +1119,9 @@ filledDiagnoses <- FillMissing(allYears, hivResults$yeardiagnosis,
 cumDiagnoses <- filledDiagnoses$value
 
 # All death rates used for all  populations
-deathRate <- hivDeathRate$deathrate
-deathRateMin <- hivDeathRate$deathrate_min
-deathRateMax <- hivDeathRate$deathrate_max
+deathRate <- hivResults$deathrate
+deathRateMin <- hivResults$drlower
+deathRateMax <- hivResults$drupper
 
 # National migration rates
 migrationRate <- filter(hivMigrate, state == "all")$rate
