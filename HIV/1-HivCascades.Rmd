@@ -1089,9 +1089,9 @@ if (analysisYear <= 2014) {
   # Calculate proportion overseas
   propAus <- filter(hivCob, countrygroup == "australia")$proptotalknown
   
-  propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.0504)
+  propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.1008)
   propStayLowerNSW <-  propAus * (1 - 2 * 0.0072) + (1 - propAus) * 
-    (1 - 2 * 0.0504)
+    (1 - 2 * 0.1008)
   propStayUpperNSW <- 1
   
   propStay <- 0.98

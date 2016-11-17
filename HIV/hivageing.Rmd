@@ -70,7 +70,7 @@ figFolder <- file.path(basePath, "output","figures")
 resultsFolder <- file.path(basePath, "output")
 
 # Source key functions
-Rcode <- file.path(basePath, "code") 
+Rcode <- file.path(dirname(getwd()), "code")
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 source(file.path(Rcode, "TidyLongitudinal.R"), echo=TRUE)

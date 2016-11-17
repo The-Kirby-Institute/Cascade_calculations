@@ -35,7 +35,7 @@ source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Function to format data and range into thousands
-source(file.path(basePath, "code", "FormatData.R"), echo=TRUE)
+source(file.path(Rcode, "FormatData.R"), echo=TRUE)
 
 # Current time for appending to outputs
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files

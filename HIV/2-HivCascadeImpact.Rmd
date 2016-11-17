@@ -20,8 +20,9 @@ basePath <- getwd() #dirname(getwd())
 dataFolder <- file.path(basePath, "data")
 resultsFolder <- file.path(basePath,"output") 
 figuresFolder <- file.path(basePath, "output","figures")
+Rcode <- file.path(dirname(getwd()), "code") 
 
-resultsYear <- 2014
+resultsYear <- 2015
 
 # Set working directory
 #setwd(basePath)
@@ -41,7 +42,7 @@ source(file.path(Rcode, "FindBeta.R"), echo=TRUE)
 
 ```{r loadresults}
 # Load hiv cascde dataframe and extract the data we want
-load(file.path(resultsFolder, "HIVcascadeEstimates-2014.rda"))
+load(file.path(resultsFolder, "HIVcascadeEstimates-2015.rda"))
 
 # Extract national PLHIV range for 2005-2014
 plhivLower <- filter(hivCascade, year >= 2005,
