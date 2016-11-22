@@ -2,6 +2,7 @@
 Archive/
 data/*.csv
 data/HIV/
+HIV/data/
 data/raw/
 data/Archive/
 data/backprojection-clean/

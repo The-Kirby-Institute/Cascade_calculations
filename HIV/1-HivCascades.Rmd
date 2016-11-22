@@ -653,7 +653,7 @@ allPredicts <- data.frame(year = numeric(),
                           upper = numeric())
 
 if (permDeparts) {
-  # Use permanent departures
+  # Use permanent departures nationally
   absDeparts <- mutate(absDeparts, migrate = permanent / erp)
   mrate <- absDeparts$migrate
 
@@ -690,13 +690,34 @@ if (permDeparts) {
     umrate <- 2 * mrate
   }
   
-  # Fill in the state values
-  for (state in states) {
+  # Fill in the state values - produce states based estimates 
+  # using NOM departure rates to adjust the national rate
+  absMigration <- mutate(absMigration, migrate = departures / erp)
+  
+  nonmrateAll <- filter(absMigration, state == "all")
+  lmrateAll <- lm(migrate ~ year, data = nonmrateAll)
+  expmrateAll <- predict(lmrateAll, data.frame(year = allYears),
+                        level = 0.9, interval = "confidence")
+    
+  for (region in states) {
+    # Adjust national rate to reflect difference at state level using 
+    # national NOM departures data
+    
+    nonmrate <- filter(absMigration, state == region)
+    
+    # Now we need to fit and extrapolate for other years
+    lmrate <- lm(migrate ~ year, data = nonmrate)
+    expmrate <- predict(lmrate, data.frame(year = allYears),
+                        level = 0.9, interval = "confidence")
+    
+    relexpmrate <-expmrate[, 1] / expmrateAll[, 1]
+    
+    
     allPredicts <- rbind(allPredicts, data.frame(year = allYears, 
-                                      state = state,
-                                      rate = mrate, 
-                                      lower = lmrate, 
-                                      upper = umrate))
+                                      state = region,
+                                      rate = mrate * relexpmrate, 
+                                      lower = 0, 
+                                      upper = 2 * mrate * relexpmrate))
   }
   
   # Store results in final data frame
@@ -720,8 +741,7 @@ if (permDeparts) {
     allPredicts <- rbind(allPredicts, data.frame(year = allYears, 
                                                  state = region,
                                                  rate = expmrate[, 3]/2, 
-                                                 #expmrate[, 1]
-                                                 lower = 0, #expmrate[, 2],
+                                                 lower = 0, 
                                                  upper = expmrate[, 3]))
   }
   
@@ -1098,6 +1118,11 @@ if (analysisYear <= 2014) {
     (1 - 2 * 0.0504)
   propStayUpperNSW <- 1
   
+  propStayVic <- 1
+  propStayLowerVic <- 1
+  propStayUpperVic <- 1
+  
+  
   propStay <- 0.98
   propStayLower <- 0.96
   propStayUpper <- 1
@@ -1179,8 +1204,10 @@ for (region in statesDiag) {
     stateStay <- propStayNSW
     stateStayLower <- propStayLowerNSW
     stateStayUpper <- propStayUpperNSW
-    
-    
+  } else if (region == "vic") {
+    stateStay <- propStayVic
+    stateStayLower <- propStayLowerVic
+    stateStayUpper <- propStayUpperVic
   } else {
     stateStay <- propStay 
     stateStayLower <- propStayLower 
