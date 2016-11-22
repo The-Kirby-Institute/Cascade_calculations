@@ -710,7 +710,7 @@ if (permDeparts) {
     expmrate <- predict(lmrate, data.frame(year = allYears),
                         level = 0.9, interval = "confidence")
     
-    relexpmrate <-expmrate[, 1] / expmrateAll[, 1]
+    relexpmrate <- expmrate[, 1] / expmrateAll[, 1]
     
     
     allPredicts <- rbind(allPredicts, data.frame(year = allYears, 
@@ -1113,9 +1113,9 @@ if (analysisYear <= 2014) {
                          propAus$proptotalknown) 
   propAus <- propAus$value
   
-  propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.0504)
+  propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.1008)
   propStayLowerNSW <-  propAus * (1 - 2 * 0.0072) + (1 - propAus) * 
-    (1 - 2 * 0.0504)
+    (1 - 2 * 0.1008)
   propStayUpperNSW <- 1
   
   propStayVic <- 1
