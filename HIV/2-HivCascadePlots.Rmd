@@ -14,6 +14,14 @@ This document shows various plots related to the HIV care and treatment
 cascade for Australia. These results illustrate estimates for the key 
 stages and populations used in the Kirby Annual Surveillance Reports.
 
+```{r knitr_options, include=FALSE} 
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE, 
+                      include = FALSE) 
+```
+
+
 ```{r setup, echo = FALSE, messages = FALSE, include=FALSE}
 # Clear workspace
 rm(list=ls()) 
@@ -33,9 +41,12 @@ resultsFolder <- file.path(basePath, "output")
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+LoadLibrary(cowplot) # Note this masks ggsave with save_plot
+LoadLibrary(captioner)
+LoadLibrary(stringr)
 
-# Function to format data and range into thousands
-source(file.path(basePath, "code", "FormatData.R"), echo=TRUE)
+# Useful functions 
+source(file.path(Rcode, "GetLegend.R"))
 
 # Current time for appending to outputs
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
@@ -51,7 +62,7 @@ if (pubPlots) {
 }
 saveFormat <- ".png" # file extension for saved plots 
 
-# Include linked and reatined in care?
+# Include linked and retained in care?
 excludeCare <- FALSE
 if (excludeCare) {
   asrcols <- asrcols[c(1, 2, 4, 5)]
@@ -122,6 +133,7 @@ plotBarAll <- ggplot(data = resultsAllYear, aes(x = stage, y = value)) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
                 color = "black", size = 1.1) +
   scale_x_discrete(limits = stages, labels = stageNamesNeat) + 
+  scale_y_continuous(labels = comma) + 
   ylab("Number of people") + xlab("") +  
   plotOpts
 
@@ -129,10 +141,17 @@ if (pubPlots) {
   # Create an additional stacked bar chart for publications removing 
   # retained stage
   
+  if (resultsYear <= 2014) {
   plotLabels <- c("Undiagnosed", 
                   "Diagnosed untreated", 
                   "On ART:  VL > 400 last test", 
                   "On ART: VL < 400 last test")
+  } else {
+    plotLabels <- c("Undiagnosed", 
+                  "Diagnosed untreated", 
+                  "On ART:  VL > 200 last test", 
+                  "On ART: VL < 200 last test")
+  }
   
   plotCols <- asrcols[c(1, 2, 4, 5)]
   xValues <- seq(startYear, resultsYear, by = 3)
@@ -143,24 +162,37 @@ if (pubPlots) {
     select(year, stage, value) %>%
     spread(stage, value) %>%
     mutate(undiagnosed = infected - pldhiv,
-           diagosed = pldhiv - numART,
+           diagnosed = pldhiv - numART,
            unsuppressed = numART - suppressed) %>%
-    select(year, undiagnosed, diagosed, unsuppressed, suppressed) %>%
-    gather("stage", "value", 2:5)
+    select(year, undiagnosed, diagnosed, unsuppressed, suppressed) %>%
+    gather("stage", "value", 2:5) %>%
+    mutate(stage = factor(stage, levels = c("undiagnosed", "diagnosed", 
+                               "unsuppressed", "suppressed"))) %>%
+    arrange(stage)
   
-  # Create plots
+  # Create inidividual plots
   stackPlotBase <- ggplot(data = stackResults, aes(x = year, y = value, 
     fill = stage)) + xlab("Year") +
     scale_fill_manual(values = plotCols, name = "", labels = plotLabels, 
-      guide = guide_legend(reverse=TRUE, nrow = 2)) +  
+      guide = guide_legend(nrow = 2)) +  
     scale_x_continuous(breaks = xValues) + plotOpts + 
     theme(legend.text = element_text(size = 8))
   
-  stackPlotNum <- stackPlotBase + geom_bar(stat="identity") + 
-    ylab("Number of PLHIV") 
-  stackPlotProp <- stackPlotBase + geom_bar(stat="identity", 
-    position= "fill") + ylab("Proportion of PLHIV")
+  stackPlotNum <- stackPlotBase + geom_area(stat="identity") + 
+    ylab("Number of PLHIV") + scale_y_continuous(labels = comma)
+  stackPlotProp <- stackPlotBase + geom_area(stat="identity", 
+    position= "fill") + ylab("Percentage of PLHIV") +
+    scale_y_continuous(labels = percent)
   
+  # Create a combined plot
+  legend <- GetLegend(stackPlotNum)
+  stackPlotNum2 <- stackPlotNum + theme(legend.position="none")
+  stackPlotProp2 <- stackPlotProp + theme(legend.position="none")
+  
+  stackCombined <- grid.arrange(legend, stackPlotNum2, stackPlotProp2,
+                                ncol=2, nrow = 2, 
+                                layout_matrix = rbind(c(1,1), c(2,3)),
+                                widths = c(4, 4), heights = c(0.6, 3.4))
 }
 
 # Save if required -------------------------------------------------------
@@ -175,7 +207,7 @@ if (savePlots) {
   
   ggsave(file.path(figFolder, paste("HIVcascade-all-", 
     toString(resultsYear), saveFormat, sep = "")), 
-    plot = plotBarAll, width =  12, height = 10, units = "cm")
+    plot = plotBarAll, width =  width, height = 10, units = "cm")
 
 } 
 
@@ -187,6 +219,10 @@ if (pubPlots) {
   ggsave(file.path(figFolder, paste("HIVcascade-Proportion-",
     toString(resultsYear), saveFormat, sep = "")),
     plot = stackPlotProp, width = 10, height = 10, units = "cm")
+  
+  ggsave(file.path(figFolder, paste("HIVcascade-Stacked-Combined-", 
+    toString(resultsYear), saveFormat, sep = "")),
+    plot = stackCombined, width = 20, height = 10, units = "cm")
 
 }
 
@@ -210,6 +246,7 @@ plotStagesAll <- ggplot(data = resultsAll, aes(x = year, y = value)) +
   scale_x_continuous(breaks = seq((resultsYear - minYear + 1), 
                                   resultsYear, by = 3)) +
   expand_limits(y = 0) +
+  scale_y_continuous(labels = comma) + 
   ylab("Number of people") + xlab("Year") +  
   plotOpts
 
@@ -231,33 +268,53 @@ if (pubPlots) {
   # Set base plotting data
   plotData <- filter(resultsAll, stage %in% plotStages)
   
-  yLabels <- c("infected" = "Number of PLHIV",
-               "pldhiv" = "Number diagnosed",
-               "numART" = "Number on ART",
-               "suppressed" = "Number with VL < 400")
+  if (resultsYear <= 2014) {
+    yLabels <- c("infected" = "Number of PLHIV",
+                 "pldhiv" = "Number diagnosed",
+                 "numART" = "Number on ART",
+                 "suppressed" = "Number suppressed\n(VL < 400 copies/ml)")
+  } else {
+    yLabels <- c("infected" = "Number of PLHIV",
+                 "pldhiv" = "Number diagnosed",
+                 "numART" = "Number on ART",
+                 "suppressed" = "Number suppressed\n(VL < 200 copies/ml)")
+  }
   
   # Loop across stages and save plots 
+  plots <- list()
   for (ii in plotStages) {
     #Select data we want
     tempData <- filter(plotData, stage == ii)
     
     # Plot the stage over time
-    plotCurrent <- ggplot(data = tempData, aes(x = year, y = value)) + 
+    plots[[ii]] <- ggplot(data = tempData, aes(x = year, y = value)) + 
       geom_ribbon(aes(ymin = lower, ymax = upper), 
                   fill = asrcols[2], alpha = 0.4) +
       geom_line(color = asrcols[2]) + 
       scale_x_continuous(breaks = seq(startYear,                        
                                       resultsYear, by = 3)) +
       expand_limits(y = 0) +
+      scale_y_continuous(labels = comma) + 
       ylab(yLabels[ii]) + xlab("Year") +  
-      plotOpts
+      plotOpts 
     
     # Save the current plot
     ggsave(file.path(figFolder, paste("HIVcascade-", ii, "_", 
       toString(startYear), "-", toString(resultsYear), 
       saveFormat, sep = "")),
-      plot = plotCurrent, width = 7.5, height = 6, units = "cm") 
+      plot = plots[[ii]], width = 7.5, height = 6, units = "cm") 
   }
+  
+  # Create a group plot
+  stagesPLot <- plot_grid(plots[[1]], plots[[2]], plots[[3]], plots[[4]],
+          labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2, align = "v")
+  
+  # Save the current plot
+  ggsave(file.path(figFolder, paste("HIVcascade-Stages_", 
+    toString(startYear), "-", toString(resultsYear), 
+    saveFormat, sep = "")),
+    plot = stagesPLot, width = 18, height = 15, units = "cm") 
+  
 }
 
 # Additional time trend plots for publications ----------------------------
@@ -270,6 +327,7 @@ if (pubPlots) {
     geom_line(color = asrcols[2])  +
     scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
     expand_limits(y = 0) +
+    scale_y_continuous(labels = comma) + 
     ylab("Number of unique cases") + xlab("Year") +  
     plotOpts
   
@@ -311,17 +369,18 @@ if (pubPlots) {
     scale_x_continuous(breaks = seq((resultsYear - minYear + 1), 
                                     resultsYear, by = 3)) +
     expand_limits(y = 0) +
+    scale_y_continuous(labels = comma) + 
     ylab("Number of deaths") + xlab("Year") +  
     plotOpts
   
   plotDeathRate <- ggplot(data = deathData, 
-                          aes(x = year, y = 100 * deathrate)) +
-    geom_ribbon(aes(ymin = 100 * drlower, ymax = 100 * drupper), 
+                          aes(x = year, y = deathrate)) +
+    geom_ribbon(aes(ymin = drlower, ymax = drupper), 
               fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
     scale_x_continuous(breaks = seq((resultsYear - minYear + 1), 
                                     resultsYear, by = 3)) +
-    ylim(c(0, 2)) +
+    scale_y_continuous(labels = percent, limits = c(0, 2)) + 
     ylab("Mortality rate (%)") + xlab("Year") +  
     plotOpts
   
@@ -357,13 +416,13 @@ if (pubPlots) {
     
   # plot art coverage
   coveragePlot <- ggplot(data = treatData, 
-                         aes(x = year, y = 100 * artcov)) +
-    geom_ribbon(aes(ymin = 100 * artcov_min, ymax = 100 * artcov_max), 
+                         aes(x = year, y = artcov)) +
+    geom_ribbon(aes(ymin = artcov_min, ymax =  artcov_max), 
               fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
     scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
-    ylim(c(0, 100)) +
-    ylab("ART coverage (%)") + xlab("Year") +  
+    scale_y_continuous(labels = percent, limits = c(0, 1)) + 
+    ylab("ART coverage of\nPLDHIV (%)") + xlab("Year") +  
     plotOpts
   
   # Save plots
@@ -388,12 +447,12 @@ if (pubPlots) {
     
   # plot art coverage
   suppressPlot <- ggplot(data = suppressData, 
-                         aes(x = year, y = 100 * suscov)) +
-    geom_ribbon(aes(ymin = 100 * suscov_min, ymax = 100 * suscov_max), 
+                         aes(x = year, y = suscov)) +
+    geom_ribbon(aes(ymin = suscov_min, ymax = suscov_max), 
               fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
     scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
-    ylim(c(0, 100)) +
+    scale_y_continuous(labels = percent, limits = c(0, 1)) + 
     ylab("PLHIV suppressed (%)") + xlab("Year") +  
     plotOpts
   

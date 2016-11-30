@@ -15,6 +15,7 @@ LoadLibrary(readxl)
 
 # Libraries for output
 LoadLibrary(ggplot2)
+LoadLibrary(scales)
 LoadLibrary(RColorBrewer)
 LoadLibrary(Hmisc)
 LoadLibrary(knitr)
