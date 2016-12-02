@@ -8,6 +8,7 @@
 # R. T. Gray 
 
 # Libraries for data manipulation
+LoadLibrary(readr)
 LoadLibrary(dplyr)
 LoadLibrary(tidyr)
 LoadLibrary(utils)

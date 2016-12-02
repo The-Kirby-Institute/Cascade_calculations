@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = FALSE,
 ```
 
 
-```{r setup, echo = FALSE, messages = FALSE, include=FALSE}
+```{r setup}
 # Clear workspace
 rm(list=ls()) 
 options(scipen=999)  # To get rid of scientific notation
@@ -70,7 +70,7 @@ if (excludeCare) {
 
 ```
 
-```{r loadresults, echo = FALSE, messages = FALSE, include=FALSE}
+```{r loadresults}
 # Load the previously saved hiv notifications data frame
 load(file.path(resultsFolder, paste("HIVset-",
                     toString(resultsYear), ".rda", sep = "")))
@@ -92,11 +92,16 @@ hivCascade <- filter(hivCascade, !(stage == "linked"))
 if (excludeCare) {
   hivCascade <- filter(hivCascade, stage != "retained")
 }
+
+if (pubPlots) {
+  newInfections <- read_excel(file.path(dirname(resultsFolder), "data",
+                            "ecdc_new_infections-2015.xlsx"))
+}
 ```
 
 # National estimates
 
-```{r allpops, echo = FALSE, messages = FALSE, include=FALSE}
+```{r allpops}
 # Create a series of plots related to the overall cascade
 
 # Plot specs
@@ -120,7 +125,7 @@ if (excludeCare) {
 # Create bar chart of current year's cascade and over time ----------------
 
 # Sort out the data we want
-resultsAll <- filter(hivCascade, 
+resultsAll <- filter(hivCascade,
                      population == "all",
                      year >= startYear)
 
@@ -380,7 +385,7 @@ if (pubPlots) {
     geom_line(color = asrcols[2])  +
     scale_x_continuous(breaks = seq((resultsYear - minYear + 1), 
                                     resultsYear, by = 3)) +
-    scale_y_continuous(labels = percent, limits = c(0, 2)) + 
+    scale_y_continuous(labels = percent, limits = c(0, 0.02)) + 
     ylab("Mortality rate (%)") + xlab("Year") +  
     plotOpts
   
@@ -457,14 +462,150 @@ if (pubPlots) {
     plotOpts
   
   # Save plots
-  ggsave(file.path(figFolder, paste("Suppression_coverage_", 
+  ggsave(file.path(figFolder, paste0("Suppression_coverage_", 
       toString(startYear), "-", toString(resultsYear), 
-      saveFormat, sep = "")),
+      saveFormat)),
       plot = suppressPlot, width = 7.5, height = 6, units = "cm")
 }
 ```
 
-```{r linkageplots, echo = FALSE, messages = FALSE, include=FALSE}
+```{r trends}
+# This chunk is used to do some simple trend analysis
+
+# Notifications excluding people previouly diagnosed overseas
+diagsData <- hivSet %>%
+  filter(is.na(previ_diag_overseas)) %>%
+  group_by(yeardiagnosis) %>%
+  summarise(diags = n()) %>%
+  rename(year = yeardiagnosis) %>%
+  filter(year >= startYear) %>%
+  mutate(overseas = "no")
+
+trendDiags <- lm(diags ~ year, data = diagsData)
+coeff <- summary(trendDiags)$coefficients["year", "Estimate"]
+p_value <- summary(trendDiags)$coefficients["year", "Pr(>|t|)"]
+
+diagsPlot <- ggplot(data = diagsData, aes(x = year, y = diags)) +
+  geom_point(colour = "black") +
+  geom_line(aes(y = predict(trendDiags)), colour = "red") +
+  coord_cartesian(ylim = c(0, 1500)) +
+  plotOpts
+
+# HIV cascade trends
+steps <- stages[stages != "retained"]
+trendCascade <- data_frame(stage = character(5), 
+                           coeff = numeric(5),
+                           pvalue = numeric(5))
+                      
+for (ii in 1:4) {
+  temp <- lm(value ~ year, data = filter(resultsAll, 
+                                         stage == steps[ii]))
+  trendCascade$stage[ii] <- steps[ii]
+  trendCascade$coeff[ii] <- summary(temp)$coefficients["year", "Estimate"]
+  trendCascade$pvalue[ii] <- summary(temp)$coefficients["year", 
+                                                         "Pr(>|t|)"]
+}
+
+# Add diagnoses
+trendCascade$stage[5] <- "diagnoses"
+trendCascade$coeff[5] <- coeff
+trendCascade$pvalue[5] <- p_value
+
+write_csv(trendCascade, file.path(figFolder, paste0("Trends_cascade_", 
+      toString(startYear), "-", toString(resultsYear), ".csv")))
+
+```
+
+```{r, new infections plot}
+# This chunk produces some plots related to new infections for the overall
+#  cascade. It is only used for publication purposes
+
+if (pubPlots) {
+  # Sort out new infections
+  infectsData <- data_frame(year = startYear:resultsYear)
+  
+  infectsData$estimate <- (filter(newInfections, year >= startYear,
+    overseas_included == "yes")$estimate + filter(newInfections,
+    year >= startYear, overseas_included == "no")$estimate) / 2
+  
+  infectsData$lower <- filter(newInfections, year >= startYear,
+                              overseas_included == "no")$lower
+  
+  infectsData$upper<- filter(newInfections, year >= startYear,
+                             overseas_included == "yes")$upper
+  
+  plhivEstimate <- filter(resultsAll, stage == "infected")$value
+  plhivLower <- filter(resultsAll, stage == "infected")$lower
+  plhivUpper <- filter(resultsAll, stage == "infected")$upper
+  
+  # Plot new infections estimate
+  plotInfects <- ggplot(data = infectsData, aes(x = year)) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), 
+                alpha = 0.3, fill = "red") + 
+    geom_line(aes(y = estimate), colour = "red") +
+    scale_x_continuous(breaks = seq(startYear,                        
+                                    resultsYear, by = 3)) +
+    scale_y_continuous(label = comma, limits = c(0, 1500))+
+    ylab("New infections") + xlab("Year") + 
+    plotOpts
+  
+  # Plot infections per plhiv
+  plotInfectsRate <- ggplot(data = infectsData, aes(x = year)) +
+    geom_ribbon(aes(ymin = 100 * lower / plhivUpper, 
+                    ymax = 100 * upper / plhivLower), 
+                alpha = 0.3, fill = "black") +
+    geom_line(aes(y = 100 * estimate / plhivEstimate), colour = "black") +
+    scale_x_continuous(breaks = seq(startYear,                        
+                                    resultsYear, by = 3)) +
+    expand_limits(y = 0) +
+    ylab("New infections\nper 100 PLHIV") + xlab("Year") + 
+    plotOpts
+  
+  # Plot relative change in new infections, the rate, and notifications
+  plotRelative <- ggplot(data = infectsData, aes(x = year)) +
+    geom_ribbon(aes(ymin = (lower / plhivUpper) / 
+                      (lower[1] / plhivUpper[1]), 
+                    ymax = (upper / plhivLower) / (upper[1] /
+                                                     plhivLower[1])), 
+                alpha = 0.3, fill = "black") +
+    geom_line(aes(y = (estimate / plhivEstimate) / (estimate[1] /
+      plhivEstimate[1]), colour = "rate")) + 
+    geom_ribbon(aes(ymin = lower / lower[1], ymax = upper / upper[1]), 
+                alpha = 0.3, fill = "red") + 
+    geom_line(aes(y = estimate / estimate[1], colour = "infections")) +
+    geom_line(aes(y = diagsData$diags / diagsData$diags[1], 
+                  colour = "diags")) + 
+    scale_x_continuous(breaks = seq(startYear,                        
+                                    resultsYear, by = 3)) +
+    scale_y_continuous(label = percent, limits = c(0, 1.5)) +
+    scale_colour_manual(name = NULL, 
+                        values = c("red", "black", "blue"),
+                        limits = c("infections", "rate", "diags"),
+                        labels = c("Estimated new infections", 
+                                   "New infections per PLHIV", 
+                                   "Notifications"),
+                        guide = guide_legend(ncol = 1)) +
+    ylab("Relative to 2006") + xlab("Year") + 
+    plotOpts + theme(legend.position = "right")
+  
+  # Produce a nice combined plot
+  plotCombined <- ggdraw() + 
+    draw_plot(plotInfects, 0, 0.5, 0.5, 0.5) +
+    draw_plot(plotInfectsRate, 0.5, 0.5, 0.5, 0.5) +
+    draw_plot(plotRelative, 0, 0, 1, 0.5) +
+    draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0), c(1, 1, 0.5), 
+                    size = 12)
+  # Save the plot
+  ggsave(file.path(figFolder, paste("HIV_new_infections_", 
+    toString(startYear), "-", toString(resultsYear), 
+                                    saveFormat, sep = "")),
+         plot = plotCombined, width = 15, height = 15, units = "cm")
+}
+```
+
+
+
+```{r linkageplots}
 # Create  a series of plot related to linkag to care for publication
 
 if (pubPlots) {
@@ -525,17 +666,17 @@ if (pubPlots) {
   # early in the epidemic
   
   linkPlot <- ggplot(data = filter(hivResults, yeardiagnosis >= 1984),
-                     aes(x = yeardiagnosis, y = 100 * proplinked)) + 
+                     aes(x = yeardiagnosis, y = proplinked)) + 
     geom_line(color = asrcols[2], size = 1.1)  +
     scale_x_continuous(breaks = seq(1982, resultsYear, by = 8)) +
-    ylim(c(0, 100)) +
-    ylab("Annual diagnoses \n linked to care (%)") + xlab("Year") +
+    scale_y_continuous(label = percent, limits = c(0, 1)) +
+    ylab("Annual diagnoses \n linked to care") + xlab("Year") +
     plotOpts
   
   # Turns out there is not much difference in % linked between MSM and
   # non-MSM so exclude from plot
   linkPlotRecent <- ggplot(data = allLinked,
-                           aes(x = yeardiagnosis, y = 100 * proplinked)) + 
+                           aes(x = yeardiagnosis, y = proplinked)) + 
     geom_line(color = asrcols[2], size = 1.1)  +
     # geom_line(data = filter(expLinked, expgroup == "msm"),
     #                         aes(x = year, y = 100 * proplinked), 
@@ -543,8 +684,8 @@ if (pubPlots) {
     # geom_line(data = nonMsmLinked, aes(x = year, y = 100 * proplinked), 
     #           colour = "blue", size = 1.1) + 
     scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
-    ylim(c(0, 100)) + 
-    ylab("Annual diagnoses \n linked to care (%)") + xlab("Year") +
+    scale_y_continuous(label = percent, limits = c(0, 1)) + 
+    ylab("Annual diagnoses \n linked to care") + xlab("Year") +
     plotOpts
   
   # Save plots 
@@ -599,7 +740,7 @@ if (pubPlots) {
     scale_x_continuous(breaks = seq(0, 100, by = 7),
                        labels = as.character(seq(0, 100, by = 7)/7)) +
     ylab("Number of diagnoses") +
-    xlab("Weeks") +
+    xlab("Weeks between diagnosis and confirmatory test") +
     plotOpts 
   
   # Save plot
@@ -655,7 +796,7 @@ if (pubPlots) {
                         values = c("black", asrcols[2], asrcols[4]),
                         labels =  c("All", "MSM", "non-MSM")) +
     ylim(c(0,NA)) + 
-    ylab("Average CD4 \n at diagnosis") + xlab("Year") +
+    ylab("Average CD4 count \n at diagnosis") + xlab("Year") +
     plotOpts 
     
   # Save plot

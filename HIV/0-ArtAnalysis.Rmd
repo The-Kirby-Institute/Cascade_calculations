@@ -121,7 +121,7 @@ saturationCoverage <- 30000 # estimate of saturation coverage
 artEstimates$diffbin <- saturationCoverage - artEstimates$all 
 
 # Now do a binomial fit
-fitGlmBin <- glm(cbind(all, diff) ~ year, data = artEstimates, 
+fitGlmBin <- glm(cbind(all, diffbin) ~ year, data = artEstimates, 
               family = binomial(link = "logit"), weights = weights)
 artEstimates$fitglmbin <- predict(fitGlmBin, type="response") * 
   saturationCoverage
@@ -349,7 +349,7 @@ ggsave(file.path(figFolder, "Logistic_Fit.png"),
 ```{r saveresults}
 if (saveResults) {
   # Directory and file name
-  saveString <- file.path(outputFolder, paste("ART_Estimates-", 
+  saveString <- file.path(resultsFolder, paste("ART_Estimates-", 
     toString(analysisYear), sep = ""))
   
   # Write to csv
