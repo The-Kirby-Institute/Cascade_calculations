@@ -484,6 +484,8 @@ diagsData <- hivSet %>%
 trendDiags <- lm(diags ~ year, data = diagsData)
 coeff <- summary(trendDiags)$coefficients["year", "Estimate"]
 p_value <- summary(trendDiags)$coefficients["year", "Pr(>|t|)"]
+interval <- confint(trendDiags, "year")
+
 
 diagsPlot <- ggplot(data = diagsData, aes(x = year, y = diags)) +
   geom_point(colour = "black") +
@@ -495,7 +497,10 @@ diagsPlot <- ggplot(data = diagsData, aes(x = year, y = diags)) +
 steps <- stages[stages != "retained"]
 trendCascade <- data_frame(stage = character(5), 
                            coeff = numeric(5),
-                           pvalue = numeric(5))
+                           pvalue = numeric(5),
+                           lower = numeric(5),
+                           upper = numeric(5))
+
                       
 for (ii in 1:4) {
   temp <- lm(value ~ year, data = filter(resultsAll, 
@@ -504,19 +509,24 @@ for (ii in 1:4) {
   trendCascade$coeff[ii] <- summary(temp)$coefficients["year", "Estimate"]
   trendCascade$pvalue[ii] <- summary(temp)$coefficients["year", 
                                                          "Pr(>|t|)"]
+  tempInterval <- confint(temp, "year")
+  trendCascade$lower[ii] <- tempInterval[1]
+  trendCascade$upper[ii] <- tempInterval[2]
 }
 
 # Add diagnoses
 trendCascade$stage[5] <- "diagnoses"
 trendCascade$coeff[5] <- coeff
 trendCascade$pvalue[5] <- p_value
+trendCascade$lower[5] <- interval[1]
+  trendCascade$upper[5] <- interval[2]
 
 write_csv(trendCascade, file.path(figFolder, paste0("Trends_cascade_", 
       toString(startYear), "-", toString(resultsYear), ".csv")))
 
 ```
 
-```{r, new infections plot}
+```{r new infections plot}
 # This chunk produces some plots related to new infections for the overall
 #  cascade. It is only used for publication purposes
 
@@ -600,6 +610,35 @@ if (pubPlots) {
     toString(startYear), "-", toString(resultsYear), 
                                     saveFormat, sep = "")),
          plot = plotCombined, width = 15, height = 15, units = "cm")
+  
+  # Trends
+  trendInfections <- lm(estimate ~ year, data = infectsData)
+  coeffInfections <- summary(trendInfections)$coefficients["year",
+                                                           "Estimate"]
+  p_valueInfections <- summary(trendInfections)$coefficients["year",
+                                                             "Pr(>|t|)"]
+  intervalInfections <- confint(trendInfections, "year")
+  
+  trendRate <- lm(100 * infectsData$estimate / plhivEstimate  ~
+                    infectsData$year)
+  coeffRate <- summary(trendRate)$coefficients["infectsData$year",
+                                               "Estimate"]
+  p_valueRate <- summary(trendRate)$coefficients["infectsData$year",
+                                                 "Pr(>|t|)"]
+  intervalRate <- confint(trendRate, "infectsData$year")
+  
+  # Save new infections trends
+  trendsInfections <- data_frame(stage = c("infections", "rate"), 
+                           coeff = c(coeffInfections, coeffRate),
+                           pvalue = c(p_valueInfections,p_valuRate),
+                           lower = c(intervalInfections[1],
+                                     intervalRate[1]),
+                           upper = c(intervalInfections[2],
+                                     intervalRate[2]))
+
+  write_csv(trendCascade, file.path(figFolder, 
+      paste0("Trends_infections_",
+      toString(startYear), "-", toString(resultsYear), ".csv")))
 }
 ```
 
