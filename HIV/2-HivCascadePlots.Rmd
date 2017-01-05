@@ -630,13 +630,13 @@ if (pubPlots) {
   # Save new infections trends
   trendsInfections <- data_frame(stage = c("infections", "rate"), 
                            coeff = c(coeffInfections, coeffRate),
-                           pvalue = c(p_valueInfections,p_valuRate),
+                           pvalue = c(p_valueInfections,p_valueRate),
                            lower = c(intervalInfections[1],
                                      intervalRate[1]),
                            upper = c(intervalInfections[2],
                                      intervalRate[2]))
 
-  write_csv(trendCascade, file.path(figFolder, 
+  write_csv(trendsInfections, file.path(figFolder, 
       paste0("Trends_infections_",
       toString(startYear), "-", toString(resultsYear), ".csv")))
 }
