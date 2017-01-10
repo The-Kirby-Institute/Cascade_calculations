@@ -28,16 +28,8 @@ resultsFolder <- file.path(basePath, "output")
 # Source useful functions
 source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 source(file.path(Rcode, "LoadLibrary.R"), echo = TRUE)
-
-# Load libraries used
-LoadLibrary(readxl)
-LoadLibrary(dplyr)
-LoadLibrary(tidyr)
-
-LoadLibrary(ggplot2)
-LoadLibrary(RColorBrewer)
-LoadLibrary(Hmisc)
-LoadLibrary(knitr)
+source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+# source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Current time for appending to outputs
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
