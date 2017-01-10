@@ -45,8 +45,9 @@ artEstimates <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
 prospectionData <- read.csv(file.path(dataFolder,
   paste("pharmdash_HIVpatients", toString(analysisYear),
     ".csv", sep = "")), as.is = c(1, 2))
+tempResData <- c(341, 300, 400) # estimates for HIV+ temporary residents
 
-# Clean ART data ---------------------------------------------------------- 
+# Clean ART data ---------------------------------------------------------
 
 # First simplify column names
 colnames(artEstimates) <- c("year", "ahod")
@@ -66,11 +67,42 @@ tempPbs$year <- unlist(lapply(tempPbs$year, function(x)
 # Add the PBS data to artEstimates
 artEstimates <- left_join(artEstimates, tempPbs, by = "year")
 
-# Add some hardcoded upper and lower bounds for the PBS data
+# Add upper and lower bounds for the PBS data
+
 artEstimates$pbslower <- 0.9 * artEstimates$pbs
 artEstimates$pbsupper <- 1.1 * artEstimates$pbs
 
-# Add other variables ------------------------------------------------------
+popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
+                                "ABS_population_sizes.xlsx"),
+                      sheet = 2)
+source(file.path(Rcode, "pharmDashError.R"), echo=TRUE)
+
+# Loop through years appending lower and upper pbs estimates
+prospectionYears <- c(2013, 2014)
+
+for (nyear in prospectionYears) {
+ 
+   numArt <- filter(artEstimates, year == nyear)$pbs
+   numPop <- filter(popData, year == nyear, population == "all")$erp
+   
+   error <- PharmDashError(numPop, numArt)
+   
+   artEstimates$pbslower[artEstimates$year == nyear] <- error$lower
+   artEstimates$pbsupper[artEstimates$year == nyear] <- error$upper
+}
+
+# Add temporary residents to PBS data
+artEstimates$pbs[artEstimates$year %in% prospectionYears] <-
+  artEstimates$pbs[artEstimates$year %in% prospectionYears] +
+  tempResData[1]
+artEstimates$pbslower[artEstimates$year %in% prospectionYears] <-
+  artEstimates$pbslower[artEstimates$year %in% prospectionYears] +
+  tempResData[2]
+artEstimates$pbsupper[artEstimates$year %in% prospectionYears] <-
+  artEstimates$pbsupper[artEstimates$year %in% prospectionYears] +
+  tempResData[3]
+
+# Add other variables ----------------------------------------------------
 
 # Add some variables for specific data
 artEstimates$ahodraw <- NA
@@ -121,7 +153,7 @@ saturationCoverage <- 30000 # estimate of saturation coverage
 artEstimates$diffbin <- saturationCoverage - artEstimates$all 
 
 # Now do a binomial fit
-fitGlmBin <- glm(cbind(all, diff) ~ year, data = artEstimates, 
+fitGlmBin <- glm(cbind(all, diffbin) ~ year, data = artEstimates, 
               family = binomial(link = "logit"), weights = weights)
 artEstimates$fitglmbin <- predict(fitGlmBin, type="response") * 
   saturationCoverage
@@ -186,8 +218,7 @@ for (ii in 1:nsamples) {
   
 }
 
-# Filter samples which go outside the PBS error bounds for the final 
-# year
+# Filter samples which go outside the PBS error bounds for 2013 
 goodRows <- apply(simMatrix, 1, 
       function(x) any(x[length(xdata)] <
                         artEstimates$pbsupper[length(xdata)]
@@ -349,7 +380,7 @@ ggsave(file.path(figFolder, "Logistic_Fit.png"),
 ```{r saveresults}
 if (saveResults) {
   # Directory and file name
-  saveString <- file.path(outputFolder, paste("ART_Estimates-", 
+  saveString <- file.path(resultsFolder, paste("ART_Estimates-", 
     toString(analysisYear), sep = ""))
   
   # Write to csv

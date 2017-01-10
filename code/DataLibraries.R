@@ -8,6 +8,7 @@
 # R. T. Gray 
 
 # Libraries for data manipulation
+LoadLibrary(readr)
 LoadLibrary(dplyr)
 LoadLibrary(tidyr)
 LoadLibrary(utils)
@@ -15,6 +16,7 @@ LoadLibrary(readxl)
 
 # Libraries for output
 LoadLibrary(ggplot2)
+LoadLibrary(scales)
 LoadLibrary(RColorBrewer)
 LoadLibrary(Hmisc)
 LoadLibrary(knitr)
