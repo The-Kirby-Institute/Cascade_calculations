@@ -9,7 +9,7 @@ This document presents estimates for the diagnosis and care cascade for
 estimates are described at the end of the document.
 
 <!--- Code for calculating the cascade --->
-```{r initialization,echo = FALSE,messages = FALSE,include=FALSE}
+```{r initialization, echo = FALSE, messages = FALSE, include=FALSE}
 # Clear workspace
 rm(list=ls()) 
 options(scipen=999)  # To get rid of scientific notation
@@ -18,15 +18,16 @@ options(scipen=999)  # To get rid of scientific notation
 # setwd(source file location)
 
 # Details of results and outputs folders
-basePath <- dirname(getwd()) #getwd()
+basePath <- getwd()
+Rcode <- file.path(dirname(getwd()), "code") 
 docFolder <- file.path(basePath, "docs")
-dataFolder <- file.path(basePath, "data", "chlamydia")
+dataFolder <- file.path(basePath, "data")
 figFolder <- file.path(basePath, "output", "figures")
 resultsFolder <- file.path(basePath, "output")
 
 # Source useful functions
-source(file.path(basePath, "code", "FormatData.R"), echo=TRUE)
-source(file.path(basePath, "code", "LoadLibrary.R"), echo=TRUE)
+source(file.path(Rcode, "FormatData.R"), echo = TRUE)
+source(file.path(Rcode, "LoadLibrary.R"), echo = TRUE)
 
 # Load libraries used
 LoadLibrary(readxl)
@@ -51,7 +52,8 @@ saveplots <- FALSE # Save plots as separate files
 ```{r loadresults, echo = FALSE, messages = FALSE, include=FALSE}
 # Load hiv cascade dataframe
 notificationsFile <- file.path(dataFolder,
-  paste("chlamnotifications", toString(tail(resultsYears, 1)), ".csv", sep = ""))
+  paste("chlamnotifications", toString(tail(resultsYears, 1)), ".csv", 
+        sep = ""))
 
 incidenceFile <- file.path(dataFolder, paste("chlamincidence",
   toString(tail(resultsYears, 1)), ".csv", sep = ""))
