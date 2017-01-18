@@ -11,15 +11,18 @@ calculations.
 
 The raw data used for the chalmydia cascade is stored in three files in 
 the 
-~/Evaluation\_Modelling/project\_care\_cascades/data/raw
+~/Evaluation\_Modelling/project\_care\_cascades/Chlamydia/data/raw
 folder:
 - ChlamydiaNotifications-Year.csv
-- CHLAMYDIA_MBS-2014.dta
+- CHLAMYDIA_MBS-Year.dta
+
+and the file in the main data folder 
+~/Evaluation\_Modelling/project\_care\_cascades/data/
 - access\_cascade\_data-Year.xlsx (only available from 2015 onwards). 
 
 The resulting cleaned data sets are saved as dataframes in three
 csv files in the 
-~/Evaluation\_Modelling/project\_care\_cascades/data/chlamydia 
+~/Evaluation\_Modelling/project\_care\_cascades/Chlamydia/data 
 folder:
 - clamnotificationsYear.csv
 - chlamtestsYear.csv
