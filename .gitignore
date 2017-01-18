@@ -3,6 +3,7 @@ Archive/
 data/*.csv
 data/HIV/
 HIV/data/
+Chlamydia/data/raw/
 data/raw/
 data/Archive/
 data/backprojection-clean/
@@ -30,3 +31,4 @@ dashboards/*.csv
 
 dashboards/rsconnect/
 PHC CT request_NSW data only_updated_26July2016.xlsx
+Chlamydia/raw/
