@@ -3,6 +3,7 @@ Archive/
 data/*.csv
 data/HIV/
 HIV/data/
+Chlamydia/data/raw/
 data/raw/
 data/Archive/
 data/backprojection-clean/
