@@ -504,6 +504,21 @@ retestNSWgp <- retestNSWgp %>%
   gather("year", "number", 5:(ncol(retestNSWgp)+1)) %>%
   spread(variable, number)
 
+# Add estimates for "all" by adding the numbers for males and females
+retestAll <- retestNSWgp %>%
+  filter(sex == "male")
+retestAll$sex <- "all"
+
+retestAll$diagnoses <- 
+  retestNSWgp$diagnoses[retestNSWgp$sex == "female"] +
+  retestNSWgp$diagnoses[retestNSWgp$sex == "male"]
+
+retestAll$retested <-
+retestNSWgp$retested[retestNSWgp$sex == "female"] +
+  retestNSWgp$retested[retestNSWgp$sex == "male"]
+
+retestNSWgp <- bind_rows(retestNSWgp, retestAll)
+
 # Now calculate proportion retest and lower and upper bound --------------
 retestNSWgp <- retestNSWgp %>%
   mutate(prop_retested = retested / diagnoses)
