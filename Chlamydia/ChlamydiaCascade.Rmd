@@ -8,8 +8,16 @@ This document presents estimates for the diagnosis and care cascade for
 *Chlamydia trachomatis* infection in Australia. The methods used for the 
 estimates are described at the end of the document.
 
+
+```{r knitr_options, include=FALSE} 
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE, 
+                      include = FALSE) 
+```
+
 <!--- Code for calculating the cascade --->
-```{r initialization, echo = FALSE, messages = FALSE, include=FALSE}
+```{r initialization}
 # Clear workspace
 rm(list=ls()) 
 options(scipen=999)  # To get rid of scientific notation
@@ -38,10 +46,20 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 resultsYears <- c(2013:2015) # Year of cascade we will plot      
 saveCascade <- TRUE                    
 saveplots <- FALSE # Save plots as separate files
+retestRange <- TRUE # Caclulate variations in retested
 
 ```
 
-```{r loadresults, echo = FALSE, messages = FALSE, include=FALSE}
+```{r Front matter}
+# Some information on the packages and versions used to generate the 
+# results
+mainPackages <- c("readr","dplyr", "tidyr", "ggplot2")
+source(file.path(Rcode, "FrontMatter.R"))
+fmStr <- FrontMatter(mainPackages, rstudio = "1.0.44")
+cat(fmStr)
+```
+
+```{r loadresults}
 # Load hiv cascade dataframe
 notificationsFile <- file.path(dataFolder,
   paste("chlamnotifications", toString(tail(resultsYears, 1)), ".csv", 
@@ -57,9 +75,16 @@ notifications <-  read.csv(notificationsFile)
 incidence <- read.csv(incidenceFile)
 treatment <- read.csv(treatFile) 
 
+  
+if (retestRange) {
+  retestVarFile <- file.path(dataFolder, paste("chlamRetestVariation",
+    toString(tail(resultsYears, 1)), ".csv", sep = ""))  
+  retests <- read.csv(retestVarFile)
+}
+
 ```
 
-```{r extractResults, echo = FALSE, messages = FALSE, include=FALSE}
+```{r extractResults}
 # Extract the actual results we want - resultsYear for 15-29 year olds
 currentDiags <- notifications %>% 
   filter(year %in% resultsYears) %>%
@@ -77,7 +102,7 @@ currentTreat <- treatment %>%
 
 ```
 
-```{r calculations, echo = FALSE, messages = FALSE, include=FALSE}
+```{r calculations}
 nyears <- length(resultsYears)
 
 # Initialize output data frame
@@ -161,9 +186,12 @@ chlamcascade <- rbind(chlamcascade,
                   data.frame(stage = "treated",
                              year = rep(resultsYears, 2),
                              sex = rep(c("male", "female"), each = 3), 
-                             estimate = c(maleTreated[, 1], femaleTreated[, 1]),
-                             lower =  c(maleTreated[, 2], femaleTreated[, 2]), 
-                             upper = c(maleTreated[, 3], femaleTreated[, 3]),
+                             estimate = c(maleTreated[, 1],
+                                          femaleTreated[, 1]),
+                             lower =  c(maleTreated[, 2], 
+                                        femaleTreated[ , 2]), 
+                             upper = c(maleTreated[, 3], 
+                                       femaleTreated[, 3]),
                              percentprevious = 100 * 
                                c(maleTreated[, 1] / maleDiags,
                                  femaleTreated[, 1] / femaleDiags)))
@@ -179,6 +207,41 @@ diagnosesProp <- filter(currentTreat, stage == "diagnoses")$proportion
 diagnosesProp <- c(diagnosesProp[2] + diagnosesProp[3], diagnosesProp[1])
 names(diagnosesProp) <- c("gp", "shc")
 
+# Fucntion for proportion retested
+propRetested <- function(gender, value) {
+  # Local function to calculate proportion tested
+  propReTest <- unname(weights["urban"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == gender, region == "urban", 
+         context == "shc")[value] + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == gender, region == "urban", 
+         context == "gp")[value]) + 
+  weights["regional"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == gender, region == "regional", 
+         context == "shc")[value] + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == gender, region == "regional", 
+         context == "gp")[value]) + 
+  weights["remote"] * (diagnosesProp["shc"] * 
+  filter(retestDF, sex == gender, region == "remote", 
+         context == "shc")[value] + 
+  diagnosesProp["gp"] * 
+  filter(retestDF,  sex == gender, region == "remote", 
+         context == "gp")[value]))
+  
+  return(propReTest)
+}
+
+# Males
+propReTestMale <- propRetested("males", "proportion")
+propReTestMaleLower <- propRetested("males", "prop_lower")
+propReTestMaleUpper <- propRetested("males", "prop_upper") 
+
+# Females
+propReTestFemale <- propRetested("females", "proportion")
+propReTestFemaleLower <- propRetested("females", "prop_lower")
+propReTestFemaleUpper <- propRetested("females", "prop_upper")
+    
 # Males
 propReTestMale <- unname(weights["urban"] * (diagnosesProp["shc"] * 
   filter(retestDF, sex == "males", region == "urban", 
@@ -199,47 +262,47 @@ propReTestMale <- unname(weights["urban"] * (diagnosesProp["shc"] *
   filter(retestDF,  sex == "males", region == "remote", 
          context == "gp")$proportion))
 
-propReTestMaleLower <- min(filter(retestDF, sex == "males")$proportion)
+# propReTestMaleLower <- min(filter(retestDF, sex == "males")$proportion)
 
-# propReTestMaleLower <- unname(weights["urban"] * (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "males", region == "urban", 
-#          context == "shc")$prop_lower + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "males", region == "urban", 
-#          context == "gp")$prop_lower) + 
-#   weights["regional"] * (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "males", region == "regional", 
-#          context == "shc")$prop_lower + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "males", region == "regional", 
-#          context == "gp")$prop_lower) + 
-#   weights["remote"] * (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "males", region == "remote", 
-#          context == "shc")$prop_lower + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "males", region == "remote", 
-#          context == "gp")$prop_lower))
+propReTestMaleLower <- unname(weights["urban"] * (diagnosesProp["shc"] *
+  filter(retestDF, sex == "males", region == "urban",
+         context == "shc")$prop_lower +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "males", region == "urban",
+         context == "gp")$prop_lower) +
+  weights["regional"] * (diagnosesProp["shc"] *
+  filter(retestDF, sex == "males", region == "regional",
+         context == "shc")$prop_lower +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "males", region == "regional",
+         context == "gp")$prop_lower) +
+  weights["remote"] * (diagnosesProp["shc"] *
+  filter(retestDF, sex == "males", region == "remote",
+         context == "shc")$prop_lower +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "males", region == "remote",
+         context == "gp")$prop_lower))
 
-propReTestMaleUpper <- max(filter(retestDF, sex == "males")$proportion)
+# propReTestMaleUpper <- max(filter(retestDF, sex == "males")$proportion)
 
-# propReTestMaleUpper <- unname(weights["urban"] * (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "males", region == "urban", 
-#          context == "shc")$prop_upper + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "males", region == "urban", 
-#          context == "gp")$prop_upper) + 
-#   weights["regional"] * (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "males", region == "regional", 
-#          context == "shc")$prop_upper + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "males", region == "regional", 
-#          context == "gp")$prop_upper) + 
-#   weights["remote"] * (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "males", region == "remote", 
-#          context == "shc")$prop_upper + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "males", region == "remote", 
-#          context == "gp")$prop_upper))
+propReTestMaleUpper <- unname(weights["urban"] * (diagnosesProp["shc"] *
+  filter(retestDF, sex == "males", region == "urban",
+         context == "shc")$prop_upper +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "males", region == "urban",
+         context == "gp")$prop_upper) +
+  weights["regional"] * (diagnosesProp["shc"] *
+  filter(retestDF, sex == "males", region == "regional",
+         context == "shc")$prop_upper +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "males", region == "regional",
+         context == "gp")$prop_upper) +
+  weights["remote"] * (diagnosesProp["shc"] *
+  filter(retestDF, sex == "males", region == "remote",
+         context == "shc")$prop_upper +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "males", region == "remote",
+         context == "gp")$prop_upper))
 
 # Females
 propReTestFemale <- unname(weights["urban"] * (diagnosesProp["shc"] * 
@@ -261,57 +324,61 @@ propReTestFemale <- unname(weights["urban"] * (diagnosesProp["shc"] *
   filter(retestDF,  sex == "females", region == "remote", 
          context == "gp")$proportion))
 
-propReTestFemaleLower <- min(filter(retestDF, sex == "females")$proportion)
+# propReTestFemaleLower <- min(filter(retestDF, 
+#                                     sex == "females")$proportion)
 
-# propReTestFemaleLower <- unname(weights["urban"] * 
-#                                   (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "females", region == "urban", 
-#          context == "shc")$prop_lower + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "females", region == "urban", 
-#          context == "gp")$prop_lower) + 
-#   weights["regional"] * (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "females", region == "regional", 
-#          context == "shc")$prop_lower + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "females", region == "regional", 
-#          context == "gp")$prop_lower) + 
-#   weights["remote"] * (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "females", region == "remote", 
-#          context == "shc")$prop_lower + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "females", region == "remote", 
-#          context == "gp")$prop_lower))
+propReTestFemaleLower <- unname(weights["urban"] *
+                                  (diagnosesProp["shc"] *
+  filter(retestDF, sex == "females", region == "urban",
+         context == "shc")$prop_lower +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "females", region == "urban",
+         context == "gp")$prop_lower) +
+  weights["regional"] * (diagnosesProp["shc"] *
+  filter(retestDF, sex == "females", region == "regional",
+         context == "shc")$prop_lower +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "females", region == "regional",
+         context == "gp")$prop_lower) +
+  weights["remote"] * (diagnosesProp["shc"] *
+  filter(retestDF, sex == "females", region == "remote",
+         context == "shc")$prop_lower +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "females", region == "remote",
+         context == "gp")$prop_lower))
 
-propReTestFemaleUpper <- max(filter(retestDF, sex == "females")$proportion)
+# propReTestFemaleUpper <- max(filter(retestDF, 
+#                                     sex == "females")$proportion)
 
-# propReTestFemaleUpper <- unname(weights["urban"] * 
-#                                   (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "females", region == "urban", 
-#          context == "shc")$prop_upper + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "females", region == "urban", 
-#          context == "gp")$prop_upper) + 
-#   weights["regional"] * (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "females", region == "regional", 
-#          context == "shc")$prop_upper + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "females", region == "regional", 
-#          context == "gp")$prop_upper) + 
-#   weights["remote"] * (diagnosesProp["shc"] * 
-#   filter(retestDF, sex == "females", region == "remote", 
-#          context == "shc")$prop_upper + 
-#   diagnosesProp["gp"] * 
-#   filter(retestDF,  sex == "females", region == "remote", 
-#          context == "gp")$prop_upper))
-
+propReTestFemaleUpper <- unname(weights["urban"] *
+                                  (diagnosesProp["shc"] *
+  filter(retestDF, sex == "females", region == "urban",
+         context == "shc")$prop_upper +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "females", region == "urban",
+         context == "gp")$prop_upper) +
+  weights["regional"] * (diagnosesProp["shc"] *
+  filter(retestDF, sex == "females", region == "regional",
+         context == "shc")$prop_upper +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "females", region == "regional",
+         context == "gp")$prop_upper) +
+  weights["remote"] * (diagnosesProp["shc"] *
+  filter(retestDF, sex == "females", region == "remote",
+         context == "shc")$prop_upper +
+  diagnosesProp["gp"] *
+  filter(retestDF,  sex == "females", region == "remote",
+         context == "gp")$prop_upper))
 
 # Now calculated the number retested
-maleRetested <- as.data.frame(t(apply(filter(chlamcascade, stage == "treated",
+maleRetested <- as.data.frame(t(apply(filter(chlamcascade, 
+                                             stage == "treated",
   sex == "male")[, c("estimate", "lower", "upper")], 1, 
-  function(x) x * c(propReTestMale, propReTestMaleLower, propReTestMaleUpper))))
+  function(x) x * c(propReTestMale, propReTestMaleLower,
+                    propReTestMaleUpper))))
 
-femaleRetested <- as.data.frame(t(apply(filter(chlamcascade, stage == "treated",
+femaleRetested <- as.data.frame(t(apply(filter(chlamcascade, 
+                                               stage == "treated",
   sex == "female")[, c("estimate", "lower", "upper")], 1, 
   function(x) x * c(propReTestFemale, propReTestFemaleLower,
                     propReTestFemaleUpper))))
@@ -334,27 +401,35 @@ chlamcascade <- rbind(chlamcascade,
                                        femaleTreated[, 1])))
 
 # Retested positive ------------------------------------------------------
-# positiveDF <- filter(currentTreat, stage == "positive")
-# propPositive <- colSums(positiveDF[, 3:5] * diagnosesProp, na.rm = TRUE)
-# propNegative <- 1- sum(propPositive * weights)
-# 
-# # Hard coded ranges based on propNegative value - +/- 10%
-# propNegativeMin <- propNegative * 0.9
-# propNegativeMax <- min(propNegative * 1.1,1)
-# 
-# maleNegative <- filter(chlamcascade, stage == "retested", 
-#   sex == "male")$estimate * c(propNegative, propNegativeMin,
-#                               propNegativeMax)
-# 
-# femaleNegative <- filter(chlamcascade, stage == "retested", 
-#   sex == "female")$estimate * c(propNegative, propNegativeMin,
-#                                 propNegativeMax)
-# 
-# chlamcascade <- rbind(chlamcascade, data.frame(stage = "negative",
-#                   sex = c("male", "female"), 
-#                   estimate = c(maleNegative[1], femaleNegative[1]),
-#                   lower =  c(maleNegative[2], femaleNegative[2]), 
-#                   upper = c(maleNegative[3], femaleNegative[3])))
+
+if (tail(resultsYears, 1) <= 2014) {
+  positiveDF <- filter(currentTreat, stage == "positive")
+  propPositive <- colSums(positiveDF[, 3:5] * diagnosesProp, na.rm = TRUE)
+  propNegative <- 1- sum(propPositive * weights)
+  
+  # Hard coded ranges based on propNegative value - +/- 10%
+  propNegativeMin <- propNegative * 0.9
+  propNegativeMax <- min(propNegative * 1.1,1)
+  
+  maleNegative <- filter(chlamcascade, stage == "retested",
+                         sex == "male")$estimate * c(propNegative,
+                                                     propNegativeMin,
+                                                     propNegativeMax)
+  
+  femaleNegative <- filter(chlamcascade, stage == "retested",
+                           sex == "female")$estimate * c(propNegative,
+                                                         propNegativeMin,
+                                                         propNegativeMax)
+  
+  chlamcascade <- rbind(chlamcascade, data.frame(stage = "negative",
+                                        sex = c("male", "female"),
+                                        estimate = c(maleNegative[1],
+                                                     femaleNegative[1]),
+                                        lower =  c(maleNegative[2],
+                                                   femaleNegative[2]),
+                                         upper = c(maleNegative[3],
+                                                   femaleNegative[3])))
+}
 
 if (saveCascade) {
   saveString <- paste0("chlamydia_cascade-", 
