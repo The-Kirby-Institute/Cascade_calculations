@@ -4,6 +4,7 @@ data/*.csv
 data/HIV/
 HIV/data/
 Chlamydia/data/raw/
+Chlamydia/ChlamydiaCascade.nb.html
 data/raw/
 data/Archive/
 data/backprojection-clean/
