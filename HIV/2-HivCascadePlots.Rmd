@@ -850,7 +850,7 @@ if (pubPlots) {
 ```
 
 
-```{r statecascade, echo = FALSE, messages = FALSE, include=FALSE}
+```{r statecascade}
 ### Create separate figures of each state cascade
 
 states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act")
@@ -935,16 +935,16 @@ for (ii in seq(along = states)){
 ```
 
 **Figure 1** -- The HIV care and treatment cascade for Australia in `r resultsYear`.
-```{r insertplot1, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3}
+```{r insertplot1, include = TRUE, results = "hide", fig.width= 5.5, fig.height=3}
 print(plotBarAll)
 ```
 
 <!--- **Figure 2** -- The HIV care and treatment cascade stages `r resultsYear - minYear`-`r resultsYear`. --->
-```{r insertplot2, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3.5}
+```{r insertplot2, include = TRUE, results = "hide", fig.width= 5.5, fig.height=3.5}
 # print(plotStagesAll)
 ```
 
-```{r createtable1, echo = FALSE, messages = FALSE, include = FALSE}
+```{r createtable1}
 # Create and insert table 
 tableAll <- select(resultsAllYear,-year, -population)
 # tableAll[,2:4] <- lapply(tableAll[,2:4],round)
@@ -990,13 +990,13 @@ finalTable <- rename(finalTable, "Cascade stage" = stage,
 ```
 
 **Table 1** -- Estimates and range for each stage of the HIV care and treatment cascade for Australia in `r resultsYear`.
-```{r inserttable1, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+```{r inserttable1, include = TRUE, results = "asis"}
 kable(finalTable, align = c("l", "c", "c"))
 ```
 
 # State estimates
 
-```{r allstates, echo = FALSE, messages = FALSE, include=FALSE}
+```{r allstates}
 # Create bar charts of current year's cascade for each state
 states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act")
 
@@ -1062,11 +1062,11 @@ if (savePlots) {
 
 **Figure 3** -- The HIV care and treatment cascade for each State and Territory in `r resultsYear`.
 From left to right the bars are for each stage of the care and treatment cascade: living with HIV, diagnosed, recieving ART, and suppressed virus.
-```{r insertplot3, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=4.5}
+```{r insertplot3, include = TRUE, results = "hide", fig.width= 5.5, fig.height=4.5}
 print(plotbarAllStates)
 ```
 
-```{r createtable2, echo = FALSE, messages = FALSE, include = FALSE}
+```{r createtable2}
 # Create bar charts of current year's cascade for each state
 states <- c("nsw", "vic", "qld", "wa", "sa", "act", "tas", "nt", "all")
 
@@ -1117,24 +1117,24 @@ finalTable <- spread(finalTable, stage, estimate)
 # if (!excludeCare) {
 #   finalTable <- finalTable[,c(1, 2, 5, 3, 6, 4, 7)]
 # }
-# finalTable <- finalTable[c(3, 8, 5, 9, 6, 1, 7, 4, 2),]
 
-# Reformat names
-colnames(finalTable) <- c("State", stageNames[c(1:2, 4:6)])
-finalTable$State <- toupper(states)
+# Reformat names, columns and rows
+colnames(finalTable)[1] <- "State"
+finalTable$State <- toupper(finalTable$State)
+finalTable <- finalTable[c(3, 8, 5, 9, 6, 1, 7, 4, 2),]
 finalTable$State[9] <- "National"
 
 ```
 
 **Table 2** -- The HIV care and treatment cascade estimates for each State and Territory in `r resultsYear`. The table shows the cascade estimates with ranges in brackets for each State and Territory.
 
-```{r inserttable2, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+```{r inserttable2, include = TRUE, results = "asis"}
 kable(finalTable, align = c("l", "c", "c", "c", "c", "c"))
 ```
 
 # Key population group estimates
 
-```{r subpops, echo = FALSE, messages = FALSE, include=FALSE}
+```{r subpops}
 # Create bar charts of PLHIV for exposure groups and country of birth
 # Set up our population groupings
 modes <- c("msm", "hetero", "pwid", "otherexp")
@@ -1188,11 +1188,11 @@ if (savePlots) {
 ```
 
 **Figure 4** -- Number of people living with HIV by mode of exposure in `r resultsYear`.
-```{r insertplot4, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3.5}
+```{r insertplot4, include = TRUE, results = "hide", fig.width= 5.5, fig.height=3.5}
 print(plotModeBar)
 ```
 
-```{r createtable3, echo = FALSE, messages = FALSE, include = FALSE}
+```{r createtable3}
 # Create and insert table 
 tableExp <- select(expResults,-year)
 tableExp[,3:5] <- lapply(tableExp[,3:5],round)
@@ -1228,16 +1228,16 @@ finalTableExp <- rename(finalTable, "Cascade stage" = stage,
 ```
 
 **Table 3** -- Number of people living with HIV by exposure population in `r resultsYear`.
-```{r inserttable3, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+```{r inserttable3, results = "asis"}
 kable(finalTableExp, align = c("l", "l", "c", "c"))
 ```
 
 **Figure 5** -- Number of people living with HIV by country of birth in `r resultsYear`.
-```{r insertplot5, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=3.5}
+```{r insertplot5, include = TRUE, results = "hide", fig.width= 5.5, fig.height=3.5}
 print(plotPopBar)
 ```
 
-```{r createtable4, echo = FALSE, messages = FALSE, include = FALSE}
+```{r createtable4}
 # Create and insert table 
 tablePop <- select(popResults,-year)
 tablePop[,3:5] <- lapply(tablePop[,3:5],round)
@@ -1273,13 +1273,13 @@ finalTablePop <- rename(finalTable, "Cascade stage" = stage,
 ```
 
 **Table 4** -- Number of people living with HIV by country of birth in `r resultsYear`.
-```{r inserttable4, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+```{r inserttable4, include = TRUE, results = "asis"}
 kable(finalTablePop, align = c("l", "l", "c", "c"))
 ```
 
 # HIV cascades for males and females in the overall population
 
-```{r Male and female cascades, echo = FALSE, messages = FALSE, include = FALSE}
+```{r Male and female cascades}
 #Create cascade bar charts for males and females
 stages <- c("infected", "pldhiv", "retained", "numART",
                   "suppressed")
@@ -1340,7 +1340,7 @@ if (savePlots) {
 
 ```
 
-```{r createtable5, echo = FALSE, messages = FALSE, include = FALSE}
+```{r createtable5}
 # Create tables for male and female cascades 
 tableGender <- genderAllYear %>%
   select(-year)
@@ -1391,12 +1391,12 @@ genderTable <- rename(genderTable, "Cascade stage" = stage,
 ```
 
 **Figure 6** -- National HIV cascades for males and females in `r resultsYear`.
-```{r insertplot6, echo = FALSE, messages = FALSE, warning = FALSE, results = "hide", fig.width= 5.5, fig.height=7}
+```{r insertplot6, include = TRUE, results = "hide", fig.width= 5.5, fig.height=7}
 print(grid.arrange(plotBarFemale, plotBarMale))
 ```
 
 **Table 5** -- Estimates and range for each stage of the HIV care and treatment cascade for Australian males and feamles in `r resultsYear`.
-```{r inserttable5, echo = FALSE, messages = FALSE, warning = FALSE, results = "asis"}
+```{r inserttable5, include = TRUE, results = "asis"}
 kable(genderTable, align = c("l", "c", "c"))
 ```
 
