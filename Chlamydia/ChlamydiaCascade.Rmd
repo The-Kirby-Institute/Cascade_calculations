@@ -206,16 +206,62 @@ chlamcascade <- rbind(chlamcascade,
                                  percentprevious = c(NA, NA)))
 
 # Diagnoses --------------------------------------------------------------
+
 maleDiags <- rowSums(currentDiags[, 2:4])
 femaleDiags <- rowSums(currentDiags[, 5:7])
+
+if (resultsYears == 2015) {
+  # Estimate uncertainty using hard coded estimates for the Victorian 
+  # 15-29 year old population due to missing data in 2015 (from 
+  # CT notifications_2015_National_Estimate.xlsx)
+  maleVicProp <- c(0.311785906, 0.282127323, 0.270113596, 0.293094275, 
+                   0.278440872, 0.292558121, 0.313928571, 0.312064919, 
+                   0.317357613)
+  femaleVicProp <- c(0.23732887, 0.236128214, 0.228577183, 0.242843632,
+                     0.235762945,	0.248466407,	0.257113747,	0.251561962,
+                     0.250829686)
+  years <- c(2006:2014)
+  
+  propData <- data.frame(year = years, males = maleVicProp, females =
+                           femaleVicProp)
+  
+  # Male estimates - produce range by using relative error for 
+  # 2015 from linear regression
+  malePropEst <-predict(lm(males ~ year, data = propData), 
+                        newdata = data.frame(year = 2015), 
+                        interval = "predict")
+  
+  lowerMaleDiags <- maleDiags * (1 - malePropEst[1]) / (1 - malePropEst[2])
+  upperMaleDiags <- maleDiags * (1 - malePropEst[1]) / (1 - malePropEst[3])
+  
+  # Female estimates - produce range by using relative error for 
+  # 2015 from linear regression
+  femalePropEst <-predict(lm(females ~ year, data = propData), 
+                          newdata = data.frame(year = 2015), 
+                          interval = "predict")
+  
+  lowerFemaleDiags <- femaleDiags * (1 - femalePropEst[1]) / 
+    (1 - femalePropEst[2])
+  upperFemaleDiags <- femaleDiags * (1 - femalePropEst[1]) / 
+    (1 - femalePropEst[3])
+  
+  
+} else {
+  # Assume no error in diagnoses
+  lowerMaleDiags <- NA
+  upperMaleDiags <- NA
+  
+}
+
+# Generate cascade
 chlamcascade <- rbind(chlamcascade, 
                       data.frame(stage = "notifications",
                                  year = rep(resultsYears, 2),
                                  sex = rep(c("male", "female"), 
                                            each = length(resultsYears)), 
                                  estimate = c(maleDiags, femaleDiags),
-                                 lower = NA, #c(maleDiags, femaleDiags), 
-                                 upper = NA, #c(maleDiags, femaleDiags),
+                                 lower = c(lowerMaleDiags, lowerFemaleDiags), 
+                                 upper = c(lowerMaleDiags, lowerFemaleDiags),
                                  percentprevious = 100 * 
                                    c(maleDiags / maleInc, 
                                      femaleDiags / femaleInc)))
