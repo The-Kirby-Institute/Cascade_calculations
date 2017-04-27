@@ -16,5 +16,8 @@ The retesting inputs in the chlamtreatmentYEAR.csv files are entered manually fr
 - restetsNSWgp2015.csv: Contains results for general practice clinics in ACCESS by region for the state of NSW. These results were used for urban general practice estimates in the 2015 cascade calculations.
 - retestsAccept2014.csv: Contains results for general practice clinics in regional areas from the control arm of the ACCEPt study. These results were used for the regional and remote general practice estimates in the 2015 cascade calculations.
 
-These there files are produced by cleaning the raw data files provided by collaborators using the ~/code/ChlamydiaClean.Rmd script. The raw data files are stored in the 'raw' sub-folder which is not included in the git repository.
+These files are produced by cleaning the raw data files provided by collaborators using the ~/code/ChlamydiaClean.Rmd script. The raw data files are stored in the 'raw' sub-folder these files are not included in the git repository. The notifications file for 2015 
+'CT notifications_2015_National_Estimate-2016-09-27.xlsx' is included in repository as it provides the notifications data excluding Victoria (which was unavailable in 2015) and the calculations used to estimate the overall notifications given the missing data from Victoria. 
+
+
 
