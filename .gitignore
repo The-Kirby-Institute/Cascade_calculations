@@ -3,16 +3,12 @@ Archive/
 data/*.csv
 data/HIV/
 HIV/data/
-Chlamydia/data/raw/
+
+Chlamydia/data/raw/*
+!Chlamydia/data/raw/CT notifications_2015_National_Estimate-2016-09-27.xlsx
+
 Chlamydia/ChlamydiaCascade.nb.html
-data/raw/
-data/Archive/
-data/backprojection-clean/
-data/chlamydia/chlamtests*.csv
-data/chlamydia/chlamretests*.csv
-data/chlamydia/CT\ notifications_2015_National_Estimate-2016-09-27.xlsx
 data/ABS_population_sizes.xlsx
-data/ecdc_undiagnosed_percentage-2015.xlsx
 docs/
 output/
 references/
@@ -32,4 +28,3 @@ dashboards/*.csv
 
 dashboards/rsconnect/
 PHC CT request_NSW data only_updated_26July2016.xlsx
-Chlamydia/raw/
