@@ -41,8 +41,8 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
 resultsYear <- 2015 # year of cascade we will calculate and plot     
-saveCascade <- TRUE                    
-saveplots <- TRUE # Save plots as separate files
+saveCascade <- FALSE                    
+saveplots <- FALSE # Save plots as separate files
 retestRange <- TRUE # Caclulate variations in retested
 
 ```
@@ -220,10 +220,15 @@ if (resultsYear == 2015) {
   femaleVicProp <- c(0.23732887, 0.236128214, 0.228577183, 0.242843632,
                      0.235762945,	0.248466407,	0.257113747,	0.251561962,
                      0.250829686)
+  allVicProp <- c(0.264047108, 0.252757725, 0.243711463, 0.261540898,
+                  0.251955083, 0.265072308,	0.278668533,	0.274679677,
+                  0.276308761)
+
   years <- c(2006:2014)
   
   propData <- data.frame(year = years, males = maleVicProp, females =
-                           femaleVicProp)
+                           femaleVicProp, all = allVicProp)
+
   
   # Male estimates - produce range by using relative error for 
   # 2015 from linear regression
@@ -246,6 +251,11 @@ if (resultsYear == 2015) {
     (1 - femalePropEst[2])
   upperFemaleDiags <- femaleDiags * (1 - femalePropEst[1]) / 
     (1 - femalePropEst[3])
+  
+  # All estimates for reporting
+  allPropEst <-predict(lm(all ~ year, data = propData), 
+                          newdata = data.frame(year = 2015), 
+                          interval = "predict")
   
   
 } else {
@@ -302,7 +312,8 @@ propTreated <- c(propTreatedUrban, propTreatedRegion, propTreatedRemote)
 propTreated <- sum(propTreated * weights)
 
 # Hard coded ranges based on propTreated value - +/- 10%
-propTreatedMin <- 0.9 # propTreated * 0.9
+propTreatedMin <- min(filter(treatedDF, 
+  region == "remote")$proportion) # minimum in remote
 propTreatedMax <- min(1, propTreated * 1.1)
 
 maleDiagnoses <- filter(chlamcascade, stage == "notifications", 
@@ -744,13 +755,13 @@ for (ii in 1:nrow(finalTable)){
 }
 
 # Rename first column
-finalTable$stage <- rep(stages, each = 6)
+finalTable$stage <- rep(stages, each = 2)
 
 # Rename columns
 finalTable <- rename(finalTable, "Cascade stage" = stage, "Sex" = sex, 
                      "Estimate (range)" = estimate)
 
-allTable <- filter(finalTable, year == 2015) %>%
+allTable <- filter(finalTable, year == resultsYear) %>%
   select(-year)
 
 maleTable <- filter(finalTable, Sex == "male") %>%
