@@ -62,7 +62,8 @@ dataYear <- 2014
 
 ```{r notifications}
 # Raw HIV notifications file
-rawdata <- file.path(dataPath,paste("ChlamydiaNotifications-", toString(dataYear), ".csv",sep=""))
+# Only works for 2014 at this stage
+rawdata <- file.path(dataPath,paste("ChlamydiaNotifications-", toString(dataYear), ".csv", sep=""))
 
 # Load the raw HIV notifications file and clean it up
 chlamdata <- read.csv(rawdata) 
