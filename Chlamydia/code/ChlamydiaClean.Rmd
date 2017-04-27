@@ -54,7 +54,7 @@ LoadLibrary(tidyr)
 LoadLibrary(utils)
 
 # Primary script parameters - data year 
-dataYear <- 2015
+dataYear <- 2014
 
 ```
 
@@ -326,9 +326,10 @@ and in general practise. This data is saved in long format. From this data
 proportions and the lower and upper bounds based on 95% confidence
 intervals are calculated.  
 
-```{r re-testing}
-
+```{r re-testing ACCESS}
+# ACCESS re-testing data
 dataStartYear <- 2007
+mergeRemote <-TRUE # add remote and regional data
 
 # Raw testing file
 rawDataTreatment <- file.path(dataPath, paste0("access_cascade_data-", 
@@ -337,7 +338,6 @@ rawDataTreatment <- file.path(dataPath, paste0("access_cascade_data-",
 # Load raw re-testing data
 chlamRetest <- read_excel(rawDataTreatment, sheet = 5, skip = 3,
                           col_names = FALSE)
-
 
 # Clean up data ----------------------------------------------------------
 
@@ -405,6 +405,25 @@ chlamRetest <- chlamRetest %>%
   select(-yearsex) %>%
   spread(variable, number)
 
+if (mergeRemote) {
+  # Add another set of rows for regional+remote data
+  mergedData <-  filter(chlamRetest, region == "regional") # initialize
+  mergedData$region <- "regional+remote" # change region name
+  
+  # Add regional and remote data
+  mergedData$diagnoses <- filter(chlamRetest, 
+                                 region == "regional")$diagnoses +
+    filter(chlamRetest, region == "remote")$diagnoses
+  mergedData$retested <- filter(chlamRetest, 
+                                region == "regional")$retested +
+    filter(chlamRetest, region == "remote")$retested
+  
+  # Add to chlamRetest
+  chlamRetest <- bind_rows(chlamRetest, mergedData)
+  
+}
+
+
 # Now calculate proportion retest and lower and upper bound --------------
 chlamRetest <- chlamRetest %>%
   mutate(prop_retested = retested / diagnoses)
@@ -434,15 +453,136 @@ chlamRetest <- chlamRetest %>%
   filter(year == dataYear)
 
 # Write to file 
-write.csv(chlamRetest, file = file.path(cleanDataFolder, 
-  paste0("chlamretests", toString(dataYear), ".csv")), 
+write.csv(chlamRetest, file = file.path(cleanDataFolder,
+  paste0("retestsAccess", toString(dataYear), ".csv")),
           row.names = FALSE)
 
 ```
 
+```{r retesting ACCEPt}
+# Read in available ACCEPt data. We use the control group data on the 
+# # second sheet
+dataStartYear <- 2010
+
+# Raw testing file
+rawDataTreatment <- file.path(dataPath, paste0("accept_cascade_data-", 
+                                    toString(dataYear), ".xlsx"))
+
+# Load raw re-testing data for control group
+retestAccept <- read_excel(rawDataTreatment, sheet = 2, skip = 3,
+                          col_names = FALSE)
+
+# Clean up data ----------------------------------------------------------
+
+colnames(retestAccept)[1] <- "setting"
+colnames(retestAccept)[2] <- "variable"
+
+# Manually relable columns by all, male and female data
+# Available data only goes up to 2014
+dataYears <- dataStartYear:(dataStartYear + 
+                              (min(dataYear, 2014) - dataStartYear))
+numDataYears <- length(dataYears)
+
+colnames(retestAccept)[3:(3 + numDataYears - 1)] <- 
+  dataYears
+
+# Get rid of excess rows and columns
+retestAccept <- retestAccept[1:27, 1:7]
+retestAccept <- retestAccept[c(1:12, 14:27), ]
+
+# Just keep the data and calculate proportions separately
+retestAccept <- retestAccept %>%
+  filter(variable %in% c("# of diagnoses", "# re-tested in 42-180 days"))
+
+# clean variable names
+retestAccept[retestAccept$variable == "# of diagnoses", ]$variable <-
+  "diagnoses"
+retestAccept[retestAccept$variable == "# re-tested in 42-180 days",
+            ]$variable <- "retested"
+
+# Pull out setting, copy and fix up names
+settingNames <- filter(retestAccept, !is.na(setting))$setting
+retestAccept[is.na(retestAccept$setting), ]$setting <- settingNames
+
+retestAccept[retestAccept$setting == "Regional - inner/outer",
+             ]$setting <- "Regional"
+retestAccept[retestAccept$setting == "Remote/very remote",
+             ]$setting <- "Remote"
+
+# Split setting names into two variables
+# settingList <- strsplit(retestAccept$setting, " - ")
+# retestAccept$context <- sapply(settingList, function(x) x[1])
+# retestAccept$region <- sapply(settingList, function(x) x[2])
+
+# Add region and context
+retestAccept$region <- tolower(retestAccept$setting)
+retestAccept$context <- "gp"
+
+retestAccept <- retestAccept %>%
+  select(-setting) %>%
+  select(region, context, everything())
+
+# Add colume for sex 
+retestAccept <- retestAccept %>%
+  mutate(sex = rep(c("male", "female"), each = 6)) %>%
+  select(region, context, sex, variable, everything()) %>%
+  gather("year", "number", 5:(ncol(retestAccept)+1)) %>%
+  spread(variable, number)
+
+# Add estimates for "all" by adding the numbers for males and females
+retestAll <- retestAccept %>%
+  filter(sex == "male")
+retestAll$sex <- "all"
+
+retestAll$diagnoses <-
+  retestAccept$diagnoses[retestAccept$sex == "female"] +
+  retestAccept$diagnoses[retestAccept$sex == "male"]
+
+retestAll$retested <-
+retestAccept$retested[retestAccept$sex == "female"] +
+  retestAccept$retested[retestAccept$sex == "male"]
+ 
+retestAccept <- bind_rows(retestAccept, retestAll)
+
+# Now calculate proportion retest and lower and upper bound --------------
+retestAccept <- retestAccept %>%
+  mutate(prop_retested = retested / diagnoses)
+
+# Need to remove NAs to calculate upper and lower 95% confidence intervals
+# using prop.test
+
+LowerProp <- function(x, y) prop.test(x, y)[[6]][1]
+UpperProp <- function(x, y) prop.test(x, y)[[6]][2]
+
+indices <- !is.na(retestAccept$retested)
+
+propLower <- mapply(LowerProp, retestAccept$retested[indices],
+                     retestAccept$diagnoses[indices])
+propUpper <- mapply(UpperProp, retestAccept$retested[indices],
+                     retestAccept$diagnoses[indices])
+
+retestAccept$prop_lower <- NA
+retestAccept$prop_upper <- NA
+
+retestAccept[indices, ]$prop_lower <- propLower
+retestAccept[indices, ]$prop_upper <- propUpper
+
+# Extract data year and write to file ------------------------------------
+
+retestAccept <- retestAccept %>%
+  filter(year == min(dataYear, 2014)) # data only available up to 2014
+
+# Write to file
+write.csv(retestAccept, file = file.path(cleanDataFolder,
+  paste0("retestsAccept", toString(min(dataYear, 2014)), ".csv")),
+          row.names = FALSE)
+
+```
+
+
+
 ```{r restesting NSW GP}
 # Read in NSW GP data from ACCESS and clean it up 
- 
 dataStartYear <- 2007
 
 # Raw testing file
@@ -662,6 +802,9 @@ retestVariation <- retestVariation %>%
 
 LowerProp <- function(x, y) prop.test(x, y)[[6]][1]
 UpperProp <- function(x, y) prop.test(x, y)[[6]][2]
+
+qcal <- function(x, y) round(100*c(x/y, LowerProp(x, y), UpperProp(x, y)),
+                             digits = 1)
 
 indices <- !is.na(retestVariation$retested)
 
