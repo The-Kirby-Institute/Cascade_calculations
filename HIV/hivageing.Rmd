@@ -85,7 +85,7 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to saved files
 analysisYear <- 2015
 
 # Script options
-region <- "qld"
+region <- "all"
 calculateGender <- FALSE
 if (region == "all") {
   calculateGender <- TRUE
