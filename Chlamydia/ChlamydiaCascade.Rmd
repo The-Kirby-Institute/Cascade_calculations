@@ -52,7 +52,7 @@ retestRange <- TRUE # Caclulate variations in retested
 # results
 mainPackages <- c("readr","dplyr", "tidyr", "ggplot2")
 source(file.path(Rcode, "FrontMatter.R"))
-fmStr <- FrontMatter(mainPackages, rstudio = "1.0.44")
+fmStr <- FrontMatter(mainPackages, rstudio = "1.0.136")
 cat(fmStr)
 ```
 
@@ -608,10 +608,9 @@ graphics.off()
 # Baseline theme for plot variables
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
-# Setup colours
+# Setup colours for ASR - not used in the current code
 asrcols <- c("males" = "#2C4452", 
-             "females" = "#2B97B0")
-
+             "females" = "#2B97B0") 
 ```
 
 ```{r barchart}
@@ -642,7 +641,7 @@ texty[3:4] <- cascade2015$estimate[3:4]
 
 allCascade <- ggplot(data = cascade2015,
                       aes(x = stage, y = estimate, fill = sex)) + 
-  geom_bar(position = "dodge", stat = "identity") + 
+  geom_bar(position = "dodge", stat = "identity", colour = "black") + 
   geom_errorbar(aes(ymin = lower, ymax = upper), 
                 position = position_dodge(width = 0.9),
                 width = 0.2, color = "black", size = 1.2) +
@@ -651,8 +650,8 @@ allCascade <- ggplot(data = cascade2015,
                 y = texty + 10000),
             position = position_dodge(width = 0.9),
             fontface = "bold") +
-  scale_fill_manual(name = "", 
-                    values = unname(asrcols[c("males", "females")]), 
+  scale_fill_grey(name = "", start = 0.4, end = 0.9,
+                    # values = unname(asrcols[c("males", "females")]), 
                     labels = c("Males", "Females"),
                     breaks = c("male", "female"),
                     limits = c("male", "female")) + 
@@ -664,11 +663,11 @@ allCascade <- ggplot(data = cascade2015,
 maleCascade <- ggplot(data = filter(plotcascade, sex == "male"), 
                       aes(x = stage, y = estimate, 
                           fill = factor(year))) + 
-  geom_bar(position = "dodge", stat = "identity") + 
+  geom_bar(position = "dodge", stat = "identity", colour = "black") + 
   geom_errorbar(aes(ymin = lower, ymax = upper), 
                 position = position_dodge(width = 0.9),
                 width = 0.2, color = "black", size = 1.2) +
-  scale_fill_manual(name = "", values = brewer.pal(3, "Blues")) +
+  scale_fill_manual(name = "", values = "#999999") +
   scale_x_discrete(labels = stagesNeat) +
   ylab("Number of people") + xlab("") +  
   plotOpts 
@@ -677,11 +676,11 @@ maleCascade <- ggplot(data = filter(plotcascade, sex == "male"),
 femaleCascade <- ggplot(data = filter(plotcascade, sex == "female"), 
                       aes(x = stage, y = estimate, 
                           fill = factor(year))) + 
-  geom_bar(position = "dodge", stat = "identity") + 
+  geom_bar(position = "dodge", stat = "identity", colour = "black") + 
   geom_errorbar(aes(ymin = lower, ymax = upper), 
                 position = position_dodge(width = 0.9),
                 width = 0.2, color = "black", size = 1.2) +
-  scale_fill_manual(name = "", values = brewer.pal(3, "Blues")) +
+  scale_fill_manual(name = "", values = "#999999") +
   scale_x_discrete(labels = stagesNeat) +
   ylab("Number of people") + xlab("") +  
   plotOpts
@@ -695,8 +694,8 @@ cascade2015All <- cascade2015 %>%
 
 allCascadeAll <- ggplot(data = cascade2015All,
                       aes(x = stage, y = estimate)) + 
-  geom_bar(stat = "identity", colour = asrcols["males"], 
-           fill = asrcols["males"]) + 
+  geom_bar(stat = "identity", 
+           fill = "#999999", colour = "black") + 
   geom_errorbar(aes(ymin = lower, ymax = upper),
                 width = 0.2, color = "black", size = 1.2) +
   scale_x_discrete(labels = stagesNeat) +
