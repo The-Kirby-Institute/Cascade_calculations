@@ -1,30 +1,36 @@
 *.url
+
+# Main directory
 Archive/
 data/*.csv
 data/HIV/
-HIV/data/
-
-Chlamydia/data/raw/*
-!Chlamydia/data/raw/CT notifications_2015_National_Estimate-2016-09-27.xlsx
-
-Chlamydia/ChlamydiaCascade.nb.html
 data/ABS_population_sizes.xlsx
-docs/
-output/
-references/
-code/Treatment cascade calculations.rmd
-misc/
-code/.Rhistory
-code/.Rdata
+/dashboards/*.csv
+/dashboards/rsconnect/
+/*.xlsm
+/*.lnk
+/*.DS_Store
+/docs/
+/output/
+/references/
+/code/Treatment cascade calculations.rmd
+/misc/
+/code/.Rhistory
+/code/.Rdata
 .Rhistory
 .RData
 cascadeIncidence_files/
 AcquisitionCalculation.xlsx
 Rplots.pdf
-dashboards/*.csv
-*.xlsm
-*.lnk
-*.DS_Store
-
-dashboards/rsconnect/
 PHC CT request_NSW data only_updated_26July2016.xlsx
+
+# HIV directory
+HIV/data/
+HIV/output/
+HIV/docs/
+
+# Chlamydia directory
+Chlamydia/data/raw/*
+!Chlamydia/data/raw/CT notifications_2015_National_Estimate-2016-09-27.xlsx
+Chlamydia/output/figures/
+Chlamydia/ChlamydiaCascade.nb.html
