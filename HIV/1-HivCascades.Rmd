@@ -14,7 +14,8 @@ substr(R.Version()$version.string,1,15)`) (see
 rm(list=ls()) 
 
 # Setup directories
-basePath <- getwd() #dirname(getwd())
+basePath <- dirname(getwd())
+
 Rcode <- file.path(dirname(getwd()), "code") 
 dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
@@ -48,8 +49,12 @@ savePldhiv <- TRUE        # save PLDHIV estimates separately
 nationalUniques <- TRUE # use proportion from National estimates for 
                         # sub-population de-duplication
 
-indigKnown <- TRUE # only use notifications with indigenous classification 
+indigKnown <- FALSE  #TRUE # only use notifications with indigenous classification 
                    # for indigenous estimates
+
+codeCOB <- NULL
+
+codeRegion <- NULL
 
 permDeparts <- TRUE # use national permant departures for 
                     # overseas migration
@@ -194,6 +199,35 @@ hivData$yeardeath <- as.numeric(substr(hivData$datedeath, 1, 4))
 
 allYears <- min(hivData$yeardiagnosis):analysisYear # All years of data
 
+#add region
+  regionCarribean <- c(8401, 8402, 8403, 8404, 8405, 8406, 8407, 8408, 8411, 8412, 8413, 8414, 8415, 8416, 8417, 8418, 8421, 8422, 8423, 8424, 8425, 8426, 8427, 8428)
+  regionCAmerica <- c(8301, 8302, 8303, 8304, 8305, 8306, 8307, 8308)
+  regionNAfricaMEast <- c(4101, 4201, 4102, 4203, 4204, 4205, 4206, 4207, 4208, 4103, 4104, 4211, 4202, 4212, 4213, 4105, 4214, 4106, 4215, 4216, 4107, 4217)
+  regionNWEurope <- c(2301, 2302, 3203, 2401, 2402, 2403, 2303, 2304, 2404, 2405, 2201, 3104, 2305, 2306, 2307, 2308, 2406, 2407, 2311, 2100)
+  regionNEAsia <- c(6101, 6102, 6201, 6202, 6203, 6103, 6104, 6105)
+  regionNAmerica <- c(8101, 8102, 8103, 8104, 1599)
+  regionOceaniaAntarctica <- c(1506, 1000, 1100, 29, 1101, 1501, 1502, 1503, 9299, 1401, 1199, 1402, 1403, 1404, 1405, 1301, 1201, 1504, 1102, 1406, 1407, 1302, 1599, 1505, 1303, 2408, 1507, 1508, 1511, 1304, 1512)
+  regionSAmerica <- c(8201, 8202, 8203, 8204, 8205, 8206, 8207, 8208, 8211, 8212, 8213, 8299, 8214, 8215, 8216)
+  regionSEAsia <- c(5201, 5102, 5206, 5202, 5103, 5203, 5101, 5204, 5205, 5104, 5105)
+  regionSCAsia <- c(7201, 7202, 7203, 7101, 7102, 9299, 7204, 7103, 7205, 7206, 7104, 7105, 7106, 7107, 7207, 7208, 7211)
+  regionSEEurope <- c(3201, 3101, 3301, 3202, 3204, 3205, 3302, 3303, 3102, 3207, 3103, 3304, 3305, 3306, 3206, 3105, 3208, 3307, 3106, 3211, 3308, 3107, 3214, 3311, 3212, 3213)
+  regionSSAfrica <- c(9201, 9101, 9202, 9102, 9203, 9103, 9104, 9105, 9106, 9204, 9107, 9108, 9111, 9205, 9112, 9206, 9207, 9113, 9114, 9115, 9116, 9117, 9208, 9211, 9118, 9212, 9213, 9121, 9122, 9214, 9215, 9216, 9217, 9123, 9124, 9218, 9221, 9222, 9125, 9126, 9223, 9127, 9224, 9225, 9226, 9227, 9128, 9228, 9231, 9232)
+  regionUnknown <- c(0)
+  hivData$region[is.na(hivData$cob)] <- 0
+  hivData$region[hivData$cob %in% regionUnknown] <- 0 
+  hivData$region[hivData$cob %in% regionCarribean] <- 1 
+  hivData$region[hivData$cob %in% regionCAmerica] <- 2
+  hivData$region[hivData$cob %in% regionNAfricaMEast] <- 3
+  hivData$region[hivData$cob %in% regionNWEurope] <- 4
+  hivData$region[hivData$cob %in% regionNEAsia] <- 5
+  hivData$region[hivData$cob %in% regionNAmerica] <- 6
+  hivData$region[hivData$cob %in% regionOceaniaAntarctica] <- 7
+  hivData$region[hivData$cob %in% regionSAmerica] <- 8
+  hivData$region[hivData$cob %in% regionSEAsia] <- 9
+  hivData$region[hivData$cob %in% regionSCAsia] <- 10
+  hivData$region[hivData$cob %in% regionSEEurope] <- 11
+  hivData$region[hivData$cob %in% regionSSAfrica] <- 12
+  
 # Quick checks that we are not doing analysis outside of the data.
 if (max(hivData$yeardiagnosis) < analysisYear) {
   stop("No data specified for final year of analysis.")
@@ -285,6 +319,9 @@ hivExpState <- hivSet %>% group_by(expgroup, state, yeardiagnosis) %>%
   mutate(proptotalnotifications = 
            totalnotifications / sum(totalnotifications)) %>% 
   filter(yeardiagnosis <= analysisYear)   
+
+#Calculate annual results by cob and region
+
 
 # Annual results by population group --------------------------------------
 
