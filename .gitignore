@@ -28,9 +28,11 @@ PHC CT request_NSW data only_updated_26July2016.xlsx
 HIV/data/
 HIV/output/
 HIV/docs/
+HIV/subprojects/
 
 # Chlamydia directory
 Chlamydia/data/raw/*
 !Chlamydia/data/raw/CT notifications_2015_National_Estimate-2016-09-27.xlsx
 Chlamydia/output/figures/
 Chlamydia/ChlamydiaCascade.nb.html
+/data/
