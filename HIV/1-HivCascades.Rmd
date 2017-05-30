@@ -626,18 +626,18 @@ Sort out population movement rates
 # This chunk converts the ABS overseas and interste migration data into 
 # population movement rates
 
-# Load all the data sets we need - the ABS data is stored in a different 
-# folder
-absFolder <- file.path(path.expand("~"), 
-                       "Research", "!Evaluation_Modelling", "data")
+# Load all the data sets we need - the ABS data is stored in the main 
+# Cascade_calculations respository data/ directory
+
+mainDataFolder <- file.path(dirname(getwd()), "data")
  
-absMigration <- read.csv(file.path(absFolder, 
+absMigration <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
-absDeparts <- read.csv(file.path(absFolder, 
+absDeparts <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_departures_clean-", toString(analysisYear), ".csv")),
   as.is = 1)
-absInterstate <- read.csv(file.path(absFolder, 
+absInterstate <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_interstate_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
 

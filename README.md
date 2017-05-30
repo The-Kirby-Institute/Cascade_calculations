@@ -42,21 +42,21 @@ Contains specific R functions and scripts used for all cascade calculations.
 
 Contains R markdown scripts for generating shiny dashboards for specific cascades. It currently only has a dashboard script for the HIV cascade.
 
-### data (local) ####
+#### data (local) ####
 
-Contains raw and cleaned data files of relevance to all cascade calculations. These files are stored locally and not available in the online repository. 
+Contains raw and cleaned data files of relevance to all cascade calculations. These files are stored locally and are not available in the online repository. 
 
-### docs (local) ####
+#### docs (local) ####
 
-Contains manuscript, report, and presentation files based on cascade results and related documents. These files are stored locally and not available in the online repository. 
+Contains manuscript, report, and presentation files based on cascade results and related documents. These files are stored locally and are not available in the online repository. 
 
-### HCV cascade (local) ####
+#### HCV cascade (local) ####
 
-Contains all the materials relevant to the HCV cascade calculations. The estimates are produced in collaboration with the [Center for Disease Analysis](http://centerforda.com/) using their CDA Bright model (which uses Microsoft Excel) of HCV transmission with updated HCV epidemiological, demographic, and clinical data for Australia. Along with the cascade estimates additional epidemiological and morbidity estimates are produced by the model for reporting in the ASR. Currently these files are stored locally and not available in the online repository.
+Contains all the materials relevant to the HCV cascade calculations. The estimates are produced in collaboration with the [Center for Disease Analysis](http://centerforda.com/) using their CDA Bright model (which uses Microsoft Excel) of HCV transmission with updated HCV epidemiological, demographic, and clinical data for Australia. Along with the cascade estimates additional epidemiological and morbidity estimates are produced by the model for reporting in the ASR. Currently these files are stored locally and are not available in the online repository.
 
-### misc (local) ####
+#### misc (local) ####
 
-Contains miscellaneous files such references, correspondence, general information, examples, working documents, and general kibble  of relevance to the project. These files are stored locally and not available in the online repository. 
+Contains miscellaneous files such references, correspondence, general information, examples, working documents, and general kibble  of relevance to the project. These files are stored locally and are not available in the online repository. 
 
 #### Chlamydia ####
 
