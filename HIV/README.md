@@ -25,7 +25,7 @@ cascade estimates for Australia. It is the primary script for the HIV cascade es
 #### data ####
 
 Contains the cleaned input data sets for HIV cascade calculations. A detailed README file within the directory describes each of the data files in detail. The data files for the year 2015 are 
-contained in the repository with other files only stored locally. A detailed README file within the directory describes the data files in detail.
+contained in the repository with other files only stored locally (these are available on request). A detailed README file within the directory describes the data files in detail.
 
 #### docs (local) ####
 
