@@ -77,9 +77,8 @@ The following publications are associated with this project and used code in thi
 - B Hajarizadeh, J Grebely, H McManus, C Estes, H Razavi, RT Gray, et al. Chronic hepatitis C burden and care cascade in Australia in the era of interferon-based treatment. Journal of gastroenterology and hepatology 2017; 32:229–236.
 <br></br>
 - RT Gray, D Callander, S McGregor, J Hocking, H McManus, A Dyda, C Moreira, DP Wilson, B Donovan, J Kaldor, RJ Guy on behalf of the Australian STI Diagnosis and Care Cascade Reference Group. A population-level diagnosis and care cascade for curable STIs: The Australian Chlamydia Cascade. _In preparation_
-	- Current manuscript based on version XX
 <br></br>
 - RT Gray et al. The Australia HIV cascade. _In preparation_ 
-	- Current manuscript based on version XX
+
 
 
