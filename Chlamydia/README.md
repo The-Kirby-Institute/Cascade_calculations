@@ -10,7 +10,9 @@ _Main directory files_
 
 The files `Chlamydia_Cascade_Methods.Rmd` and `ChlamydiaCascade.bib` are minor files used for storing a description of the methods and data sources used in the chlamydia cascade calculations.
 
-**ChlamydiaCascade.Rmd** is a R markdown script and is the main file for the chlamydia calculations. The user needs to specify a specific year for the cascade estimates. The script then reads in the associated cleaned data files stored in the data/ directory, performs the cascade calculations and stores the resulting estimates and figures in the `output/` directory.  
+**ChlamydiaCascade.Rmd** is a R markdown script and is the main file for the chlamydia calculations. The user needs to specify a specific year for the cascade estimates. The script then reads in the associated cleaned data files stored in the data/ directory, performs the cascade calculations and stores the resulting estimates and figures in the `output/` directory.
+
+Note as this is a are script, not a function, care should be taken to ensure the project specifications are correct before running especially after updates have been pulled from the repository.  
 
 #### code ####
 
