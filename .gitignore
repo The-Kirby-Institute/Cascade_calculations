@@ -26,6 +26,7 @@ Rplots.pdf
 PHC CT request_NSW data only_updated_26July2016.xlsx
 
 # HIV directory
+HIV/*.nb.html
 HIV/data/
 HIV/output/*
 !HIV/output/HIVcascadeEstimates-2015.csv
