@@ -483,7 +483,8 @@ if (permDeparts) {
     # Change in methodlogy for migration rates from 2015.
     
     # Hard coded adjustment factor to account for age > 15 years and 
-    # sex
+    # sex. These harded coded estimates for 1981-2015 are determined in 
+    # the file project_care_cascades/data/Migration_options-2016-10-12.xlsx
     relativeRate <- c(1.2499, 1.2499,	1.2499,	1.240169381, 1.235807895,
                       1.235391781, 1.236048319,	1.236375068, 1.236578904,
                       1.235863902, 1.23556672, 1.235166515,	1.234926588,
@@ -716,6 +717,7 @@ linkageMortalityMax <- deaths_max/numLiving_min
 # Calculate crude death rate for each state and year - use 95% CI as the upper and lower bound
 
 ahodDeaths <- ahodData %>% 
+  filter(population == "ALL") %>%
   group_by(state, year) %>%
   summarise(n = sum(n_id), 
     deaths = sum(n_death), 
