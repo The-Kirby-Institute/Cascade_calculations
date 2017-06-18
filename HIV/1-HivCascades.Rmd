@@ -446,12 +446,23 @@ Sort out population movement rates
 #absFolder <- file.path(path.expand("~"), 
 #                       "Research", "!Evaluation_Modelling", "data")
  
-absFolder <- file.path(dataFolder)
-absMigration <- read.csv(file.path(absFolder, 
+# absFolder <- file.path(dataFolder)
+# absMigration <- read.csv(file.path(absFolder, 
+
+# Load all the data sets we need - the ABS data is stored in the main 
+# Cascade_calculations respository data/ directory
+
+mainDataFolder <- file.path(dirname(getwd()), "data")
+ 
+absMigration <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
-absDeparts <- read.csv(file.path(absFolder, 
+absDeparts <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_departures_clean-", toString(analysisYear), ".csv")),
+  as.is = 1)
+
+absInterstate <- read.csv(file.path(mainDataFolder, 
+  paste0("ABS_interstate_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
 
 # Depending on data used calculate departure rate for each state ---------

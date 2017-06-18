@@ -4,7 +4,7 @@ This project repository contains all the code and input data used to estimate th
 
 This repository currently contains materials for two separate cascades: the Australian HIV cascade and the Australian Chlamydia cascade. This project also provides estimates for a viral hepatitis C (HCV) cascade but materials for this cascade are stored locally and not available in the online repository. Cascade estimates obtained from this project have been reported in the ASR since 2015. Additional calculations related to these cascades have also been used to produce a number of publications listed below. 
 
-All calculations are primarily conducted using R (currently version 3.3.2) with associated packages (main packages: readr 1.0.0; dplyr 0.5.0; tidyr 0.6.1; ggplot2 2.2.1). Some simple calculations are conducted using Microsoft Excel.
+All calculations are primarily conducted using R (currently version 3.3.2) with associated packages (main packages: readr 1.0.0; dplyr 0.5.0; tidyr 0.6.1; ggplot2 2.2.1). Some simple calculations are conducted using Microsoft Excel. Many of the data files required to run the scripts are not publicly available and have been excluded from the repository. Please report an issue if you want to run the code or contact Rgray@kirby.unsw.edu.au. 
 
 **Repository owner:** Richard T. Gray
 
@@ -42,21 +42,21 @@ Contains specific R functions and scripts used for all cascade calculations.
 
 Contains R markdown scripts for generating shiny dashboards for specific cascades. It currently only has a dashboard script for the HIV cascade.
 
-### data (local) ####
+#### data (local) ####
 
-Contains raw and cleaned data files of relevance to all cascade calculations. These files are stored locally and not available in the online repository. 
+Contains raw and cleaned data files of relevance to all cascade calculations. These files are stored locally and are not available in the online repository. 
 
-### docs (local) ####
+#### docs (local) ####
 
-Contains manuscript, report, and presentation files based on cascade results and related documents. These files are stored locally and not available in the online repository. 
+Contains manuscript, report, and presentation files based on cascade results and related documents. These files are stored locally and are not available in the online repository. 
 
-### HCV cascade (local) ####
+#### HCV cascade (local) ####
 
-Contains all the materials relevant to the HCV cascade calculations. The estimates are produced in collaboration with the [Center for Disease Analysis](http://centerforda.com/) using their CDA Bright model (which uses Microsoft Excel) of HCV transmission with updated HCV epidemiological, demographic, and clinical data for Australia. Along with the cascade estimates additional epidemiological and morbidity estimates are produced by the model for reporting in the ASR. Currently these files are stored locally and not available in the online repository.
+Contains all the materials relevant to the HCV cascade calculations. The estimates are produced in collaboration with the [Center for Disease Analysis](http://centerforda.com/) using their CDA Bright model (which uses Microsoft Excel) of HCV transmission with updated HCV epidemiological, demographic, and clinical data for Australia. Along with the cascade estimates additional epidemiological and morbidity estimates are produced by the model for reporting in the ASR. Currently these files are stored locally and are not available in the online repository.
 
-### misc (local) ####
+#### misc (local) ####
 
-Contains miscellaneous files such references, correspondence, general information, examples, working documents, and general kibble  of relevance to the project. These files are stored locally and not available in the online repository. 
+Contains miscellaneous files such references, correspondence, general information, examples, working documents, and general kibble  of relevance to the project. These files are stored locally and are not available in the online repository. 
 
 #### Chlamydia ####
 
@@ -77,9 +77,8 @@ The following publications are associated with this project and used code in thi
 - B Hajarizadeh, J Grebely, H McManus, C Estes, H Razavi, RT Gray, et al. Chronic hepatitis C burden and care cascade in Australia in the era of interferon-based treatment. Journal of gastroenterology and hepatology 2017; 32:229–236.
 <br></br>
 - RT Gray, D Callander, S McGregor, J Hocking, H McManus, A Dyda, C Moreira, DP Wilson, B Donovan, J Kaldor, RJ Guy on behalf of the Australian STI Diagnosis and Care Cascade Reference Group. A population-level diagnosis and care cascade for curable STIs: The Australian Chlamydia Cascade. _In preparation_
-	- Current manuscript based on version XX
 <br></br>
 - RT Gray et al. The Australia HIV cascade. _In preparation_ 
-	- Current manuscript based on version XX
+
 
 
