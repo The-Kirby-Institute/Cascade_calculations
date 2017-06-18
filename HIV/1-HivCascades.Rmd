@@ -45,16 +45,22 @@ saveNotifications <- TRUE # save cleaned notifications set
 saveResults <- TRUE       # save information national annual notifications
 savePldhiv <- TRUE        # save PLDHIV estimates separately
 
+# set hivSet function parameters
+targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
+targetAge <- 'all' #groups 0, 1, 2, 3, 4...
+targetCob <- 'non-australia' #all=including n/a, Thailand, etc.
+targetExposure <- 'all'
+targetAtsi <- 'non-australia' #0 or 1
+targetState <- 'all' #NSW, VIC, etc
+targetLocalRegion <- 'all' #tbd
+targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc.
+
 # PLDHIV 
 nationalUniques <- TRUE # use proportion from National estimates for 
                         # sub-population de-duplication
 
 indigKnown <- FALSE  #TRUE # only use notifications with indigenous classification 
                    # for indigenous estimates
-
-codeCOB <- NULL
-
-codeRegion <- NULL
 
 permDeparts <- TRUE # use national permant departures for 
                     # overseas migration
@@ -95,25 +101,56 @@ source(file.path(Rcode,"LivingDiagnosed.R"), echo=TRUE)
 source(file.path(Rcode, "FillMissing.R"), echo=TRUE)
 
 # Function to easily extract sub-populations of interest
-subhivset <- function(hivdataframe, born = 'all', 
-                      region = 'all', mode = 'all' ) {
-  # Options
-  # pop - all, seasia, ssafrica, indigenous, nonindigenous
-  # state - nsw, vic, qld, wa, nt, tas, sa, act
-  # expgroup - msm, pwid, hetero, other
+subhivset <- function(hivdataframe, fAge, fExposure, fCob, fAtsi, fLocalRegion, fGlobalRegion){
   
   subframe <- hivdataframe
-  #   if (born ~= 'all')
-  #     subframe <- filter(subframe, state == born)
-  if (region != 'all') {
-    subframe <- filter(subframe, state == region)
+  
+  if(fAge!='all'){
+    #to be filled later
+  }
+  if(fExposure!='all'){
+    subframe <- filter(subframe, exposure == fExposure)
+  }
+  if(fCob!='all'){
+    if(fCob=='non-australia'){
+      subframe <- filter(subframe, cob!='Not Reported') #remove all missings
+      subframe <- filter(subframe, !is.na(cob)) #remove all missings
+      subframe <- filter(subframe, cob != 'Australia') #get only non-Australians
+    }#else if(fCob=='non-australia all'){
+      #missingframe <- filter(subframe, cob=='Not Reported') #get subset of all missing cobs
+      #nonmissingframe <- filter(subframe, cob!='Not Reported') #remove all missings
+      #subframe <- filter(nonmissingframe, cob != 'Australia') #get only non-Australians
+      #get proportion of non-australians from missings by applying proportion of non-australians from non-missings; get only those who are non-atsi
+      #proportion <- nrow(subframe)/nrow(nonmissingframe)
+      #missingframe <- filter(missingframe, indigenous != 'Aboriginal')
+      #proportionExtract <- floor(proportion*nrow(missingframe))
+      #missingframe <- missingframe[1:proportionExtract,]
+      #append a subset of missingframe to subframe
+      #subframe <- rbind(missingframe, subframe)
+    #}
+    else{
+      subframe <- filter(subframe, cob == fCob)
+    }
+  }
+  if(fAtsi!='all'){
+    if(fAtsi=='non-australia'){
+      #subframe <- filter(subframe, aboriggroup == 'othercob')
+    }else{
+      if(fAtsi=='non-atsi'){
+        subframe <- filter(subframe, aboriggroup == 'non-indigenous') 
+      }else if(fAtsi=='atsi'){
+        subframe <- filter(subframe, aboriggroup == 'indigenous') 
+      }
+    }
+    #what to do with NA's?
+  }
+  if(fLocalRegion!='all'){
+    subframe <- filter(subframe, localregion == fLocalRegion)
+  }
+  if(fGlobalRegion!='all'){
+    subframe <- filter(subframe, globalregion == fGlobalRegion)
   }
 
-  if (mode != 'all') {
-    subframe <- filter(subframe, expgroup == mode)            
-  }
-
-  # Return final subframe
   return(subframe)
 }
 
@@ -199,35 +236,36 @@ hivData$yeardeath <- as.numeric(substr(hivData$datedeath, 1, 4))
 
 allYears <- min(hivData$yeardiagnosis):analysisYear # All years of data
 
+# transfer cob to cobCode
+hivData$cobcode <- hivData$cob
+
+# load cob and region codes
+crCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
+
+# if cob is not in crCodes/NA, change to Not Reported 
+hivData$cob[!(hivData$cobcode %in% crCodes$COUNTRY_CODE)] <- "Not Reported"
+
+# change cob from code to String
+hivData$cob <- crCodes$COUNTRY_NAME[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
+
 #add region
-  regionCarribean <- c(8401, 8402, 8403, 8404, 8405, 8406, 8407, 8408, 8411, 8412, 8413, 8414, 8415, 8416, 8417, 8418, 8421, 8422, 8423, 8424, 8425, 8426, 8427, 8428)
-  regionCAmerica <- c(8301, 8302, 8303, 8304, 8305, 8306, 8307, 8308)
-  regionNAfricaMEast <- c(4101, 4201, 4102, 4203, 4204, 4205, 4206, 4207, 4208, 4103, 4104, 4211, 4202, 4212, 4213, 4105, 4214, 4106, 4215, 4216, 4107, 4217)
-  regionNWEurope <- c(2301, 2302, 3203, 2401, 2402, 2403, 2303, 2304, 2404, 2405, 2201, 3104, 2305, 2306, 2307, 2308, 2406, 2407, 2311, 2100)
-  regionNEAsia <- c(6101, 6102, 6201, 6202, 6203, 6103, 6104, 6105)
-  regionNAmerica <- c(8101, 8102, 8103, 8104, 1599)
-  regionOceaniaAntarctica <- c(1506, 1000, 1100, 29, 1101, 1501, 1502, 1503, 9299, 1401, 1199, 1402, 1403, 1404, 1405, 1301, 1201, 1504, 1102, 1406, 1407, 1302, 1599, 1505, 1303, 2408, 1507, 1508, 1511, 1304, 1512)
-  regionSAmerica <- c(8201, 8202, 8203, 8204, 8205, 8206, 8207, 8208, 8211, 8212, 8213, 8299, 8214, 8215, 8216)
-  regionSEAsia <- c(5201, 5102, 5206, 5202, 5103, 5203, 5101, 5204, 5205, 5104, 5105)
-  regionSCAsia <- c(7201, 7202, 7203, 7101, 7102, 9299, 7204, 7103, 7205, 7206, 7104, 7105, 7106, 7107, 7207, 7208, 7211)
-  regionSEEurope <- c(3201, 3101, 3301, 3202, 3204, 3205, 3302, 3303, 3102, 3207, 3103, 3304, 3305, 3306, 3206, 3105, 3208, 3307, 3106, 3211, 3308, 3107, 3214, 3311, 3212, 3213)
-  regionSSAfrica <- c(9201, 9101, 9202, 9102, 9203, 9103, 9104, 9105, 9106, 9204, 9107, 9108, 9111, 9205, 9112, 9206, 9207, 9113, 9114, 9115, 9116, 9117, 9208, 9211, 9118, 9212, 9213, 9121, 9122, 9214, 9215, 9216, 9217, 9123, 9124, 9218, 9221, 9222, 9125, 9126, 9223, 9127, 9224, 9225, 9226, 9227, 9128, 9228, 9231, 9232)
-  regionUnknown <- c(0)
-  hivData$region[is.na(hivData$cob)] <- 0
-  hivData$region[hivData$cob %in% regionUnknown] <- 0 
-  hivData$region[hivData$cob %in% regionCarribean] <- 1 
-  hivData$region[hivData$cob %in% regionCAmerica] <- 2
-  hivData$region[hivData$cob %in% regionNAfricaMEast] <- 3
-  hivData$region[hivData$cob %in% regionNWEurope] <- 4
-  hivData$region[hivData$cob %in% regionNEAsia] <- 5
-  hivData$region[hivData$cob %in% regionNAmerica] <- 6
-  hivData$region[hivData$cob %in% regionOceaniaAntarctica] <- 7
-  hivData$region[hivData$cob %in% regionSAmerica] <- 8
-  hivData$region[hivData$cob %in% regionSEAsia] <- 9
-  hivData$region[hivData$cob %in% regionSCAsia] <- 10
-  hivData$region[hivData$cob %in% regionSEEurope] <- 11
-  hivData$region[hivData$cob %in% regionSSAfrica] <- 12
+hivData$globalregion <- crCodes$REGION[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
   
+#clean aboriggroup
+hivData$aboriggroup <- rep(NA,nrow(hivData))
+
+if (analysisYear < 2015) {
+  hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
+  hivData$aboriggroup[hivData$cob==0] <- NA
+  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
+  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non indigenous"] <- "non-indigenous" 
+} else {
+  hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
+  hivData$aboriggroup[hivData$cob==0] <- NA
+  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
+  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non indigenous"] <- "non-indigenous" 
+}
+
 # Quick checks that we are not doing analysis outside of the data.
 if (max(hivData$yeardiagnosis) < analysisYear) {
   stop("No data specified for final year of analysis.")
@@ -238,7 +276,20 @@ if (min(hivData$yeardiagnosis) > startYear) {
 }
 
 # Setup our working data frame
+#### hivSet <- filter(hivData, yeardiagnosis <= analysisYear)
+#### replace this with a function to get hivSet based on input parameters
 hivSet <- filter(hivData, yeardiagnosis <= analysisYear)
+hivSetOrig <- filter(hivData, yeardiagnosis <= analysisYear)
+hivSet <- subhivset(hivData, targetAge, targetExposure, targetCob, targetAtsi, targetLocalRegion, targetGlobalRegion)
+
+##get set of Au cob and unknowns to distribute proportion
+hivSetKnown <- filter(hivData, yeardiagnosis <= analysisYear)
+hivSetKnown <- subset(hivSetKnown, cob!="Not Reported")
+hivSetKnown <- subset(hivSetKnown, !is.na(cob))
+
+hivSetUnknown <- filter(hivData, yeardiagnosis <= analysisYear)
+hivSetUnknown <- subset(hivSetUnknown, is.na(cob) | cob=="Not Reported")
+
 
 if (saveNotifications) {
   # Directory and file name
@@ -272,151 +323,48 @@ Sort out diagnoses ...
 # Setup dataframe for overall results by first extracting diagnoses details
 
 # Overall annual results --------------------------------------------------
+origHivSet <- hivSetOrig %>%
+  group_by(yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  mutate(totalnotifications  = cumsum(notifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)   
+
 hivResults <- hivSet %>% 
   group_by(yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
   mutate(totalnotifications  = cumsum(notifications)) %>% 
   filter(yeardiagnosis <= analysisYear)   
 
-# Annual results by state and exposure category ---------------------------
-
-# Calculate the proportion of diagnoses by exposure and population 
-# category by state and nationally. Theses data frames are used for further
-# calculations
-
-hivState <- hivSet %>% group_by(state, yeardiagnosis) %>% 
-  summarise(notifications = n()) %>% 
-  ungroup() %>% 
-  group_by(state) %>%
-  mutate(totalnotifications = cumsum(notifications)) %>%
-  ungroup() %>% 
+hivResultsKnown <- hivSetKnown %>% 
   group_by(yeardiagnosis) %>% 
-  mutate(propnotifications = notifications / sum(notifications)) %>%
-  mutate(proptotalnotifications = 
-           totalnotifications / sum(totalnotifications)) %>% 
-  filter(yeardiagnosis <= analysisYear)   
-
-hivExpNat <- hivSet %>% group_by(expgroup, yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
-  ungroup() %>% 
-  group_by(expgroup) %>% 
-  mutate(totalnotifications = cumsum(notifications)) %>%
-  ungroup() %>% 
-  group_by(yeardiagnosis) %>% 
-  mutate(propnotifications = notifications / sum(notifications)) %>%
-  mutate(proptotalnotifications = 
-           totalnotifications / sum(totalnotifications)) %>% 
-  filter(yeardiagnosis <= analysisYear)   
-
-hivExpState <- hivSet %>% group_by(expgroup, state, yeardiagnosis) %>% 
-  summarise(notifications = n()) %>% 
-  ungroup() %>% 
-  group_by(state,expgroup) %>%
-  mutate(totalnotifications = cumsum(notifications)) %>%
-  ungroup() %>% 
-  group_by(state,yeardiagnosis) %>% 
-  mutate(propnotifications = notifications / sum(notifications)) %>%
-  mutate(proptotalnotifications = 
-           totalnotifications / sum(totalnotifications)) %>% 
-  filter(yeardiagnosis <= analysisYear)   
-
-#Calculate annual results by cob and region
-
-
-# Annual results by population group --------------------------------------
-
-# Calculate the proportion of diagnoses by country of birth and indigenous 
-# status. These are used for further calculations and estimates for the 
-# number of people living with diagnosed HIV in specific groups. 
-
-# There is a large number of notifications with missing country of birth 
-# and indigenous status. Calculate overall proportion and known proportion.
-
-hivCob <- hivSet %>%
-  group_by(yeardiagnosis, countrygroup) %>%
-  summarise(notifications = n()) %>%
-  ungroup() %>% 
-  group_by(countrygroup) %>% 
-  mutate(totalnotifications = cumsum(notifications)) %>%
-  ungroup() %>%
-  group_by(yeardiagnosis) %>% 
-  mutate(propnotifications = notifications / sum(notifications)) %>%
-  mutate(proptotalnotifications = 
-           totalnotifications / sum(totalnotifications)) %>% 
-  filter(yeardiagnosis <= analysisYear)
-
-# Now add known proportions
-hivCobKnown <- hivCob %>% 
-  filter(!is.na(countrygroup)) %>%
-  select(yeardiagnosis, countrygroup, 
-         notifications, totalnotifications) %>%
-  group_by(yeardiagnosis) %>%
-  mutate(propnotifications = notifications / sum(notifications)) %>%
-  mutate(proptotalnotifications = 
-           totalnotifications / sum(totalnotifications)) 
-  
-hivCob$propknown <- NA
-hivCob[!is.na(hivCob$countrygroup), ]$propknown <- 
-  hivCobKnown$propnotifications
-hivCob[is.na(hivCob$countrygroup), ]$propknown <- 0
-hivCob$proptotalknown <- NA
-hivCob[!is.na(hivCob$countrygroup), ]$proptotalknown  <- 
-  hivCobKnown$proptotalnotifications
-hivCob[is.na(hivCob$countrygroup), ]$proptotalknown <- 0
-
-# Indigenous status
-hivAborig <- hivSet %>%
-  group_by(yeardiagnosis, aboriggroup) %>%
-  summarise(notifications = n()) %>%
-  ungroup() %>% 
-  group_by(aboriggroup) %>% 
-  mutate(totalnotifications = cumsum(notifications)) %>%
-  ungroup() %>%
-  group_by(yeardiagnosis) %>% 
-  mutate(propnotifications = notifications / sum(notifications)) %>%
-  mutate(proptotalnotifications = 
-           totalnotifications / sum(totalnotifications)) %>% 
-  filter(yeardiagnosis <= analysisYear)
-
-# Now add known proportions
-hivAborigKnown <- hivAborig %>% 
-  filter(!is.na(aboriggroup) & aboriggroup != "othercob") %>%
-  select(yeardiagnosis, aboriggroup, notifications, totalnotifications) %>%
-  group_by(yeardiagnosis) %>%
-  mutate(propnotifications = notifications / sum(notifications))%>%
-  mutate(proptotalnotifications = 
-           totalnotifications / sum(totalnotifications)) 
-
-hivAborig$propknown <- NA
-hivAborig[!is.na(hivAborig$aboriggroup) & hivAborig$aboriggroup !=
-            "othercob", ]$propknown <- hivAborigKnown$propnotifications
-hivAborig[is.na(hivAborig$aboriggroup) | hivAborig$aboriggroup == 
-            "othercob",]$propknown <- 0
-hivAborig$proptotalknown <- NA
-hivAborig[!is.na(hivAborig$aboriggroup) & hivAborig$aboriggroup != 
-  "othercob",]$proptotalknown  <- 
-  hivAborigKnown$proptotalnotifications
-hivAborig[is.na(hivAborig$aboriggroup) | hivAborig$aboriggroup ==
-            "othercob",]$proptotalknown <- 0
-
-# Overall annual results by gender ----------------------------------------
-hivGender <- hivSet %>% 
-  group_by(yeardiagnosis, sex) %>% 
-  summarise(notifications = n()) %>% 
-  ungroup() %>% 
-  group_by(sex) %>%
   mutate(totalnotifications  = cumsum(notifications)) %>% 
-  filter(yeardiagnosis <= analysisYear)
+  filter(yeardiagnosis <= analysisYear)   
 
-# tempGender <- hivGender %>%
-#   select(-notifications) %>%  
-#   spread(sex, totalnotifications)
-# 
-# tempGender[is.na(tempGender)] <- 0
-# 
-# tempGender <- tempGender %>%  
-#   mutate(propmale = male/(female + male + transgender + unknown)) %>%
-#   select(yeardiagnosis, propmale)
+hivResultsUnknown <- hivSetUnknown %>% 
+  group_by(yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  mutate(totalnotifications  = cumsum(notifications)) %>% 
+  filter(yeardiagnosis <= analysisYear)   
+
+#Fill up missing years
+fillMissing <- as.data.frame(allYears) 
+colnames(fillMissing) <- c("yeardiagnosis")
+hivResults <- merge(fillMissing, hivResults, by="yeardiagnosis", all.x=TRUE)
+hivResults[is.na(hivResults)] <- 0
+hivResultsKnown <- merge(fillMissing, hivResultsKnown, by="yeardiagnosis", all.x=TRUE)
+hivResultsKnown[is.na(hivResultsKnown)] <- 0
+hivResultsUnknown <- merge(fillMissing, hivResultsUnknown, by="yeardiagnosis", all.x=TRUE)
+hivResultsUnknown[is.na(hivResultsUnknown)] <- 0
+
+#Get proportion of unknown 
+proportion <- as.data.frame(allYears) 
+colnames(proportion) <- c("yeardiagnosis")
+proportion$proportion <- hivResults$notifications/hivResultsKnown$notifications
+proportion$proportion[is.na(proportion$proportion)] <- 0
+hivResults$notifications <- hivResults$notifications + floor(proportion$proportion*hivResultsUnknown$notifications)
+#hivResults$notifications <- hivResults$notifications + hivResultsUnknown$notifications
+hivResults$totalnotifications <- cumsum(hivResults$notifications)
 
 # Create some useful diagnoses data plots ---------------------------------
 if (plots) {
@@ -437,72 +385,11 @@ if (plots) {
   ggsave(file.path(figuresFolder, "all_notifications.png"), 
     plot = plotDiags, width = 10, height = 5, units = "in")
   
-  # States
-  plotStates1 <- ggplot(data = hivState, 
-    aes(x = yeardiagnosis, y = notifications, fill = state)) + 
-    geom_area() + ylab("Annual notifications") + xlab("Year") + 
-    theme_bw() + plotOpts
-  
-  plotStates2 <- ggplot(data = hivState, 
-    aes(x = yeardiagnosis, y = propnotifications, fill = state)) + 
-    geom_area() + ylab("Proportion annual notifications") + xlab("Year") + 
-    theme_bw() + plotOpts
-  
-  plotStates <- grid.arrange(plotStates1, plotStates2, ncol = 2)
-  ggsave(file.path(figuresFolder, "state_notifications.png"), 
-    plot = plotStates, width = 10, height = 5, units = "in")
-  
-  # Exposure
-  plotExp1 <- ggplot(data = hivExpNat, 
-    aes(x = yeardiagnosis, y = notifications, fill = expgroup)) + 
-    geom_area() + ylab("Annual notifications") + xlab("Year") + 
-    theme_bw() + plotOpts
-  
-  plotExp2 <- ggplot(data = hivExpNat, 
-    aes(x = yeardiagnosis, y = propnotifications, fill = expgroup)) + 
-    geom_area() + ylab("Proportion annual notifications") + xlab("Year") + 
-    theme_bw() + plotOpts
-  
-  plotExp <- grid.arrange(plotExp1, plotExp2, ncol = 2)
-  ggsave(file.path(figuresFolder, "exp_notifications.png"), 
-    plot = plotExp, width = 10, height = 5, units = "in")
-  
-  # Country of birth
-  plotCob1 <-ggplot(data = hivCob, 
-    aes(x = yeardiagnosis, y = notifications, fill = countrygroup)) + 
-    geom_area() + ylab("Annual notifications") + xlab("Year") + 
-    theme_bw() + plotOpts
-  
-  plotCob2 <-ggplot(data = hivCob, 
-    aes(x = yeardiagnosis, y = propknown, fill = countrygroup)) + 
-    geom_area() + ylab("Proportion annual notifications") + xlab("Year") + 
-    theme_bw() + plotOpts
-  
-  plotCob <- grid.arrange(plotCob1, plotCob2, ncol = 2)
-  ggsave(file.path(figuresFolder, "cob_notifications.png"), 
-    plot = plotCob, width = 10, height = 5, units = "in")
-  
-  # Indigenous status
-  plotIndig1 <- ggplot(data = hivAborig, 
-    aes(x = yeardiagnosis, y = notifications, fill = aboriggroup)) + 
-    geom_area() + ylab("Annual notifications") + xlab("Year") + 
-    theme_bw() + plotOpts
-  
-  plotIndig2 <- ggplot(data = filter(hivAborig, 
-                                     aboriggroup == "indigenous"), 
-    aes(x = yeardiagnosis, y = propknown)) + 
-    geom_line() + ylim(c(0,0.2)) + 
-    ylab("Proportion notifications indigenous") + 
-    xlab("Year") + theme_bw() + plotOpts
-  
-  plotIndig <- grid.arrange(plotIndig1, plotIndig2, ncol = 2)
-  ggsave(file.path(figuresFolder, "indig_notifications.png"), 
-    plot = plotIndig, width = 10, height = 5, units = "in")
 } 
 
 ```
 
-Potentially impute country of birth and indigeous status
+Potentially impute country of birth and indigeous status 
 
 ```{r imputation}
 # 
@@ -530,131 +417,22 @@ ignore <- c(1,15)
 # unique cases assume all the first years of disgnoses are unique. 
 
 # Do calculations for all notifications first-----------------------------
-dobAll <- select(hivSet, dob, yeardiagnosis) # Overall
-numberUniqueAll <- numUnique(dobAll, allYears, ignore)
 
-# Store national results
-hivResults$uniquecases <- numberUniqueAll
+dobAll <- select(hivSetOrig, dob, yeardiagnosis) # Overall
+numberUniqueAll <- numUnique(dobAll, allYears, ignore)
+numberUniqueAll[is.na(numberUniqueAll)] <- 0
 
 # Add variable for proportion unique - due to statistical calculations 
 # proportion mybe slightly higher than one. In those cases round down to
 # 1.
 hivResults$propunique <- 
-  hivResults$uniquecases / hivResults$totalnotifications
-  hivResults[hivResults$propunique > 1, ]$propunique <- 1
+  numberUniqueAll / origHivSet$totalnotifications
+  hivResults$propunique[is.na(hivResults$propunique)] <- 0
+  hivResults$propunique[hivResults$propunique > 1] <- 1
 
-### States and territories
-states <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas")
-
-hivState$uniquecases <- rep(NA, nrow(hivState))
-hivState$propunique <- rep(NA, nrow(hivState))
-
-for (region in states) {
-  # Dob vector
-  dobTemp <- select(subhivset(hivSet, region = region), 
-                    dob, yeardiagnosis) %>% 
-    arrange(yeardiagnosis) %>%
-    tbl_df()
+# Store set unique cases
+hivResults$uniquecases <- hivResults$totalnotifications*hivResults$propunique
   
-  # Calculate number unique
-  numberUnique <- numUnique(dobTemp, unique(dobTemp$yeardiagnosis),
-                            ignore)
-  
-  # Store state results
-  hivState[hivState$state == region, ]$uniquecases <- numberUnique
-  
-  # Replace proportion unique if using national estimates
-  if (nationalUniques) {
-    stateYears <- hivState[hivState$state == region, ]$yeardiagnosis
-    hivState[hivState$state == region, ]$propunique <- 
-      filter(hivResults, yeardiagnosis %in% stateYears)$propunique
-  } 
-}
-
-# Calculate proportion unique if not doing national estimates
-if (!nationalUniques) {
-  hivState$propunique <- hivState$uniquecases /
-    hivState$totalnotifications
-  hivState[hivState$propunique > 1, ]$propunique <- 1
-}
-
-# Mode of exposure -------------------------------------------------
-modes <- c("msm", "pwid", "hetero", "otherexp", "unknown")
-
-hivExpNat$uniquecases <- rep(NA, nrow(hivExpNat))
-hivExpNat$propunique <- rep(NA, nrow(hivExpNat))
-
-for (mode in modes) {
-  # Dob vector
-  dobTemp <- select(subhivset(hivSet, mode = mode), dob,
-                    yeardiagnosis) %>%
-    arrange(yeardiagnosis) %>%
-    tbl_df()
-  
-  # Calculate number unique
-  numberUnique <- numUnique(dobTemp, unique(dobTemp$yeardiagnosis),
-                            ignore)
-  
-  # Store exposure results
-  hivExpNat[hivExpNat$expgroup == mode, ]$uniquecases <- numberUnique
-  
-  # Replace proportion unique if using national estimates
-  if (nationalUniques) {
-    expYears <- hivExpNat[hivExpNat$expgroup == mode, ]$yeardiagnosis
-    hivExpNat[hivExpNat$expgroup == mode, ]$propunique <- 
-      filter(hivResults, yeardiagnosis %in% expYears)$propunique
-  } 
-}
-
-# Calculate proportion unique if not doing national estimates
-if (!nationalUniques) {
-  hivExpNat$propunique <- 
-    hivExpNat$uniquecases / hivExpNat$totalnotifications
-  hivexpnat[hivExpNat$propunique > 1, ]$propunique <- 1
-}
-
-# We don't do this for country of birth or indigenous just using the 
-# proportions of notifications
-
-# Now do genders ----------------------------------------------------------
-genders <- c("male", "female", "transgender", "unknown")
-hivGender$propunique <- rep(NA, nrow(hivGender))
-
-for (gender in genders) {
-  # Use national estimates
-  genYears <- hivGender[hivGender$sex == gender, ]$yeardiagnosis
-  hivGender[hivGender$sex == gender, ]$propunique <- 
-    filter(hivResults, yeardiagnosis %in% genYears)$propunique
-}
-
-# Plot if required -------------------------------------------------------
-if (plots) {
-  graphics.off()
-  
-  # State de-duplication by state
-  uniqueState <- hivState %>% 
-    group_by(yeardiagnosis) %>% 
-    summarise(total = sum(uniquecases))
-  
-  # Plot national notifications data raw and deduplicated
-  uniqueBase <- ggplot(hivResults, aes(yeardiagnosis)) + 
-    xlim(c(startYear,analysisYear)) + ylim(c(0,NA)) + xlab(" Year") + 
-    ylab("Number of notifications") + theme_bw() + plotOpts 
-    
-  uniquePlot1 <- uniqueBase + geom_line(aes(y = 
-      totalnotifications,color = "All notifications")) +              
-    geom_line(aes(y = uniquecases, color="Unique notifications")) + 
-    theme(legend.direction = "vertical") +
-    theme(legend.title = element_blank()) 
-  
-  uniquePlot2 <-  uniqueBase + geom_line(data = uniqueState, aes(y = total,
-                                         color = "State notifications"))
-  
-  # Save to file
-  ggsave(file.path(figuresFolder,  "unique_diagnoses.png"), 
-    plot = uniquePlot1, width = 5, height = 5, units = "in")
-}
-
 ```
 
 Sort out population movement rates
@@ -665,17 +443,15 @@ Sort out population movement rates
 
 # Load all the data sets we need - the ABS data is stored in a different 
 # folder
-absFolder <- file.path(path.expand("~"), 
-                       "Research", "!Evaluation_Modelling", "data")
+#absFolder <- file.path(path.expand("~"), 
+#                       "Research", "!Evaluation_Modelling", "data")
  
+absFolder <- file.path(dataFolder)
 absMigration <- read.csv(file.path(absFolder, 
   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
 absDeparts <- read.csv(file.path(absFolder, 
   paste0("ABS_departures_clean-", toString(analysisYear), ".csv")),
-  as.is = 1)
-absInterstate <- read.csv(file.path(absFolder, 
-  paste0("ABS_interstate_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
 
 # Depending on data used calculate departure rate for each state ---------
@@ -693,7 +469,6 @@ if (permDeparts) {
   # Use permanent departures nationally
   absDeparts <- mutate(absDeparts, migrate = permanent / erp)
   mrate <- absDeparts$migrate
-
   
   if (analysisYear <= 2014) {
     # Keep methdology for 2014 cascade for replication purposes
@@ -835,72 +610,6 @@ if (permDeparts) {
     }
 }
 
-# Calculate interstate rates ---------------------------------------------
-
-# At this stage just calculate the best fit.
-# Don't worry about upper and lower bounds.
-
-# First estimate erp for each state
-
-allInterstate <- data.frame(year = allYears)
-
-for (region in states) {
-  lmErp <- lm(erp ~ year, data = filter(absMigration, state == region))
-  erpState <- predict(lmErp, data.frame(year = allYears))
-  
-  # Store extrapolated population
-  allInterstate[[region]] <- erpState
-}
-
-hivInterstate <- gather(allInterstate, "state", "erp", 2:10)
-
-# Calculate interstate ERP simply overall population minus state population
-allErp <- filter(hivInterstate, state == "all")$erp
-
-hivInterstate <- hivInterstate %>% 
-  group_by(state) %>%
-  mutate(intererp = allErp - erp)
-
-# Calculate departure rate
-hivInterstate$departures <- NA
-
-for (region in states) {
-  lmDepart <- lm(departures ~ year, data = filter(absInterstate, 
-                                                  state == region))
-  departState <- predict(lmDepart, data.frame(year = allYears))
-  
-  # Store extrapolated population
-  hivInterstate[hivInterstate$state == region, ]$departures <- departState
-}
-
-hivInterstate <- mutate(hivInterstate, departrate = departures / erp) 
-
-# Calculate arrival rate
-hivInterstate$arrivals <- NA
-
-for (region in states) {
-  lmArrive <- lm(arrivals ~ year, data = filter(absInterstate, 
-                                                state == region))
-  arriveState <- predict(lmArrive, data.frame(year = allYears))
-  
-  # Store extrapolated population
-  hivInterstate[hivInterstate$state == region, ]$arrivals <- arriveState
-}
-
-hivInterstate <- mutate(hivInterstate, arriverate = arrivals / intererp) 
-
-# As intererp is zero national set arriverate to departure rate for "all"
-# Gives indication of rate people move interstate nationally
-hivInterstate[hivInterstate$state == "all", ]$arriverate <- 
-  hivInterstate[hivInterstate$state == "all", ]$departrate
-
-# Add a net leaving rate relative to state ERP -- useful for separate 
-# state calculations 
-hivInterstate <- mutate(hivInterstate, 
-                        netrate = (departures - arrivals) / erp)
-
-
-
 
 ```
 
@@ -931,11 +640,22 @@ ahodData <- read.csv(file.path(dataFolder,
                                      ".csv", sep = "")))
 
 # Extract number of known deaths and store in a central data frame
-hivDeaths <- hivData %>% 
+#hivDeaths <- hivData %>% 
+#  filter(! is.na(yeardeath)) %>%
+#  group_by(yeardeath) %>% 
+#  summarise(number_deaths = n()) %>% 
+#  filter(yeardeath <= analysisYear)  
+hivDeaths <- hivSet %>% 
   filter(! is.na(yeardeath)) %>%
   group_by(yeardeath) %>% 
   summarise(number_deaths = n()) %>% 
-  filter(yeardeath <= analysisYear)  
+  filter(yeardeath <= analysisYear) 
+
+#Fill up missing years
+fillMissing <- as.data.frame(allYears) 
+colnames(fillMissing) <- c("yeardeath")
+hivDeaths <- merge(fillMissing, hivDeaths, by="yeardeath", all.x=TRUE)
+hivDeaths[is.na(hivDeaths)] <- 0
 
 # Calculate sensitivity of recorded deaths based on linkage results
 linkageFactor <- (linkedDeaths + notifiedDeaths) / notifiedDeaths
@@ -954,8 +674,8 @@ hivDeaths$inflated_deaths_upper <- hivDeaths$number_deaths *
 
 # No deaths in 1980 and 1982 so add this data manually to ensure 
 # everything lines up
-hivDeaths <- rbind(hivDeaths, c(1980, 0, 0, 0, 0))
-hivDeaths <- rbind(hivDeaths, c(1982, 0, 0, 0, 0))
+#hivDeaths <- rbind(hivDeaths, c(1980, 0, 0, 0, 0))
+#hivDeaths <- rbind(hivDeaths, c(1982, 0, 0, 0, 0))
 hivDeaths <- arrange(hivDeaths, yeardeath)
 
 # Now calculate mortality rate for linkage data --------------------------
@@ -991,50 +711,6 @@ linkageMortality <- deaths / numLiving
 linkageMortalityMin <- deaths_min/numLiving_max
 linkageMortalityMax <- deaths_max/numLiving_min
 
-# NSW death rates -------------------------------------------------------
-
-nswData <- read.csv(file.path(dataFolder, 
-                               paste0("nswDeaths-",
-                                      toString(analysisYear), 
-                                     ".csv")))
-nswLiving <- rep(NA, nrow(nswData))
-nswLiving_min <- rep(NA, nrow(nswData))
-nswLiving_max <- rep(NA, nrow(nswData))
-
-nswLiving[1] <- 0
-nswLiving_min[1] <- 0
-nswLiving_max[1] <- 0
-
-nswMigrate <- filter(hivMigrate, state == "nsw") 
-nswInterstate <- filter(hivInterstate, state == "nsw")
-nswArriveRate <- nswInterstate$arrivals / nswInterstate$erp
-
-nswDiagnoses <- filter(hivState, state == "nsw")$propunique *
-  filter(hivState, state == "nsw")$totalnotifications
-nswDeaths <- nswData$total
-nswDeaths_min <- 0.9 * nswData$total
-nswDeaths_max <- 1.1 * nswData$total
-nswDiags <- c(nswDiagnoses[1], diff(nswDiagnoses))
-
-for (ii in 2:nrow(nswData)) {
-  nswLiving[ii] <- nswLiving[ii-1] + nswDiags[ii] - nswDeaths[ii-1] 
-    - nswLiving[ii-1] * nswMigrate$rate[ii-1] + (nswArriveRate[ii-1] -
-    nswInterstate$departrate[ii-1]) * nswLiving[ii-1]
-  nswLiving_min[ii] <- nswLiving_min[ii-1] + nswDiags[ii] -
-    nswDeaths_max[ii-1] - nswLiving_min[ii-1] * nswMigrate$upper[ii-1] +
-    (nswArriveRate[ii-1] - nswInterstate$departrate[ii-1]) *
-    nswLiving_min[ii-1]
-  nswLiving_max[ii] <- nswLiving_max[ii-1] + nswDiags[ii] -
-    nswDeaths_min[ii-1] - nswLiving_max[ii-1] * nswMigrate$lower[ii-1] +
-    (nswArriveRate[ii-1] - nswInterstate$departrate[ii-1]) *
-    nswLiving_max[ii-1]
-}
-
-nswMortality <- nswDeaths / nswLiving
-nswMortality[1] <- 0
-nswMortalityMin <- nswDeaths_min/nswLiving_min
-nswMortalityMax <- nswDeaths_max/nswLiving_max
-
 #Append AHOD mortality ---------------------------------------
 
 # Calculate crude death rate for each state and year - use 95% CI as the upper and lower bound
@@ -1068,6 +744,10 @@ deathRate_min[(indexLinkage + 1):length(deathRate)] <- filter(ahodDeaths,
 deathRate_max[1:indexLinkage] <- linkageMortalityMax[1:indexLinkage]
 deathRate_max[(indexLinkage+1):length(deathRate)] <- filter(ahodDeaths, 
   state == "all")$upper # 
+
+deathRate[is.na(deathRate)] <- 0
+deathRate_min[is.na(deathRate_min)] <- 0
+deathRate_max[is.na(deathRate_max)] <- 0
 
 # Fix last 10 years if we are doing cascade impact calculations
 if(cascadeImpact) {
@@ -1143,23 +823,6 @@ if (analysisYear <= 2014) {
   propStayLower <- 1
   propStayUpper <- 1
 } else {
-  # Calculate proportion overseas
-  propAus <- filter(hivCob, countrygroup == "australia") %>%
-    select(yeardiagnosis, proptotalknown)
-  propAus <- FillMissing(allYears, propAus$yeardiagnosis,
-                         propAus$proptotalknown) 
-  propAus <- propAus$value
-  
-  propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.1008)
-  propStayLowerNSW <-  propAus * (1 - 2 * 0.0072) + (1 - propAus) * 
-    (1 - 2 * 0.1008)
-  propStayUpperNSW <- 1
-  
-  propStayVic <- 1
-  propStayLowerVic <- 1
-  propStayUpperVic <- 1
-  
-  
   propStay <- 0.98
   propStayLower <- 0.96
   propStayUpper <- 1
@@ -1231,395 +894,6 @@ hivDiagnosed <- rbind(hivDiagnosed,
                             lower = pldhivAllMin,
                             upper = pldhivAllMax))
 
-# State based PLDHIV -----------------------------------------------
-statesDiag <- head(states, -1)
-
-for (region in statesDiag) {
-  stateYears <- filter(hivState, state == region)$yeardiagnosis
-  
-  if (region == "nsw") {
-    stateStay <- propStayNSW
-    stateStayLower <- propStayLowerNSW
-    stateStayUpper <- propStayUpperNSW
-  } else if (region == "vic") {
-    stateStay <- propStayVic
-    stateStayLower <- propStayLowerVic
-    stateStayUpper <- propStayUpperVic
-  } else {
-    stateStay <- propStay 
-    stateStayLower <- propStayLower 
-    stateStayUpper <- propStayUpper 
-  }
-  
-  if (nationalUniques) {
-    stateDiags <- filter(hivState, 
-      state == region)$totalnotifications * 
-      filter(hivState, state == region)$propunique
-  } else {
-    stateDiags <- filter(hivState, state == region)$uniquecases
-  }
-    
-  fillStateDiags <- FillMissing(allYears, stateYears, stateDiags)  
-  cumStateDiags <- fillStateDiags$value
-  
-  # State migration rates
-  migStateRate <- filter(hivMigrate, state == region)$rate
-  migStateRateMin <- filter(hivMigrate, state == region)$lower
-  migStateRateMax <- filter(hivMigrate, state == region)$upper
-  
-  # State departures
-  depStateRate <- filter(hivInterstate, state == region)$departrate
-  
-  # State arrivals
-  arrStateRate <- filter(hivInterstate, state == region)$arriverate
-  
-  # Do the state calculation and range
-  pldhivState <- LivingDiagnosed(cumStateDiags, deathRate,
-                                 migStateRate, stateStay, arrStateRate,
-                                 depStateRate,
-                                 pldhivAll)
-                                 
-  
-  pldhivStateMin <- LivingDiagnosed(cumStateDiags,
-                                    deathRateMax, migStateRateMax,
-                                    stateStayLower,
-                                    arrStateRate, depStateRate,
-                                    pldhivAll)
-                                    
-  
-  pldhivStateMax <- LivingDiagnosed(cumStateDiags,
-                                    deathRateMin, migStateRateMin,
-                                    stateStayUpper,
-                                    arrStateRate, depStateRate,
-                                    pldhivAll)                                   
-  
-  # Store the state results
-  hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
-                                                 year = allYears, 
-                                                 population = region, 
-                                                 value = pldhivState,
-                                                 lower = pldhivStateMin,
-                                                 upper = pldhivStateMax))
-}
-
-# Exposure based PLHIV ---------------------------------------------
-
-modes <- c("msm", "pwid", "hetero", "otherexp", "unknown")
-# nmodes <- length(modes)
-
-for (mode in modes) {
-  expYears <- filter(hivExpNat, expgroup == mode)$yeardiagnosis
-  
-  if (nationalUniques) {
-    expDiags <- filter(hivExpNat, expgroup == mode)$totalnotifications *
-      filter(hivExpNat, expgroup == mode)$propunique
-  } else {
-    expDiags <- filter(hivExpNat, expgroup == mode)$uniquecases
-  }
-    
-  fillExpDiags <- FillMissing(allYears, expYears, expDiags)  
-  cumExpDiags <- fillExpDiags$value
-  
-  # Exp migration rates, death rates, assumed to be same overall
-  
-  # Do the Exp calculation and range
-  pldhivExp <- LivingDiagnosed(cumExpDiags, deathRate,
-                               migrationRate, propStay)
-  
-  pldhivExpMin <- LivingDiagnosed(cumExpDiags,
-                                  deathRateMax,
-                                  migrationRateMax,
-                                  propStayLower)
-  pldhivExpMax <- LivingDiagnosed(cumExpDiags,
-                                  deathRateMin,
-                                  migrationRateMin,
-                                  propStayUpper)
-  
-  # Store the state results
-  hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
-                            year = allYears, 
-                            population = mode, 
-                            value = pldhivExp,
-                            lower = pldhivExpMin,
-                            upper = pldhivExpMax))
-}
-
-# Remove unknowns by redistributing to known exposure groups in proportion
-keyGroups <- c("msm", "pwid", "hetero", "otherexp")
-
-# Calculate proportion known in each category
-propExpDiags <- hivDiagnosed %>% 
-  filter(population %in% keyGroups) %>%
-  group_by(year) %>%
-  mutate(totalval = sum(value), propval = value  /totalval) %>%
-  select(-stage, -totalval)
-
-# Calculate the number unknown and the proportional increase
-numUnknown <- hivDiagnosed %>% 
-  filter(population == "unknown") %>%
-  select(year, value)
-
-numUnknown$msm <- filter(propExpDiags, population == "msm")$propval *
-  numUnknown$value
-numUnknown$pwid <- filter(propExpDiags, population == "pwid")$propval *
-  numUnknown$value 
-numUnknown$hetero <- filter(propExpDiags, 
-  population == "hetero")$propval *
-  numUnknown$value 
-numUnknown$otherexp <- filter(propExpDiags, 
-  population == "otherexp")$propval * numUnknown$value 
-
-# Make into long format
-numUnknown <- numUnknown %>%
-  select(-value) %>%
-  gather("mode", "number", 2:5)
-
-# Update hivDiagnosed
-for (group in keyGroups) {
-     temPdf <- filter(hivDiagnosed, population == group)
-     propLwr <- temPdf$lower / temPdf$value
-     propUpr <- temPdf$upper / temPdf$value
-     
-     hivDiagnosed[hivDiagnosed$population == group, ]$value <- 
-       hivDiagnosed[hivDiagnosed$population == group, ]$value + 
-       filter(numUnknown, mode == group)$number
-     
-     hivDiagnosed[hivDiagnosed$population == group, ]$lower <- 
-       hivDiagnosed[hivDiagnosed$population == group, ]$value *
-       propLwr
-      
-     hivDiagnosed[hivDiagnosed$population == group, ]$upper <- 
-       hivDiagnosed[hivDiagnosed$population == group, ]$value * 
-       propUpr
-}    
-   
-# Remove unknown & fix up modes
-hivDiagnosed <- filter(hivDiagnosed, population != "unknown")
-modes <- keyGroups
-# nmodes <- length(modes)
-  
-# Population based PLDHIV ------------------------------------------
-
-pops <- c("non-indigenous", "indigenous", "bornssa", "bornsea","othercob")
-# npops <- length(pops)
-
-# First do a quick calculation to work out proportion of cumulative
-# notifications (as an approximation for PLDHIV) which are indigenous to 
-# adjust mortality and migration rates. 
-
-if (indigKnown) {
-  # Use known indigenous diagnoses
-  aborigDiags <- filter(hivAborig, 
-                        aboriggroup == "indigenous")$totalnotifications
-  aborigYears <- filter(hivAborig, 
-                        aboriggroup == "indigenous")$yeardiagnosis
-  
-  fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
-  aborigDiags <- fillAborigDiags$value
-  
-} else {
-  # Use proportionally known diagnoses
-  popDiags <- filter(hivCob, 
-                     countrygroup == "australia")$proptotalknown
-  popYears <- filter(hivCob, 
-                     countrygroup == "australia")$yeardiagnosis
-  
-  aborigDiags <- filter(hivAborig, 
-                        aboriggroup == "indigenous")$proptotalknown
-  aborigYears <- filter(hivAborig, 
-                        aboriggroup == "indigenous")$yeardiagnosis
-  
-  fillPopDiags <- FillMissing(allYears, popYears, popDiags)
-  fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
-  
-  aborigDiags <- cumDiagnoses * 
-    fillPopDiags$value * 
-    fillAborigDiags$value
-}
-
-nonAborigDiags <- cumDiagnoses - aborigDiags
-
-nonAborigMortalityFactor <- ((1-aborigMortality) *
-                      fillAborigDiags$value + 
-                      nonAborigDiags) / nonAborigDiags
-
-nonAborigMigrationFactor <- cumDiagnoses / nonAborigDiags
-  
-
-for (pop in pops) {
-  # Set up cumDiags for each population use the overall cumdiagnoses 
-  # For Australian born we have to also consider indigenous status
-  if (pop == "non-indigenous") {
-    # Non-indigenous estimates
-    popDiags <- filter(hivCob, 
-                       countrygroup == "australia")$proptotalknown
-    popYears <- filter(hivCob, countrygroup == "australia")$yeardiagnosis
-    fillPopDiags <- FillMissing(allYears, popYears, popDiags)
-  
-    if (indigKnown) {
-      # If just using known subtract from australian born diagnoses
-      aborigDiags <- filter(hivAborig, 
-        aboriggroup == "indigenous")$totalnotifications
-      aborigYears <- filter(hivAborig, 
-        aboriggroup == "indigenous")$yeardiagnosis
-      
-      fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
-      cumPopDiags <- cumDiagnoses * 
-        fillPopDiags$value - fillAborigDiags$value
-    } else {
-      # Use proportional estimate
-      aborigDiags <- filter(hivAborig, 
-        aboriggroup == "non-indigenous")$proptotalknown
-      aborigYears <- filter(hivAborig, 
-        aboriggroup == "non-indigenous")$yeardiagnosis
-      
-      fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
-      cumPopDiags <- cumDiagnoses * 
-        fillPopDiags$value * 
-        fillAborigDiags$value
-    }
-      
-  } else if (pop == "indigenous") {
-    # Indigenous estimates
-    if (indigKnown) {
-      # Use known indigenous diagnoses
-      aborigDiags <- filter(hivAborig, 
-        aboriggroup == "indigenous")$totalnotifications
-      aborigYears <- filter(hivAborig, 
-        aboriggroup == "indigenous")$yeardiagnosis
-      
-      fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
-      cumPopDiags <- fillAborigDiags$value
-      
-    } else {
-      # Use proportionally known diagnoses
-      popDiags <- filter(hivCob, 
-                         countrygroup == "australia")$proptotalknown
-      popYears <- filter(hivCob, 
-                         countrygroup == "australia")$yeardiagnosis
-      
-      aborigDiags <- filter(hivAborig, 
-                            aboriggroup == "indigenous")$proptotalknown
-      aborigYears <- filter(hivAborig, 
-                            aboriggroup == "indigenous")$yeardiagnosis
-      
-      fillPopDiags <- FillMissing(allYears, popYears, popDiags)
-      fillAborigDiags <- FillMissing(allYears, aborigYears, aborigDiags)
-      
-      cumPopDiags <- cumDiagnoses * 
-        fillPopDiags$value * 
-        fillAborigDiags$value
-    }
-    
-  } else {
-    popDiags <- filter(hivCob, countrygroup == pop)$proptotalknown
-    popYears <- filter(hivCob, countrygroup == pop)$yeardiagnosis
-    
-    fillPopDiags <- FillMissing(allYears, popYears, popDiags)
-    cumPopDiags <- cumDiagnoses * fillPopDiags$value
-  }
-
-  # Do the Pop calculation and range - if indigenous adjust mortality rate 
-  # appropriately
-  # mortalityMultiplier <- ifelse(pop == "indigenous", aborigMortality, 1)
-  # mortalityMultiplierMin <- ifelse(pop == "indigenous", 
-  #                                  aborigMortalityMin, 1)
-  # mortalityMultiplierMax <- ifelse(pop == "indigenous", 
-  #                                  aborigMortalityMax, 1)
-
-  if (pop == "indigenous") {
-    # Assume no initial migration overseas post diagnosis
-    pldhivPop <- LivingDiagnosed(cumPopDiags, 
-                                 aborigMortality * deathRate,
-                                 rep(0, nyears))
-    
-    pldhivPopMin <- LivingDiagnosed(cumPopDiags, 
-                                    aborigMortalityMax * deathRateMax,
-                                    rep(0, nyears))
-    
-    pldhivPopMax <- LivingDiagnosed(cumPopDiags, 
-                                    aborigMortalityMin * deathRateMin,
-                                    rep(0, nyears))
-  } else {
-    pldhivPop <- LivingDiagnosed((1-nonAborigMigrationFactor * 
-                                   (1-propStay)) * cumPopDiags, 
-                                 nonAborigMortalityFactor * deathRate,
-                                 nonAborigMigrationFactor *
-                                   migrationRate)
-    
-    pldhivPopMin <- LivingDiagnosed((1-nonAborigMigrationFactor * 
-                                   (1-propStayLower)) * cumPopDiags, 
-                                    nonAborigMortalityFactor * 
-                                      deathRateMax,
-                                    nonAborigMigrationFactor * 
-                                      migrationRateMax)
-    
-    pldhivPopMax <- LivingDiagnosed((1-nonAborigMigrationFactor * 
-                                   (1-propStayUpper)) * cumPopDiags, 
-                                    nonAborigMortalityFactor * 
-                                      deathRateMin,
-                                    nonAborigMigrationFactor *
-                                      migrationRateMin)
-  }
-  
-  # Store the population results
-  hivDiagnosed <- rbind(hivDiagnosed, data_frame(stage = "pldhiv", 
-                            year = allYears, 
-                            population = pop, 
-                            value = pldhivPop,
-                            lower = pldhivPopMin,
-                            upper = pldhivPopMax))
-}
-
-# Gender based PLDHIV -----------------------------------------------------
-
-# Calculated separately for a separate calculation
-hivDiagGender <- data.frame(stage = character(), 
-                         year = double(),
-                         population = character(),
-                         value = double(),
-                         lower = double(),
-                         upper = double())
-
-genders <- c("male", "female", "transgender", "unknown")
-# ngenders <- length(genders)
-
-for (gender in genders) {
-  genYears <- filter(hivGender, sex == gender)$yeardiagnosis
-  genDiags <- filter(hivGender, sex == gender)$totalnotifications * 
-    filter(hivGender, sex == gender)$propunique
-    
-  fillGenDiags <- FillMissing(allYears, genYears, genDiags)  
-  cumGenDiags <- fillGenDiags$value
-  
-  # Exp migration rates, death rates, assumed to be same overall
-  
-  # Do the Exp calculation and range
-  pldhivGen <- LivingDiagnosed(cumGenDiags, 
-                               deathRate, migrationRate,
-                               propStay)
-  
-  pldhivGenMin <- LivingDiagnosed(cumGenDiags,  
-                                  deathRateMax,
-                                  migrationRateMax,
-                                  propStayLower)
-  
-  pldhivGenMax <- LivingDiagnosed(cumGenDiags, 
-                                  deathRateMin, 
-                                  migrationRateMin,
-                                  propStayUpper)
-  
-  # Store the state results
-  hivDiagGender <- rbind(hivDiagGender, data_frame(stage = "pldhiv", 
-                            year = allYears, 
-                            population = gender, 
-                            value = pldhivGen,
-                            lower = pldhivGenMin,
-                            upper = pldhivGenMax))
-}
-
-# Bind gender estimates to other population estimates
-hivDiagnosed <- rbind(hivDiagnosed, hivDiagGender)
 
 # Finally bind to overall results -----------------------------------------
 if (bindCascade) {
