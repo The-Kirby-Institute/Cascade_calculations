@@ -1027,26 +1027,29 @@ excludeCare <- FALSE
 resultsStatesYear$population <- factor(resultsStatesYear$population)
 levels(resultsStatesYear$population) <- c("ACT", "NSW", 
                                           "Northern Territory",
-                                          "Queensland", "South Australia",
+                                          "Queensland", 
+                                          "South Australia",
                                           "Tasmania",
-                                          "Victoria", "Western Australia")
+                                          "Victoria", 
+                                          "Western Australia")
 
 resultsStatesYear <- within(resultsStatesYear, 
     population <- factor(population, 
-                         levels(population)[c(2, 7, 4, 8, 5, 1, 6, 3)]))
+                    levels(population)[c(2, 7, 4, 8, 5, 1, 6, 3)]))
 
 
 ### Plot the bar charts
 plotbarAllStates <- ggplot(data = resultsStatesYear, 
-                           aes(x = stage, y = value)) + 
-  geom_bar(stat = "identity", color = asrcols[2], 
-           fill = asrcols[2], width = 0.6) +
+                           aes(x = stage, y = value, fill = stage)) +
+  geom_bar(stat = "identity", color = "black", 
+           width = 0.6) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
                 color = "black", size = 1.2) +
+  scale_fill_manual(values = asrcols[c(1:2, 4:5)]) +
   facet_wrap(~ population, scales = "free") + 
   scale_x_discrete(labels = NULL) + 
   ylab("Number of people") + xlab("") +  
-  plotOpts
+  plotOpts + theme(legend.position = "none")
 
 # Save if required
 if (savePlots) {
@@ -1157,7 +1160,11 @@ plotModeBar <- ggplot(data = expResults, aes(x = population, y = value, fill = s
   geom_errorbar(aes(ymin = lower, ymax = upper), 
                 position = position_dodge(width = 0.9),
                 width = 0.2, color = "black", size = 1.2) +
-  scale_fill_brewer(palette = "Set1", name = "", labels = c("Living with HIV", "Diagnosed")) + 
+  scale_fill_manual(values = asrcols[1:2],
+                    name = "", 
+                    labels = c("Living with HIV", "Diagnosed")) +
+  # scale_fill_brewer(palette = "Set1", 
+  # name = "", labels = c("Living with HIV", "Diagnosed")) + 
   scale_x_discrete(limits = modes, labels = modeNames) + 
   ylab("Number of people") + xlab("") +  
   plotOpts
@@ -1167,7 +1174,11 @@ plotPopBar <- ggplot(data = popResults, aes(x = population, y = value, fill = st
   geom_errorbar(aes(ymin = lower, ymax = upper), 
                 position = position_dodge(width = 0.9),
                 width = 0.2, color = "black", size = 1.2) +
-  scale_fill_brewer(palette = "Set1", name = "", labels = c("Living with HIV", "Diagnosed")) + 
+  scale_fill_manual(values = asrcols[1:2],
+                    name = "", 
+                    labels = c("Living with HIV", "Diagnosed")) +
+  # scale_fill_brewer(palette = "Set1", name = "", 
+  #                   labels = c("Living with HIV", "Diagnosed")) + 
   scale_x_discrete(limits = pops, labels = popNames) + 
   ylab("Number of people") + xlab("") +  
   plotOpts
