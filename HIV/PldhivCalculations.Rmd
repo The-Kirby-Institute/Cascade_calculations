@@ -332,7 +332,7 @@ migrationRateMax <- filter(hivMigrate, state == "all")$upper
 
 # Calculate number living with diagnosed HIV and range
 pldhivAll <- LivingDiagnosed(cumDiagnoses, nonAborigMortalityFactor * deathRate,
-                             nonAborigMigrationFactor * migrationRate, ) # propStay)
+                             nonAborigMigrationFactor * migrationRate, propStay)
 
 # Use max rates for min estimate because they are removal rates 
 # and vice versa
