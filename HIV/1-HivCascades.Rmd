@@ -17,8 +17,8 @@ rm(list=ls())
 basePath <- dirname(getwd())
 
 Rcode <- file.path(dirname(getwd()), "code") 
-dataFolder <- file.path(basePath, "data")
-outputFolder <- file.path(basePath, "output")
+dataFolder <- file.path(basePath, "HIV", "data")
+outputFolder <- file.path(basePath, "HIV", "output")
 figuresFolder <- file.path(basePath, "output","figures")
 
 # Set working directory
