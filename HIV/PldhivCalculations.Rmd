@@ -1,0 +1,261 @@
+---
+title: "PldhivCalculations"
+output: html_notebook
+author: Neil Bretana and Richard T. Gray
+---
+
+This is a draft [R Markdown](http://rmarkdown.rstudio.com) Notebook for 
+calculating the number of people living with HIV in Australia. This is one of 
+the key steps for producing the estimates of the Australian HIV diagnosis and 
+care cascade. 
+
+This notebook is currently in draft form for updating the HIV cascade 
+calculation scripts to version 3.0
+
+```{r Knitr options, include=FALSE} 
+# This chunk may not be necessary
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE, 
+                      include = FALSE) 
+```
+
+```{r Front matter}
+# This chunk might not be necessary either
+mainPackages <- c("dplyr", "tidyr", "ggplot2", "markdown", "cowplot", 
+                  "gridExtra")
+source(file.path(Rcode, "FrontMatter.R"), echo = TRUE)
+fmStr <- FrontMatter(mainPackages, rstudio = "1.0.44")
+cat(fmStr)
+```
+
+```{r Initialization}
+# Chunk to setup everything
+# Clear workspace
+rm(list=ls()) 
+
+# Setup directories
+basePath <- dirname(getwd())
+
+Rcode <- file.path(dirname(getwd()), "code") 
+HIVcode <- file.path(basePath, "code") 
+dataFolder <- file.path(basePath, "data")
+outputFolder <- file.path(basePath, "output")
+figuresFolder <- file.path(basePath, "output","figures")
+
+# Set working directory
+#setwd(basePath)
+
+# Load standard libraries and options ----------------------------------
+source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
+source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+
+# Primary script parameters
+currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
+
+
+```
+
+```{r Script parameters}
+# Chunk to enter all the script parameters we will use
+analysisYear <- 2015
+startYear <- 1990
+
+plots <- FALSE       # TRUE if we want to plot things
+bindCascade <- TRUE  # TRUE if we want to store all the cascade results 
+                     # one data frame
+
+saveCascade <- TRUE       # save final cascade dataframe
+saveNotifications <- TRUE # save cleaned notifications set
+saveResults <- TRUE       # save information national annual notifications
+savePldhiv <- TRUE        # save PLDHIV estimates separately
+
+# set hivSet function parameters
+targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
+targetAge <- 'all' #groups 0, 1, 2, 3, 4...
+targetCob <- 'non-australia' #all=including n/a, Thailand, etc.
+targetExposure <- 'all'
+targetAtsi <- 'non-australia' #0 or 1
+targetState <- 'all' #NSW, VIC, etc
+targetLocalRegion <- 'all' #tbd
+targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc.
+
+# PLDHIV 
+nationalUniques <- TRUE # use proportion from National estimates for 
+                        # sub-population de-duplication
+
+indigKnown <- FALSE  #TRUE # only use notifications with indigenous
+                     # classification for indigenous estimates
+
+
+```
+
+```{r Functions}
+# Load and define useful functions for analysis 
+# POTENTIALLY PUT SOME FUNCTIONS INTO A SEPARATE SCRIPT FOR SOURCING
+
+# Load function to remove duplicates
+source(file.path(Rcode,"RemoveDuplicates.R"), echo=TRUE)
+
+# Load function to calculate number living with diagnosed HIV
+source(file.path(Rcode,"LivingDiagnosed.R"), echo=TRUE)
+
+# Source function for filling in missing data
+source(file.path(Rcode, "FillMissing.R"), echo=TRUE)
+
+# Function to easily extract sub-populations of interest 
+# SHOULD GO INTO a SEPARTE FUNCTION FILE
+subhivset <- function(hivdataframe, fAge, fExposure, fCob, fAtsi, fLocalRegion, fGlobalRegion){
+  
+  subframe <- hivdataframe
+  
+  if(fAge!='all'){
+    #to be filled later
+  }
+  if(fExposure!='all'){
+    subframe <- filter(subframe, exposure == fExposure)
+  }
+  if(fCob!='all'){
+    if(fCob=='non-australia'){
+      subframe <- filter(subframe, cob!='Not Reported') #remove all missings
+      subframe <- filter(subframe, !is.na(cob)) #remove all missings
+      subframe <- filter(subframe, cob != 'Australia') #get only non-Australians
+    }#else if(fCob=='non-australia all'){
+      #missingframe <- filter(subframe, cob=='Not Reported') #get subset of all missing cobs
+      #nonmissingframe <- filter(subframe, cob!='Not Reported') #remove all missings
+      #subframe <- filter(nonmissingframe, cob != 'Australia') #get only non-Australians
+      #get proportion of non-australians from missings by applying proportion of non-australians from non-missings; get only those who are non-atsi
+      #proportion <- nrow(subframe)/nrow(nonmissingframe)
+      #missingframe <- filter(missingframe, indigenous != 'Aboriginal')
+      #proportionExtract <- floor(proportion*nrow(missingframe))
+      #missingframe <- missingframe[1:proportionExtract,]
+      #append a subset of missingframe to subframe
+      #subframe <- rbind(missingframe, subframe)
+    #}
+    else{
+      subframe <- filter(subframe, cob == fCob)
+    }
+  }
+  if(fAtsi!='all'){
+    if(fAtsi=='non-australia'){
+      #subframe <- filter(subframe, aboriggroup == 'othercob')
+    }else{
+      if(fAtsi=='non-atsi'){
+        subframe <- filter(subframe, aboriggroup == 'non-indigenous') 
+      }else if(fAtsi=='atsi'){
+        subframe <- filter(subframe, aboriggroup == 'indigenous') 
+      }
+    }
+    #what to do with NA's?
+  }
+  if(fLocalRegion!='all'){
+    subframe <- filter(subframe, localregion == fLocalRegion)
+  }
+  if(fGlobalRegion!='all'){
+    subframe <- filter(subframe, globalregion == fGlobalRegion)
+  }
+
+  return(subframe)
+}
+
+# Function for removing duplicates annually
+numUnique <- function(dobframe, years,ignore, file = NA) {
+  # Loop through years and calculate cumulative number of unique cases 
+  numcases <- rep(NA,length(years))
+  for (ii in seq(along=years)) {
+    dobvector <- filter(dobframe,yeardiagnosis <= years[ii])$dob
+    if (length(dobvector) != 0) {
+      # Make sure our dobvector isn't empty
+      numcases[ii] <- RemoveDuplicates(dobvector,ignore)
+    }
+  }
+  
+  # If selected write final output to file
+  if (!is.na(file)) {
+    numcases[ii] <- RemoveDuplicates(dobvector,ignore, write = file)
+  }
+  
+  # Return vector of unique cases
+  return(numcases)
+}
+
+# Function to create file name for deduplicted output
+deduplicateFile <- function(pop, state, mode, years) {
+  filename <- paste(basePath, "/output/uniquehiv-", state, "_", mode, 
+                    "_", toString(tail(years,1)),sep="")
+}
+
+# Function is replace current estimates with estimates for 
+# specific populations obtained separately for a specific time period. 
+# These values are read in from a csv file. 
+
+replaceEstimates <- function(cascade, hardcode) {  
+  # Replace with updated values
+  for (ii in 1:nrow(hardcode)) {
+    cascade <- cascade %>%
+      mutate(value = ifelse(population == hardcode$population[ii] &
+                              year == hardcode$year[ii] &
+                              stage == hardcode$stage[ii], 
+                            hardcode$value[ii],
+                            value),
+             lower = ifelse(population == hardcode$population[ii] &
+                              year == hardcode$year[ii] &
+                              stage == hardcode$stage[ii], 
+                            hardCodeValues$lower[ii],
+                            lower),
+             upper = ifelse(population == hardcode$population[ii] &
+                              year == hardcode$year[ii] &
+                              stage == hardcode$stage[ii], 
+                            hardcode$upper[ii],
+                            upper))
+  }
+  
+  return(cascade)
+}
+
+```
+
+```{r Load overall estimates}
+# This chunk creates or loads the overall cascade estimates for proportion 
+# unique, mortality, and overses migration
+
+# if required output exists load it 
+# else source a script or function to create the output 
+
+```
+
+```{r Subset notifications}
+# This chunck loads the national notifications and subsets based on the
+# specified criteria in Script paramaters
+
+# Load notifications
+
+# Source subset function
+
+# Create subsetted notifiactions dataframe
+```
+
+```{r Annual notifications}
+# This chuck creates a dataframe of the annual notifications for the specified 
+# criteria.
+
+
+# Fill in missing data and years ----------------------------------------------
+
+
+```
+
+
+```{r Adjust parameters}
+# This chuck is used to create adjusted mortality and migratio rates for the 
+# specified criteria
+ 
+```
+
+```{r Calculate PLDHIV}
+# This chunk fianlly calculates the number of people living with diagnosed HIV
+
+```
+
+

@@ -2,9 +2,10 @@
 
 # Main directory
 Archive/
-data/*.csv
-data/HIV/
-data/ABS_population_sizes.xlsx
+data/*
+!data/ABS_departures_clean-2015.csv
+!data/ABS_interstate_clean-2015.csv
+!data/ABS_migration_clean-2015.csv
 /dashboards/*.csv
 /dashboards/rsconnect/
 /*.xlsm
@@ -25,8 +26,11 @@ Rplots.pdf
 PHC CT request_NSW data only_updated_26July2016.xlsx
 
 # HIV directory
+HIV/*.nb.html
 HIV/data/
-HIV/output/
+HIV/output/*
+!HIV/output/HIVcascadeEstimates-2015.csv
+
 HIV/docs/
 HIV/subprojects/
 
@@ -35,4 +39,4 @@ Chlamydia/data/raw/*
 !Chlamydia/data/raw/CT notifications_2015_National_Estimate-2016-09-27.xlsx
 Chlamydia/output/figures/
 Chlamydia/ChlamydiaCascade.nb.html
-/data/
+
