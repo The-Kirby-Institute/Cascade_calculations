@@ -30,6 +30,10 @@ HIV/*.nb.html
 HIV/data/
 HIV/output/*
 !HIV/output/HIVcascadeEstimates-2015.csv
+# Temporarily ignore stat analysis files
+HIV/Methodology.docx
+HIV/TREND_v1.2.do
+HIV/output.dta
 
 HIV/docs/
 HIV/subprojects/
