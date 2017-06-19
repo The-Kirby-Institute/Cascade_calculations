@@ -213,16 +213,19 @@ origHivSet <- hivSetOrig %>%
   summarise(notifications = n()) %>% 
   mutate(totalnotifications  = cumsum(notifications)) %>% 
   filter(yeardiagnosis <= analysisYear)   
+
 hivResults <- hivSet %>% 
   group_by(yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
   mutate(totalnotifications  = cumsum(notifications)) %>% 
-  filter(yeardiagnosis <= analysisYear)   
+  filter(yeardiagnosis <= analysisYear) 
+
 hivResultsKnown <- hivSetKnown %>% 
   group_by(yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
   mutate(totalnotifications  = cumsum(notifications)) %>% 
   filter(yeardiagnosis <= analysisYear) 
+
 hivResultsUnknown <- hivSetUnknown %>% 
   group_by(yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
@@ -283,6 +286,9 @@ hivResults$drupper <- deathRate_max
 # This chuck is used to create adjusted mortality and migration rates for the 
 # specified criteria
 
+load("nonIndigenous_Adjustment.Rda")
+
+
  
 ```
 
@@ -325,8 +331,8 @@ migrationRateMin <- filter(hivMigrate, state == "all")$lower
 migrationRateMax <- filter(hivMigrate, state == "all")$upper
 
 # Calculate number living with diagnosed HIV and range
-pldhivAll <- LivingDiagnosed(cumDiagnoses, deathRate,
-                             migrationRate, propStay)
+pldhivAll <- LivingDiagnosed(cumDiagnoses, nonAborigMortalityFactor * deathRate,
+                             nonAborigMigrationFactor * migrationRate, ) # propStay)
 
 # Use max rates for min estimate because they are removal rates 
 # and vice versa
