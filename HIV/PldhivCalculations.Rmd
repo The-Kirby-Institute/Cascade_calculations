@@ -152,6 +152,24 @@ hivData$yeardeath <- as.numeric(substr(hivData$datedeath, 1, 4))
 
 allYears <- min(hivData$yeardiagnosis):analysisYear # All years of data
 
+#clean aboriggroup
+hivData$aboriggroup <- rep(NA,nrow(hivData))
+
+# Aboriginal group
+if (analysisYear < 2015) {
+  hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
+  hivData$aboriggroup[hivData$cob==0] <- NA
+  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
+  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non indigenous"] <- "non-indigenous" 
+} else {
+  hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
+  # MAY NEED TO BE CAREFUL WITH MISSING COUNTRY OF BIRTH INDIGENOUS
+  # hivData$aboriggroup[hivData$cob==0 & hivData$indigenous == "Aboriginal"] <- "indigenous"
+  # hivData$aboriggroup[hivData$cob==0 & hivData$indigenous != "Aboriginal"] <- "not-reported"
+  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
+  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non-Indigenous"] <- "non-indigenous" 
+}
+
 # transfer cob to cobCode
 hivData$cobcode <- hivData$cob
 
@@ -161,26 +179,14 @@ crCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
 # if cob is not in crCodes/NA, change to Not Reported 
 hivData$cob[!(hivData$cobcode %in% crCodes$COUNTRY_CODE)] <- "Not Reported"
 
+# CHANGE NA TO NOT REPORTED AS WELL (only 22 in the data set)
+hivData$cob[is.na(hivData$cob)] <- "Not Reported"
+
 # change cob from code to String
 hivData$cob <- crCodes$COUNTRY_NAME[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
 
-#add region
+#add region - DO LATER?
 hivData$globalregion <- crCodes$REGION[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
-  
-#clean aboriggroup
-hivData$aboriggroup <- rep(NA,nrow(hivData))
-
-if (analysisYear < 2015) {
-  hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
-  hivData$aboriggroup[hivData$cob==0] <- NA
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non indigenous"] <- "non-indigenous" 
-} else {
-  hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
-  hivData$aboriggroup[hivData$cob==0] <- NA
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non indigenous"] <- "non-indigenous" 
-}
 
 # Quick checks that we are not doing analysis outside of the data.
 if (max(hivData$yeardiagnosis) < analysisYear) {
@@ -197,6 +203,8 @@ hivSetOrig <- filter(hivData, yeardiagnosis <= analysisYear)
 hivSet <- subhivset(hivSetOrig, targetAge, targetExposure, targetCob, targetAtsi, targetLocalRegion, targetGlobalRegion)
 
 ##get set of AU cob and unknowns to distribute proportion
+## I ACTUALLY DONT THINK WE NEED THIS - ALSO NEED TO BE CAREFUL OF 
+## INDIGENOUS IN THE CALCULATIONS
 hivSetKnown <- filter(hivData, yeardiagnosis <= analysisYear)
 hivSetKnown <- subset(hivSetKnown, cob!="Not Reported")
 hivSetKnown <- subset(hivSetKnown, !is.na(cob))
@@ -213,6 +221,38 @@ origHivSet <- hivSetOrig %>%
   summarise(notifications = n()) %>% 
   mutate(totalnotifications  = cumsum(notifications)) %>% 
   filter(yeardiagnosis <= analysisYear)   
+
+annualDiags <- hivSetOrig %>%
+  group_by(yeardiagnosis) %>% 
+  summarise(all = n(),
+            cob_unknown = sum(is.na(cob) | cob=="Not Reported"),
+            indigenous = sum(!is.na(aboriggroup) & aboriggroup == "indigenous"))
+
+if (targetCob != "all") {            
+  adjustDiags <- hivSet %>% 
+    group_by(yeardiagnosis) %>% 
+    summarise(subset = n()) %>%
+    ungroup() %>%
+    right_join(annualDiags, by = "yeardiagnosis") %>%
+    mutate(subset = ifelse(is.na(subset),0, subset),
+           cob_known = all - indigenous - cob_unknown) %>%
+    mutate(prop_known = subset / cob_known) %>%
+    mutate(prop_known = ifelse(is.nan(prop_known),0, prop_known)) %>%
+    mutate(adjusted_subset = round(subset  + cob_unknown * prop_known)) %>%
+    rename(year = yeardiagnosis)
+  
+  subsetDiags <- adjustDiags %>% 
+    select(year, adjusted_subset) %>%
+    rename(subset = adjusted_subset)
+  
+} else {
+  subsetDiags <- hivSet %>% 
+    group_by(yeardiagnosis) %>% 
+    summarise(subset = n()) %>%
+    rename(year = yeardiagnosis)
+}
+
+
 
 hivResults <- hivSet %>% 
   group_by(yeardiagnosis) %>% 
@@ -249,6 +289,8 @@ colnames(proportion) <- c("yeardiagnosis")
 proportion$proportion <- hivResults$notifications/hivResultsKnown$notifications
 proportion$proportion[is.na(proportion$proportion)] <- 0
 hivResults$notifications <- hivResults$notifications + floor(proportion$proportion*hivResultsUnknown$notifications)
+
+hivResults$notifications <- subsetDiags$subset
 hivResults$totalnotifications <- cumsum(hivResults$notifications)
 
 ```
@@ -315,10 +357,11 @@ hivDiagnosed <- data.frame(stage = character(),
 # First calculate overall number -----------------------------------------
 
 # Setup all our vectors - first by filling in missing cumulative diagnoses
-filledDiagnoses <- FillMissing(allYears, hivResults$yeardiagnosis, 
-                                 hivResults$uniquecases)
+# filledDiagnoses <- FillMissing(allYears, hivResults$yeardiagnosis, 
+#                                  hivResults$uniquecases)
 
-cumDiagnoses <- filledDiagnoses$value
+# cumDiagnoses <- filledDiagnoses$value
+cumDiagnoses <- round(hivResults$uniquecases)
 
 # All death rates used for all  populations
 deathRate <- hivResults$deathrate
@@ -331,8 +374,10 @@ migrationRateMin <- filter(hivMigrate, state == "all")$lower
 migrationRateMax <- filter(hivMigrate, state == "all")$upper
 
 # Calculate number living with diagnosed HIV and range
-pldhivAll <- LivingDiagnosed(cumDiagnoses, nonAborigMortalityFactor * deathRate,
-                             nonAborigMigrationFactor * migrationRate, propStay)
+pldhivAll <- LivingDiagnosed((1 - nonAborigMigrationFactor * (1-propStay)) *
+                               cumDiagnoses, 
+                             nonAborigMortalityFactor * deathRate,
+                             nonAborigMigrationFactor * migrationRate)
 
 # Use max rates for min estimate because they are removal rates 
 # and vice versa
