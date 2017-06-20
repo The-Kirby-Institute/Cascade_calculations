@@ -75,24 +75,12 @@ savePldhiv <- TRUE        # save PLDHIV estimates separately
 # set hivSet function parameters
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'non-australia' #all=including n/a, Thailand, etc.
+targetCob <- 'non-australia' # all=including n/a, Thailand, etc.
 targetExposure <- 'all'
-targetAtsi <- 'non-australia' #0 or 1
-targetState <- 'all' #NSW, VIC, etc
+targetAtsi <- 'non-australia' # 0 or 1
+targetState <- 'all' # NSW, VIC, etc
 targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc.
-
-# PLDHIV 
-nationalUniques <- TRUE # use proportion from National estimates for 
-                        # sub-population de-duplication
-
-indigKnown <- FALSE  #TRUE # only use notifications with indigenous
-                     # classification for indigenous estimates
-
-permDeparts <- TRUE
-
-# Overall
-replaceValues <- TRUE # Replace with specific estimates
 
 ```
 
@@ -162,12 +150,15 @@ if (analysisYear < 2015) {
   hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
   hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non indigenous"] <- "non-indigenous" 
 } else {
-  hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
+  # hivData$aboriggroup[hivData$cob!=1100] <- "othercob"
   # MAY NEED TO BE CAREFUL WITH MISSING COUNTRY OF BIRTH INDIGENOUS
   # hivData$aboriggroup[hivData$cob==0 & hivData$indigenous == "Aboriginal"] <- "indigenous"
   # hivData$aboriggroup[hivData$cob==0 & hivData$indigenous != "Aboriginal"] <- "not-reported"
   hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non-Indigenous"] <- "non-indigenous" 
+   hivData$aboriggroup[hivData$indigenous != "Aboriginal"] <- "non-indigenous"
+  hivData$aboriggroup[is.na(hivData$aboriggroup)] <- "non-indigenous"
+  # hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non-Indigenous"] <- "non-indigenous" 
+  # hivData$aboriggroup[hivData$cob == 1100 & is.na(hivData$indigenous)] <- "non-indigenous"
 }
 
 # transfer cob to cobCode
@@ -179,14 +170,20 @@ crCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
 # if cob is not in crCodes/NA, change to Not Reported 
 hivData$cob[!(hivData$cobcode %in% crCodes$COUNTRY_CODE)] <- "Not Reported"
 
-# CHANGE NA TO NOT REPORTED AS WELL (only 22 in the data set)
-hivData$cob[is.na(hivData$cob)] <- "Not Reported"
-
 # change cob from code to String
 hivData$cob <- crCodes$COUNTRY_NAME[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
 
 #add region - DO LATER?
 hivData$globalregion <- crCodes$REGION[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
+
+# CHANGE NA TO NOT REPORTED AS WELL (only 22 in the data set)
+hivData$cob[is.na(hivData$cob)] <- "Not Reported"
+
+# Convert some of the not reporteds to "overseas" if country of birth is missing 
+# but region of birth is available.
+hivData$cob <- as.character(hivData$cob)
+hivData$cob[hivData$cob == "Not Reported" & !(hivData$rob %in%  c(0,7))] <-
+  "Overseas"
 
 # Quick checks that we are not doing analysis outside of the data.
 if (max(hivData$yeardiagnosis) < analysisYear) {
@@ -222,11 +219,14 @@ origHivSet <- hivSetOrig %>%
   mutate(totalnotifications  = cumsum(notifications)) %>% 
   filter(yeardiagnosis <= analysisYear)   
 
+
+
 annualDiags <- hivSetOrig %>%
   group_by(yeardiagnosis) %>% 
   summarise(all = n(),
-            cob_unknown = sum(is.na(cob) | cob=="Not Reported"),
-            indigenous = sum(!is.na(aboriggroup) & aboriggroup == "indigenous"))
+            cob_unknown = sum(is.na(cob) | cob == "Not Reported"),
+            indigenous = sum(!is.na(aboriggroup) & aboriggroup == "indigenous"),
+            overseas = sum(cob=="Overseas"))
 
 if (targetCob != "all") {            
   adjustDiags <- hivSet %>% 
@@ -234,16 +234,37 @@ if (targetCob != "all") {
     summarise(subset = n()) %>%
     ungroup() %>%
     right_join(annualDiags, by = "yeardiagnosis") %>%
-    mutate(subset = ifelse(is.na(subset),0, subset),
+    mutate(subset = ifelse(is.na(subset), 0, subset),
            cob_known = all - indigenous - cob_unknown) %>%
-    mutate(prop_known = subset / cob_known) %>%
-    mutate(prop_known = ifelse(is.nan(prop_known),0, prop_known)) %>%
-    mutate(adjusted_subset = round(subset  + cob_unknown * prop_known)) %>%
+    mutate(non_subset = cob_known - subset - overseas) %>%
+    mutate(prop_subset = subset / cob_known,
+           prop_non_subset = non_subset / cob_known,
+           prop_overseas = overseas/cob_known) %>%
+    mutate(prop_subset = ifelse(is.nan(prop_subset),0, prop_subset),
+           prop_non_subset = ifelse(is.nan(prop_non_subset),0, prop_non_subset),
+           prop_overseas = ifelse(is.nan(prop_overseas),0, prop_overseas)) %>%
+    mutate(adjusted_subset = subset  + cob_unknown * prop_subset,
+           adjusted_non_subset = non_subset + cob_unknown *    
+             prop_non_subset,
+           adjusted_overseas = overseas + cob_unknown * prop_overseas) %>%
     rename(year = yeardiagnosis)
   
+  # Need to adjust appropriately
+  if (targetCob == "non-australia") {
+  # Have to add the other overseas
   subsetDiags <- adjustDiags %>% 
-    select(year, adjusted_subset) %>%
-    rename(subset = adjusted_subset)
+    mutate(subset = adjusted_subset + adjusted_overseas) %>%
+    select(year, subset)
+  } else if (targetCob == "Australia") {
+    # Have to add the indigenous
+    subsetDiags <- adjustDiags %>%
+    mutate(subset = adjusted_subset - adjusted_overseas) %>%
+    select(year, subset)
+  } else {
+    subsetDiags <- adjustDiags %>% 
+    mutate(subset = adjusted_subset) %>%
+    select(year, subset)
+  }
   
 } else {
   subsetDiags <- hivSet %>% 
@@ -378,6 +399,10 @@ pldhivAll <- LivingDiagnosed((1 - nonAborigMigrationFactor * (1-propStay)) *
                                cumDiagnoses, 
                              nonAborigMortalityFactor * deathRate,
                              nonAborigMigrationFactor * migrationRate)
+
+LivingDiagnosed(cumDiagnoses, 
+                             nonAborigMortalityFactor * deathRate,
+                             nonAborigMigrationFactor * migrationRate, propStay)
 
 # Use max rates for min estimate because they are removal rates 
 # and vice versa
