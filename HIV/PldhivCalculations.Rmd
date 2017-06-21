@@ -204,8 +204,9 @@ if (min(hivData$yeardiagnosis) > startYear) {
 hivSetOrig <- filter(hivData, yeardiagnosis <= analysisYear)
 
 # Set indigenous aside separately to add on later if required
-hivSetOrig <- filter(hivSetOrig, aboriggroup == 'non-indigenous')
 hivSetIndigenous <- filter(hivSetOrig, aboriggroup == 'indigenous')
+hivSetOrig <- filter(hivSetOrig, aboriggroup == 'non-indigenous')
+
 
 # if (targetCob == "australia") {
 #   if (targetAtsi == "atsi") {
@@ -250,13 +251,23 @@ origHivSet <- hivSetOrig %>%
 allDiags <- hivSetOrig %>%
   group_by(yeardiagnosis) %>% 
   summarise(all = n()) 
-excludedDiags <- hivSetExcluded %>%
-  group_by(yeardiagnosis) %>% 
-  summarise(excluded = n()) 
+if (length(hivSetExcluded) == 0) {
+  excludedDiags <- data_frame(yeardiagnosis = allDiags$yeardiagnosis,
+                            excluded = 0)
+} else {
+  excludedDiags <- hivSetExcluded %>%
+    group_by(yeardiagnosis) %>% 
+    summarise(excluded = n()) 
+}
+
+if (length(hivSetUnknown) == 0) {
+ unknownDiags <- data_frame(yeardiagnosis = allDiags$yeardiagnosis,
+                            unknown = 0)
+} else {
 unknownDiags <- hivSetUnknown %>%
   group_by(yeardiagnosis) %>% 
   summarise(unknown = n())
-
+}
             # cob_unknown = sum(is.na(cob) | cob == "Not Reported"),
             # indigenous = sum(!is.na(aboriggroup) & aboriggroup == "indigenous"),
             # overseas = sum(cob=="Overseas"))
@@ -396,17 +407,17 @@ source(file.path(Rcode, "EstimateMigration.R"), echo=TRUE)
 #Function to estimate death rate
 source(file.path(Rcode, "EstimateMortality.R"), echo=TRUE)
 
-hivResults$osrate <- allMigrate$rate
-hivResults$oslower <- allMigrate$lower
-hivResults$osupper <- allMigrate$upper
-
-hivResults$deathslinked <- deaths
-hivResults$deathslower <- deaths_min
-hivResults$deathsupper <- deaths_max
-
-hivResults$deathrate <- deathRate
-hivResults$drlower <- deathRate_min
-hivResults$drupper <- deathRate_max
+# hivResults$osrate <- allMigrate$rate
+# hivResults$oslower <- allMigrate$lower
+# hivResults$osupper <- allMigrate$upper
+# 
+# hivResults$deathslinked <- deaths
+# hivResults$deathslower <- deaths_min
+# hivResults$deathsupper <- deaths_max
+# 
+# hivResults$deathrate <- oldResults$deathrate
+# hivResults$drlower <- deathRate_min
+# hivResults$drupper <- deathRate_max
 
 
 
@@ -449,27 +460,27 @@ hivDiagnosed <- data.frame(stage = character(),
 #                                  hivResults$uniquecases)
 
 # cumDiagnoses <- filledDiagnoses$value
-cumDiagnoses <- round(hivResults$uniquecases)
+cumDiagnoses <- hivResults$uniquecases
 
 # All death rates used for all  populations
-deathRate <- hivResults$deathrate
-deathRateMin <- hivResults$drlower
-deathRateMax <- hivResults$drupper
+deathRate <- oldResults$deathrate
+deathRateMin <- oldResults$drlower
+deathRateMax <- oldResults$drupper
 
 # National migration rates
-migrationRate <- filter(hivMigrate, state == "all")$rate
-migrationRateMin <- filter(hivMigrate, state == "all")$lower
-migrationRateMax <- filter(hivMigrate, state == "all")$upper
+# migrationRate <- filter(hivMigrate, state == "all")$rate
+# migrationRateMin <- filter(hivMigrate, state == "all")$lower
+# migrationRateMax <- filter(hivMigrate, state == "all")$upper
+
+migrationRate <- oldResults$osrate
 
 # Calculate number living with diagnosed HIV and range
+
 pldhivAll <- LivingDiagnosed((1 - nonAborigMigrationFactor * (1-propStay)) *
-                               cumDiagnoses, 
+                               cumDiagnoses,
                              nonAborigMortalityFactor * deathRate,
                              nonAborigMigrationFactor * migrationRate)
 
-LivingDiagnosed(cumDiagnoses, 
-                             nonAborigMortalityFactor * deathRate,
-                             nonAborigMigrationFactor * migrationRate, propStay)
 
 # Use max rates for min estimate because they are removal rates 
 # and vice versa

@@ -6,7 +6,8 @@ subhivset <- function(hivdataframe, fAge, fExposure, fCob, fAtsi, fLocalRegion, 
   
   subframe <- hivdataframe
   includeframe <- subframe
-  # excludeframe <- 
+  unknownframe <- data_frame()
+  excludeframe <- data_frame()
   
   if(fAge!='all'){
     #to be filled later
