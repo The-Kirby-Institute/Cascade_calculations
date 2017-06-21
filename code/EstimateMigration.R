@@ -4,6 +4,8 @@
 
 # Load all the data sets we need - the ABS data is stored in the main 
 # Cascade_calculations respository data/ directory
+# 
+permDeparts <- TRUE
 
 mainDataFolder <- file.path(dirname(getwd()), "data")
 
