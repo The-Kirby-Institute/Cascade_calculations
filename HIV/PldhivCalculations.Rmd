@@ -75,7 +75,7 @@ savePldhiv <- TRUE        # save PLDHIV estimates separately
 # set hivSet function parameters
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'Australia' # all=including n/a, Thailand, etc.
+targetCob <- 'non-australia' # all=including n/a, Thailand, etc.
 targetExposure <- 'all'
 targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
 targetState <- 'all' # NSW, VIC, etc
