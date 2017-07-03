@@ -30,19 +30,19 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Primary script parameters
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
-analysisYear <- 2015
+analysisYear <- 2016
 startYear <- 1990
 
 # Script options ------------------------------------------------------
 
 plots <- FALSE       # TRUE if we want to plot things
-bindCascade <- TRUE  # TRUE if we want to store all the cascade results 
+bindCascade <- FALSE  # TRUE if we want to store all the cascade results 
                      # one data frame
 
-saveCascade <- TRUE       # save final cascade dataframe
-saveNotifications <- TRUE # save cleaned notifications set
-saveResults <- TRUE       # save information national annual notifications
-savePldhiv <- TRUE        # save PLDHIV estimates separately
+saveCascade <- FALSE       # save final cascade dataframe
+saveNotifications <- FALSE # save cleaned notifications set
+saveResults <- FALSE       # save information national annual notifications
+savePldhiv <- FALSE        # save PLDHIV estimates separately
 
 # PLDHIV 
 nationalUniques <- TRUE # use proportion from National estimates for 
@@ -681,7 +681,7 @@ if (permDeparts) {
                       1.231400608, 1.231146313, 1.230567577, 1.22257888,
                       1.211940692, 1.20153294, 1.191640652, 1.180852205,
                       1.170562151, 1.160456052,	1.150374872, 1.140323439,
-                      1.130276173,	1.12031362)
+                      1.130276173, 1.12031362, 1.12031362)
     
     mrate <- relativeRate * mrate
     
