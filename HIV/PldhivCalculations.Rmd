@@ -75,7 +75,7 @@ savePldhiv <- TRUE        # save PLDHIV estimates separately
 # set hivSet function parameters
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'non-australia' # all=including n/a, Thailand, etc.
+targetCob <- 'Australia' # all=including n/a, Thailand, etc.
 targetExposure <- 'all'
 targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
 targetState <- 'all' # NSW, VIC, etc
@@ -476,6 +476,8 @@ deathRateMax <- oldResults$drupper
 # migrationRateMax <- filter(hivMigrate, state == "all")$upper
 
 migrationRate <- oldResults$osrate
+migrationRateMin <- oldResults$oslower
+migrationRateMax <- oldResults$osupper
 
 # Calculate number living with diagnosed HIV and range
 
@@ -487,14 +489,15 @@ pldhivAll <- LivingDiagnosed((1 - nonAborigMigrationFactor * (1-propStay)) *
 
 # Use max rates for min estimate because they are removal rates 
 # and vice versa
-# pldhivAllMin <- LivingDiagnosed(cumDiagnoses,
-#                                 deathRateMax,
-#                                 migrationRateMax,
-#                                 propStayLower) 
-# pldhivAllMax <- LivingDiagnosed(cumDiagnoses,
-#                                 deathRateMin,
-#                                 migrationRateMin,
-#                                 propStayUpper) 
+pldhivAllMin <- LivingDiagnosed((1 - nonAborigMigrationFactor * 
+                                   (1-propStayLower)) *cumDiagnoses,
+                                nonAborigMortalityFactor * deathRateMax,
+                                nonAborigMigrationFactor * migrationRateMax)
+
+pldhivAllMax <- LivingDiagnosed((1 - nonAborigMigrationFactor * 
+                                   (1-propStayUpper)) *cumDiagnoses,
+                                nonAborigMortalityFactor * deathRateMin,
+                                nonAborigMigrationFactor * migrationRateMin)
 # 
 # # Store results
  nyears <- length(allYears)
@@ -506,11 +509,6 @@ pldhivAll <- LivingDiagnosed((1 - nonAborigMigrationFactor * (1-propStay)) *
 #                             lower = pldhivAllMin,
 #                             upper = pldhivAllMax))
 # 
-# 
-# # Finally bind to overall results -----------------------------------------
-# if (bindCascade) {
-#   hivCascade <- rbind(hivCascade, hivDiagnosed)
-# }
 # 
 # # Replace values with hard coded if necessary
 # if (replaceValues) {
