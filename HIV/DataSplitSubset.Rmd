@@ -179,6 +179,9 @@ hivData$yeardeath <- as.numeric(format(as.Date(hivData$datedeath, '%d/%m/%Y'), "
 hmtData$timeneg <- as.numeric(as.Date(as.character(hmtData$datediagnosis), format="%d/%m/%Y") - as.Date(as.character(hmtData$dateneg), format="%d/%m/%Y"))  ##CHANGED 
 hmtData$timeneg[is.na(hmtData$timeneg)] <- 1e5
 
+# Add a broad exposure category indicator.
+hmtData$expgroup <- hmtData$exposure
+
 # Remove unnecessary variables
 hmtData <- hmtData %>%
   select(-datediagnosis, -dateaids, -exposure)
@@ -236,6 +239,9 @@ write_csv(annMigrants, file.path(dataFolderAll, "Emig.csv"))
 
 ```{r Extract annual notifications data (overall)}
 # Number of HIV diagnoses per year
+fillMissing <- as.data.frame(allYears) 
+colnames(fillMissing) <- c("year")
+
 allHivDiags <- hmtData %>%
   group_by(yearhiv) %>% 
   summarise(all = n()) 
@@ -274,7 +280,12 @@ adjustHivDiags <- hmtSet %>%
   mutate(adjusted_included = included  + unknown * prop_included,
          adjusted_excluded = excluded + unknown * prop_excluded)%>%
   rename(year = yearhiv)
- 
+
+HivDiags <- subset(adjustHivDiags, select=c(year, adjusted_included))
+HivDiags <- merge(fillMissing, HivDiags, by="year", all.x=TRUE)
+HivDiags[is.na(HivDiags)] <- 0 
+colnames(HivDiags)[2] <- "all"
+
 # Number of aids diagnoses
 allAidsDiags <- hmtData %>%
   group_by(yearaids) %>% 
@@ -289,7 +300,7 @@ if (length(hmtSetExcluded) == 0) {
 }
 
 if (length(hmtSetUnknown) == 0) {
- unknownAidsDiags <- data_frame(yearaids = allAidsDiags$yearhiv,
+ unknownAidsDiags <- data_frame(yearaids = allAidsDiags$yearaids,
                             unknown = 0)
 } else {
 unknownAidsDiags <- hmtSetUnknown %>%
@@ -314,6 +325,11 @@ adjustAidsDiags <- hmtSet %>%
   mutate(adjusted_included = included  + unknown * prop_included,
          adjusted_excluded = excluded + unknown * prop_excluded)%>%
   rename(year = yearaids)
+
+AidsDiags <- subset(adjustAidsDiags, select=c(year, adjusted_included))
+AidsDiags <- merge(fillMissing, AidsDiags, by="year", all.x=TRUE)
+AidsDiags[is.na(AidsDiags)] <- 0 
+colnames(AidsDiags)[2] <- "all"
 
 # Number of HIV and aids diagnoses per year
 indices <- hmtData$yearhiv == hmtData$yearaids
@@ -358,10 +374,15 @@ adjustHivAidsDiags <- hmtSet[indicesSet, ] %>%
          adjusted_excluded = excluded + unknown * prop_excluded)%>%
   rename(year = yearhiv)
 
+HivAidsDiags <- subset(adjustHivAidsDiags, select=c(year, adjusted_included))
+HivAidsDiags <- merge(fillMissing, HivAidsDiags, by="year", all.x=TRUE)
+HivAidsDiags[is.na(HivAidsDiags)] <- 0 
+colnames(HivAidsDiags)[2] <- "all"
+
 # Write to file
-write_csv(adjustHivDiags, file.path(dataFolderAll, "HIV.csv"))
-write_csv(adjustAidsDiags, file.path(dataFolderAll, "AIDS.csv"))
-write_csv(adjustHivAidsDiags, file.path(dataFolderAll, "HIVAIDS.csv"))
+write_csv(HivDiags, file.path(dataFolderAll, "HIV.csv"))
+write_csv(AidsDiags, file.path(dataFolderAll, "AIDS.csv"))
+write_csv(HivAidsDiags, file.path(dataFolderAll, "HIVAIDS.csv"))
 
 ```
 
@@ -373,8 +394,6 @@ hivcd41 <- hmtSet %>%
   group_by(yearhiv) %>%
   summarise(all = n()) %>%
   rename(year = yearhiv)
-fillMissing <- as.data.frame(allYears) 
-colnames(fillMissing) <- c("year")
 hivcd41 <- merge(fillMissing, hivcd41, by="year", all.x=TRUE)
 hivcd41[is.na(hivcd41)] <- 0
 
@@ -428,74 +447,95 @@ addExpCols <- function(df, names) {
 }
 
 # Number of HIV diagnoses per year
-diagnosesRisk <- hmtData %>%
+#diagnosesRisk <- hmtSet %>%
+#  group_by(yearhiv, expgroup) %>%
+#  summarise(number = n()) %>%
+#  rename(year = yearhiv) %>%
+#  spread(expgroup, number) %>%
+#  ungroup()
+#diagnosesRisk[is.na(diagnosesRisk)] <- 0 
+#diagnosesRisk <- addExpCols(diagnosesRisk, expNames)
+
+#if (length(hmtSetExcluded) != 0) {
+#  excludedHivDiagsRisk <- hmtSetExcluded %>%
+#      group_by(yearhiv, expgroup) %>%
+#      summarise(number = n()) %>%
+#      rename(year = yearhiv) %>%
+#      spread(expgroup, number) %>%
+#      ungroup()
+#}
+
+#if (length(hmtSetUnknown) != 0) {
+#  unknownHivDiagsRisk <- hmtSetUnknown %>%
+#      group_by(yearhiv, expgroup) %>%
+#      summarise(number = n()) %>%
+#      rename(year = yearhiv) %>%
+#      spread(expgroup, number) %>%
+#      ungroup()
+#}
+
+preadjustHivDiags <- hmtSet %>% 
   group_by(yearhiv, expgroup) %>%
-  summarise(number = n()) %>%
-  rename(year = yearhiv) %>%
-  spread(expgroup, number) %>%
-  ungroup()
-diagnosesRisk[is.na(diagnosesRisk)] <- 0 
-diagnosesRisk <- addExpCols(diagnosesRisk, expNames)
+  summarise(subset = n()) %>%
+  spread(expgroup, subset) %>%
+  #ungroup() %>%
+  rename(year = yearhiv)
+preadjustHivDiags[is.na(preadjustHivDiags)] <- 0
 
-#diagnosesRiskATSI <- hmtDataATSI %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#diagnosesRiskATSI[is.na(diagnosesRiskATSI)] <- 0 
-#diagnosesRiskATSI <- addExpCols(diagnosesRiskATSI, expNames)
-
-#diagnosesRiskNonATSI <- hmtDataNonATSI %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#diagnosesRiskNonATSI[is.na(diagnosesRiskNonATSI)] <- 0 
-#diagnosesRiskNonATSI <- addExpCols(diagnosesRiskNonATSI, expNames)
+adjustHivDiags <- preadjustHivDiags %>%
+  right_join(., select(hivResults, year, notifications), by = "year") %>%
+  mutate(hetero = ifelse(is.na(hetero),0, hetero),
+         msm = ifelse(is.na(as.numeric(msm)),0, as.numeric(msm)),
+         otherexp = ifelse(is.na(otherexp),0, otherexp),
+         pwid = ifelse(is.na(pwid),0, pwid)) %>%
+  mutate(known = hetero + msm + otherexp + pwid) %>%
+  mutate(prop_hetero = hetero / known,
+         prop_msm = msm / known,
+         prop_otherexp = otherexp / known,
+         prop_pwid = pwid / known) %>%
+  mutate(prop_hetero = ifelse(is.nan(prop_hetero),0, prop_hetero), 
+         prop_msm = ifelse(is.nan(prop_msm),0, prop_msm),
+         prop_otherexp = ifelse(is.nan(prop_otherexp),0, prop_otherexp),
+         prop_pwid = ifelse(is.nan(prop_pwid),0, prop_pwid)) %>%
+  mutate(adjusted_hetero = notifications * prop_hetero,
+         adjusted_msm = notifications * prop_msm,
+         adjusted_otherexp = notifications *  prop_otherexp,
+         adjusted_pwid = notifications * prop_pwid) %>%
+  select(-hetero, -msm, -otherexp, -pwid) %>%
+  mutate(hetero = adjusted_hetero, msm = adjusted_msm, otherexp = adjusted_otherexp, pwid = adjusted_pwid) %>%
+  select(-unknown, -known, -prop_hetero, -prop_msm, -prop_otherexp, -prop_pwid, -adjusted_hetero, -adjusted_msm, -adjusted_pwid, -adjusted_otherexp, -notifications)
 
 # Remove unknown notifications by distributing them to other categories
 # in proportion
-temp <- diagnosesRisk
-temp$prop_unknown <- temp$unknown / rowSums(temp[, 2:6])
-tempAdjusted <- temp
-temp$prop_unknown[temp$prop_unknown == 1] <- 0
-tempAdjusted[, 2:5] <- temp[, 2:5] / (1 - temp$prop_unknown)
-tempAdjusted <- select(tempAdjusted, -unknown, -prop_unknown)
-if (is.null(region)) {
-  tempAdjusted[2, 2:ncol(tempAdjusted)] <-  rep(temp$unknown[2] /
-    4, 4)
-}
+#temp <- diagnosesRisk
+#temp$prop_unknown <- temp$unknown / rowSums(temp[, 2:6])
+#tempAdjusted <- temp
+#temp$prop_unknown[temp$prop_unknown == 1] <- 0
+#tempAdjusted[, 2:5] <- temp[, 2:5] / (1 - temp$prop_unknown)
+#tempAdjusted <- select(tempAdjusted, -unknown, -prop_unknown)
 
-diagnosesRisk <- tempAdjusted
-diagnosesRisk <- FillDataFrame(analysisYears, diagnosesRisk)
-diagnosesRisk[, 2:5] <- 
-  apply(diagnosesRisk[, 2:5], 2, 
-                            function(x) x * (1 - propAnnDuplicates))
-
-#tempATSI <- diagnosesRiskATSI
-#tempATSI$prop_unknown <- tempATSI$unknown / rowSums(tempATSI[, 2:6])
-#tempAdjustedATSI <- tempATSI
-#tempATSI$prop_unknown[tempATSI$prop_unknown == 1] <- 0
-#tempAdjustedATSI[, 2:5] <- tempATSI[, 2:5] / (1 - tempATSI$prop_unknown)
-#tempAdjustedATSI <- select(tempAdjustedATSI, -unknown, -prop_unknown)
-#if (is.null(region)) {
-#  tempAdjustedATSI[2, 2:ncol(tempAdjustedATSI)] <-  rep(tempATSI$unknown[2] /
-#    4, 4)
-#}
-
-#diagnosesRiskATSI <- tempAdjustedATSI
-#diagnosesRiskATSI <- FillDataFrame(analysisYears, diagnosesRiskATSI)
-#diagnosesRiskATSI[, 2:5] <- 
-#  apply(diagnosesRiskATSI[, 2:5], 2, 
-#                            function(x) x * (1 - #propAnnDuplicates))
+#diagnosesRisk <- tempAdjusted
+#diagnosesRisk <- merge(fillMissing, diagnosesRisk, by="year", all.x=TRUE)
+#diagnosesRisk[, 2:5] <- 
+#  apply(diagnosesRisk[, 2:5], 2, 
+#                            function(x) x * (1 - propAnnDuplicates))
+#diagnosesRisk[is.na(diagnosesRisk)] <- 0
 
 # Number of HIV and aids diagnoses per year - need to manually add 1980
 # and 1981
 indices <- hmtData$yearhiv == hmtData$yearaids
 
-hivaidsRisk <- hmtData[indices, ] %>%
+hivTemp <- hmtSet%>%
+  group_by(yearhiv, expgroup) %>%
+  summarise(number = n()) %>%
+  rename(year = yearhiv) %>%
+  spread(expgroup, number) %>%
+  ungroup()
+hivTemp[is.na(hivTemp)] <- 0 
+hivTemp <- merge(fillMissing, hivTemp, by="year", all.x=TRUE)
+hivTemp[is.na(hivTemp)] <- 0 
+
+hivaidsRisk <- hmtSet[indices, ] %>%
   group_by(yearhiv, expgroup) %>%
   summarise(number = n()) %>%
   rename(year = yearhiv) %>%
@@ -503,156 +543,89 @@ hivaidsRisk <- hmtData[indices, ] %>%
   ungroup()
 hivaidsRisk[is.na(hivaidsRisk)] <- 0 
 hivaidsRisk <- addExpCols(hivaidsRisk, expNames)
+hivaidsRisk <- merge(fillMissing, hivaidsRisk, by="year", all.x=TRUE)
+hivaidsRisk[is.na(hivaidsRisk)] <- 0 
 
-#hivaidsRiskATSI <- hmtDataATSI[indices, ] %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#hivaidsRiskATSI[is.na(hivaidsRiskATSI)] <- 0 
-#hivaidsRiskATSI <- addExpCols(hivaidsRiskATSI, expNames)
-
-#hivaidsRiskNonATSI <- hmtDataNonATSI[indices, ] %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#hivaidsRiskNonATSI[is.na(hivaidsRiskNonATSI)] <- 0 
-#hivaidsRiskNonATSI <- addExpCols(hivaidsRiskNonATSI, expNames)
+adjustHivAidsRisk <- hivaidsRisk[,c(2:5)]/hivTemp[,c(2:5)] * adjustHivDiags[,c(2:5)]
+adjustHivAidsRisk <- cbind(years = allYears, adjustHivAidsRisk)
+adjustHivAidsRisk[is.na(adjustHivAidsRisk)] <- 0
 
 # Remove unknown notifications by distributing them to other categories
 # in proportion
-temp <- hivaidsRisk
-temp$prop_unknown <- temp$unknown / rowSums(temp[, 2:6])
-tempAdjusted <- temp
-temp$prop_unknown[temp$prop_unknown == 1] <- 0
-tempAdjusted[, 2:5] <- temp[, 2:5] / (1 - temp$prop_unknown)
-tempAdjusted <- select(tempAdjusted, -unknown, -prop_unknown)
+#temp <- hivaidsRisk
+#temp$prop_unknown <- temp$unknown / rowSums(temp[, 2:6])
+#tempAdjusted <- temp
+#temp$prop_unknown[temp$prop_unknown == 1] <- 0
+#tempAdjusted[, 2:5] <- temp[, 2:5] / (1 - temp$prop_unknown)
+#tempAdjusted <- select(tempAdjusted, -unknown, -prop_unknown)
 
-hivaidsRisk <- tempAdjusted
-hivaidsRisk <- FillDataFrame(analysisYears, hivaidsRisk)
-hivaidsRisk[, 2:5] <- 
-  apply(hivaidsRisk[, 2:5], 2, 
-                            function(x) x * (1 - propAnnDuplicates))
-
-#tempATSI <- hivaidsRiskATSI
-#tempATSI$prop_unknown <- tempATSI$unknown / rowSums(tempATSI[, 2:6])
-#tempAdjustedATSI <- tempATSI
-#tempATSI$prop_unknown[tempATSI$prop_unknown == 1] <- 0
-#tempAdjustedATSI[, 2:5] <- tempATSI[, 2:5] / (1 - tempATSI$prop_unknown)
-#tempAdjustedATSI <- select(tempAdjustedATSI, -unknown, -prop_unknown)
-
-#hivaidsRiskATSI <- tempAdjustedATSI
-#hivaidsRiskATSI <- FillDataFrame(analysisYears, hivaidsRiskATSI)
-#hivaidsRiskATSI <- hivaidsRiskATSI[complete.cases(hivaidsRiskATSI),]
-#hivaidsRiskATSI[, 2:5] <- 
-#  apply(hivaidsRiskATSI[, 2:5], 2, 
+#hivaidsRisk <- tempAdjusted
+#hivaidsRisk <- merge(fillMissing, hivaidsRisk, by="year", all.x=TRUE)
+#hivaidsRisk[, 2:5] <- 
+#  apply(hivaidsRisk[, 2:5], 2, 
 #                            function(x) x * (1 - propAnnDuplicates))
-
-#tempNonATSI <- hivaidsRiskNonATSI
-#tempNonATSI$prop_unknown <- tempNonATSI$unknown / rowSums(tempNonATSI[, 2:6])
-#tempAdjustedNonATSI <- tempNonATSI
-#tempNonATSI$prop_unknown[tempNonATSI$prop_unknown == 1] <- 0
-#tempAdjustedNonATSI[, 2:5] <- tempNonATSI[, 2:5] / (1 - tempNonATSI$prop_unknown)
-#tempAdjustedNonATSI <- select(tempAdjustedNonATSI, -unknown, -prop_unknown)
-
-#hivaidsRiskNonATSI <- tempAdjustedNonATSI
-#hivaidsRiskNonATSI <- FillDataFrame(analysisYears, hivaidsRiskNonATSI)
-#hivaidsRiskNonATSI <- hivaidsRiskNonATSI[complete.cases(hivaidsRiskNonATSI),]
-#hivaidsRiskNonATSI[, 2:5] <- 
-#  apply(hivaidsRiskNonATSI[, 2:5], 2, 
-#                            function(x) x * (1 - propAnnDuplicates))
+#hivaidsRisk[is.na(hivaidsRisk)] <- 0
 
 # Number of aids diagnoses - need to manually add 1980
-aidsRisk <- hmtData %>%
+#aidsRisk <- hmtSet %>%
+#  group_by(yearaids, expgroup) %>%
+#  filter(yearaids != -99) %>%
+#  summarise(number = n()) %>%
+#  rename(year = yearaids) %>%
+#  spread(expgroup, number) %>%
+#  ungroup()
+#aidsRisk[is.na(aidsRisk)] <- 0  
+#aidsRisk <- addExpCols(aidsRisk, expNames)
+
+adjustAidsDiags <- hmtSet %>% 
   group_by(yearaids, expgroup) %>%
-  filter(yearaids != -99) %>%
-  summarise(number = n()) %>%
-  rename(year = yearaids) %>%
-  spread(expgroup, number) %>%
-  ungroup()
-aidsRisk[is.na(aidsRisk)] <- 0  
-aidsRisk <- addExpCols(aidsRisk, expNames)
-
-#aidsRiskATSI <- hmtDataATSI %>%
-#  group_by(yearaids, expgroup) %>%
-#  filter(yearaids != -99) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearaids) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#aidsRiskATSI[is.na(aidsRiskATSI)] <- 0  
-#aidsRiskATSI <- addExpCols(aidsRiskATSI, expNames)
-
-#aidsRiskNonATSI <- hmtDataNonATSI %>%
-#  group_by(yearaids, expgroup) %>%
-#  filter(yearaids != -99) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearaids) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#aidsRiskNonATSI[is.na(aidsRiskNonATSI)] <- 0  
-#aidsRiskNonATSI <- addExpCols(aidsRiskNonATSI, expNames)
+  summarise(subset = n()) %>%
+  spread(expgroup, subset) %>%
+  #ungroup() %>%
+  rename(year = yearaids)  %>%
+  right_join(., select(hivResults, year, notifications), by = "year") %>%
+  mutate(hetero = ifelse(is.na(as.numeric(hetero)),0, as.numeric(hetero)),
+         msm = ifelse(is.na(as.numeric(msm)),0, as.numeric(msm)),
+         otherexp = ifelse(is.na(as.numeric(otherexp)),0, as.numeric(otherexp)),
+         pwid = ifelse(is.na(as.numeric(pwid)),0, as.numeric(pwid))) %>%
+  mutate(known = hetero + msm + otherexp + pwid) %>%
+  mutate(prop_hetero = hetero / known,
+         prop_msm = msm / known,
+         prop_otherexp = otherexp / known,
+         prop_pwid = pwid / known) %>%
+  mutate(prop_hetero = ifelse(is.nan(prop_hetero),0, prop_hetero), 
+         prop_msm = ifelse(is.nan(prop_msm),0, prop_msm),
+         prop_otherexp = ifelse(is.nan(prop_otherexp),0, prop_otherexp),
+         prop_pwid = ifelse(is.nan(prop_pwid),0, prop_pwid)) %>%
+  mutate(adjusted_hetero = notifications * prop_hetero,
+         adjusted_msm = notifications * prop_msm,
+         adjusted_otherexp = notifications *  prop_otherexp,
+         adjusted_pwid = notifications * prop_pwid) %>%
+  select(-hetero, -msm, -otherexp, -pwid) %>%
+  mutate(hetero = adjusted_hetero, msm = adjusted_msm, otherexp = adjusted_otherexp, pwid = adjusted_pwid) %>%
+  select(-unknown, -known, -prop_hetero, -prop_msm, -prop_otherexp, -prop_pwid, -adjusted_hetero, -adjusted_msm, -adjusted_pwid, -adjusted_otherexp, -notifications)
 
 # Remove unknown notifications by distributing them to other categories
 # in proportion
-temp <- aidsRisk
-temp$prop_unknown <- temp$unknown / rowSums(temp[, 2:6])
-tempAdjusted <- temp
-temp$prop_unknown[temp$prop_unknown == 1] <- 0
-tempAdjusted[, 2:5] <- temp[, 2:5] / 
-  (1 - temp$prop_unknown)
-tempAdjusted <- select(tempAdjusted, -unknown, -prop_unknown)
-if (is.null(region) || region == "nsw") {
-  tempAdjusted[1, 2:5] <-  rep(temp$unknown[1] / 4, 4)
-}
+#temp <- aidsRisk
+#temp$prop_unknown <- temp$unknown / rowSums(temp[, 2:6])
+#tempAdjusted <- temp
+#temp$prop_unknown[temp$prop_unknown == 1] <- 0
+#tempAdjusted[, 2:5] <- temp[, 2:5] / 
+#  (1 - temp$prop_unknown)
+#tempAdjusted <- select(tempAdjusted, -unknown, -prop_unknown)
 
-aidsRisk <- tempAdjusted
-aidsRisk <- FillDataFrame(analysisYears, aidsRisk)
-aidsRisk[, 2:5] <- apply(aidsRisk[, 2:5], 2, 
-                            function(x) x * (1 - propAnnDuplicates))
-aidsRisk[, 2:5] <- aidsRisk[, 2:5] + hivaidsRisk[, 2:5]
-
-#tempATSI <- aidsRiskATSI
-#tempATSI$prop_unknown <- tempATSI$unknown / rowSums(tempATSI[, 2:6])
-#tempAdjustedATSI <- tempATSI
-#tempATSI$prop_unknown[tempATSI$prop_unknown == 1] <- 0
-#tempAdjustedATSI[, 2:5] <- tempATSI[, 2:5] / 
-#  (1 - tempATSI$prop_unknown)
-#tempAdjustedATSI <- select(tempAdjustedATSI, -unknown, -prop_unknown)
-#if (is.null(region) || region == "nsw") {
-#  tempAdjustedATSI[1, 2:5] <-  rep(tempATSI$unknown[1] / 4, 4)
-#}
-
-#aidsRiskATSI <- tempAdjustedATSI
-#aidsRiskATSI <- FillDataFrame(analysisYears, aidsRiskATSI)
-#aidsRiskATSI[, 2:5] <- apply(aidsRiskATSI[, 2:5], 2, 
+#aidsRisk <- tempAdjusted
+#aidsRisk <- merge(fillMissing, aidsRisk, by="year", all.x=TRUE)
+#aidsRisk[, 2:5] <- apply(aidsRisk[, 2:5], 2, 
 #                            function(x) x * (1 - propAnnDuplicates))
-#aidsRiskATSI[, 2:5] <- aidsRiskATSI[, 2:5] + hivaidsRiskATSI[, 2:5]
-
-#tempNonATSI <- aidsRiskNonATSI
-#tempNonATSI$prop_unknown <- tempNonATSI$unknown / rowSums(tempATSI[, 2:6])
-#tempAdjustedNonATSI <- tempNonATSI
-#tempNonATSI$prop_unknown[tempNonATSI$prop_unknown == 1] <- 0
-#tempAdjustedNonATSI[, 2:5] <- tempNonATSI[, 2:5] / 
-#  (1 - tempNonATSI$prop_unknown)
-#tempAdjustedNonATSI <- select(tempAdjustedNonATSI, -unknown, -prop_unknown)
-#if (is.null(region) || region == "nsw") {
-#  tempAdjustedNonATSI[1, 2:5] <-  rep(tempNonATSI$unknown[1] / 4, 4)
-#}
-
-#aidsRiskNonATSI <- tempAdjustedNonATSI
-#aidsRiskNonATSI <- FillDataFrame(analysisYears, aidsRiskNonATSI)
-#aidsRiskNonATSI[, 2:5] <- apply(aidsRiskNonATSI[, 2:5], 2, 
-#                            function(x) x * (1 - #propAnnDuplicates))
-#aidsRiskNonATSI[, 2:5] <- aidsRiskNonATSI[, 2:5] + hivaidsRiskATSI[, 2:5]
+#aidsRisk[, 2:5] <- aidsRisk[, 2:5] + hivaidsRisk[, 2:5]
+#aidsRisk[is.na(aidsRisk)] <- 0
 
 # Write to file
-write_csv(diagnosesRisk, file.path(dataFolderRisk, "HIV.csv"))
-write_csv(aidsRisk, file.path(dataFolderRisk, "AIDS.csv"))
-write_csv(hivaidsRisk, file.path(dataFolderRisk, "HIVAIDS.csv"))
+write_csv(adjustHivDiags, file.path(dataFolderRisk, "HIV.csv"))
+write_csv(adjustAidsDiags, file.path(dataFolderRisk, "AIDS.csv"))
+write_csv(adjustHivAidsRisk, file.path(dataFolderRisk, "HIVAIDS.csv"))
 
 ```
 
@@ -662,29 +635,21 @@ write_csv(hivaidsRisk, file.path(dataFolderRisk, "HIVAIDS.csv"))
 # cumulative notifications
 hivExpDiags <- as.data.frame(apply(diagnosesRisk[, 2:5] + aidsRisk[, 2:5], 2, function(x) cumsum(x))) %>% mutate(all = hetero + msm + otherexp + pwid) %>% tbl_df()
 
-# PLDHIV in the region
-if(group == "atsi"){
-  allPLDHIV <- filter(hivCascade, stage == "pldhiv" & population == "indigenous")$value
-}else if(group == "cob"){
-  allPLDHIV <- filter(hivCascade, stage == "pldhiv" & population == "othercob")$value
-}else{
-  allPLDHIV <- filter(hivCascade, stage == "pldhiv")$value
-}
-
 # Estimate the number of deaths
-heteroDeaths <- hivExpDiags$hetero * deathRate * allPLDHIV *
+deathRate <- 1
+heteroDeaths <- hivExpDiags$hetero * deathRate * hivDiagnosed$value *
   hivResults$deathrate / hivExpDiags$all
 heteroDeaths[is.nan(heteroDeaths)] <- 0
 
-msmDeaths <- hivExpDiags$msm * deathRate * allPLDHIV *
+msmDeaths <- hivExpDiags$msm * deathRate * hivDiagnosed$value *
   hivResults$deathrate / hivExpDiags$all
 msmDeaths[is.nan(msmDeaths)] <- 0
 
-pwidDeaths <- hivExpDiags$pwid * deathRate * allPLDHIV *
+pwidDeaths <- hivExpDiags$pwid * deathRate * hivDiagnosed$value *
   hivResults$deathrate / hivExpDiags$all
 pwidDeaths[is.nan(pwidDeaths)] <- 0
 
-otherDeaths <- hivExpDiags$otherexp * deathRate * allPLDHIV *
+otherDeaths <- hivExpDiags$otherexp * deathRate * hivDiagnosed$value *
   hivResults$deathrate / hivExpDiags$all
 otherDeaths[is.nan(otherDeaths)] <- 0
 
@@ -697,34 +662,23 @@ annDeathsExp <- data_frame(year = diagnosesRisk$year,
 # Number of migrants by exposure group -- ignore interstate migration
 # for the time being
 
-if (is.null(region)) {
- osRate <- hivResults$osrate
-} else { 
-  osRate <- hivResults$osrate + hivResults$netrate  
-}
- 
-heteroMig <- hivExpDiags$hetero * allPLDHIV * osRate / 
+osRate <- hivResults$osrate
+
+heteroMig <- hivExpDiags$hetero * hivDiagnosed$value * osRate / 
   hivExpDiags$all 
 heteroMig[is.nan(heteroMig)] <- 0
 
-msmMig <- hivExpDiags$msm * allPLDHIV * osRate / 
+msmMig <- hivExpDiags$msm * hivDiagnosed$value * osRate / 
   hivExpDiags$all 
 msmMig[is.nan(msmMig)] <- 0
 
-pwidMig <- hivExpDiags$pwid * allPLDHIV * osRate / 
+pwidMig <- hivExpDiags$pwid * hivDiagnosed$value * osRate / 
   hivExpDiags$all 
 pwidMig[is.nan(pwidMig)] <- 0
 
-otherMig <- hivExpDiags$otherexp * allPLDHIV * osRate / 
+otherMig <- hivExpDiags$otherexp * hivDiagnosed$value * osRate / 
   hivExpDiags$all 
 otherMig[is.nan(otherMig)] <- 0
-
-if(atsi==TRUE){
-  heteroMig <- 0
-  msmMig <- 0
-  pwidMig <- 0
-  otherMig <- 0
-}
 
 annMigrantsExp <- data_frame(year = diagnosesRisk$year,
                            hetero = heteroMig,
@@ -745,7 +699,7 @@ expNames <- expNames[1:5]
 
 # Number overall with CD4 >= 500 at diagnosis - need to manually append
 #  missing
-hivCd41Risk <- hmtData %>%
+hivCd41Risk <- hmtSet %>%
   filter(cd4count >= 500) %>%
   group_by(yearhiv, expgroup) %>%
   summarise(number = n()) %>%
@@ -757,38 +711,15 @@ if ("unknown" %in% colnames(hivCd41Risk)) {
 }
 hivCd41Risk[is.na(hivCd41Risk)] <- 0 
 hivCd41Risk <- addExpCols(hivCd41Risk, expNames)
-hivCd41Risk <- FillDataFrame(analysisYears, hivCd41Risk)
+hivCd41Risk <- merge(fillMissing, hivCd41Risk, by="year", all.x=TRUE)
+hivCd41Risk$hetero[is.na(hivCd41Risk$hetero)] <- 0
+hivCd41Risk$msm[is.na(hivCd41Risk$msm)] <- 0
+hivCd41Risk$otherexp[is.na(hivCd41Risk$otherexp)] <- 0
+hivCd41Risk$pwid[is.na(hivCd41Risk$pwid)] <- 0
 
-#hivCd41RiskATSI <- hmtDataATSI %>%
-#  filter(cd4count >= 500) %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#if ("unknown" %in% colnames(hivCd41RiskATSI)) {
-#  hivCd41RiskATSI <- select(hivCd41RiskATSI, -unknown)
-#}
-#hivCd41RiskATSI[is.na(hivCd41RiskATSI)] <- 0 
-#hivCd41RiskATSI <- addExpCols(hivCd41RiskATSI, expNames)
-#hivCd41RiskATSI <- FillDataFrame(analysisYears, hivCd41RiskATSI)
-
-#hivCd41RiskNonATSI <- hmtDataNonATSI %>%
-#  filter(cd4count >= 500) %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#if ("unknown" %in% colnames(hivCd41RiskNonATSI)) {
-#  hivCd41RiskNonATSI <- select(hivCd41RiskNonATSI, -unknown)
-#}
-#hivCd41RiskNonATSI[is.na(hivCd41RiskNonATSI)] <- 0 
-#hivCd41RiskNonATSI <- addExpCols(hivCd41RiskNonATSI, expNames)
-#hivCd41RiskNonATSI <- FillDataFrame(analysisYears, hivCd41RiskNonATSI)
 # Number overall with CD4 < 500 & >= 350 at diagnosis - need to
 #  manually append missing
-hivCd42Risk <- hmtData %>%
+hivCd42Risk <- hmtSet %>%
   filter(cd4count < 500, cd4count >= 350) %>%
   group_by(yearhiv, expgroup) %>%
   summarise(number = n()) %>%
@@ -800,39 +731,15 @@ if ("unknown" %in% colnames(hivCd42Risk)) {
 }
 hivCd42Risk[is.na(hivCd42Risk)] <- 0  
 hivCd42Risk <- addExpCols(hivCd42Risk, expNames)
-hivCd42Risk <- FillDataFrame(analysisYears, hivCd42Risk)
-
-#hivCd42RiskATSI <- hmtDataATSI %>%
-#  filter(cd4count < 500, cd4count >= 350) %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#if ("unknown" %in% colnames(hivCd42RiskATSI)) {
-#  hivCd42RiskATSI <- select(hivCd42RiskATSI, -unknown)
-#}
-#hivCd42RiskATSI[is.na(hivCd42RiskATSI)] <- 0  
-#hivCd42RiskATSI <- addExpCols(hivCd42RiskATSI, expNames)
-#hivCd42RiskATSI <- FillDataFrame(analysisYears, hivCd42RiskATSI)
-
-#hivCd42RiskNonATSI <- hmtDataNonATSI %>%
-#  filter(cd4count < 500, cd4count >= 350) %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#if ("unknown" %in% colnames(hivCd42RiskNonATSI)) {
-#  hivCd42RiskNonATSI <- select(hivCd42RiskNonATSI, -unknown)
-#}
-#hivCd42RiskNonATSI[is.na(hivCd42RiskNonATSI)] <- 0  
-#hivCd42RiskNonATSI <- addExpCols(hivCd42RiskNonATSI, expNames)
-#hivCd42RiskNonATSI <- FillDataFrame(analysisYears, hivCd42RiskNonATSI)
+hivCd42Risk <- merge(fillMissing, hivCd42Risk, by="year", all.x=TRUE)
+hivCd42Risk$hetero[is.na(hivCd42Risk$hetero)] <- 0
+hivCd42Risk$msm[is.na(hivCd42Risk$msm)] <- 0
+hivCd42Risk$otherexp[is.na(hivCd42Risk$otherexp)] <- 0
+hivCd42Risk$pwid[is.na(hivCd42Risk$pwid)] <- 0
 
 # Number overall with CD4 < 350 & >= 200 at diagnosis - need to
 #  manually append missing
-hivCd43Risk <- hmtData %>%
+hivCd43Risk <- hmtSet %>%
   filter(cd4count < 350, cd4count >= 200) %>%
   group_by(yearhiv, expgroup) %>%
   summarise(number = n()) %>%
@@ -844,38 +751,15 @@ if ("unknown" %in% colnames(hivCd43Risk)) {
 }
 hivCd43Risk[is.na(hivCd43Risk)] <- 0  
 hivCd43Risk <- addExpCols(hivCd43Risk, expNames)
-hivCd43Risk <- FillDataFrame(analysisYears, hivCd43Risk)
+hivCd43Risk <- merge(fillMissing, hivCd43Risk, by="year", all.x=TRUE)
+hivCd43Risk$hetero[is.na(hivCd43Risk$hetero)] <- 0
+hivCd43Risk$msm[is.na(hivCd43Risk$msm)] <- 0
+hivCd43Risk$otherexp[is.na(hivCd43Risk$otherexp)] <- 0
+hivCd43Risk$pwid[is.na(hivCd43Risk$pwid)] <- 0
 
-#hivCd43RiskATSI <- hmtDataATSI %>%
-#  filter(cd4count < 350, cd4count >= 200) %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#if ("unknown" %in% colnames(hivCd43RiskATSI)) {
-#  hivCd43RiskATSI <- select(hivCd43RiskATSI, -unknown)
-#}
-#hivCd43RiskATSI[is.na(hivCd43RiskATSI)] <- 0  
-#hivCd43RiskATSI <- addExpCols(hivCd43RiskATSI, expNames)
-#hivCd43RiskATSI <- FillDataFrame(analysisYears, hivCd43RiskATSI)
-
-#hivCd43RiskNonATSI <- hmtDataNonATSI %>%
-#  filter(cd4count < 350, cd4count >= 200) %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#if ("unknown" %in% colnames(hivCd43RiskNonATSI)) {
-#  hivCd43RiskNonATSI <- select(hivCd43RiskNonATSI, -unknown)
-#}
-#hivCd43RiskNonATSI[is.na(hivCd43RiskNonATSI)] <- 0  
-#hivCd43RiskNonATSI <- addExpCols(hivCd43RiskNonATSI, expNames)
-#hivCd43RiskNonATSI <- FillDataFrame(analysisYears, hivCd43RiskNonATSI)
 # Number overall with CD4 < 200 & >= 0 at diagnosis - need to
 #  manually append missing
-hivCd44Risk <- hmtData %>%
+hivCd44Risk <- hmtSet %>%
   filter(cd4count < 200, cd4count >= 0) %>%
   group_by(yearhiv, expgroup) %>%
   summarise(number = n()) %>%
@@ -887,45 +771,17 @@ if ("unknown" %in% colnames(hivCd44Risk)) {
 }
 hivCd44Risk[is.na(hivCd44Risk)] <- 0  
 hivCd44Risk <- addExpCols(hivCd44Risk, expNames)
-hivCd44Risk <- FillDataFrame(analysisYears, hivCd44Risk)
+hivCd44Risk <- merge(fillMissing, hivCd44Risk, by="year", all.x=TRUE)
+hivCd44Risk$hetero[is.na(hivCd44Risk$hetero)] <- 0
+hivCd44Risk$msm[is.na(hivCd44Risk$msm)] <- 0
+hivCd44Risk$otherexp[is.na(hivCd44Risk$otherexp)] <- 0
+hivCd44Risk$pwid[is.na(hivCd44Risk$pwid)] <- 0
 
-#hivCd44RiskATSI <- hmtDataATSI %>%
-#  filter(cd4count < 200, cd4count >= 0) %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#if ("unknown" %in% colnames(hivCd44RiskATSI)) {
-#  hivCd44RiskATSI <- select(hivCd44RiskATSI, -unknown)
-#}
-#hivCd44RiskATSI[is.na(hivCd44RiskATSI)] <- 0  
-#hivCd44RiskATSI <- addExpCols(hivCd44RiskATSI, expNames)
-#hivCd44RiskATSI <- FillDataFrame(analysisYears, hivCd44RiskATSI)
-
-#hivCd44RiskNonATSI <- hmtDataNonATSI %>%
-#  filter(cd4count < 200, cd4count >= 0) %>%
-#  group_by(yearhiv, expgroup) %>%
-#  summarise(number = n()) %>%
-#  rename(year = yearhiv) %>%
-#  spread(expgroup, number) %>%
-#  ungroup()
-#if ("unknown" %in% colnames(hivCd44RiskNonATSI)) {
-#  hivCd44RiskNonATSI <- select(hivCd44RiskNonATSI, -unknown)
-#}
-#hivCd44RiskNonATSI[is.na(hivCd44RiskNonATSI)] <- 0  
-#hivCd44RiskNonATSI <- addExpCols(hivCd44RiskNonATSI, expNames)
-#hivCd44RiskNonATSI <- FillDataFrame(analysisYears, hivCd44RiskNonATSI)
-
-#hivCd41RiskATSI <- hivCd41RiskATSI[,1:5]
-#hivCd42RiskATSI <- hivCd42RiskATSI[,1:5]
-#hivCd43RiskATSI <- hivCd43RiskATSI[,1:5]
-#hivCd44RiskATSI <- hivCd44RiskATSI[,1:5]
 # Write to file
-write_csv(hivCd41RiskATSI, file.path(dataFolderRisk, "HIV_CD4_1.csv"))
-write_csv(hivCd42RiskATSI, file.path(dataFolderRisk, "HIV_CD4_2.csv"))
-write_csv(hivCd43RiskATSI, file.path(dataFolderRisk, "HIV_CD4_3.csv"))
-write_csv(hivCd44RiskATSI, file.path(dataFolderRisk, "HIV_CD4_4.csv"))
+write_csv(hivCd41Risk, file.path(dataFolderRisk, "HIV_CD4_1.csv"))
+write_csv(hivCd42Risk, file.path(dataFolderRisk, "HIV_CD4_2.csv"))
+write_csv(hivCd43Risk, file.path(dataFolderRisk, "HIV_CD4_3.csv"))
+write_csv(hivCd44Risk, file.path(dataFolderRisk, "HIV_CD4_4.csv"))
 
 ```
 
