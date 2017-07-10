@@ -3,6 +3,7 @@
 # Main directory
 Archive/
 data/*
+OtherSTIs/
 !data/ABS_departures_clean-2015.csv
 !data/ABS_interstate_clean-2015.csv
 !data/ABS_migration_clean-2015.csv
@@ -30,6 +31,9 @@ HIV/*.nb.html
 HIV/data/
 HIV/output/*
 !HIV/output/HIVcascadeEstimates-2015.csv
+# Temporarily ignore stat analysis files
+HIV/trend_analysis/
+HIV/output.dta
 
 HIV/docs/
 HIV/subprojects/
