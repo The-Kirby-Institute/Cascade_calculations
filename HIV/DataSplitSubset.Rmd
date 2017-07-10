@@ -1,0 +1,787 @@
+HIV Modelling Tool Data Organization 
+====================================
+  
+This script is used to load the raw HIV notifications data for Australia 
+and create the CSV files used by the ECDC HIV Modelling Tool. 
+
+```{r Initialization}
+# Chunk to setup everything
+# Clear workspace
+rm(list=ls()) 
+
+# Setup directories
+basePath <- file.path(dirname(getwd()), "HIV")
+
+Rcode <- file.path(dirname(getwd()), "code") 
+HIVcode <- file.path(basePath, "code") 
+dataFolder <- file.path(basePath, "data")
+outputFolder <- file.path(basePath, "output")
+figuresFolder <- file.path(basePath, "output","figures")
+
+# Set working directory
+#setwd(basePath)
+
+# Load standard libraries and options ----------------------------------
+source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
+source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+# Function to easily extract sub-populations of interest 
+source(file.path(Rcode, "Subset.R"), echo=TRUE)
+
+# Primary script parameters
+currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
+
+# Primary script parameters
+dataYear <- 2015
+analysisYears <- c(1980:dataYear)
+includeOS <- TRUE
+
+# set hivSet function parameters
+targetPopulation <- "non-australian" #"atsi"
+targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
+targetAge <- 'all' #groups 0, 1, 2, 3, 4...
+targetCob <- 'non-australia' #all=including n/a, Thailand, etc.
+targetExposure <- 'all'
+targetAtsi <- 'all' #0 or 1
+targetState <- 'all' #NSW, VIC, etc
+targetLocalRegion <- 'all' #tbd
+targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc.
+
+```
+
+```{r Setup folders}
+# Create model folder for storing results for all notifications and
+# by risk group
+
+if (includeOS) {
+  if (is.null(targetLocalRegion)) {
+    folderAll <- "all"
+    folderExp <- "exposure"
+  } else {
+    folderAll <- paste0("all_", targetLocalRegion)
+    folderExp <- paste0("exposure_", targetLocalRegion)
+  }
+} else {
+  if (is.null(targetLocalRegion)) {
+    folderAll <- "all2"
+    folderExp <- "exposure2"
+  } else {
+    folderAll <- paste0("all2_", targetLocalRegion)
+    folderExp <- paste0("exposure2_", targetLocalRegion)
+  }
+}
+
+# All -----------------------------------------------------------------
+modelPathAll <- file.path(outputFolder, folderAll)
+
+dir.create(modelPathAll, showWarnings = FALSE)
+
+# Create other directories
+dataFolderAll <- file.path(modelPathAll, "data")
+resultsFolderAll <- file.path(modelPathAll, "results")
+
+dir.create(dataFolderAll, showWarnings = FALSE)
+dir.create(resultsFolderAll, showWarnings = FALSE)
+
+# By at-risk category -------------------------------------------------
+modelPathRisk <- file.path(outputFolder, folderExp)
+
+dir.create(modelPathRisk, showWarnings = FALSE)
+
+# Create other directories
+dataFolderRisk <- file.path(modelPathRisk, "data")
+resultsFolderRisk <- file.path(modelPathRisk, "results")
+
+dir.create(dataFolderRisk, showWarnings = FALSE)
+dir.create(resultsFolderRisk, showWarnings = FALSE)
+
+```
+
+```{r loaddata}
+# This chunk is used to extract the data we need from the raw
+# notifications file. It then cleans it up and converts the variables
+# into a useful format
+
+rawDataFile <- file.path(dataFolder,
+                         paste0("hivnotifications", 
+                                      toString(dataYear), ".csv"))
+
+hivData <- read_csv(rawDataFile)
+
+hivData[is.na(hivData$previ_diag_overseas), ]$previ_diag_overseas <- 0
+
+# Setup extra columns for analysis
+hivData$yeardiagnosis <- as.numeric(substr(hivData$datediagnosis, 1, 4))
+hivData$yeardeath <- as.numeric(substr(hivData$datedeath, 1, 4))
+
+allYears <- analysisYears # All years of data
+
+#clean aboriggroup
+hivData$aboriggroup <- rep(NA,nrow(hivData))
+
+# Aboriginal group
+if (dataYear < 2015) {
+  hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
+  hivData$aboriggroup[hivData$cob==0] <- NA
+  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
+  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non indigenous"] <- "non-indigenous" 
+} else {
+  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
+   hivData$aboriggroup[hivData$indigenous != "Aboriginal"] <- "non-indigenous"
+  hivData$aboriggroup[is.na(hivData$aboriggroup)] <- "non-indigenous"
+}
+
+# transfer cob to cobCode
+hivData$cobcode <- hivData$cob
+
+# load cob and region codes
+crCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
+
+# if cob is not in crCodes/NA, change to Not Reported 
+hivData$cob[!(hivData$cobcode %in% crCodes$COUNTRY_CODE)] <- "Not Reported"
+
+# change cob from code to String
+hivData$cob <- crCodes$COUNTRY_NAME[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
+
+#add region - DO LATER?
+hivData$globalregion <- crCodes$REGION[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
+
+# CHANGE NA TO NOT REPORTED AS WELL (only 22 in the data set)
+hivData$cob[is.na(hivData$cob)] <- "Not Reported"
+
+# Convert some of the not reporteds to "overseas" if country of birth is missing 
+# but region of birth is available.
+hivData$cob <- as.character(hivData$cob)
+hivData$cob[hivData$cob == "Not Reported" & !(hivData$rob %in%  c(0,7))] <-
+  "Overseas"
+
+# Quick checks that we are not doing analysis outside of the data.
+if (max(hivData$yeardiagnosis) < dataYear) {
+  stop("No data specified for final year of analysis.")
+}
+
+if (min(hivData$yeardiagnosis) > analysisYears[1]) {
+  stop("No data specified for first year of analysis.")
+}
+
+hmtData <- hivData %>%
+  filter(yearhiv <= dataYear) %>%
+  select(sex, datediagnosis, dateaids, cd4count, expgroup, yearhiv,
+          dateneg, cob, aboriggroup, globalregion) %>%
+  rename(exposure = expgroup)
+
+# Convert date aids to year
+hmtData$yearaids <- as.numeric(format(as.Date(hmtData$dateaids, '%d/%m/%Y'), "%Y")) ##CHANGED
+hivData$yeardeath <- as.numeric(format(as.Date(hivData$datedeath, '%d/%m/%Y'), "%Y"))
+
+# Time sinece last ng test
+#hmtData$timeneg <- as.numeric(hmtData$datehiv - hmtData$dateneg)
+hmtData$timeneg <- as.numeric(as.Date(as.character(hmtData$datediagnosis), format="%d/%m/%Y") - as.Date(as.character(hmtData$dateneg), format="%d/%m/%Y"))  ##CHANGED 
+hmtData$timeneg[is.na(hmtData$timeneg)] <- 1e5
+
+# Add a broad exposure category indicator.
+hmtData$expgroup <- hmtData$exposure
+
+# Remove unnecessary variables
+hmtData <- hmtData %>%
+  select(-datediagnosis, -dateaids, -exposure)
+
+# Convert NA to a number for filtering
+hmtData[is.na(hmtData$yearaids), ]$yearaids <- -99
+hmtData[is.na(hmtData$cd4count), ]$cd4count <- -99
+
+#Divide hmtData into all, ATSI, non-ATSI, and unknown, use subhivset
+hmtTmp <- subhivset(hmtData, targetAge, targetExposure, targetCob, targetAtsi, targetLocalRegion, targetGlobalRegion)
+
+hmtSet <- hmtTmp[[1]]
+hmtSetExcluded <- hmtTmp[[2]]
+hmtSetUnknown <- hmtTmp[[3]]
+```
+
+```{r load cascade results}
+# Load the previously saved hivresults data frame
+load(paste0(outputFolder, "/HIVresults-",
+                    toString(dataYear), ".rda"))
+
+# Load interstate data for interstate estimates
+#if (!is.null(region)) {
+#  load(paste0("HIVinterstateEstimates-",
+#                    toString(dataYear), ".rda"))
+  
+#  hivResults$netrate <- filter(hivInterstate, state == "nsw")$netrate
+#}
+
+# Load hiv cascade dataframe
+#inputFile <- paste0("HIVpldhivEstimates-", 
+#  toString(dataYear), ".rda")
+inputFile <- paste0(outputFolder,"/HIVpldhivEstimates-",  toString(dataYear), ".rda")
+load(inputFile)
+
+```
+
+```{r annual deaths and migrants}
+# Number of deaths
+load("nonIndigenous_Adjustment.Rda")
+
+annDeaths <- as.data.frame(allYears) 
+colnames(annDeaths) <- c("year")
+annDeaths$all <- hivDiagnosed$value * (nonAborigMortalityFactor * hivResults$deathrate)
+
+annMigrants <- as.data.frame(allYears) 
+colnames(annMigrants) <- c("year")
+annMigrants$all <- hivDiagnosed$value * (nonAborigMigrationFactor * hivResults$osrate)
+
+# Writeannual deaths and migrants to file
+write_csv(annDeaths, file.path(dataFolderAll, "Dead.csv"))
+write_csv(annMigrants, file.path(dataFolderAll, "Emig.csv"))
+
+```
+
+```{r Extract annual notifications data (overall)}
+# Number of HIV diagnoses per year
+fillMissing <- as.data.frame(allYears) 
+colnames(fillMissing) <- c("year")
+
+allHivDiags <- hmtData %>%
+  group_by(yearhiv) %>% 
+  summarise(all = n()) 
+if (length(hmtSetExcluded) == 0) {
+  excludedHivDiags <- data_frame(yearhiv = allHivDiags$yearhiv,
+                            excluded = 0)
+} else {
+  excludedHivDiags <- hmtSetExcluded %>%
+    group_by(yearhiv) %>% 
+    summarise(excluded = n()) 
+}
+
+if (length(hmtSetUnknown) == 0) {
+ unknownHivDiags <- data_frame(yearhiv = allHivDiags$yearhiv,
+                            unknown = 0)
+} else {
+unknownHivDiags <- hmtSetUnknown %>%
+  group_by(yearhiv) %>% 
+  summarise(unknown = n())
+}
+
+adjustHivDiags <- hmtSet %>% 
+  group_by(yearhiv) %>%
+  summarise(subset = n()) %>%
+  ungroup() %>%
+  right_join(allHivDiags, by = "yearhiv") %>%
+  left_join(excludedHivDiags, by = "yearhiv") %>%
+  left_join(unknownHivDiags, by = "yearhiv") %>%
+  mutate(included = ifelse(is.na(subset), 0, subset),
+         excluded = ifelse(is.na(excluded), 0, excluded),
+         unknown = ifelse(is.na(unknown), 0, unknown)) %>%
+  mutate(prop_included = included / (included + excluded),
+         prop_excluded = excluded / (included + excluded)) %>%
+  mutate(prop_included = ifelse(is.nan(prop_included),0, prop_included), 
+         prop_excluded = ifelse(is.nan(prop_excluded),0, prop_excluded)) %>%
+  mutate(adjusted_included = included  + unknown * prop_included,
+         adjusted_excluded = excluded + unknown * prop_excluded)%>%
+  rename(year = yearhiv)
+
+HivDiags <- subset(adjustHivDiags, select=c(year, adjusted_included))
+HivDiags <- merge(fillMissing, HivDiags, by="year", all.x=TRUE)
+HivDiags[is.na(HivDiags)] <- 0 
+colnames(HivDiags)[2] <- "all"
+
+# Number of aids diagnoses
+allAidsDiags <- hmtData %>%
+  group_by(yearaids) %>% 
+  summarise(all = n()) 
+if (length(hmtSetExcluded) == 0) {
+  excludedAidsDiags <- data_frame(yearaids = allAidsDiags$yearaids,
+                            excluded = 0)
+} else {
+  excludedAidsDiags <- hmtSetExcluded %>%
+    group_by(yearaids) %>% 
+    summarise(excluded = n()) 
+}
+
+if (length(hmtSetUnknown) == 0) {
+ unknownAidsDiags <- data_frame(yearaids = allAidsDiags$yearaids,
+                            unknown = 0)
+} else {
+unknownAidsDiags <- hmtSetUnknown %>%
+  group_by(yearaids) %>% 
+  summarise(unknown = n())
+}
+
+adjustAidsDiags <- hmtSet %>% 
+  group_by(yearaids) %>%
+  summarise(subset = n()) %>%
+  ungroup() %>%
+  right_join(allAidsDiags, by = "yearaids") %>%
+  left_join(excludedAidsDiags, by = "yearaids") %>%
+  left_join(unknownAidsDiags, by = "yearaids") %>%
+  mutate(included = ifelse(is.na(subset), 0, subset),
+         excluded = ifelse(is.na(excluded), 0, excluded),
+         unknown = ifelse(is.na(unknown), 0, unknown)) %>%
+  mutate(prop_included = included / (included + excluded),
+         prop_excluded = excluded / (included + excluded)) %>%
+  mutate(prop_included = ifelse(is.nan(prop_included),0, prop_included), 
+         prop_excluded = ifelse(is.nan(prop_excluded),0, prop_excluded)) %>%
+  mutate(adjusted_included = included  + unknown * prop_included,
+         adjusted_excluded = excluded + unknown * prop_excluded)%>%
+  rename(year = yearaids)
+
+AidsDiags <- subset(adjustAidsDiags, select=c(year, adjusted_included))
+AidsDiags <- merge(fillMissing, AidsDiags, by="year", all.x=TRUE)
+AidsDiags[is.na(AidsDiags)] <- 0 
+colnames(AidsDiags)[2] <- "all"
+
+# Number of HIV and aids diagnoses per year
+indices <- hmtData$yearhiv == hmtData$yearaids
+
+allHivAidsDiags <- hmtData[indices, ] %>%
+  group_by(yearhiv) %>% 
+  summarise(all = n()) 
+if (length(hmtSetExcluded) == 0) {
+  excludedHivAidsDiags <- data_frame(yearhiv = allHivAidsDiags$yearhiv,
+                            excluded = 0)
+} else {
+  excludedHivAidsDiags <- hmtSetExcluded %>%
+    group_by(yearhiv) %>% 
+    summarise(excluded = n()) 
+}
+
+if (length(hmtSetUnknown) == 0) {
+ unknownHivAidsDiags <- data_frame(yearhiv = allHivAidsDiags$yearhiv,
+                            unknown = 0)
+} else {
+unknownHivAidsDiags <- hmtSetUnknown %>%
+  group_by(yearhiv) %>% 
+  summarise(unknown = n())
+}
+
+indicesSet <- hmtSet$yearhiv == hmtSet$yearaids
+adjustHivAidsDiags <- hmtSet[indicesSet, ] %>% 
+  group_by(yearhiv) %>%
+  summarise(subset = n()) %>%
+  ungroup() %>%
+  right_join(allHivAidsDiags, by = "yearhiv") %>%
+  left_join(excludedHivAidsDiags, by = "yearhiv") %>%
+  left_join(unknownHivAidsDiags, by = "yearhiv") %>%
+  mutate(included = ifelse(is.na(subset), 0, subset),
+         excluded = ifelse(is.na(excluded), 0, excluded),
+         unknown = ifelse(is.na(unknown), 0, unknown)) %>%
+  mutate(prop_included = included / (included + excluded),
+         prop_excluded = excluded / (included + excluded)) %>%
+  mutate(prop_included = ifelse(is.nan(prop_included),0, prop_included), 
+         prop_excluded = ifelse(is.nan(prop_excluded),0, prop_excluded)) %>%
+  mutate(adjusted_included = included  + unknown * prop_included,
+         adjusted_excluded = excluded + unknown * prop_excluded)%>%
+  rename(year = yearhiv)
+
+HivAidsDiags <- subset(adjustHivAidsDiags, select=c(year, adjusted_included))
+HivAidsDiags <- merge(fillMissing, HivAidsDiags, by="year", all.x=TRUE)
+HivAidsDiags[is.na(HivAidsDiags)] <- 0 
+colnames(HivAidsDiags)[2] <- "all"
+
+# Write to file
+write_csv(HivDiags, file.path(dataFolderAll, "HIV.csv"))
+write_csv(AidsDiags, file.path(dataFolderAll, "AIDS.csv"))
+write_csv(HivAidsDiags, file.path(dataFolderAll, "HIVAIDS.csv"))
+
+```
+
+```{r CD4 count breakdown (overall)}
+# Number overall with CD4 >= 500 at diagnosis - need to manually append
+#  missing
+hivcd41 <- hmtSet %>%
+  filter(cd4count >= 500) %>%
+  group_by(yearhiv) %>%
+  summarise(all = n()) %>%
+  rename(year = yearhiv)
+hivcd41 <- merge(fillMissing, hivcd41, by="year", all.x=TRUE)
+hivcd41[is.na(hivcd41)] <- 0
+
+# Number overall with CD4 < 500 & >= 350 at diagnosis - need to
+#  manually append missing
+hivcd42 <- hmtSet %>% 
+  filter(cd4count < 500, cd4count >= 350) %>%
+  group_by(yearhiv) %>%
+  summarise(all = n()) %>%
+  rename(year = yearhiv)
+hivcd42 <- merge(fillMissing, hivcd42, by="year", all.x=TRUE)
+hivcd42[is.na(hivcd42)] <- 0
+
+# Number overall with CD4 < 350 & >= 200 at diagnosis - need to
+#  manually append missing
+hivcd43 <- hmtSet %>%  
+  filter(cd4count < 350, cd4count >= 200) %>%
+  group_by(yearhiv) %>%
+  summarise(all = n()) %>%
+  rename(year = yearhiv)
+hivcd43 <- merge(fillMissing, hivcd43, by="year", all.x=TRUE)
+hivcd43[is.na(hivcd43)] <- 0
+
+# Number overall with CD4 < 200 & >= 0 at diagnosis - need to
+#  manually append missing
+hivcd44 <- hmtSet %>% 
+  filter(cd4count < 200, cd4count >= 0) %>%
+  group_by(yearhiv) %>%
+  summarise(all = n()) %>%
+  rename(year = yearhiv)
+hivcd44 <- merge(fillMissing, hivcd44, by="year", all.x=TRUE)
+hivcd44[is.na(hivcd44)] <- 0
+
+# Write to file
+write_csv(hivcd41, file.path(dataFolderAll, "HIV_CD4_1.csv"))
+write_csv(hivcd42,  file.path(dataFolderAll, "HIV_CD4_2.csv"))
+write_csv(hivcd43, file.path(dataFolderAll, "HIV_CD4_3.csv"))
+write_csv(hivcd44, file.path(dataFolderAll, "HIV_CD4_4.csv"))
+
+```
+
+```{r Extract annual notifications data (by exposure)}
+#Vector of columns you want in each data.frame
+expNames <- c("year", "hetero", "msm", "otherexp", "pwid", "unknown")
+
+addExpCols <- function(df, names) {
+  Missing <- setdiff(names, names(df))  # Find names of missing columns
+  df[Missing] <- 0                      # Add them, filled with '0's
+  df <- df[names]  
+  return(df)
+}
+
+# Number of HIV diagnoses per year
+#diagnosesRisk <- hmtSet %>%
+#  group_by(yearhiv, expgroup) %>%
+#  summarise(number = n()) %>%
+#  rename(year = yearhiv) %>%
+#  spread(expgroup, number) %>%
+#  ungroup()
+#diagnosesRisk[is.na(diagnosesRisk)] <- 0 
+#diagnosesRisk <- addExpCols(diagnosesRisk, expNames)
+
+#if (length(hmtSetExcluded) != 0) {
+#  excludedHivDiagsRisk <- hmtSetExcluded %>%
+#      group_by(yearhiv, expgroup) %>%
+#      summarise(number = n()) %>%
+#      rename(year = yearhiv) %>%
+#      spread(expgroup, number) %>%
+#      ungroup()
+#}
+
+#if (length(hmtSetUnknown) != 0) {
+#  unknownHivDiagsRisk <- hmtSetUnknown %>%
+#      group_by(yearhiv, expgroup) %>%
+#      summarise(number = n()) %>%
+#      rename(year = yearhiv) %>%
+#      spread(expgroup, number) %>%
+#      ungroup()
+#}
+
+preadjustHivDiags <- hmtSet %>% 
+  group_by(yearhiv, expgroup) %>%
+  summarise(subset = n()) %>%
+  spread(expgroup, subset) %>%
+  #ungroup() %>%
+  rename(year = yearhiv)
+preadjustHivDiags[is.na(preadjustHivDiags)] <- 0
+
+adjustHivDiags <- preadjustHivDiags %>%
+  right_join(., select(hivResults, year, notifications), by = "year") %>%
+  mutate(hetero = ifelse(is.na(hetero),0, hetero),
+         msm = ifelse(is.na(as.numeric(msm)),0, as.numeric(msm)),
+         otherexp = ifelse(is.na(otherexp),0, otherexp),
+         pwid = ifelse(is.na(pwid),0, pwid)) %>%
+  mutate(known = hetero + msm + otherexp + pwid) %>%
+  mutate(prop_hetero = hetero / known,
+         prop_msm = msm / known,
+         prop_otherexp = otherexp / known,
+         prop_pwid = pwid / known) %>%
+  mutate(prop_hetero = ifelse(is.nan(prop_hetero),0, prop_hetero), 
+         prop_msm = ifelse(is.nan(prop_msm),0, prop_msm),
+         prop_otherexp = ifelse(is.nan(prop_otherexp),0, prop_otherexp),
+         prop_pwid = ifelse(is.nan(prop_pwid),0, prop_pwid)) %>%
+  mutate(adjusted_hetero = notifications * prop_hetero,
+         adjusted_msm = notifications * prop_msm,
+         adjusted_otherexp = notifications *  prop_otherexp,
+         adjusted_pwid = notifications * prop_pwid) %>%
+  select(-hetero, -msm, -otherexp, -pwid) %>%
+  mutate(hetero = adjusted_hetero, msm = adjusted_msm, otherexp = adjusted_otherexp, pwid = adjusted_pwid) %>%
+  select(-unknown, -known, -prop_hetero, -prop_msm, -prop_otherexp, -prop_pwid, -adjusted_hetero, -adjusted_msm, -adjusted_pwid, -adjusted_otherexp, -notifications)
+
+# Remove unknown notifications by distributing them to other categories
+# in proportion
+#temp <- diagnosesRisk
+#temp$prop_unknown <- temp$unknown / rowSums(temp[, 2:6])
+#tempAdjusted <- temp
+#temp$prop_unknown[temp$prop_unknown == 1] <- 0
+#tempAdjusted[, 2:5] <- temp[, 2:5] / (1 - temp$prop_unknown)
+#tempAdjusted <- select(tempAdjusted, -unknown, -prop_unknown)
+
+#diagnosesRisk <- tempAdjusted
+#diagnosesRisk <- merge(fillMissing, diagnosesRisk, by="year", all.x=TRUE)
+#diagnosesRisk[, 2:5] <- 
+#  apply(diagnosesRisk[, 2:5], 2, 
+#                            function(x) x * (1 - propAnnDuplicates))
+#diagnosesRisk[is.na(diagnosesRisk)] <- 0
+
+# Number of HIV and aids diagnoses per year - need to manually add 1980
+# and 1981
+indices <- hmtData$yearhiv == hmtData$yearaids
+
+hivTemp <- hmtSet%>%
+  group_by(yearhiv, expgroup) %>%
+  summarise(number = n()) %>%
+  rename(year = yearhiv) %>%
+  spread(expgroup, number) %>%
+  ungroup()
+hivTemp[is.na(hivTemp)] <- 0 
+hivTemp <- merge(fillMissing, hivTemp, by="year", all.x=TRUE)
+hivTemp[is.na(hivTemp)] <- 0 
+
+hivaidsRisk <- hmtSet[indices, ] %>%
+  group_by(yearhiv, expgroup) %>%
+  summarise(number = n()) %>%
+  rename(year = yearhiv) %>%
+  spread(expgroup, number) %>%
+  ungroup()
+hivaidsRisk[is.na(hivaidsRisk)] <- 0 
+hivaidsRisk <- addExpCols(hivaidsRisk, expNames)
+hivaidsRisk <- merge(fillMissing, hivaidsRisk, by="year", all.x=TRUE)
+hivaidsRisk[is.na(hivaidsRisk)] <- 0 
+
+adjustHivAidsRisk <- hivaidsRisk[,c(2:5)]/hivTemp[,c(2:5)] * adjustHivDiags[,c(2:5)]
+adjustHivAidsRisk <- cbind(years = allYears, adjustHivAidsRisk)
+adjustHivAidsRisk[is.na(adjustHivAidsRisk)] <- 0
+
+# Remove unknown notifications by distributing them to other categories
+# in proportion
+#temp <- hivaidsRisk
+#temp$prop_unknown <- temp$unknown / rowSums(temp[, 2:6])
+#tempAdjusted <- temp
+#temp$prop_unknown[temp$prop_unknown == 1] <- 0
+#tempAdjusted[, 2:5] <- temp[, 2:5] / (1 - temp$prop_unknown)
+#tempAdjusted <- select(tempAdjusted, -unknown, -prop_unknown)
+
+#hivaidsRisk <- tempAdjusted
+#hivaidsRisk <- merge(fillMissing, hivaidsRisk, by="year", all.x=TRUE)
+#hivaidsRisk[, 2:5] <- 
+#  apply(hivaidsRisk[, 2:5], 2, 
+#                            function(x) x * (1 - propAnnDuplicates))
+#hivaidsRisk[is.na(hivaidsRisk)] <- 0
+
+# Number of aids diagnoses - need to manually add 1980
+#aidsRisk <- hmtSet %>%
+#  group_by(yearaids, expgroup) %>%
+#  filter(yearaids != -99) %>%
+#  summarise(number = n()) %>%
+#  rename(year = yearaids) %>%
+#  spread(expgroup, number) %>%
+#  ungroup()
+#aidsRisk[is.na(aidsRisk)] <- 0  
+#aidsRisk <- addExpCols(aidsRisk, expNames)
+
+adjustAidsDiags <- hmtSet %>% 
+  group_by(yearaids, expgroup) %>%
+  summarise(subset = n()) %>%
+  spread(expgroup, subset) %>%
+  #ungroup() %>%
+  rename(year = yearaids)  %>%
+  right_join(., select(hivResults, year, notifications), by = "year") %>%
+  mutate(hetero = ifelse(is.na(as.numeric(hetero)),0, as.numeric(hetero)),
+         msm = ifelse(is.na(as.numeric(msm)),0, as.numeric(msm)),
+         otherexp = ifelse(is.na(as.numeric(otherexp)),0, as.numeric(otherexp)),
+         pwid = ifelse(is.na(as.numeric(pwid)),0, as.numeric(pwid))) %>%
+  mutate(known = hetero + msm + otherexp + pwid) %>%
+  mutate(prop_hetero = hetero / known,
+         prop_msm = msm / known,
+         prop_otherexp = otherexp / known,
+         prop_pwid = pwid / known) %>%
+  mutate(prop_hetero = ifelse(is.nan(prop_hetero),0, prop_hetero), 
+         prop_msm = ifelse(is.nan(prop_msm),0, prop_msm),
+         prop_otherexp = ifelse(is.nan(prop_otherexp),0, prop_otherexp),
+         prop_pwid = ifelse(is.nan(prop_pwid),0, prop_pwid)) %>%
+  mutate(adjusted_hetero = notifications * prop_hetero,
+         adjusted_msm = notifications * prop_msm,
+         adjusted_otherexp = notifications *  prop_otherexp,
+         adjusted_pwid = notifications * prop_pwid) %>%
+  select(-hetero, -msm, -otherexp, -pwid) %>%
+  mutate(hetero = adjusted_hetero, msm = adjusted_msm, otherexp = adjusted_otherexp, pwid = adjusted_pwid) %>%
+  select(-unknown, -known, -prop_hetero, -prop_msm, -prop_otherexp, -prop_pwid, -adjusted_hetero, -adjusted_msm, -adjusted_pwid, -adjusted_otherexp, -notifications)
+
+# Remove unknown notifications by distributing them to other categories
+# in proportion
+#temp <- aidsRisk
+#temp$prop_unknown <- temp$unknown / rowSums(temp[, 2:6])
+#tempAdjusted <- temp
+#temp$prop_unknown[temp$prop_unknown == 1] <- 0
+#tempAdjusted[, 2:5] <- temp[, 2:5] / 
+#  (1 - temp$prop_unknown)
+#tempAdjusted <- select(tempAdjusted, -unknown, -prop_unknown)
+
+#aidsRisk <- tempAdjusted
+#aidsRisk <- merge(fillMissing, aidsRisk, by="year", all.x=TRUE)
+#aidsRisk[, 2:5] <- apply(aidsRisk[, 2:5], 2, 
+#                            function(x) x * (1 - propAnnDuplicates))
+#aidsRisk[, 2:5] <- aidsRisk[, 2:5] + hivaidsRisk[, 2:5]
+#aidsRisk[is.na(aidsRisk)] <- 0
+
+# Write to file
+write_csv(adjustHivDiags, file.path(dataFolderRisk, "HIV.csv"))
+write_csv(adjustAidsDiags, file.path(dataFolderRisk, "AIDS.csv"))
+write_csv(adjustHivAidsRisk, file.path(dataFolderRisk, "HIVAIDS.csv"))
+
+```
+
+```{r annual adjustments (exposure)}
+# Deaths by exposure group breakdown by notifications breakdown
+# First estimate raltive number of PLDHIV by exposure using 
+# cumulative notifications
+hivExpDiags <- as.data.frame(apply(diagnosesRisk[, 2:5] + aidsRisk[, 2:5], 2, function(x) cumsum(x))) %>% mutate(all = hetero + msm + otherexp + pwid) %>% tbl_df()
+
+# Estimate the number of deaths
+deathRate <- 1
+heteroDeaths <- hivExpDiags$hetero * deathRate * hivDiagnosed$value *
+  hivResults$deathrate / hivExpDiags$all
+heteroDeaths[is.nan(heteroDeaths)] <- 0
+
+msmDeaths <- hivExpDiags$msm * deathRate * hivDiagnosed$value *
+  hivResults$deathrate / hivExpDiags$all
+msmDeaths[is.nan(msmDeaths)] <- 0
+
+pwidDeaths <- hivExpDiags$pwid * deathRate * hivDiagnosed$value *
+  hivResults$deathrate / hivExpDiags$all
+pwidDeaths[is.nan(pwidDeaths)] <- 0
+
+otherDeaths <- hivExpDiags$otherexp * deathRate * hivDiagnosed$value *
+  hivResults$deathrate / hivExpDiags$all
+otherDeaths[is.nan(otherDeaths)] <- 0
+
+annDeathsExp <- data_frame(year = diagnosesRisk$year,
+                           hetero = heteroDeaths,
+                           msm = msmDeaths,
+                           pwid = pwidDeaths,
+                           otherexp = otherDeaths)
+
+# Number of migrants by exposure group -- ignore interstate migration
+# for the time being
+
+osRate <- hivResults$osrate
+
+heteroMig <- hivExpDiags$hetero * hivDiagnosed$value * osRate / 
+  hivExpDiags$all 
+heteroMig[is.nan(heteroMig)] <- 0
+
+msmMig <- hivExpDiags$msm * hivDiagnosed$value * osRate / 
+  hivExpDiags$all 
+msmMig[is.nan(msmMig)] <- 0
+
+pwidMig <- hivExpDiags$pwid * hivDiagnosed$value * osRate / 
+  hivExpDiags$all 
+pwidMig[is.nan(pwidMig)] <- 0
+
+otherMig <- hivExpDiags$otherexp * hivDiagnosed$value * osRate / 
+  hivExpDiags$all 
+otherMig[is.nan(otherMig)] <- 0
+
+annMigrantsExp <- data_frame(year = diagnosesRisk$year,
+                           hetero = heteroMig,
+                           msm = msmMig,
+                           pwid = pwidMig,
+                           otherexp = otherMig)
+
+# Writeannual deaths and migrants to file
+write_csv(annDeathsExp, file.path(dataFolderRisk, "Dead.csv"))
+write_csv(annMigrantsExp, file.path(dataFolderRisk, "Emig.csv"))
+
+```
+
+
+```{r CD4 count breakdown (risk)}
+
+expNames <- expNames[1:5]
+
+# Number overall with CD4 >= 500 at diagnosis - need to manually append
+#  missing
+hivCd41Risk <- hmtSet %>%
+  filter(cd4count >= 500) %>%
+  group_by(yearhiv, expgroup) %>%
+  summarise(number = n()) %>%
+  rename(year = yearhiv) %>%
+  spread(expgroup, number) %>%
+  ungroup()
+if ("unknown" %in% colnames(hivCd41Risk)) {
+  hivCd41Risk <- select(hivCd41Risk, -unknown)
+}
+hivCd41Risk[is.na(hivCd41Risk)] <- 0 
+hivCd41Risk <- addExpCols(hivCd41Risk, expNames)
+hivCd41Risk <- merge(fillMissing, hivCd41Risk, by="year", all.x=TRUE)
+hivCd41Risk$hetero[is.na(hivCd41Risk$hetero)] <- 0
+hivCd41Risk$msm[is.na(hivCd41Risk$msm)] <- 0
+hivCd41Risk$otherexp[is.na(hivCd41Risk$otherexp)] <- 0
+hivCd41Risk$pwid[is.na(hivCd41Risk$pwid)] <- 0
+
+# Number overall with CD4 < 500 & >= 350 at diagnosis - need to
+#  manually append missing
+hivCd42Risk <- hmtSet %>%
+  filter(cd4count < 500, cd4count >= 350) %>%
+  group_by(yearhiv, expgroup) %>%
+  summarise(number = n()) %>%
+  rename(year = yearhiv) %>%
+  spread(expgroup, number) %>%
+  ungroup()
+if ("unknown" %in% colnames(hivCd42Risk)) {
+  hivCd42Risk <- select(hivCd42Risk, -unknown)
+}
+hivCd42Risk[is.na(hivCd42Risk)] <- 0  
+hivCd42Risk <- addExpCols(hivCd42Risk, expNames)
+hivCd42Risk <- merge(fillMissing, hivCd42Risk, by="year", all.x=TRUE)
+hivCd42Risk$hetero[is.na(hivCd42Risk$hetero)] <- 0
+hivCd42Risk$msm[is.na(hivCd42Risk$msm)] <- 0
+hivCd42Risk$otherexp[is.na(hivCd42Risk$otherexp)] <- 0
+hivCd42Risk$pwid[is.na(hivCd42Risk$pwid)] <- 0
+
+# Number overall with CD4 < 350 & >= 200 at diagnosis - need to
+#  manually append missing
+hivCd43Risk <- hmtSet %>%
+  filter(cd4count < 350, cd4count >= 200) %>%
+  group_by(yearhiv, expgroup) %>%
+  summarise(number = n()) %>%
+  rename(year = yearhiv) %>%
+  spread(expgroup, number) %>%
+  ungroup()
+if ("unknown" %in% colnames(hivCd43Risk)) {
+  hivCd43Risk <- select(hivCd43Risk, -unknown)
+}
+hivCd43Risk[is.na(hivCd43Risk)] <- 0  
+hivCd43Risk <- addExpCols(hivCd43Risk, expNames)
+hivCd43Risk <- merge(fillMissing, hivCd43Risk, by="year", all.x=TRUE)
+hivCd43Risk$hetero[is.na(hivCd43Risk$hetero)] <- 0
+hivCd43Risk$msm[is.na(hivCd43Risk$msm)] <- 0
+hivCd43Risk$otherexp[is.na(hivCd43Risk$otherexp)] <- 0
+hivCd43Risk$pwid[is.na(hivCd43Risk$pwid)] <- 0
+
+# Number overall with CD4 < 200 & >= 0 at diagnosis - need to
+#  manually append missing
+hivCd44Risk <- hmtSet %>%
+  filter(cd4count < 200, cd4count >= 0) %>%
+  group_by(yearhiv, expgroup) %>%
+  summarise(number = n()) %>%
+  rename(year = yearhiv) %>%
+  spread(expgroup, number) %>%
+  ungroup()
+if ("unknown" %in% colnames(hivCd44Risk)) {
+  hivCd44Risk <- select(hivCd44Risk, -unknown)
+}
+hivCd44Risk[is.na(hivCd44Risk)] <- 0  
+hivCd44Risk <- addExpCols(hivCd44Risk, expNames)
+hivCd44Risk <- merge(fillMissing, hivCd44Risk, by="year", all.x=TRUE)
+hivCd44Risk$hetero[is.na(hivCd44Risk$hetero)] <- 0
+hivCd44Risk$msm[is.na(hivCd44Risk$msm)] <- 0
+hivCd44Risk$otherexp[is.na(hivCd44Risk$otherexp)] <- 0
+hivCd44Risk$pwid[is.na(hivCd44Risk$pwid)] <- 0
+
+# Write to file
+write_csv(hivCd41Risk, file.path(dataFolderRisk, "HIV_CD4_1.csv"))
+write_csv(hivCd42Risk, file.path(dataFolderRisk, "HIV_CD4_2.csv"))
+write_csv(hivCd43Risk, file.path(dataFolderRisk, "HIV_CD4_3.csv"))
+write_csv(hivCd44Risk, file.path(dataFolderRisk, "HIV_CD4_4.csv"))
+
+```
+
