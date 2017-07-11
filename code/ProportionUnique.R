@@ -19,8 +19,7 @@ ProportionUnique <- function(hivSetOrig, hivResults, origHivSet){
   # Add variable for proportion unique - due to statistical calculations 
   # proportion mybe slightly higher than one. In those cases round down to
   # 1.
-  propunique <- 
-  numberUniqueAll / origHivSet$totalnotifications
+  propunique <- numberUniqueAll / origHivSet$totalnotifications
   propunique[is.na(propunique)] <- 0
   propunique[propunique > 1] <- 1
 

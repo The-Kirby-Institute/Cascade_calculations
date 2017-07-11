@@ -43,9 +43,7 @@ source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Primary script parameters
-currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
-
-
+# currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 ```
 
 ```{r Front matter}
@@ -61,7 +59,6 @@ cat(fmStr)
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2015
-startYear <- 1990
 
 plots <- FALSE       # TRUE if we want to plot things
 bindCascade <- TRUE  # TRUE if we want to store all the cascade results 
@@ -72,15 +69,16 @@ saveNotifications <- TRUE # save cleaned notifications set
 saveResults <- TRUE       # save information national annual notifications
 savePldhiv <- TRUE        # save PLDHIV estimates separately
 
-# set hivSet function parameters
+# Set HIV subsetting function parameters----------------------------------
+
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'non-australia' # all=including n/a, Thailand, etc.
+targetCob <- 'all' # all=including n/a, Thailand, etc.
 targetExposure <- 'all'
 targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
 targetState <- 'all' # NSW, VIC, etc
 targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc.
+targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 
 ```
 
@@ -89,125 +87,88 @@ targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc.
 # POTENTIALLY PUT SOME FUNCTIONS INTO A SEPARATE SCRIPT FOR SOURCING
 
 # Load function to remove duplicates
-source(file.path(Rcode,"RemoveDuplicates.R"), echo=TRUE)
+# source(file.path(Rcode,"RemoveDuplicates.R"), echo=TRUE)
 
 # Load function to calculate number living with diagnosed HIV
 source(file.path(Rcode,"LivingDiagnosed.R"), echo=TRUE)
 
-# Source function for filling in missing data
+# Source functions for filling in missing data
 source(file.path(Rcode, "FillMissing.R"), echo=TRUE)
+source(file.path(Rcode, "FillDataFrame.R"), echo=TRUE)
 
 # Function to easily extract sub-populations of interest 
 source(file.path(Rcode, "Subset.R"), echo=TRUE)
 
 # Function for removing duplicates annually
-source(file.path(Rcode, "RemoveDuplicatesAnnually.R"), echo=TRUE)
+source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
+# source(file.path(Rcode, "RemoveDuplicatesAnnually.R"), echo=TRUE)
 
 # Function to create file name for deduplicted output
-source(file.path(Rcode, "Deduplicate.R"), echo=TRUE)
+# source(file.path(Rcode, "Deduplicate.R"), echo=TRUE)
 
 # Function to create file name for deduplicted output
-source(file.path(Rcode, "Deduplicate.R"), echo=TRUE)
+# source(file.path(Rcode, "Deduplicate.R"), echo=TRUE)
 
 # Function to replace estimates
 source(file.path(Rcode, "ReplaceEstimates.R"), echo=TRUE)
 
+# Function to tidy notifications
+source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
 
 ```
 
 ```{r Clean notifications}
-# SHOULD PUSH ALL THIS INTO HIV CLEAN SCRIPT
-
 # This chunk loads the national notifications and subsets based on the
 # specified criteria in Script paramaters
 
-# Load notifications
-hivData <- read.csv(file.path(dataFolder, paste("hivnotifications",
-                    toString(analysisYear), ".csv", sep = ""))) 
+# Load cleaned notifications data
+origHivData <- read.csv(file.path(dataFolder, paste0("hivnotifications",
+                    toString(analysisYear), ".csv"))) 
 
-# if (replaceValues) {
-#   # Replace with hard coded estimates where necessary
-#   
-#   # Load hard coded estimates
-#   hardCodeValues <- read.csv(file.path(dataFolder,
-#                                        "Hard_coded_estimates.csv"))
-# }
+# Read in country code data
+countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
 
-# Setup overarching analysis                   
-years <- startYear:analysisYear # Years to calculate and plot 
+# Tidy up notifications for calculations
+hivData <- TidyNotifications(origHivData, analysisYear, countryCodes)
 
-# Setup extra columns for analysis
-hivData$yeardiagnosis <- as.numeric(substr(hivData$datediagnosis, 1, 4))
-hivData$yeardeath <- as.numeric(substr(hivData$datedeath, 1, 4))
+# Data checks-------------------------------------------------------------
 
-allYears <- min(hivData$yeardiagnosis):analysisYear # All years of data
-
-#clean aboriggroup
-hivData$aboriggroup <- rep(NA,nrow(hivData))
-
-# Aboriginal group
-if (analysisYear < 2015) {
-  hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
-  hivData$aboriggroup[hivData$cob==0] <- NA
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non indigenous"] <- "non-indigenous" 
-} else {
-  # hivData$aboriggroup[hivData$cob!=1100] <- "othercob"
-  # MAY NEED TO BE CAREFUL WITH MISSING COUNTRY OF BIRTH INDIGENOUS
-  # hivData$aboriggroup[hivData$cob==0 & hivData$indigenous == "Aboriginal"] <- "indigenous"
-  # hivData$aboriggroup[hivData$cob==0 & hivData$indigenous != "Aboriginal"] <- "not-reported"
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
-   hivData$aboriggroup[hivData$indigenous != "Aboriginal"] <- "non-indigenous"
-  hivData$aboriggroup[is.na(hivData$aboriggroup)] <- "non-indigenous"
-  # hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non-Indigenous"] <- "non-indigenous" 
-  # hivData$aboriggroup[hivData$cob == 1100 & is.na(hivData$indigenous)] <- "non-indigenous"
-}
-
-# transfer cob to cobCode
-hivData$cobcode <- hivData$cob
-
-# load cob and region codes
-crCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
-
-# if cob is not in crCodes/NA, change to Not Reported 
-hivData$cob[!(hivData$cobcode %in% crCodes$COUNTRY_CODE)] <- "Not Reported"
-
-# change cob from code to String
-hivData$cob <- crCodes$COUNTRY_NAME[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
-
-#add region - DO LATER?
-hivData$globalregion <- crCodes$REGION[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
-
-# CHANGE NA TO NOT REPORTED AS WELL (only 22 in the data set)
-hivData$cob[is.na(hivData$cob)] <- "Not Reported"
-
-# Convert some of the not reporteds to "overseas" if country of birth is missing 
-# but region of birth is available.
-hivData$cob <- as.character(hivData$cob)
-hivData$cob[hivData$cob == "Not Reported" & !(hivData$rob %in%  c(0,7))] <-
-  "Overseas"
-
-# Quick checks that we are not doing analysis outside of the data.
+# Quick check that we are not doing analysis outside of the data
 if (max(hivData$yeardiagnosis) < analysisYear) {
   stop("No data specified for final year of analysis.")
 }
 
-if (min(hivData$yeardiagnosis) > startYear) {
-  stop("No data specified for first year of analysis.")
-}
+# HIV data variables------------------------------------------------------
+
+# Setup variables for overarching analysis                  
+allYears <- min(hivData$yeardiagnosis):analysisYear # all years of data
 
 ```
 
 ```{r Subset notifications}
-# Source subset function
-# Create subsetted notifications dataframe
-hivSetOrig <- filter(hivData, yeardiagnosis <= analysisYear)
+# Create subsetted notifications dataframe. May have to do this multiple
+# times to get the extact number of specific category and those excluded
+# for inter-regional movement. E.g. MSM only in NSW as excluded will have
+# non-MSM and non-NSW
+
+hivSetAll <- filter(hivData, yeardiagnosis <= analysisYear)
+annDiagsOrig <- hivSetAll %>% 
+  group_by(yeardiagnosis) %>%
+  summarise(notifications = n()) %>%
+  mutate(totalnotifications = cumsum(notifications)) %>%
+  ungroup() 
+
+overallPropUnique <- ProportionUnique(hivSetAll,
+                                      annDiagsOrig$totalnotifications,
+                                      allYears)
 
 # Set indigenous aside separately to add on later if required
-hivSetIndigenous <- filter(hivSetOrig, aboriggroup == 'indigenous')
-hivSetOrig <- filter(hivSetOrig, aboriggroup == 'non-indigenous')
+hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
+hivSetAll <- filter(hivSetAll, aboriggroup == 'non-indigenous')
   
-hivSetReturn <- subhivset(hivSetOrig, targetAge, targetExposure, targetCob, targetAtsi, targetLocalRegion, targetGlobalRegion)
+hivSetReturn <- subhivset(hivSetAll, targetAge, targetExposure,
+                          targetCob, targetAtsi, targetLocalRegion,
+                          targetGlobalRegion)
 
 hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
@@ -215,9 +176,114 @@ hivSetUnknown <- hivSetReturn[[3]]
 
 ```
 
+```{r Annual notifications and proportions}
+# For the known diagnoses calculate proportion by age bin, exposure group,
+# cd4 count category and diagnosis type. Tis will be used to distribute 
+# annual notifications for aging PLDHIV and to distribute notifications
+# by CD4 count, expgroup, and diagnosis type for the ECDC model.  
+
+knownDiags <- hivSet %>% 
+  group_by(yeardiagnosis) %>%
+  summarise(subset = n()) %>%
+  ungroup() 
+
+# Proportion in each age group--------------------------------------------
+# Used for aging calculations
+agedDiags <- hivSet %>%
+  group_by(yeardiagnosis, agebin) %>%
+  summarise(diags = n()) %>%
+  ungroup() %>%
+  spread(agebin, diags) %>%
+  dplyr::select(-yeardiagnosis, -`Not Reported`)
+agedDiags[is.na(agedDiags)] <- 0
+propAge <- t(apply(agedDiags, 1, 
+                 function(row) row/sum(row)))
+agedSubset <- bind_cols(knownDiags, as.data.frame(propAge))
+
+# Number in each CD4 count---------------------------------------------
+# This is for ECDC where we have CD4 by exposure
+
+cd4All <- function(hivData, cd4binGroup, 
+                   minYear = 1980, adjustUnique = NULL) {
+  # Organize all the data
+  cd4DiagsAll <- hivData %>%
+    group_by(yeardiagnosis, cd4bin) %>%
+    summarise(diags = n()) %>%
+    ungroup() %>%
+    spread(cd4bin, diags) %>%
+    dplyr::select(-`Not Reported`) %>%
+    rename(year = yeardiagnosis)
+  cd4DiagsAll[is.na(cd4DiagsAll)] <- 0
+  
+  # Fix cd4 string so it can be read by Select
+  cd4binGroup <- paste0("`", cd4binGroup, "`")
+  
+  # Select what we want
+  cd4Diags <- cd4DiagsAll %>%
+    select_("year", cd4binGroup)
+  colnames(cd4Diags)[2] <- c("all")
+  
+  # Fill in missing years
+  allYears <- minYear:max(cd4Diags$year)
+  requiredYears <- allYears[!(allYears %in% cd4Diags$year)]
+  cd4Diags <- FillDataFrame(requiredYears, cd4Diags)
+  
+  return(cd4Diags)
+
+}
+
+cd4Exposure <- function(hivData, cd4binGroup,
+                        minYear = 1980) {
+  
+  cd4DiagsExp <- hivData %>%
+    group_by(yeardiagnosis, cd4bin, expgroup) %>%
+    summarise(diags = n()) %>%
+    ungroup() %>%
+    spread(expgroup, diags) 
+  cd4DiagsExp[is.na(cd4DiagsExp)] <- 0  
+  
+  cd4ExpBin <- cd4DiagsExp %>%
+    filter(cd4bin == cd4binGroup) %>%
+    mutate(total = hetero+msm+otherexp+pwid+unknown) %>%
+    mutate(hetero = hetero / (1 - unknown / total),
+           msm = msm / (1 - unknown / total),
+           pwid = pwid / (1 - unknown / total),
+           otherexp = otherexp / (1 - unknown / total)) %>%
+    dplyr::select(-cd4bin, -total, -unknown) %>%
+    rename(year = yeardiagnosis)
+  
+  # Fill in missing years
+  allYears <- minYear:max(cd4ExpBin$year)
+  requiredYears <- allYears[!(allYears %in% cd4ExpBin$year)]
+  cd4ExpBin <- FillDataFrame(requiredYears, cd4ExpBin)
+
+  return(cd4ExpBin)
+  
+}  
+
+# Diagnosis type----------------------------------------------------------
+diagType <- hivData %>%
+  group_by(yeardiagnosis, typediagnosis, expgroup) %>%
+  summarise(diags = n()) %>%
+  ungroup() %>%
+  spread(expgroup, diags)
+
+
+%>%
+  dplyr::select(-yeardiagnosis)
+diagType[is.na(diagType)] <- 0
+propType <- t(apply(diagType, 1, 
+                 function(row) row/sum(row)))
+
+knownDiags <- bind_cols(knownDiags, diagType)
+
+
+```
+
+
 ```{r Annual notifications}
-# This chunk creates a dataframe of the annual notifications for the specified 
-# criteria.
+# This chunk creates a dataframe of the annual notifications for the
+# specified criteria.
 origHivSet <- hivSetOrig %>%
   group_by(yeardiagnosis) %>%
   summarise(notifications = n()) %>%
@@ -246,9 +312,8 @@ unknownDiags <- hivSetUnknown %>%
   group_by(yeardiagnosis) %>% 
   summarise(unknown = n())
 }
-            # cob_unknown = sum(is.na(cob) | cob == "Not Reported"),
-            # indigenous = sum(!is.na(aboriggroup) & aboriggroup == "indigenous"),
-            # overseas = sum(cob=="Overseas"))
+
+
 
 adjustDiags <- hivSet %>% 
   group_by(yeardiagnosis) %>%
@@ -262,8 +327,9 @@ adjustDiags <- hivSet %>%
          unknown = ifelse(is.na(unknown), 0, unknown)) %>%
   mutate(prop_included = included / (included + excluded),
          prop_excluded = excluded / (included + excluded)) %>%
-  mutate(prop_included = ifelse(is.nan(prop_included),0, prop_included), 
-         prop_excluded = ifelse(is.nan(prop_excluded),0, prop_excluded)) %>%
+  mutate(prop_included = ifelse(is.nan(prop_included), 0, prop_included), 
+         prop_excluded = ifelse(is.nan(prop_excluded), 0, 
+                                prop_excluded)) %>%
   mutate(adjusted_included = included  + unknown * prop_included,
          adjusted_excluded = excluded + unknown * prop_excluded)%>%
   rename(year = yeardiagnosis)
