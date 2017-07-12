@@ -194,7 +194,7 @@ agedSubset <- bind_cols(knownDiags, agedDiags)
 agedSubsetProp <- bind_cols(knownDiags, as.data.frame(propAge))
 ```
 
-```{r ECDC}
+```{r ECDC Outputs}
 # ECDC calculations-------------------------------------------------------
 model <- "all"
 

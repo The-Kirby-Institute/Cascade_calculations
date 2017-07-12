@@ -2,9 +2,10 @@
 
 # R. T. Gray
 
-LivingDiagnosed <- function(cumdiagnoses, deathrate, migration, 
+LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,  
                             propstay = NULL, arrivals = NULL, 
-                            departs = NULL, pldhiv = NULL) {
+                            departs = NULL, pldhiv = NULL,
+                            propstay = NULL) {
   # Calculate the number of people living with diagnosed HIV.
   #
   # Args:
@@ -37,7 +38,11 @@ LivingDiagnosed <- function(cumdiagnoses, deathrate, migration,
   nyears <- length(cumdiagnoses)
   
   # If optional inputs equal to zero convert to vectors
-  if (is.null(propstay)) {
+  if (!is.null(propstay)) {
+    if (length(propstay == 1)) {
+      propstay <- rep(propstay, nyears)
+    } 
+  } else {
     propstay <- rep(1, nyears)
   }
   
@@ -68,7 +73,7 @@ LivingDiagnosed <- function(cumdiagnoses, deathrate, migration,
   # Main program ----------------------------------------------------------
 
   # Calculate annual diagnoses
-  annualdiags <- propstay * c(cumdiagnoses[1], diff(cumdiagnoses))
+  # annualdiags <- propstay * c(cumdiagnoses[1], diff(cumdiagnoses))
   
   # Initialize output array
   nliving <- rep(NA,nyears)
@@ -85,8 +90,12 @@ LivingDiagnosed <- function(cumdiagnoses, deathrate, migration,
   
   # Loop through input parameters and calculate numLiving
   for (ii in 2:nyears) {
-    nliving[ii] <- nliving[ii-1] + annualdiags[ii] - (deathrate[ii-1] +  
-      migration[ii-1] + departs[ii-1]) * nliving[ii-1] + arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
+    nliving[ii] <- nliving[ii-1] + propstay[ii] * propunique[ii] * 
+      annualdiags[ii] - (deathrate[ii-1] + migration[ii-1] + 
+                           departs[ii-1]) * nliving[ii-1] + 
+      arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
+    
+    nduplicates <- (1 - propunique[ii]) * nliving[ii-1]
     
     ndead[ii] <- deathrate[ii-1] * nliving[ii-1]
       
@@ -94,8 +103,16 @@ LivingDiagnosed <- function(cumdiagnoses, deathrate, migration,
       
     ndeparts[ii] <- departs[ii-1] * nliving[ii-1]
     
+    narrivals[ii] <- arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
+    
+    nleave[ii] <- (1 - propstay[ii]) * nliving[ii-1]
+    
+    
+    
   }
-
+ 
+  # Put all the outputs into a dataframe
+  
   # Return final output
   return(nliving)
   
