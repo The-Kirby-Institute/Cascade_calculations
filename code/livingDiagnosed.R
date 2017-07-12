@@ -74,10 +74,25 @@ LivingDiagnosed <- function(cumdiagnoses, deathrate, migration,
   nliving <- rep(NA,nyears)
   nliving[1] <- annualdiags[1]
   
+  ndead <- rep(NA,nyears)
+  ndead[1] <- 0
+  
+  nmigrants <- rep(NA,nyears)
+  nmigrants[1] <- 0
+  
+  ndeparts <- rep(NA,nyears)
+  ndeparts[1] <- 0
+  
   # Loop through input parameters and calculate numLiving
   for (ii in 2:nyears) {
     nliving[ii] <- nliving[ii-1] + annualdiags[ii] - (deathrate[ii-1] +  
       migration[ii-1] + departs[ii-1]) * nliving[ii-1] + arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
+    
+    ndead[ii] <- deathrate[ii-1] * nliving[ii-1]
+      
+    nmigrants[ii] <- migration[ii-1] * nliving[ii-1]
+      
+    ndeparts[ii] <- departs[ii-1] * nliving[ii-1]
     
   }
 
