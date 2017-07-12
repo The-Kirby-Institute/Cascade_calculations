@@ -115,6 +115,20 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
                              labels = c(levels(hivData$cd4bin), 
                                         "Not Reported"), exclude = NULL)
     
+    # Add CD4 count London Method
+    cd4LMlabels <- c("<20", "20-49", "50-99", "100-149", "150-199", 
+                     "200-249", "250-299", "300-349", ">350")
+    hivData$cd4London <- cut(floor(hivData$cd4count), 
+                          breaks = c(0, 20, 50, 100, 150, 200,
+                                     250, 300, 350, Inf), 
+                          right = FALSE, 
+                          labels = cd4LMlabels)
+    
+    hivData$cd4London <- factor(hivData$cd4London, 
+                             levels = levels(addNA(hivData$cd4London)), 
+                             labels = c(levels(hivData$cd4London), 
+                                        "Not Reported"), exclude = NULL)
+    
     # Diagnosed with AIDS
     hivData$yearaids <- as.numeric(format(as.Date(origHivData$dateaids), 
                                           "%Y"))

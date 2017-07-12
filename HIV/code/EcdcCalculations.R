@@ -10,11 +10,11 @@ EcdcFolders <- function(outputFolder, model, includeOS = TRUE,
                         time = FALSE) {
   
   if (includeOS) {
-      folderAll <- "all"
-      folderExp <- "exposure"
+    folderAll <- "all"
+    folderExp <- "exposure"
   } else {
-      folderAll <- "all_exclude"
-      folderExp <- "exposure_exclude"
+    folderAll <- "all_exclude"
+    folderExp <- "exposure_exclude"
   }
   
   if (time) {
@@ -52,16 +52,35 @@ EcdcFolders <- function(outputFolder, model, includeOS = TRUE,
 
 # Function for writing ECDC files------------------------------------------
 EcdcWrite <- function(results, folder, category) {
- # Categories: hiv, hivaids, aids, <200, 200-349, 350-499, >500
+  # Categories: hiv, hivaids, aids, <200, 200-349, 350-499, >500
   
   fileTag <- switch(category,
-         "hiv" = "HIV",
-         "hivaids" = "HIVAIDS",
-         "aids" = "AIDS",
-         ">500" = "HIV_CD4_1", 
-         "350-499" = "HIV_CD4_2", 
-         "200-349" = "HIV_CD4_3", 
-         "<200" = "HIV_CD4_4")
+                    "hiv" = "HIV",
+                    "hivaids" = "HIVAIDS",
+                    "aids" = "AIDS",
+                    ">500" = "HIV_CD4_1", 
+                    "350-499" = "HIV_CD4_2", 
+                    "200-349" = "HIV_CD4_3", 
+                    "<200" = "HIV_CD4_4",
+                    "Not Reported_1" = "HIV_CD4_LM_1_0",
+                    "<20_1" = "HIV_CD4_LM_1_1",
+                    "20-49_1" = "HIV_CD4_LM_1_2",
+                    "50-99_1" = "HIV_CD4_LM_1_3",
+                    "100-149_1" = "HIV_CD4_LM_1_4",
+                    "150-199_1" = "HIV_CD4_LM_1_5",
+                    "200-249_1" = "HIV_CD4_LM_1_6",
+                    "250-299_1" = "HIV_CD4_LM_1_7",
+                    "300-349_1" = "HIV_CD4_LM_1_8",
+                    "Not Reported_2" = "HIV_CD4_LM_2_0",
+                    "<20_2" = "HIV_CD4_LM_2_1",
+                    "20-49_2" = "HIV_CD4_LM_2_2",
+                    "50-99_2" = "HIV_CD4_LM_2_3",
+                    "100-149_2" = "HIV_CD4_LM_2_4",
+                    "150-199_2" = "HIV_CD4_LM_2_5",
+                    "200-249_2" = "HIV_CD4_LM_2_6",
+                    "250-299_2" = "HIV_CD4_LM_2_7",
+                    "300-349_2" = "HIV_CD4_LM_2_8",
+                    ">350_2" = "HIV_CD4_LM_2_9")
   
   fileName <- file.path(folder, paste0(fileTag, ".csv"))
   
@@ -79,7 +98,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
     # Extract notifications
     if (type == "hiv") {
       diagType <- hivData %>%
-        filter(typediagnosis %in% c("hiv", "hivaids")) %>%
+        # filter(typediagnosis %in% c("hiv", "hivaids")) %>%
         group_by(yeardiagnosis,  expgroup) %>%
         summarise(diags = n()) %>%
         ungroup() %>%
@@ -88,6 +107,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
     } else if (type == "aids") {
       diagType <- hivData %>%
         filter(typediagnosis %in% c("aids", "hivaids")) %>%
+        # filter(typediagnosis %in% c("hivaids")) %>%
         group_by(yeardiagnosis, expgroup) %>%
         summarise(diags = n()) %>%
         ungroup() %>%
@@ -123,6 +143,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
         spread(expgroup, diags) %>%
         rename(year = yeardiagnosis)
     } 
+    
     diagType[is.na(diagType)] <- 0
     
     diagType <- diagType %>%
@@ -136,7 +157,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
              pwid = ifelse(is.nan(pwid), 0, pwid),
              otherexp = ifelse(is.nan(otherexp), 0, otherexp)) %>%
       select(-known, -unknown)
-      
+    
     
     # Fill in missing years
     allYears <- minYear:max(hivData$yeardiagnosis)
@@ -157,7 +178,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
     # Don't split by exposure group 
     if (type == "hiv") {
       diagType <- hivData %>%
-        filter(typediagnosis %in% c("hiv", "hivaids")) %>%
+        # filter(typediagnosis %in% c("hiv", "hivaids")) %>%
         group_by(yeardiagnosis) %>%
         summarise(all = n()) %>%
         ungroup() %>%
@@ -165,6 +186,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
     } else if (type == "aids") {
       diagType <- hivData %>%
         filter(typediagnosis %in% c("aids", "hivaids")) %>%
+        # filter(typediagnosis %in% c("hivaids")) %>%
         group_by(yeardiagnosis) %>%
         summarise(all = n()) %>%
         ungroup() %>%
@@ -198,19 +220,37 @@ typeDiag <- function(hivData, type, minYear = 1980,
 
 # Number in each CD4 count all---------------------------------------------
 cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
-                   adjustUnique = NULL) {
-  # First filer out aids cases
-  hivData <- hivData %>%
-    filter(typediagnosis == "hiv")
+                   adjustUnique = NULL, london = FALSE, lmset = FALSE) {
   
   # Organize all the data
-  cd4DiagsAll <- hivData %>%
-    group_by(yeardiagnosis, cd4bin) %>%
-    summarise(diags = n()) %>%
-    ungroup() %>%
-    spread(cd4bin, diags) %>%
-    mutate(total = apply(select(., 2:6), 1, sum)) %>%
-    rename(year = yeardiagnosis)
+  if (london) {
+    
+    if (lmset) {
+      # First filter hiv/aids
+      hivData <- hivData %>%
+      filter(typediagnosis %in% c("hivaids", "aids"))
+    }
+    
+    cd4DiagsAll <- hivData %>%
+      group_by(yeardiagnosis, cd4London) %>%
+      summarise(diags = n()) %>%
+      ungroup() %>%
+      spread(cd4London, diags) %>%
+      mutate(total = apply(select(., 2:6), 1, sum)) %>%
+      rename(year = yeardiagnosis)
+  } else {
+    # First filter out concurrent aids cases
+    hivData <- hivData %>%
+      filter(typediagnosis %in% c("hiv", "aids"))
+    
+    cd4DiagsAll <- hivData %>%
+      group_by(yeardiagnosis, cd4bin) %>%
+      summarise(diags = n()) %>%
+      ungroup() %>%
+      spread(cd4bin, diags) %>%
+      mutate(total = apply(select(., 2:6), 1, sum)) %>%
+      rename(year = yeardiagnosis)
+  }
   cd4DiagsAll[is.na(cd4DiagsAll)] <- 0
   
   # Fix cd4 string so it can be read by Select
@@ -249,33 +289,58 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
 
 # Number in each CD4 count by exposure------------------------------------
 cd4Exposure <- function(hivData, cd4binGroup,
-                        minYear = 1980, adjustUnique = NULL) {
+                        minYear = 1980, adjustUnique = NULL,
+                        london = FALSE) {
   
-  # First filer out aids cases
+  # First filter out concurrent aids cases
   hivData <- hivData %>%
-    filter(typediagnosis == "hiv")
+    filter(typediagnosis %in% c("hiv", "aids"))
   
-  cd4DiagsExp <- hivData %>%
-    group_by(yeardiagnosis, cd4bin, expgroup) %>%
-    summarise(diags = n()) %>%
-    ungroup() %>%
-    spread(expgroup, diags) 
-  cd4DiagsExp[is.na(cd4DiagsExp)] <- 0  
+  if (london) {
+    cd4DiagsExp <- hivData %>%
+      group_by(yeardiagnosis, cd4London, expgroup) %>%
+      summarise(diags = n()) %>%
+      ungroup() %>%
+      spread(expgroup, diags)
+    
+    cd4DiagsExp[is.na(cd4DiagsExp)] <- 0 
+    
+    cd4ExpBin <- cd4DiagsExp %>%
+      filter(cd4London == cd4binGroup) %>%
+      select(-cd4London, -unknown) %>%
+      rename(year = yeardiagnosis)
+    
+  } else {
+    cd4DiagsExp <- hivData %>%
+      group_by(yeardiagnosis, cd4bin, expgroup) %>%
+      summarise(diags = n()) %>%
+      ungroup() %>%
+      spread(expgroup, diags)
+    
+    cd4DiagsExp[is.na(cd4DiagsExp)] <- 0  
+    
+    cd4ExpBin <- cd4DiagsExp %>%
+      filter(cd4bin == cd4binGroup) %>%
+      select(-cd4bin, -unknown) %>%
+      rename(year = yeardiagnosis)
+    
+  }
+  # cd4DiagsExp[is.na(cd4DiagsExp)] <- 0  
   
-  cd4ExpBin <- cd4DiagsExp %>%
-    filter(cd4bin == cd4binGroup) %>%
-    # mutate(known = hetero+msm+otherexp+pwid) %>%
-    # mutate(hetero = hetero + unknown * hetero/known,
-    #        msm = msm + unknown * msm/known,
-    #        pwid = pwid + unknown * pwid/known,
-    #        otherexp = otherexp + unknown * otherexp/known) %>%
-    # mutate(hetero = ifelse(is.nan(hetero), 0, hetero), 
-    #        msm = ifelse(is.nan(msm), 0, msm),
-    #        pwid = ifelse(is.nan(pwid), 0, pwid),
-    #        otherexp = ifelse(is.nan(otherexp), 0, otherexp)) %>%
-    # select(-cd4bin, -known, -unknown) %>%
-    select(-cd4bin, -unknown) %>%
-    rename(year = yeardiagnosis)
+  # cd4ExpBin <- cd4DiagsExp %>%
+  #   filter(cd4bin == cd4binGroup) %>%
+  #   # mutate(known = hetero+msm+otherexp+pwid) %>%
+  #   # mutate(hetero = hetero + unknown * hetero/known,
+  #   #        msm = msm + unknown * msm/known,
+  #   #        pwid = pwid + unknown * pwid/known,
+  #   #        otherexp = otherexp + unknown * otherexp/known) %>%
+  #   # mutate(hetero = ifelse(is.nan(hetero), 0, hetero), 
+  #   #        msm = ifelse(is.nan(msm), 0, msm),
+  #   #        pwid = ifelse(is.nan(pwid), 0, pwid),
+  #   #        otherexp = ifelse(is.nan(otherexp), 0, otherexp)) %>%
+  #   # select(-cd4bin, -known, -unknown) %>%
+  #   select(-cd4bin, -unknown) %>%
+  #   rename(year = yeardiagnosis)
   
   # Fill in missing years
   allYears <- minYear:max(cd4ExpBin$year)

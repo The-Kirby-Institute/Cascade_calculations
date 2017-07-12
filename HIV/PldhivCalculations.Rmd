@@ -63,6 +63,8 @@ targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 
 excludeAborig <- FALSE
+ecdcData <- TRUE
+ecdcModel <- "all"
 
 ```
 
@@ -98,6 +100,9 @@ source(file.path(Rcode, "ReplaceEstimates.R"), echo=TRUE)
 
 # Function to tidy notifications
 source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
+
+# Functions to output ECDC model data
+source(file.path(HIVcode, "EcdcCalculations.R"), echo=TRUE)
 
 ```
 
@@ -196,7 +201,9 @@ model <- "all"
 dataAll <- EcdcFolders(outputFolder, model)
 dataAllExclude <- EcdcFolders(outputFolder, model, includeOS = FALSE)
 
-# All diagnoses
+# All diagnoses-----------------------------------------------------------
+
+# Incidence method
 hivcsvAll <- typeDiag(hivSet, "hiv", exposure = FALSE, 
                    adjustUnique = overallPropUnique)
 hivaidscsvAll <- typeDiag(hivSet, "hivaids", exposure = FALSE, 
@@ -217,6 +224,51 @@ EcdcWrite(cd4All1, dataAll[[1]], ">500")
 EcdcWrite(cd4All2, dataAll[[1]], "350-499")
 EcdcWrite(cd4All3, dataAll[[1]], "200-349")
 EcdcWrite(cd4All4, dataAll[[1]], "<200")
+
+# London method
+cd4LM10 <- cd4All(hivSet, "Not Reported", london = TRUE, lmset = TRUE)
+cd4LM11 <- cd4All(hivSet, "<20", london = TRUE, lmset = TRUE)
+cd4LM12 <- cd4All(hivSet, "20-49", london = TRUE, lmset = TRUE)
+cd4LM13 <- cd4All(hivSet, "50-99", london = TRUE, lmset = TRUE)
+cd4LM14 <- cd4All(hivSet, "100-149", london = TRUE, lmset = TRUE)
+cd4LM15 <- cd4All(hivSet, "150-199", london = TRUE, lmset = TRUE)
+cd4LM16 <- cd4All(hivSet, "200-249", london = TRUE, lmset = TRUE)
+cd4LM17 <- cd4All(hivSet, "250-299", london = TRUE, lmset = TRUE)
+cd4LM18 <- cd4All(hivSet, "300-349", london = TRUE, lmset = TRUE)
+cd4LM19 <- cd4All(hivSet, ">350", london = TRUE, lmset = TRUE)
+
+EcdcWrite(cd4LM10, dataAll[[1]], "Not Reported_1")
+EcdcWrite(cd4LM11, dataAll[[1]], "<20_1")
+EcdcWrite(cd4LM12, dataAll[[1]], "20-49_1")
+EcdcWrite(cd4LM13, dataAll[[1]], "50-99_1")
+EcdcWrite(cd4LM14, dataAll[[1]], "100-149_1")
+EcdcWrite(cd4LM15, dataAll[[1]], "150-199_1")
+EcdcWrite(cd4LM16, dataAll[[1]], "200-249_1")
+EcdcWrite(cd4LM17, dataAll[[1]], "250-299_1")
+EcdcWrite(cd4LM18, dataAll[[1]], "300-349_1")
+EcdcWrite(cd4LM19, dataAll[[1]], ">350_1")
+
+cd4LM20 <- cd4All(hivSet, "Not Reported", london = TRUE)
+cd4LM21 <- cd4All(hivSet, "<20", london = TRUE)
+cd4LM22 <- cd4All(hivSet, "20-49", london = TRUE)
+cd4LM23 <- cd4All(hivSet, "50-99", london = TRUE)
+cd4LM24 <- cd4All(hivSet, "100-149", london = TRUE)
+cd4LM25 <- cd4All(hivSet, "150-199", london = TRUE)
+cd4LM26 <- cd4All(hivSet, "200-249", london = TRUE)
+cd4LM27 <- cd4All(hivSet, "250-299", london = TRUE)
+cd4LM28 <- cd4All(hivSet, "300-349", london = TRUE)
+cd4LM29 <- cd4All(hivSet, ">350", london = TRUE)
+
+EcdcWrite(cd4LM20, dataAll[[1]], "Not Reported_2")
+EcdcWrite(cd4LM21, dataAll[[1]], "<20_2")
+EcdcWrite(cd4LM22, dataAll[[1]], "20-49_2")
+EcdcWrite(cd4LM23, dataAll[[1]], "50-99_2")
+EcdcWrite(cd4LM24, dataAll[[1]], "100-149_2")
+EcdcWrite(cd4LM25, dataAll[[1]], "150-199_2")
+EcdcWrite(cd4LM26, dataAll[[1]], "200-249_2")
+EcdcWrite(cd4LM27, dataAll[[1]], "250-299_2")
+EcdcWrite(cd4LM28, dataAll[[1]], "300-349_2")
+EcdcWrite(cd4LM29, dataAll[[1]], ">350_2")
 
 # Risk groups
 hivcsvExp <- typeDiag(hivSet, "hiv",
@@ -239,6 +291,7 @@ EcdcWrite(cd4Exp1, dataAll[[2]], ">500")
 EcdcWrite(cd4Exp2, dataAll[[2]], "350-499")
 EcdcWrite(cd4Exp3, dataAll[[2]], "200-349")
 EcdcWrite(cd4Exp4, dataAll[[2]], "<200")
+
 
 
 ```
