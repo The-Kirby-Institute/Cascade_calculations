@@ -118,7 +118,7 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
     # Diagnosed with AIDS
     hivData$yearaids <- as.numeric(format(as.Date(origHivData$dateaids), 
                                           "%Y"))
-    hivData[is.na(hivData$yearaids), ]$yearaids <- -99
+    hivData$yearaids[is.na(hivData$yearaids)] <- -99
     
     # Add column with hiv, hivaids or aids
     hivData$typediagnosis <- "hiv"
@@ -131,7 +131,7 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
   
   if (removeExcess) {
     # Remove unwanted columns
-    hivData <- dplyr::select(hivData, -rob, -datediagnosis, 
+    hivData <- select(hivData, -rob, -datediagnosis, 
                   -dateaids, -partnercob,
                   -dateneg, -dateindet, -dateill, 
                   -datedeath, -causeofdeath, -indigenous,

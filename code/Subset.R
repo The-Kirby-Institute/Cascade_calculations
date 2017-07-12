@@ -31,6 +31,7 @@ subhivset <- function(hivdataframe, fAge, fExposure, fCob, fAtsi, fLocalRegion, 
     }
     
   }
+  
   if(fAtsi!='all'){
     # if(fAtsi=='non-australia'){
     #   #subframe <- filter(subframe, aboriggroup == 'othercob')
@@ -44,19 +45,18 @@ subhivset <- function(hivdataframe, fAge, fExposure, fCob, fAtsi, fLocalRegion, 
     }
     #what to do with NA's? EXCLUDE INDIGENOUS 
   }
-  if(fLocalRegion!='all'){
+  
+  if(fLocalRegion != 'all'){
     unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(localregion)))
     excludeframe <- bind_rows(excludeframe, filter(includeframe, localregion != fLocalRegion))
     includeframe <- filter(includeframe, localregion == fLocalRegion)
-    
   }
-  if(fGlobalRegion!='all'){
+  
+  if(fGlobalRegion != 'all'){
     unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(localregion)))
     excludeframe <- bind_rows(excludeframe, filter(includeframe, localregion != globalregion))
     includeframe <- filter(includeframe, globalregion == fGlobalRegion)
   }
-  
-                         
   
   return(list(includeframe, excludeframe, unknownframe))
 }

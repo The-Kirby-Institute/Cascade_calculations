@@ -12,14 +12,6 @@ care cascade.
 This notebook is currently in draft form for updating the HIV cascade 
 calculation scripts to version 3.0
 
-```{r Knitr options, include=FALSE} 
-# This chunk may not be necessary
-knitr::opts_chunk$set(echo = FALSE, 
-                      warning = FALSE, 
-                      message = FALSE, 
-                      include = FALSE) 
-```
-
 ```{r Initialization}
 # Chunk to setup everything
 # Clear workspace
@@ -46,16 +38,6 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 ```
 
-```{r Front matter}
-# This chunk might not be necessary either
-mainPackages <- c("dplyr", "tidyr", "ggplot2", "markdown", "cowplot", 
-                  "gridExtra")
-source(file.path(Rcode, "FrontMatter.R"), echo = TRUE)
-fmStr <- FrontMatter(mainPackages, rstudio = "1.0.44")
-cat(fmStr)
-
-```
-
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2015
@@ -79,6 +61,8 @@ targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
 targetState <- 'all' # NSW, VIC, etc
 targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
+
+excludeAborig <- FALSE
 
 ```
 
@@ -158,13 +142,16 @@ annDiagsOrig <- hivSetAll %>%
   mutate(totalnotifications = cumsum(notifications)) %>%
   ungroup() 
 
+# Possibly temporary as this may be generated elsewhere
 overallPropUnique <- ProportionUnique(hivSetAll,
                                       annDiagsOrig$totalnotifications,
                                       allYears)
 
-# Set indigenous aside separately to add on later if required
-hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
-hivSetAll <- filter(hivSetAll, aboriggroup == 'non-indigenous')
+if (excludeAborig) {
+  # Set indigenous aside separately to add on later if required
+  hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
+  hivSetAll <- filter(hivSetAll, aboriggroup == 'non-indigenous')
+}
   
 hivSetReturn <- subhivset(hivSetAll, targetAge, targetExposure,
                           targetCob, targetAtsi, targetLocalRegion,
@@ -198,84 +185,60 @@ agedDiags <- hivSet %>%
 agedDiags[is.na(agedDiags)] <- 0
 propAge <- t(apply(agedDiags, 1, 
                  function(row) row/sum(row)))
-agedSubset <- bind_cols(knownDiags, as.data.frame(propAge))
+agedSubset <- bind_cols(knownDiags, agedDiags)
+agedSubsetProp <- bind_cols(knownDiags, as.data.frame(propAge))
+```
 
-# Number in each CD4 count---------------------------------------------
-# This is for ECDC where we have CD4 by exposure
+```{r ECDC}
+# ECDC calculations-------------------------------------------------------
+model <- "all"
 
-cd4All <- function(hivData, cd4binGroup, 
-                   minYear = 1980, adjustUnique = NULL) {
-  # Organize all the data
-  cd4DiagsAll <- hivData %>%
-    group_by(yeardiagnosis, cd4bin) %>%
-    summarise(diags = n()) %>%
-    ungroup() %>%
-    spread(cd4bin, diags) %>%
-    dplyr::select(-`Not Reported`) %>%
-    rename(year = yeardiagnosis)
-  cd4DiagsAll[is.na(cd4DiagsAll)] <- 0
-  
-  # Fix cd4 string so it can be read by Select
-  cd4binGroup <- paste0("`", cd4binGroup, "`")
-  
-  # Select what we want
-  cd4Diags <- cd4DiagsAll %>%
-    select_("year", cd4binGroup)
-  colnames(cd4Diags)[2] <- c("all")
-  
-  # Fill in missing years
-  allYears <- minYear:max(cd4Diags$year)
-  requiredYears <- allYears[!(allYears %in% cd4Diags$year)]
-  cd4Diags <- FillDataFrame(requiredYears, cd4Diags)
-  
-  return(cd4Diags)
+dataAll <- EcdcFolders(outputFolder, model)
+dataAllExclude <- EcdcFolders(outputFolder, model, includeOS = FALSE)
 
-}
+# All diagnoses
+hivcsvAll <- typeDiag(hivSet, "hiv", exposure = FALSE, 
+                   adjustUnique = overallPropUnique)
+hivaidscsvAll <- typeDiag(hivSet, "hivaids", exposure = FALSE, 
+                   adjustUnique = overallPropUnique)
+aidscsvAll <- typeDiag(hivSet, "aids", exposure = FALSE, 
+                   adjustUnique = overallPropUnique)
 
-cd4Exposure <- function(hivData, cd4binGroup,
-                        minYear = 1980) {
-  
-  cd4DiagsExp <- hivData %>%
-    group_by(yeardiagnosis, cd4bin, expgroup) %>%
-    summarise(diags = n()) %>%
-    ungroup() %>%
-    spread(expgroup, diags) 
-  cd4DiagsExp[is.na(cd4DiagsExp)] <- 0  
-  
-  cd4ExpBin <- cd4DiagsExp %>%
-    filter(cd4bin == cd4binGroup) %>%
-    mutate(total = hetero+msm+otherexp+pwid+unknown) %>%
-    mutate(hetero = hetero / (1 - unknown / total),
-           msm = msm / (1 - unknown / total),
-           pwid = pwid / (1 - unknown / total),
-           otherexp = otherexp / (1 - unknown / total)) %>%
-    dplyr::select(-cd4bin, -total, -unknown) %>%
-    rename(year = yeardiagnosis)
-  
-  # Fill in missing years
-  allYears <- minYear:max(cd4ExpBin$year)
-  requiredYears <- allYears[!(allYears %in% cd4ExpBin$year)]
-  cd4ExpBin <- FillDataFrame(requiredYears, cd4ExpBin)
+EcdcWrite(hivcsvAll, dataAll[[1]], "hiv")
+EcdcWrite(hivaidscsvAll, dataAll[[1]], "hivaids")
+EcdcWrite(aidscsvAll, dataAll[[1]], "aids")
 
-  return(cd4ExpBin)
-  
-}  
+cd4All1 <- cd4All(hivSet, ">500")
+cd4All2 <- cd4All(hivSet, "350-499")
+cd4All3 <- cd4All(hivSet, "200-349")
+cd4All4 <- cd4All(hivSet, "<200")
 
-# Diagnosis type----------------------------------------------------------
-diagType <- hivData %>%
-  group_by(yeardiagnosis, typediagnosis, expgroup) %>%
-  summarise(diags = n()) %>%
-  ungroup() %>%
-  spread(expgroup, diags)
+EcdcWrite(cd4All1, dataAll[[1]], ">500")
+EcdcWrite(cd4All2, dataAll[[1]], "350-499")
+EcdcWrite(cd4All3, dataAll[[1]], "200-349")
+EcdcWrite(cd4All4, dataAll[[1]], "<200")
 
+# Risk groups
+hivcsvExp <- typeDiag(hivSet, "hiv",
+                   adjustUnique = overallPropUnique)
+hivaidscsvExp <- typeDiag(hivSet, "hivaids", 
+                   adjustUnique = overallPropUnique)
+aidscsvExp <- typeDiag(hivSet, "aids",
+                   adjustUnique = overallPropUnique)
 
-%>%
-  dplyr::select(-yeardiagnosis)
-diagType[is.na(diagType)] <- 0
-propType <- t(apply(diagType, 1, 
-                 function(row) row/sum(row)))
+EcdcWrite(hivcsvExp, dataAll[[2]], "hiv")
+EcdcWrite(hivaidscsvExp, dataAll[[2]], "hivaids")
+EcdcWrite(aidscsvExp, dataAll[[2]], "aids")
 
-knownDiags <- bind_cols(knownDiags, diagType)
+cd4Exp1 <- cd4Exposure(hivSet, ">500")
+cd4Exp2 <- cd4Exposure(hivSet, "350-499")
+cd4Exp3 <- cd4Exposure(hivSet, "200-349")
+cd4Exp4 <- cd4Exposure(hivSet, "<200")
+
+EcdcWrite(cd4Exp1, dataAll[[2]], ">500")
+EcdcWrite(cd4Exp2, dataAll[[2]], "350-499")
+EcdcWrite(cd4Exp3, dataAll[[2]], "200-349")
+EcdcWrite(cd4Exp4, dataAll[[2]], "<200")
 
 
 ```
