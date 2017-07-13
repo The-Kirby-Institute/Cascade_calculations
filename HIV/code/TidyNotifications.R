@@ -147,7 +147,7 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
     # Remove unwanted columns
     hivData <- select(hivData, -rob, -datediagnosis, 
                   -dateaids, -partnercob,
-                  -dateneg, -dateindet, -dateill, 
+                  -dateneg, -dateindet, 
                   -datedeath, -causeofdeath, -indigenous,
                   -linked, -cobcode) 
   }

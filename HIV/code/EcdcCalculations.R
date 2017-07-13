@@ -3,7 +3,8 @@
 # Richard T. Gray
 
 # This script contains a number of functions used to produce the data 
-# for the ECDC annual HIV notifications.
+# for the ECDC annual HIV notifications. It is used by the EcdcFiles 
+# function.
 
 # Create output folders ---------------------------------------------------
 EcdcFolders <- function(outputFolder, model, includeOS = TRUE,
@@ -71,6 +72,7 @@ EcdcWrite <- function(results, folder, category) {
                     "200-249_1" = "HIV_CD4_LM_1_6",
                     "250-299_1" = "HIV_CD4_LM_1_7",
                     "300-349_1" = "HIV_CD4_LM_1_8",
+                    ">350_1" = "HIV_CD4_LM_1_9",
                     "Not Reported_2" = "HIV_CD4_LM_2_0",
                     "<20_2" = "HIV_CD4_LM_2_1",
                     "20-49_2" = "HIV_CD4_LM_2_2",
@@ -215,6 +217,9 @@ typeDiag <- function(hivData, type, minYear = 1980,
     
   }
   
+  # Replace any negatives with zero
+  diagType[diagType < 0] <- 0
+  
   return(diagType)
 }
 
@@ -226,9 +231,14 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
   if (london) {
     
     if (lmset) {
-      # First filter hiv/aids
+      # HIV/AIDS only
       hivData <- hivData %>%
       filter(typediagnosis %in% c("hivaids", "aids"))
+    } else {
+      # HIV/AIDS + those with HIV symptoms
+      hivData <- hivData %>%
+        filter(typediagnosis %in% c("hivaids", "aids") |
+                 !is.na(dateill))
     }
     
     cd4DiagsAll <- hivData %>%
@@ -290,13 +300,22 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
 # Number in each CD4 count by exposure------------------------------------
 cd4Exposure <- function(hivData, cd4binGroup,
                         minYear = 1980, adjustUnique = NULL,
-                        london = FALSE) {
+                        london = FALSE, lmset = FALSE) {
   
-  # First filter out concurrent aids cases
-  hivData <- hivData %>%
-    filter(typediagnosis %in% c("hiv", "aids"))
-  
+  # Organize the data
   if (london) {
+    
+    if (lmset) {
+      # First filter hiv/aids
+      hivData <- hivData %>%
+        filter(typediagnosis %in% c("hivaids", "aids"))
+    } else {
+      # HIV/AIDS + those with HIV symptoms
+      hivData <- hivData %>%
+        filter(typediagnosis %in% c("hivaids", "aids") |
+                 !is.na(dateill))
+    }
+    
     cd4DiagsExp <- hivData %>%
       group_by(yeardiagnosis, cd4London, expgroup) %>%
       summarise(diags = n()) %>%
@@ -311,6 +330,10 @@ cd4Exposure <- function(hivData, cd4binGroup,
       rename(year = yeardiagnosis)
     
   } else {
+    # First filter out concurrent aids cases
+    hivData <- hivData %>%
+      filter(typediagnosis %in% c("hiv", "aids"))
+    
     cd4DiagsExp <- hivData %>%
       group_by(yeardiagnosis, cd4bin, expgroup) %>%
       summarise(diags = n()) %>%
