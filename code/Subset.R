@@ -10,13 +10,24 @@ subhivset <- function(hivdataframe, fAge, fExposure, fCob, fAtsi, fLocalRegion, 
   excludeframe <- data_frame()
   
   if(fAge!='all'){
-    #to be filled later
+    unknownframe <- filter(subframe, agebin == 'Not Reported')
+    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(agebin)))
+    includeframe <- filter(includeframe, agebin!='Not Reported') 
+    includeframe <- filter(includeframe, !is.na(agebin))
+    excludeframe <- filter(includeframe, agebin != fAge)
+    includeframe <- filter(includeframe, agebin == fAge) 
   }
   if(fExposure!='all'){
+    unknownframe <- filter(unknownframe, expgroup == 'Not Reported')
+    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(expgroup)))
+    includeframe <- filter(includeframe, expgroup!='Not Reported') 
+    includeframe <- filter(includeframe, !is.na(expgroup))
+    excludeframe <- filter(includeframe, expgroup != fExposure)
+    includeframe <- filter(includeframe, expgroup == fExposure) 
   }
   
   if(fCob!='all'){
-    unknownframe <- filter(subframe, cob == 'Not Reported')
+    unknownframe <- filter(unknownframe, cob == 'Not Reported')
     unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(cob)))
     if(fCob=='non-australia'){
       excludeframe <- filter(includeframe, cob == 'Australia')
@@ -33,17 +44,12 @@ subhivset <- function(hivdataframe, fAge, fExposure, fCob, fAtsi, fLocalRegion, 
   }
   
   if(fAtsi!='all'){
-    # if(fAtsi=='non-australia'){
-    #   #subframe <- filter(subframe, aboriggroup == 'othercob')
-    # }else{
-    if (fCob =='australia') {
-      if(fAtsi=='non-atsi'){
-        includeframe <- filter(includeframe, aboriggroup == 'non-indigenous') 
-      }else if(fAtsi=='atsi'){
-        includeframe <- filter(includeframe, aboriggroup == 'indigenous') 
-      }
-    }
-    #what to do with NA's? EXCLUDE INDIGENOUS 
+    unknownframe <- filter(unknownframe, aboriggroup == 'Not Reported')
+    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(aboriggroup)))
+    includeframe <- filter(includeframe, aboriggroup!='Not Reported') 
+    includeframe <- filter(includeframe, !is.na(aboriggroup))
+    excludeframe <- filter(includeframe, aboriggroup != fAtsi)
+    includeframe <- filter(includeframe, aboriggroup == fAtsi)  
   }
   
   if(fLocalRegion != 'all'){
