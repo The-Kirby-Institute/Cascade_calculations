@@ -5,12 +5,12 @@ author: Neil Bretana and Richard T. Gray
 ---
 
 This is a draft [R Markdown](http://rmarkdown.rstudio.com) Notebook for 
-calculating the number of people living with HIV in Australia. This is one of 
-the key steps for producing the estimates of the Australian HIV diagnosis and 
-care cascade. 
+calculating the number of people living with HIV in Australia. This is one
+of the key steps for producing the estimates of the Australian HIV
+diagnosis and care cascade. 
 
 This notebook is currently in draft form for updating the HIV cascade 
-calculation scripts to version 3.0
+calculation scripts to version 3.0.
 
 ```{r Initialization}
 # Chunk to setup everything

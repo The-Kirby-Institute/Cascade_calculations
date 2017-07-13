@@ -2,10 +2,10 @@
 
 # Richard T. Gray
 
-# This script contains a number of functions used to remove duplicates from
-# annual HIV notifications.
+# This script contains a number of functions used to remove duplicates
+# from annual HIV notifications.
 
-# Main function for calculating number of duplicates-----------------------
+# Main function for calculating number of duplicates----------------------
 RemoveDuplicates <- function(dobvector, days.ignore, 
                              na.rm = FALSE, 
                              write = NA){
@@ -20,12 +20,12 @@ RemoveDuplicates <- function(dobvector, days.ignore,
   #           missing values using the proportion calculated for the 
   #           complete data to estimate thenumber of unique people with 
   #           missing dob. Default is FALSE.
-  #   write: String specifying file to save output dataframe as a csv file. 
+  #   write: String specifying file to save output dataframe as a csv file.
   #           Default is NA meaning no file is written.         
   # Returns:
   #   The estimated number of unique cases in the list of date of birth  
   #   vector. If specified a csv file of results is also saved. 
-  
+  #
   # Setup -----------------------------------------------------------------
   
   # Make sure we have required libraries 

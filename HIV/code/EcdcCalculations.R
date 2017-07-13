@@ -6,7 +6,7 @@
 # for the ECDC annual HIV notifications. It is used by the EcdcFiles 
 # function.
 
-# Create output folders ---------------------------------------------------
+# Create output folders --------------------------------------------------
 EcdcFolders <- function(outputFolder, model, includeOS = TRUE,
                         time = FALSE) {
   
@@ -24,7 +24,7 @@ EcdcFolders <- function(outputFolder, model, includeOS = TRUE,
     folderExp <- paste0(folderExp, "_", currTime)
   }
   
-  # All ---------------------------------------------------------------------
+  # All -------------------------------------------------------------------
   modelPathAll <- file.path(outputFolder, "ECDC_models", model, folderAll)
   dir.create(modelPathAll, showWarnings = FALSE, recursive = TRUE)
   
@@ -35,7 +35,7 @@ EcdcFolders <- function(outputFolder, model, includeOS = TRUE,
   dir.create(dataFolderAll, showWarnings = FALSE, recursive = TRUE)
   dir.create(resultsFolderAll, showWarnings = FALSE, recursive = TRUE)
   
-  # By at-risk category -----------------------------------------------------
+  # By at-risk category ---------------------------------------------------
   modelPathRisk <- file.path(outputFolder, "ECDC_models", model, folderExp)
   dir.create(modelPathRisk, showWarnings = FALSE, recursive = TRUE)
   

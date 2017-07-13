@@ -49,13 +49,13 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
     hivData$aboriggroup[hivData$cob == 1100 & 
       hivData$indigenous == "Aboriginal"] <- "indigenous"
     hivData$aboriggroup[hivData$cob == 1100 & 
-      hivData$indigenous == "Non indigenous"] <- "non-indigenous" 
+      hivData$indigenous == "Non indigenous"] <- "non_indigenous" 
   } else {
 
     hivData$aboriggroup[hivData$cob == 1100 & 
       hivData$indigenous == "Aboriginal"] <- "indigenous"
-    hivData$aboriggroup[hivData$indigenous != "Aboriginal"] <- "non-indigenous"
-    hivData$aboriggroup[is.na(hivData$aboriggroup)] <- "non-indigenous"
+    hivData$aboriggroup[hivData$indigenous != "Aboriginal"] <- "non_indigenous"
+    hivData$aboriggroup[is.na(hivData$aboriggroup)] <- "non_indigenous"
   }
   
   # Country and region of birth--------------------------------------------
@@ -67,7 +67,7 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
   # crCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
 
   # If cob is not in crCodes/NA, change to Not Reported
-  hivData$cob[!(hivData$cobcode %in% crCodes$COUNTRY_CODE)] <- "Not Reported"
+  hivData$cob[!(hivData$cobcode %in% crCodes$COUNTRY_CODE)] <- "Not Reported" 
 
   # Change cob from code to String
   hivData$cob <- crCodes$COUNTRY_NAME[match(hivData$cobcode,
@@ -78,13 +78,13 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
                                                crCodes$COUNTRY_CODE)])
 
   # Change NAs to not reported (only 22 missing cobs in the data set)
-  hivData$cob[is.na(hivData$cob)] <- "Not Reported"
-  hivData$globalregion[is.na(hivData$globalregion)] <- "Not Reported"
+  hivData$cob[is.na(hivData$cob)] <- "Not Reported" 
+  hivData$globalregion[is.na(hivData$globalregion)] <- "Not Reported" 
 
   # Convert some of the not reporteds to "overseas" if country of birth is
   # missing but region of birth is available.
   hivData$cob <- as.character(hivData$cob)
-  hivData$cob[hivData$cob == "Not Reported" &
+  hivData$cob[hivData$cob == "Not Reported"  &
                 !(hivData$rob %in%  c(0,7))] <- "Overseas"
   
   # Additional variables---------------------------------------------------
@@ -101,7 +101,7 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
     hivData$agebin <- factor(hivData$agebin, 
                              levels = levels(addNA(hivData$agebin)), 
                              labels = c(levels(hivData$agebin), 
-                                        "Not Reported"), exclude = NULL)
+                                        "not_reported"), exclude = NULL)
     
     # Add CD4 count variable
     cd4Labels <- c("<200", "200-349", "350-499", ">500")
@@ -113,11 +113,11 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
     hivData$cd4bin <- factor(hivData$cd4bin, 
                              levels = levels(addNA(hivData$cd4bin)), 
                              labels = c(levels(hivData$cd4bin), 
-                                        "Not Reported"), exclude = NULL)
+                                        "not_reported"), exclude = NULL)
     
     # Add CD4 count London Method
-    cd4LMlabels <- c("<20", "20-49", "50-99", "100-149", "150-199", 
-                     "200-249", "250-299", "300-349", ">350")
+    cd4LMlabels <- c("cl20", "c20_49", "c50_99", "c100_149", "c150_199", 
+                     "c200_249", "c250_299", "c300_349", "cg350")
     hivData$cd4London <- cut(floor(hivData$cd4count), 
                           breaks = c(0, 20, 50, 100, 150, 200,
                                      250, 300, 350, Inf), 
@@ -127,10 +127,10 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
     hivData$cd4London <- factor(hivData$cd4London, 
                              levels = levels(addNA(hivData$cd4London)), 
                              labels = c(levels(hivData$cd4London), 
-                                        "Not Reported"), exclude = NULL)
+                                        "not_reported"), exclude = NULL)
     
     # Diagnosed with AIDS
-    hivData$yearaids <- as.numeric(format(as.Date(origHivData$dateaids), 
+    hivData$yearaids <- as.numeric(format(as.Date(hivData$dateaids), 
                                           "%Y"))
     hivData$yearaids[is.na(hivData$yearaids)] <- -99
     
