@@ -104,7 +104,7 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
                                         "not_reported"), exclude = NULL)
     
     # Add CD4 count variable
-    cd4Labels <- c("<200", "200-349", "350-499", ">500")
+    cd4Labels <- c("cl200", "c200_349", "c350_499", "cg500")
     hivData$cd4bin <- cut(floor(hivData$cd4count), 
                           breaks = c(0, 200, 350, 500, Inf), 
                           right = FALSE, 

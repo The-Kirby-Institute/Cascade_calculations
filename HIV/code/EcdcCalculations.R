@@ -59,30 +59,30 @@ EcdcWrite <- function(results, folder, category) {
                     "hiv" = "HIV",
                     "hivaids" = "HIVAIDS",
                     "aids" = "AIDS",
-                    ">500" = "HIV_CD4_1", 
-                    "350-499" = "HIV_CD4_2", 
-                    "200-349" = "HIV_CD4_3", 
-                    "<200" = "HIV_CD4_4",
-                    "Not Reported_1" = "HIV_CD4_LM_1_0",
-                    "<20_1" = "HIV_CD4_LM_1_1",
-                    "20-49_1" = "HIV_CD4_LM_1_2",
-                    "50-99_1" = "HIV_CD4_LM_1_3",
-                    "100-149_1" = "HIV_CD4_LM_1_4",
-                    "150-199_1" = "HIV_CD4_LM_1_5",
-                    "200-249_1" = "HIV_CD4_LM_1_6",
-                    "250-299_1" = "HIV_CD4_LM_1_7",
-                    "300-349_1" = "HIV_CD4_LM_1_8",
-                    ">350_1" = "HIV_CD4_LM_1_9",
+                    "cg500" = "HIV_CD4_1", 
+                    "c350-499" = "HIV_CD4_2", 
+                    "c200-349" = "HIV_CD4_3", 
+                    "cl200" = "HIV_CD4_4",
+                    "not_eported_1" = "HIV_CD4_LM_1_0",
+                    "cl20_1" = "HIV_CD4_LM_1_1",
+                    "c20_49_1" = "HIV_CD4_LM_1_2",
+                    "c50_99_1" = "HIV_CD4_LM_1_3",
+                    "c100_149_1" = "HIV_CD4_LM_1_4",
+                    "c150_199_1" = "HIV_CD4_LM_1_5",
+                    "c200_249_1" = "HIV_CD4_LM_1_6",
+                    "c250_299_1" = "HIV_CD4_LM_1_7",
+                    "c300_349_1" = "HIV_CD4_LM_1_8",
+                    "cg350_1" = "HIV_CD4_LM_1_9",
                     "Not Reported_2" = "HIV_CD4_LM_2_0",
-                    "<20_2" = "HIV_CD4_LM_2_1",
-                    "20-49_2" = "HIV_CD4_LM_2_2",
-                    "50-99_2" = "HIV_CD4_LM_2_3",
-                    "100-149_2" = "HIV_CD4_LM_2_4",
-                    "150-199_2" = "HIV_CD4_LM_2_5",
-                    "200-249_2" = "HIV_CD4_LM_2_6",
-                    "250-299_2" = "HIV_CD4_LM_2_7",
-                    "300-349_2" = "HIV_CD4_LM_2_8",
-                    ">350_2" = "HIV_CD4_LM_2_9")
+                    "cl20_2" = "HIV_CD4_LM_2_1",
+                    "c20_49_2" = "HIV_CD4_LM_2_2",
+                    "c50_99_2" = "HIV_CD4_LM_2_3",
+                    "c100_149_2" = "HIV_CD4_LM_2_4",
+                    "c150_199_2" = "HIV_CD4_LM_2_5",
+                    "c200_249_2" = "HIV_CD4_LM_2_6",
+                    "c250_299_2" = "HIV_CD4_LM_2_7",
+                    "c300_349_2" = "HIV_CD4_LM_2_8",
+                    "cg350_2" = "HIV_CD4_LM_2_9")
   
   fileName <- file.path(folder, paste0(fileTag, ".csv"))
   
@@ -264,7 +264,7 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
   cd4DiagsAll[is.na(cd4DiagsAll)] <- 0
   
   # Fix cd4 string so it can be read by Select
-  cd4binSelect <- paste0("`", cd4binGroup, "`")
+  cd4binSelect <- cd4binGroup # paste0("`", cd4binGroup, "`")
   
   # Select what we want
   cd4Diags <- cd4DiagsAll %>%
@@ -274,7 +274,7 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
   if (useprop) {
     
     propCD4all <- t(apply(select(cd4DiagsAll, -year, -total, 
-                                 -`Not Reported`), 1,
+                                 -not_reported), 1,
                           function(row) row/sum(row)))
     
     propCD4all[is.nan(propCD4all)] <- 0

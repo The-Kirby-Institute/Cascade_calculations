@@ -187,7 +187,7 @@ agedDiags <- hivSet %>%
   summarise(diags = n()) %>%
   ungroup() %>%
   spread(agebin, diags) %>%
-  dplyr::select(-yeardiagnosis, -`Not Reported`)
+  select(-yeardiagnosis, -not_reported)
 agedDiags[is.na(agedDiags)] <- 0
 propAge <- t(apply(agedDiags, 1, 
                  function(row) row/sum(row)))
