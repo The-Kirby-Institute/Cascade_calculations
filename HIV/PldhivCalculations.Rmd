@@ -170,29 +170,80 @@ hivSetUnknown <- hivSetReturn[[3]]
 ```
 
 ```{r Annual notifications and proportions}
-# For the known diagnoses calculate proportion by age bin, exposure group,
-# cd4 count category and diagnosis type. Tis will be used to distribute 
-# annual notifications for aging PLDHIV and to distribute notifications
-# by CD4 count, expgroup, and diagnosis type for the ECDC model.  
+# This chunk creates a dataframe of the annual notifications for the
+# specified criteria.
 
-knownDiags <- hivSet %>% 
+includeDiags <- hivSet %>% 
   group_by(yeardiagnosis) %>%
-  summarise(subset = n()) %>%
-  ungroup() 
+  summarise(included = n()) %>%
+  ungroup() %>%
+  rename(year = yeardiagnosis)
+includeDiags <- FillDataFrame(allYears, includeDiags)
+
+
+# If excluded and unknown is empty replace with zeros
+if (length(hivSetExcluded) == 0) {
+  excludedDiags <- data_frame(year = allYears,
+                            excluded = 0)
+} else {
+  excludedDiags <- hivSetExcluded %>%
+    group_by(yeardiagnosis) %>% 
+    summarise(excluded = n()) %>%
+    rename(year = yeardiagnosis)
+  
+}
+excludedDiags <- FillDataFrame(allYears, excludedDiags)
+
+if (length(hivSetUnknown) == 0) {
+ unknownDiags <- data_frame(year = allYears,
+                            unknown = 0)
+} else {
+unknownDiags <- hivSetUnknown %>%
+  group_by(yeardiagnosis) %>% 
+  summarise(unknown = n()) %>%
+  rename(year = yeardiagnosis)
+}
+unknownDiags <- FillDataFrame(allYears, unknownDiags)
+
+# Adjust included and excluded annual diagnoses propotionally to replace
+# unknwons
+adjustDiags <- includeDiags %>% 
+  left_join(excludedDiags, by = "year") %>%
+  left_join(unknownDiags, by = "year") %>%
+  mutate(all = included + excluded + unknown) %>%
+  mutate(included = ifelse(is.na(included), 0, included),
+         excluded = ifelse(is.na(excluded), 0, excluded),
+         unknown = ifelse(is.na(unknown), 0, unknown)) %>%
+  mutate(prop_included = included / (included + excluded),
+         prop_excluded = excluded / (included + excluded)) %>%
+  mutate(prop_included = ifelse(is.nan(prop_included), 0, prop_included), 
+         prop_excluded = ifelse(is.nan(prop_excluded), 0, 
+                                prop_excluded)) %>%
+  mutate(adjusted_included = included  + unknown * prop_included,
+         adjusted_excluded = excluded + unknown * prop_excluded)
+
+hivResults <- data_frame(year = adjustDiags$year,
+                         notifications = adjustDiags$adjusted_included,
+                         cumnotifications =
+                           cumsum(adjustDiags$adjusted_included))
 
 # Proportion in each age group--------------------------------------------
-# Used for aging calculations
+# For the known diagnoses calculate proportion by age bin, exposure group,
+# cd4 count category and diagnosis type. This will be used to distribute 
+# annual notifications for aging PLDHIV.  
+
 agedDiags <- hivSet %>%
   group_by(yeardiagnosis, agebin) %>%
   summarise(diags = n()) %>%
   ungroup() %>%
   spread(agebin, diags) %>%
-  select(-yeardiagnosis, -not_reported)
+  select(-yeardiagnosis, -not_reported) 
 agedDiags[is.na(agedDiags)] <- 0
 propAge <- t(apply(agedDiags, 1, 
                  function(row) row/sum(row)))
-agedSubset <- bind_cols(knownDiags, agedDiags)
-agedSubsetProp <- bind_cols(knownDiags, as.data.frame(propAge))
+agedSubset <- bind_cols(includeDiags, agedDiags)
+agedSubsetProp <- bind_cols(includeDiags, as.data.frame(propAge))
+
 ```
 
 ```{r ECDC Outputs}
@@ -210,136 +261,28 @@ if (ecdcData) {
 
 ```
 
+```{r Load base and adjustment estimates}
+# This loads the adjustment files for adjusting the death rates and
+# migration rates  
+hivBase <- read.csv(file.path(dataFolder, paste0("HIVbaseEstimates-",
+                    toString(analysisYear), ".csv")))
+hivAdjustments <- read.csv(file.path(dataFolder,
+                    paste0("HIVadjustments-",
+                    toString(analysisYear), ".csv")))
+hivInterstate <- read.csv(file.path(dataFolder,
+                              paste0("HIVinterstateEstimates-",
+                    toString(analysisYear), ".csv")))
 
-```{r Annual notifications}
-# This chunk creates a dataframe of the annual notifications for the
-# specified criteria.
-origHivSet <- hivSetOrig %>%
-  group_by(yeardiagnosis) %>%
-  summarise(notifications = n()) %>%
-  mutate(totalnotifications  = cumsum(notifications)) %>%
-  filter(yeardiagnosis <= analysisYear)
-
-
-
-allDiags <- hivSetOrig %>%
-  group_by(yeardiagnosis) %>% 
-  summarise(all = n()) 
-if (length(hivSetExcluded) == 0) {
-  excludedDiags <- data_frame(yeardiagnosis = allDiags$yeardiagnosis,
-                            excluded = 0)
-} else {
-  excludedDiags <- hivSetExcluded %>%
-    group_by(yeardiagnosis) %>% 
-    summarise(excluded = n()) 
-}
-
-if (length(hivSetUnknown) == 0) {
- unknownDiags <- data_frame(yeardiagnosis = allDiags$yeardiagnosis,
-                            unknown = 0)
-} else {
-unknownDiags <- hivSetUnknown %>%
-  group_by(yeardiagnosis) %>% 
-  summarise(unknown = n())
-}
-
-
-
-adjustDiags <- hivSet %>% 
-  group_by(yeardiagnosis) %>%
-  summarise(subset = n()) %>%
-  ungroup() %>%
-  right_join(allDiags, by = "yeardiagnosis") %>%
-  left_join(excludedDiags, by = "yeardiagnosis") %>%
-  left_join(unknownDiags, by = "yeardiagnosis") %>%
-  mutate(included = ifelse(is.na(subset), 0, subset),
-         excluded = ifelse(is.na(excluded), 0, excluded),
-         unknown = ifelse(is.na(unknown), 0, unknown)) %>%
-  mutate(prop_included = included / (included + excluded),
-         prop_excluded = excluded / (included + excluded)) %>%
-  mutate(prop_included = ifelse(is.nan(prop_included), 0, prop_included), 
-         prop_excluded = ifelse(is.nan(prop_excluded), 0, 
-                                prop_excluded)) %>%
-  mutate(adjusted_included = included  + unknown * prop_included,
-         adjusted_excluded = excluded + unknown * prop_excluded)%>%
-  rename(year = yeardiagnosis)
-
-subsetDiags <- adjustDiags
-
-hivResults <- data_frame(year = subsetDiags$year,
-                         notifications = subsetDiags$adjusted_included)
-hivResults$year <- subsetDiags$year
-hivResults$notifications <- subsetDiags$adjusted_included
-hivResults$totalnotifications <- cumsum(hivResults$notifications)
-
-```
-
-```{r Load overall estimates}
-# This chunk creates or loads the overall cascade estimates for proportion 
-# unique, mortality, and overses migration
-#Get proportion unique
-# Function to estimate proportion unique
-
-# THIS CHUCK AHOULD BE STAND ALONE AND NOT REALY ON PREVIOUS CALCULATIONS
-
-# source(file.path(Rcode, "ProportionUnique.R"), echo=TRUE)
-# hivResults$propunique <- ProportionUnique(hivSetOrig, hivResults, origHivSet)
-# hivResults$uniquecases <- hivResults$totalnotifications*hivResults$propunique
-
-#
-oldResults <- read.csv(file.path(outputFolder, "HIVresults-2015.csv"))
-
-hivResults$uniquecases <- hivResults$totalnotifications*oldResults$propunique
-
-# Function to estimate migration rate
-source(file.path(Rcode, "EstimateMigration.R"), echo=TRUE)
-
-#Function to estimate death rate
-source(file.path(Rcode, "EstimateMortality.R"), echo=TRUE)
-
- hivResults$osrate <- allMigrate$rate
- hivResults$oslower <- allMigrate$lower
- hivResults$osupper <- allMigrate$upper
- 
- hivResults$deathslinked <- deaths
- hivResults$deathslower <- deaths_min
- hivResults$deathsupper <- deaths_max
- 
- hivResults$deathrate <- oldResults$deathrate
- hivResults$drlower <- deathRate_min
- hivResults$drupper <- deathRate_max
-
-#save hivResults
-  saveString <- file.path(outputFolder, paste("HIVresults-", 
-    toString(analysisYear), sep = ""))
- save(hivResults, file = paste(saveString, ".rda", sep =""))
-
-```
-
-```{r Adjust parameters}
-# This chuck is used to create adjusted mortality and migration rates for the 
-# specified criteria
-
-load("nonIndigenous_Adjustment.Rda")
-
-
+# WHERE I AM UP TO
+GetAdjustments(targetAge, targetExposure, targetCob, targetAtsi,
+               targetLocalRegion, targetGlobalRegion) 
  
 ```
 
 ```{r Calculate PLDHIV}
-# This chunk fianlly calculates the number of people living with diagnosed HIV
-#intiial migration post-diagnosis
-if (analysisYear <= 2014) {
-  propStay <- 1
-  propStayLower <- 1
-  propStayUpper <- 1
-  propLeave <- 1-propStay
-} else {
-  propStay <- 0.98
-  propStayLower <- 0.96
-  propStayUpper <- 1
-  propLeave <- 1-propStay
-} 
+# This chunk fianlly calculates the number of people living with diagnosed
+#  HIV
+
 numInitialPostDiagMigrants <- cumDiagnoses * propLeave
 
 # Initialize final results data frame

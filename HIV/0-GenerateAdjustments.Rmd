@@ -83,7 +83,10 @@ hivSet <- filter(hivData, yeardiagnosis <= analysisYear)
 
 ```
 
-```{r Annual diagnoses}
+```{r Annual and cummulative diagnoses}
+# This chunk is used to estimate the annual and cumulative proportional 
+# notifications for various population groups. 
+# TODO: convert into a function?
 
 # Overall 
 hivResults <- hivSet %>% 
@@ -95,7 +98,7 @@ hivResults <- hivSet %>%
 # Exposure - reallocate unknown proportionally by calculating proportion
 # for each group using known exposure. Need to manually fix 1981. 
 # Assume it is an MSM. 
-hivExp <- hivSet %>% 
+hivExpAnn <- hivSet %>% 
   group_by(expgroup, yeardiagnosis) %>% 
   summarise(notifications = n()) %>% 
   ungroup() %>% 
@@ -114,8 +117,30 @@ hivExp <- hivSet %>%
   rename(year = yeardiagnosis) 
 hivExp$msm[2] <- 1.0
 
+hivExpCum <- hivSet %>% 
+  group_by(expgroup, yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  ungroup() %>% 
+  group_by(expgroup) %>% 
+  mutate(cumnotifications = cumsum(notifications)) %>%
+  ungroup() %>% 
+  select(-notifications) %>%
+  spread(expgroup, cumnotifications) %>%
+  select(-unknown) %>%
+  gather("expgroup", "cumnotifications", 2:5) %>%
+  mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
+                                cumnotifications)) %>%
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
+  mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
+                                propnotifications)) %>%
+  select(-cumnotifications) %>%
+  ungroup() %>% 
+  spread(expgroup, propnotifications) %>%
+  rename(year = yeardiagnosis) 
+
 # Indigenous status
-hivAborig <- hivSet %>%
+hivAborigAnn <- hivSet %>%
   group_by(yeardiagnosis, aboriggroup) %>%
   summarise(notifications = n()) %>%
   ungroup() %>%
@@ -126,9 +151,25 @@ hivAborig <- hivSet %>%
   mutate(indigenous = ifelse(is.na(indigenous), 0, indigenous)) %>%
   rename(year = yeardiagnosis)
 
+hivAborigCum <- hivSet %>%
+  group_by(yeardiagnosis, aboriggroup) %>%
+  summarise(notifications = n()) %>%
+  ungroup() %>% 
+  group_by(aboriggroup) %>% 
+  mutate(cumnotifications = cumsum(notifications)) %>%
+  ungroup() %>%
+  select(-notifications) %>%
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = cumnotifications / 
+           sum(cumnotifications))  %>%
+  select(-cumnotifications) %>%
+  spread(aboriggroup, propnotifications) %>%
+  mutate(indigenous = ifelse(is.na(indigenous), 0, indigenous)) %>%
+  rename(year = yeardiagnosis)
+
 # Gender - reallocate unknown proportionally by calculating proportion
 # for each group using known exposure.
-hivGender <- hivSet %>% 
+hivGenderAnn <- hivSet %>% 
   group_by(yeardiagnosis, sex) %>% 
   summarise(notifications = n()) %>% 
   ungroup() %>% 
@@ -145,6 +186,70 @@ hivGender <- hivSet %>%
          male = ifelse(is.na(male), 0, male),
          transgender = ifelse(is.na(transgender), 0, transgender)) %>%
   rename(year = yeardiagnosis)
+
+hivGenderAnn <- hivSet %>% 
+  group_by(yeardiagnosis, sex) %>% 
+  summarise(notifications = n()) %>% 
+  ungroup() %>% 
+  group_by(sex) %>% 
+  mutate(cumnotifications = cumsum(notifications)) %>%
+  ungroup() %>%
+  select(-notifications) %>%
+  spread(sex, cumnotifications) %>%
+  select(-unknown) %>%
+  gather("sex", "cumnotifications", 2:4) %>%
+  mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
+                                cumnotifications)) %>%
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
+  select(-cumnotifications) %>%
+  spread(sex, propnotifications) %>%
+  mutate(female = ifelse(is.na(female), 0, female),
+         male = ifelse(is.na(male), 0, male),
+         transgender = ifelse(is.na(transgender), 0, transgender)) %>%
+  rename(year = yeardiagnosis)
+
+# Country of birth - Australia versus overseas
+hivCobAnn <- hivSet %>% 
+  group_by(yeardiagnosis, countrygroup) %>% 
+  summarise(notifications = n()) %>% 
+  ungroup() %>% 
+  spread(countrygroup, notifications) %>%
+  select(-`<NA>`) %>%
+  gather("countrygroup", "notifications", 2:5) %>%
+  mutate(notifications = ifelse(is.na(notifications), 0, 
+                                notifications)) %>%
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = notifications / sum(notifications)) %>%
+  mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
+                                propnotifications)) %>%
+  select(-notifications) %>%
+  ungroup() %>% 
+  spread(countrygroup, propnotifications) %>%
+  rename(year = yeardiagnosis)  
+
+hivCobCum <- hivSet %>% 
+  group_by(countrygroup, yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  ungroup() %>% 
+  group_by(countrygroup) %>% 
+  mutate(cumnotifications = cumsum(notifications)) %>%
+  ungroup() %>% 
+  select(-notifications) %>%
+  spread(countrygroup, cumnotifications) %>%
+  select(-`<NA>`) %>%
+  gather("countrygroup", "cumnotifications", 2:5) %>%
+  mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
+                                cumnotifications)) %>%
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
+  mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
+                                propnotifications)) %>%
+  select(-cumnotifications) %>%
+  ungroup() %>% 
+  spread(countrygroup, propnotifications) %>%
+  rename(year = yeardiagnosis) 
+
 
 ```
 
@@ -250,6 +355,46 @@ for (region in states) {
   
 }
 
+# Initial post-diagnosis migration ---------------------------------------
+
+hivBaseRates$propstay <- rep(0.98, length(allYears))
+hivBaseRates$propstay_lower <- rep(0.96, length(allYears))
+hivBaseRates$propstay_upper <- rep(1, length(allYears))
+
+# Indigenous vs non-Indigenous
+nonAborigDiags <- hivResults$totalnotifications *
+  hivAborigCum$non_indigenous
+aborigDiags <- hivResults$totalnotifications *
+  hivAborigCum$indigenous
+
+nonAborigMigrationFactor <- hivResults$totalnotifications / nonAborigDiags
+
+hivAdjustments$pstay_indigenous <- 0
+hivAdjustments$pstay_non_indigenous <- nonAborigMigrationFactor
+
+# Specific NSW estimates
+propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.1008)
+propStayLowerNSW <-  propAus * (1 - 2 * 0.0072) + (1 - propAus) * 
+  (1 - 2 * 0.1008)
+propStayUpperNSW <- rep(1, length(allYears))
+
+hivAdjustments$pstay_nsw <- propStayNSW / hivBaseRates$propstay
+hivAdjustments$pstay_nsw_lower <- propStayLowerNSW /
+  hivBaseRates$propstay_lower
+hivAdjustments$pstay_nsw_upper <- hivBaseRates$propstay_upper /
+  hivBaseRates$propstay_upper
+
+# Specific Vic estimates
+propStayVic <- 1
+propStayLowerVic <- 1
+propStayUpperVic <- 1
+
+hivAdjustments$pstay_vic <- propStayVic / hivBaseRates$propstay
+hivAdjustments$pstay_vic_lower <- propStayLowerVic /
+  hivBaseRates$propstay_lower
+hivAdjustments$pstay_vic_upper <- propStayUpperVic /
+  hivBaseRates$propstay_upper
+
 ```
 
 ```{r Death rates}
@@ -336,20 +481,22 @@ numLiving_max[1] <- annDiags[1]
 
 # Overall migration rate for deaths estimate
 allMigrate <- baseMigration * allAdultsAdjust
+allMigrateLower <- baseMigrationLower * allAdultsAdjust
+allMigrateUpper<- baseMigrationUpper * allAdultsAdjust
 
 for (ii in 2:length(annDiags)) {
   numLiving[ii] <- numLiving[ii-1] + annDiags[ii] - deaths[ii-1] 
    - numLiving[ii-1] * allMigrate$rate[ii-1]
   numLiving_min[ii] <- numLiving_min[ii-1] + annDiags[ii] -
-    deaths_max[ii-1] - numLiving_min[ii-1] * allMigrate$upper[ii-1]
+    deaths_max[ii-1] - numLiving_min[ii-1] * allMigrateUpper[ii-1]
   numLiving_max[ii] <- numLiving_max[ii-1] + annDiags[ii] -
-    deaths_min[ii-1] - numLiving_max[ii-1] * allMigrate$lower[ii-1]
+    deaths_min[ii-1] - numLiving_max[ii-1] * allMigrateLower[ii-1]
 }
 
 # Calculate crude average annual mortality rates up to 2003
 linkageMortality <- deaths / numLiving
-linkageMortalityMin <- deaths_min/numLiving_max
-linkageMortalityMax <- deaths_max/numLiving_min
+linkageMortalityMin <- deaths_min / numLiving_max
+linkageMortalityMax <- deaths_max / numLiving_min
 
 # Append AHOD mortality --------------------------------------------------
 
@@ -389,8 +536,30 @@ deathRate_max[(indexLinkage+1):length(deathRate)] <- filter(ahodDeaths,
 
 # Store base death rate --------------------------------------------------
 hivBaseRates$deathrate <- deathRate
-hivBaseRates$deathrate <- deathRate_min
-hivBaseRates$deathrate <- deathRate_max
+hivBaseRates$deathrate_lower <- deathRate_min
+hivBaseRates$deathrate_upper <- deathRate_max
+
+# Adjustments for Indigenous vs nonIndigenous
+nonAborigMortalityFactor <- 
+  ((1-aborigMortality) * aborigDiags + nonAborigDiags) / nonAborigDiags
+nonAborigMortalityFactorLower <- 
+  ((1-aborigMortalityMax) * aborigDiags + nonAborigDiags) / nonAborigDiags
+nonAborigMortalityFactorUpper <- 
+  ((1-aborigMortalityMin) * aborigDiags + nonAborigDiags) / nonAborigDiags
+
+# TODO: aborigMortality needs to be calculated over time. Also 
+# need to shorten some variable names. 
+hivAdjustments$drate_indigenous <- aborigMortality
+hivAdjustments$drate_indigenous_lower <- aborigMortalityMin / 
+  hivBaseRates$deathrate_lower
+hivAdjustments$drate_indigenous_upper <- aborigMortalityMax /
+  hivBaseRates$deathrate_upper
+
+hivAdjustments$drate_non_indigenous <- nonAborigMortalityFactor
+hivAdjustments$drate_non_indigenous_lower <- 
+  nonAborigMortalityFactorLower / hivBaseRates$deathrate_lower
+hivAdjustments$drate_non_indigenous_upper <- 
+  nonAborigMortalityFactorUpper / hivBaseRates$deathrate_upper
 
 ```
 
