@@ -2,7 +2,7 @@
 
 # N.A. Bretana
 
-subhivset <- function(hivdataframe, fAge, fExposure, fCob, fAtsi, fLocalRegion, fGlobalRegion){
+subhivset <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, fLocalRegion, fGlobalRegion){
   
   subframe <- hivdataframe
   includeframe <- subframe
@@ -17,6 +17,16 @@ subhivset <- function(hivdataframe, fAge, fExposure, fCob, fAtsi, fLocalRegion, 
     excludeframe <- filter(includeframe, agebin != fAge)
     includeframe <- filter(includeframe, agebin == fAge) 
   }
+  
+  if(fGender!='all'){
+    unknownframe <- filter(unknownframe, sex == 'Not Reported')
+    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(sex)))
+    includeframe <- filter(includeframe, sex!='Not Reported') 
+    includeframe <- filter(includeframe, !is.na(sex))
+    excludeframe <- filter(includeframe, sex != fGender)
+    includeframe <- filter(includeframe, sex == fGender)     
+  }
+  
   if(fExposure!='all'){
     unknownframe <- filter(unknownframe, expgroup == 'Not Reported')
     unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(expgroup)))
