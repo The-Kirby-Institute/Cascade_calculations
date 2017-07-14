@@ -82,7 +82,9 @@ EcdcWrite <- function(results, folder, category) {
                     "c200_249_2" = "HIV_CD4_LM_2_6",
                     "c250_299_2" = "HIV_CD4_LM_2_7",
                     "c300_349_2" = "HIV_CD4_LM_2_8",
-                    "cg350_2" = "HIV_CD4_LM_2_9")
+                    "cg350_2" = "HIV_CD4_LM_2_9",
+                    "deaths" = "Dead",
+                    "emigrants" = "Emig")
   
   fileName <- file.path(folder, paste0(fileTag, ".csv"))
   

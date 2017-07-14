@@ -48,11 +48,12 @@ analysisYear <- 2015
 # 
 # saveCascade <- TRUE       # save final cascade dataframe
 # saveNotifications <- TRUE # save cleaned notifications set
-# saveResults <- TRUE     # save information national annual notifications
+saveResults <- TRUE     # save information national annual notifications
 # savePldhiv <- TRUE        # save PLDHIV estimates separately
 
 # Set HIV subsetting function parameters----------------------------------
 
+cascadeName <- paste0("all-", toString(analysisYear)) 
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
@@ -64,7 +65,7 @@ targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 
 excludeAborig <- FALSE
 ecdcData <- TRUE
-ecdcModel <- "all" # name
+ecdcModel <- cascadeName # name
 
 ```
 
@@ -275,44 +276,7 @@ subsetRates <- GetAdjustments(hivBase, hivAdjustments, targetAge,
 
 ```{r Calculate PLDHIV}
 # This chunk fianlly calculates the number of people living with diagnosed
-#  HIV
-
-# numInitialPostDiagMigrants <- cumDiagnoses * propLeave
-
-# Initialize final results data frame
-# hivDiagnosed <- data.frame(stage = character(), 
-#                            year = double(),
-#                            population = character(),
-#                            estimate = double(),
-#                            lower = double(),
-#                            upper = double())
-
-# First calculate overall number -----------------------------------------
-
-# Setup all our vectors - first by filling in missing cumulative diagnoses
-# filledDiagnoses <- FillMissing(allYears, hivResults$yeardiagnosis, 
-#                                  hivResults$uniquecases)
-
-# cumDiagnoses <- filledDiagnoses$value
-# cumDiagnoses <- hivResults$uniquecases
-
-# All death rates used for all  populations
-# deathRate <- oldResults$deathrate
-# deathRateMin <- oldResults$drlower
-# deathRateMax <- oldResults$drupper
-# numDeaths <- cumDiagnoses * (nonAborigMortalityFactor * deathRate)
-
-# National migration rates
-# migrationRate <- filter(hivMigrate, state == "all")$rate
-# migrationRateMin <- filter(hivMigrate, state == "all")$lower
-# migrationRateMax <- filter(hivMigrate, state == "all")$upper
-
-# migrationRate <- oldResults$osrate
-# migrationRateMin <- oldResults$oslower
-# migrationRateMax <- oldResults$osupper
-# numMigrants <- cumDiagnoses * (nonAborigMigrationFactor * migrationRate)
-
-# Calculate number living with diagnosed HIV and range
+# HIV
 
 annPropUnique <- AnnualUnique(adjustDiags$included,
                               overallPropUnique) / adjustDiags$included
@@ -321,42 +285,98 @@ pldhivAll <- LivingDiagnosed(adjustDiags$included,
                              annPropUnique, 
                              subsetRates$deathrate,
                              subsetRates$mrate,
-                             subsetRates$propstay)
+                             subsetRates$propstay) %>%
+  mutate(year = allYears) %>%
+  select(year, everything())
 
-# IF ECDC WE NEED TO SAVE DEATHS and EMIGRATION
+pldhivAllMin <- LivingDiagnosed(adjustDiags$included,
+                             annPropUnique, 
+                             subsetRates$deathrate_lower,
+                             subsetRates$mrate_lower,
+                             subsetRates$propstay_lower) %>%
+  mutate(year = allYears) %>%
+  select(year, everything())
 
+pldhivAllMax <- LivingDiagnosed(adjustDiags$included,
+                             annPropUnique, 
+                             subsetRates$deathrate_upper,
+                             subsetRates$mrate_upper,
+                             subsetRates$propstay_upper) %>%
+  mutate(year = allYears) %>%
+  select(year, everything())
 
-# Use max rates for min estimate because they are removal rates 
-# and vice versa
-pldhivAllMin <- LivingDiagnosed((1 - nonAborigMigrationFactor * 
-                                   (1-propStayLower)) *cumDiagnoses,
-                                nonAborigMortalityFactor * deathRateMax,
-                                nonAborigMigrationFactor * migrationRateMax)
+# Save deaths and emigrants into ECDC
+if (ecdcData) {
+  # All deaths
+  EcdcWrite(select(pldhivAll, year, deaths), 
+            dataAll[[1]], "deaths")
+  
+  # All emigrants
+  emigrants <- pldhivAll %>% 
+    select(year, emigrants, diag_departs) %>%
+    mutate(total <- emigrants + diag_departs)
+  
+  EcdcWrite(emigrants, dataAll[[1]], "emigrants")
+  
+  # TODO: excluding previously diagnosed overseas 
+  hivExpCum <- hivSet %>% 
+    filter(is.na(previ_diag_overseas)) %>%
+    group_by(expgroup, yeardiagnosis) %>% 
+    summarise(notifications = n()) %>% 
+    ungroup() %>% 
+    group_by(expgroup) %>% 
+    mutate(cumnotifications = cumsum(notifications)) %>%
+    ungroup() %>% 
+    select(-notifications) %>%
+    spread(expgroup, cumnotifications) %>%
+    select(-unknown) %>%
+    gather("expgroup", "cumnotifications", 2:5) %>%
+    mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
+                                     cumnotifications)) %>%
+    group_by(yeardiagnosis) %>% 
+    mutate(propnotifications = cumnotifications /
+             sum(cumnotifications)) %>%
+    mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
+                                      propnotifications)) %>%
+    select(-cumnotifications) %>%
+    ungroup() %>% 
+    spread(expgroup, propnotifications) %>%
+    rename(year = yeardiagnosis) 
+  hivExpCum$msm[2] <- 1.0
+  
+  expDeaths <- hivExpCum
+  expDeaths[, 2:5] <- expDeaths[, 2:5] * 
+    matrix(rep(pldhivAll$deaths, 4), ncol = 4)
+  
+  EcdcWrite(expDeaths, dataAll[[2]], "deaths")
+  
+  expEmig <- hivExpCum
+  expEmig[, 2:5] <- expEmig[, 2:5] * 
+    matrix(rep(emigrants$total, 4), ncol = 4)
+  
+  EcdcWrite(expEmig, dataAll[[2]], "emigrants")
+}
 
-pldhivAllMax <- LivingDiagnosed((1 - nonAborigMigrationFactor * 
-                                   (1-propStayUpper)) *cumDiagnoses,
-                                nonAborigMortalityFactor * deathRateMin,
-                                nonAborigMigrationFactor * migrationRateMin)
-# 
-# # Store results
- nyears <- length(allYears)
- hivDiagnosed <- rbind(hivDiagnosed, 
-                       data_frame(stage = "pldhiv", 
-                             year = allYears, 
-                             population = "all", 
-                             value = pldhivAll))
-#                             lower = pldhivAllMin,
-#                             upper = pldhivAllMax))
- cascadeInformation <- cbind(allYears, numDeaths, numMigrants, numInitialPostDiagMigrants, propunique = oldResults$propunique)
+# Store results
+hivDiagnosed <- data.frame(stage = "pldhiv",
+                           year = allYears,
+                           population = "all",
+                           value = pldhivAll$pldhiv,
+                           lower = pldhivAllMin$pldhiv,
+                           upper = pldhivAllMax$pldhiv)
 
-# 
-# # Replace values with hard coded if necessary
-# if (replaceValues) {
-#   tempHardCode <- filter(hardCodeValues, stage == "pldhiv")
-#   if (nrow(tempHardCode) > 0) {
-#     hivCascade <- replaceEstimates(hivCascade, tempHardCode)
-#   }
-# }
+if (saveResults) {
+  # Create output directory
+  resultsPath <- file.path(outputFolder, cascadeName)
+  dir.create(resultsPath, showWarnings = FALSE, recursive = TRUE)
+  
+  # Save
+  saveStringPldhiv <- file.path(resultsPath, 
+    paste0("HIVpldhivEstimates-", toString(analysisYear)))
+  
+  # Write to csv
+  write_csv(hivDiagnosed, paste0(saveStringPldhiv, ".csv"))
+}
 
 ```
 
