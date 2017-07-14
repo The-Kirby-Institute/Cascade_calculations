@@ -319,6 +319,8 @@ pldhivAll <- LivingDiagnosed(adjustDiags$included,
                              subsetRates$mrate,
                              subsetRates$propstay)
 
+# IF ECDC WE NEED TO SAVE DEATHS and EMIGRATION
+
 
 # Use max rates for min estimate because they are removal rates 
 # and vice versa
