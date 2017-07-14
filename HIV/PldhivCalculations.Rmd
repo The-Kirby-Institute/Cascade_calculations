@@ -72,7 +72,7 @@ ecdcModel <- "all" # name
 # Load functions used for analysis 
 
 # Load function to calculate number living with diagnosed HIV
-# source(file.path(Rcode,"LivingDiagnosed.R"), echo=TRUE)
+source(file.path(Rcode,"LivingDiagnosed.R"), echo=TRUE)
 
 # Source functions for filling in missing data
 source(file.path(Rcode, "FillMissing.R"), echo=TRUE)
@@ -314,7 +314,11 @@ subsetRates <- GetAdjustments(hivBase, hivAdjustments, targetAge,
 
 # Calculate number living with diagnosed HIV and range
 
+annPropUnique <- AnnualUnique(adjustDiags$included,
+                              overallPropUnique) / adjustDiags$included
+
 pldhivAll <- LivingDiagnosed(adjustDiags$included,
+                             annPropUnique, 
                              subsetRates$deathrate,
                              subsetRates$mrate,
                              subsetRates$propstay)

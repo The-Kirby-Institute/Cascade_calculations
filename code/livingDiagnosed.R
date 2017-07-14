@@ -34,7 +34,7 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   # Setup ----------------------------------------------------------------
   
   # Calculate number of years from length of cumdiagnoses
-  nyears <- length(cumdiagnoses)
+  nyears <- length(annualdiags)
   
   # If optional inputs equal to zero convert to vectors
   if (!is.null(propstay)) {
@@ -61,7 +61,7 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   # Make sure all the vectors are the right length and the vectors of rates
   # are between zero and one. 
   
-  vectorLengths <- c(nyears, length(cumdiagnoses), length(deathrate),
+  vectorLengths <- c(nyears, length(annualdiags), length(deathrate),
                      length(migration), length(arrivals), length(departs), 
                      length(pldhiv))
   
@@ -103,7 +103,7 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
                            departs[ii-1]) * nliving[ii-1] + 
       arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
     
-    nduplicates[ii] <- (1 - propunique[ii]) * nliving[ii-1]
+    nduplicates[ii] <- (1 - propunique[ii]) * annualdiags[ii]
     
     ndead[ii] <- deathrate[ii-1] * nliving[ii-1]
       
@@ -113,7 +113,8 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
     
     narrivals[ii] <- arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
     
-    nleave[ii] <- (1 - propstay[ii]) * nliving[ii-1]
+    nleave[ii] <- (1 - propstay[ii]) * propunique[ii] * 
+      annualdiags[ii]
     
   }
  
@@ -121,5 +122,11 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   
   # Return final output
   #return(nliving)
-  return(data.frame(nliving, nduplicates, ndead, nmigrants, ndeparts, narrivals, nleave))
+  return(data.frame(pldhiv  = nliving,
+                    duplicates = nduplicates,
+                    deaths = ndead, 
+                    emigrants = nmigrants,
+                    diag_departs = nleave,
+                    inter_departs = ndeparts,
+                    inter_arrivals = narrivals))
 }
