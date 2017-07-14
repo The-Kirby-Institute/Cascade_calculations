@@ -105,19 +105,22 @@ GetAdjustments <- function(hivBase, hivAdjustments, targetAge,
   # Now adjust for location only have this for nsw and vic
   if (targetLocalRegion == "nsw") {
     adjustments$propstay <- adjustments$propstay * 
-      adjustments$propstay_nsw
+      hivAdjustments$pstay_nsw
     adjustments$propstay_lower <- adjustments$propstay_lower * 
-      adjustments$propstay_nsw_lower
+      hivAdjustments$pstay_nsw_lower
     adjustments$propstay_upper <- adjustments$propstay_upper * 
-      adjustments$propstay_nsw_upper
+      hivAdjustments$pstay_nsw_upper
   } 
   
-  if (argetLocalRegion == "vic") {
+  if (targetLocalRegion == "vic") {
     adjustments$propstay <- adjustments$propstay * 
-      adjustments$propstay_vic
+      hivAdjustments$pstay_vic
     adjustments$propstay_lower <- adjustments$propstay_lower * 
-      adjustments$propstay_vic_lower
+      hivAdjustments$pstay_vic_lower
     adjustments$propstay_upper <- adjustments$propstay_upper * 
-      adjustments$propstay_vic_upper
+      hivAdjustments$pstay_vic_upper
   }
+  
+  return(adjustments)
+  
 }

@@ -94,6 +94,9 @@ source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
 source(file.path(HIVcode, "EcdcCalculations.R"), echo=TRUE)
 source(file.path(HIVcode, "EcdcFiles.R"), echo=TRUE)
 
+# Function for adjustments
+source(file.path(HIVcode, "GetAdjustments.R"), echo=TRUE)
+
 ```
 
 ```{r Clean notifications}
@@ -274,15 +277,15 @@ subsetRates <- GetAdjustments(hivBase, hivAdjustments, targetAge,
 # This chunk fianlly calculates the number of people living with diagnosed
 #  HIV
 
-numInitialPostDiagMigrants <- cumDiagnoses * propLeave
+# numInitialPostDiagMigrants <- cumDiagnoses * propLeave
 
 # Initialize final results data frame
-hivDiagnosed <- data.frame(stage = character(), 
-                           year = double(),
-                           population = character(),
-                           estimate = double(),
-                           lower = double(),
-                           upper = double())
+# hivDiagnosed <- data.frame(stage = character(), 
+#                            year = double(),
+#                            population = character(),
+#                            estimate = double(),
+#                            lower = double(),
+#                            upper = double())
 
 # First calculate overall number -----------------------------------------
 
@@ -291,27 +294,30 @@ hivDiagnosed <- data.frame(stage = character(),
 #                                  hivResults$uniquecases)
 
 # cumDiagnoses <- filledDiagnoses$value
-cumDiagnoses <- hivResults$uniquecases
+# cumDiagnoses <- hivResults$uniquecases
 
 # All death rates used for all  populations
-deathRate <- oldResults$deathrate
-deathRateMin <- oldResults$drlower
-deathRateMax <- oldResults$drupper
-numDeaths <- cumDiagnoses * (nonAborigMortalityFactor * deathRate)
+# deathRate <- oldResults$deathrate
+# deathRateMin <- oldResults$drlower
+# deathRateMax <- oldResults$drupper
+# numDeaths <- cumDiagnoses * (nonAborigMortalityFactor * deathRate)
 
 # National migration rates
 # migrationRate <- filter(hivMigrate, state == "all")$rate
 # migrationRateMin <- filter(hivMigrate, state == "all")$lower
 # migrationRateMax <- filter(hivMigrate, state == "all")$upper
 
-migrationRate <- oldResults$osrate
-migrationRateMin <- oldResults$oslower
-migrationRateMax <- oldResults$osupper
-numMigrants <- cumDiagnoses * (nonAborigMigrationFactor * migrationRate)
+# migrationRate <- oldResults$osrate
+# migrationRateMin <- oldResults$oslower
+# migrationRateMax <- oldResults$osupper
+# numMigrants <- cumDiagnoses * (nonAborigMigrationFactor * migrationRate)
 
 # Calculate number living with diagnosed HIV and range
 
-pldhivAll <- LivingDiagnosed((1 - nonAborigMigrationFactor * (1-propStay)) * cumDiagnoses, nonAborigMortalityFactor * deathRate, nonAborigMigrationFactor * migrationRate)
+pldhivAll <- LivingDiagnosed(adjustDiags$included,
+                             subsetRates$deathrate,
+                             subsetRates$mrate,
+                             subsetRates$propstay)
 
 
 # Use max rates for min estimate because they are removal rates 
