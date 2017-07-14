@@ -4,8 +4,7 @@
 
 LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,  
                             propstay = NULL, arrivals = NULL, 
-                            departs = NULL, pldhiv = NULL,
-                            propstay = NULL) {
+                            departs = NULL, pldhiv = NULL) {
   # Calculate the number of people living with diagnosed HIV.
   #
   # Args:
@@ -78,7 +77,10 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   # Initialize output array
   nliving <- rep(NA,nyears)
   nliving[1] <- annualdiags[1]
-  
+
+  nduplicates <- rep(NA,nyears)
+  nduplicates[1] <- 0
+    
   ndead <- rep(NA,nyears)
   ndead[1] <- 0
   
@@ -88,6 +90,12 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   ndeparts <- rep(NA,nyears)
   ndeparts[1] <- 0
   
+  narrivals <- rep(NA,nyears)
+  narrivals[1] <- 0
+  
+  nleave <- rep(NA,nyears)
+  nleave[1] <- 0
+  
   # Loop through input parameters and calculate numLiving
   for (ii in 2:nyears) {
     nliving[ii] <- nliving[ii-1] + propstay[ii] * propunique[ii] * 
@@ -95,7 +103,7 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
                            departs[ii-1]) * nliving[ii-1] + 
       arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
     
-    nduplicates <- (1 - propunique[ii]) * nliving[ii-1]
+    nduplicates[ii] <- (1 - propunique[ii]) * nliving[ii-1]
     
     ndead[ii] <- deathrate[ii-1] * nliving[ii-1]
       
@@ -107,13 +115,11 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
     
     nleave[ii] <- (1 - propstay[ii]) * nliving[ii-1]
     
-    
-    
   }
  
   # Put all the outputs into a dataframe
   
   # Return final output
-  return(nliving)
-  
+  #return(nliving)
+  return(data.frame(nliving, nduplicates, ndead, nmigrants, ndeparts, narrivals, nleave))
 }
