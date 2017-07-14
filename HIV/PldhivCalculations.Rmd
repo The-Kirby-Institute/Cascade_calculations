@@ -151,9 +151,7 @@ if (excludeAborig) {
   hivSetAll <- filter(hivSetAll, aboriggroup == 'non-indigenous')
 }
   
-hivSetReturn <- subhivset(hivSetAll, targetAge, targetExposure,
-                          targetCob, targetAtsi, targetLocalRegion,
-                          targetGlobalRegion)
+hivSetReturn <- subhivset(hivSetAll, targetAge, targetGender, targetExposure, targetCob, targetAtsi, targetState, targetGlobalRegion)
 
 hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
