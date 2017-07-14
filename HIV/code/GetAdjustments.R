@@ -4,7 +4,7 @@
 
 # R function to extract subset of interest from notifications
 
-GetAdjustments <- function(hivBase, hivAdjustments, targetAge, 
+GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate, targetAge, 
                            targetExposure, targetCob, targetAtsi,
                            targetLocalRegion, targetGlobalRegion) {
   
@@ -42,8 +42,7 @@ GetAdjustments <- function(hivBase, hivAdjustments, targetAge,
       hivAdjustments$mrate_all_adults
   }
   
-
-  # Adjust migration rate for location
+  # Adjust  migration rate for location
   if (targetLocalRegion != "all") {
     mrate <- switch(targetLocalRegion,
                     "nsw" = hivAdjustments$mrate_nsw,
@@ -58,6 +57,37 @@ GetAdjustments <- function(hivBase, hivAdjustments, targetAge,
     adjustments$mrate <- adjustments$mrate * mrate
     adjustments$mrate_lower <- adjustments$mrate_lower * mrate
     adjustments$mrate_upper <- adjustments$mrate_upper * mrate
+  }
+
+  # Adjust interstate migration rate for location
+  if (targetLocalRegion != "all") {
+    arriverate <- switch(targetLocalRegion,
+                    "nsw" = filter(hivInterstatestate == "nsw")$arriverate,
+                    "vic" = filter(hivInterstatestate == "vic")$arriverate,
+                    "qld" = filter(hivInterstatestate == "qld")$arriverate,
+                    "nt" = filter(hivInterstatestate == "nt")$arriverate,
+                    "wa" = filter(hivInterstatestate == "wa")$arriverate,
+                    "sa" = filter(hivInterstatestate == "sa")$arriverate,
+                    "tas" = filter(hivInterstatestate == "tas")$arriverate,
+                    "act" = filter(hivInterstatestate == "act")$arriverate)
+    
+    adjustments$inter_arriverate <- arriverate
+    
+    departrate <- switch(targetLocalRegion,
+                         "nsw" = filter(hivInterstatestate == "nsw")$departrate,
+                         "vic" = filter(hivInterstatestate == "vic")$departrate,
+                         "qld" = filter(hivInterstatestate == "qld")$departrate,
+                         "nt" = filter(hivInterstatestate == "nt")$departrate,
+                         "wa" = filter(hivInterstatestate == "wa")$departrate,
+                         "sa" = filter(hivInterstatestate == "sa")$departrate,
+                         "tas" = filter(hivInterstatestate == "tas")$departrate,
+                         "act" = filter(hivInterstatestate == "act")$departrate)
+    
+    adjustments$inter_departrate <- departrate
+    
+  } else {
+    adjustments$inter_arriverate <- 0
+    adjustments$inter_departrate <- 0
   }
   
   # Extract deathrate and propstay for indigenous and non-indigenous 

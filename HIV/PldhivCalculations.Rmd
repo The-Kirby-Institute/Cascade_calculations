@@ -268,9 +268,10 @@ hivInterstate <- read.csv(file.path(dataFolder,
 
 # WHERE I AM UP TO
 # Now get the death rates, migration rates, and proportion stay rates
-subsetRates <- GetAdjustments(hivBase, hivAdjustments, targetAge, 
-                              targetExposure, targetCob, targetAtsi,
-                              targetLocalRegion, targetGlobalRegion) 
+subsetRates <- GetAdjustments(hivBase, hivAdjustments, hivInterstate, 
+                              targetAge, targetExposure, targetCob,
+                              targetAtsi, targetLocalRegion,
+                              targetGlobalRegion) 
  
 ```
 
@@ -281,7 +282,9 @@ subsetRates <- GetAdjustments(hivBase, hivAdjustments, targetAge,
 annPropUnique <- AnnualUnique(adjustDiags$included,
                               overallPropUnique) / adjustDiags$included
 
-pldhivAll <- LivingDiagnosed(adjustDiags$included,
+if (interState) {
+# Calculate for interregional migration
+pldhivOverall <- LivingDiagnosed(adjustDiags$all,
                              annPropUnique, 
                              subsetRates$deathrate,
                              subsetRates$mrate,
@@ -289,32 +292,62 @@ pldhivAll <- LivingDiagnosed(adjustDiags$included,
   mutate(year = allYears) %>%
   select(year, everything())
 
-pldhivAllMin <- LivingDiagnosed(adjustDiags$included,
+# Now do regional migration
+pldhivAll <- LivingDiagnosed(adjustDiags$included,
                              annPropUnique, 
-                             subsetRates$deathrate_lower,
-                             subsetRates$mrate_lower,
-                             subsetRates$propstay_lower) %>%
+                             subsetRates$deathrate,
+                             subsetRates$mrate,
+                             subsetRates$propstay, 
+                             arrivals = subsetRates$arriverate,
+                             departs = subsetRates$departrate,
+                             pldhiv = pldhivOverall$pldhiv) %>%
   mutate(year = allYears) %>%
   select(year, everything())
 
-pldhivAllMax <- LivingDiagnosed(adjustDiags$included,
-                             annPropUnique, 
-                             subsetRates$deathrate_upper,
-                             subsetRates$mrate_upper,
-                             subsetRates$propstay_upper) %>%
-  mutate(year = allYears) %>%
-  select(year, everything())
+
+} else {
+  
+  # Now do regional migration
+  pldhivAll <- LivingDiagnosed(adjustDiags$included,
+                               annPropUnique, 
+                               subsetRates$deathrate,
+                               subsetRates$mrate,
+                               subsetRates$propstay) %>%
+    mutate(year = allYears) %>%
+    select(year, everything())
+  
+  pldhivAllMin <- LivingDiagnosed(adjustDiags$included,
+                                  annPropUnique, 
+                                  subsetRates$deathrate_lower,
+                                  subsetRates$mrate_lower,
+                                  subsetRates$propstay_lower) %>%
+    mutate(year = allYears) %>%
+    select(year, everything())
+  
+  pldhivAllMax <- LivingDiagnosed(adjustDiags$included,
+                                  annPropUnique, 
+                                  subsetRates$deathrate_upper,
+                                  subsetRates$mrate_upper,
+                                  subsetRates$propstay_upper) %>%
+    mutate(year = allYears) %>%
+    select(year, everything())
+  
+}
 
 # Save deaths and emigrants into ECDC
 if (ecdcData) {
   # All deaths
-  EcdcWrite(select(pldhivAll, year, deaths), 
-            dataAll[[1]], "deaths")
+  deaths <- pldhivAll %>%
+    select(year, deaths) %>%
+    rename(all = deaths)
+  EcdcWrite(deaths, dataAll[[1]], "deaths")
   
   # All emigrants
   emigrants <- pldhivAll %>% 
     select(year, emigrants, diag_departs) %>%
-    mutate(total <- emigrants + diag_departs)
+    mutate(total = emigrants + diag_departs) %>%
+    select(year, total) %>%
+    rename(all = total)
   
   EcdcWrite(emigrants, dataAll[[1]], "emigrants")
   
