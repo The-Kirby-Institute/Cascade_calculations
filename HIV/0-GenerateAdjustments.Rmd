@@ -5,7 +5,7 @@ Author: Richard T. Gray
 
 This scripts calculates the overseas migration rate and death rate 
 adjustments for specific populations of PLWHIV. The results of these 
-calculations are stored as files which are read in by the main HIv cascade
+calculations are stored as files which are read in by the main HIV cascade
 calculations scripts and functions. 
 
 The basic approach is to produce a base estimates for the overall 
@@ -115,7 +115,7 @@ hivExpAnn <- hivSet %>%
   ungroup() %>% 
   spread(expgroup, propnotifications) %>%
   rename(year = yeardiagnosis) 
-hivExp$msm[2] <- 1.0
+hivExpAnn$msm[2] <- 1.0
 
 hivExpCum <- hivSet %>% 
   group_by(expgroup, yeardiagnosis) %>% 
@@ -138,6 +138,7 @@ hivExpCum <- hivSet %>%
   ungroup() %>% 
   spread(expgroup, propnotifications) %>%
   rename(year = yeardiagnosis) 
+hivExpCum$msm[2] <- 1.0
 
 # Indigenous status
 hivAborigAnn <- hivSet %>%
@@ -373,6 +374,7 @@ hivAdjustments$pstay_indigenous <- 0
 hivAdjustments$pstay_non_indigenous <- nonAborigMigrationFactor
 
 # Specific NSW estimates
+propAus <- hivCobCum$australia
 propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.1008)
 propStayLowerNSW <-  propAus * (1 - 2 * 0.0072) + (1 - propAus) * 
   (1 - 2 * 0.1008)
@@ -463,7 +465,7 @@ overallPropUnique <- ProportionUnique(hivSet,
                                       hivResults$totalnotifications,
                                       allYears)
 
-cumDiagnoses <- hivResults$notifications * overallPropUnique # cumulative
+cumDiagnoses <- hivResults$totalnotifications * overallPropUnique # cumulative
 annDiags <- c(cumDiagnoses[1], diff(cumDiagnoses))  # annual diagnoses
 
 deaths <- hivDeaths$inflated_deaths
@@ -486,7 +488,7 @@ allMigrateUpper<- baseMigrationUpper * allAdultsAdjust
 
 for (ii in 2:length(annDiags)) {
   numLiving[ii] <- numLiving[ii-1] + annDiags[ii] - deaths[ii-1] 
-   - numLiving[ii-1] * allMigrate$rate[ii-1]
+   - numLiving[ii-1] * allMigrate[ii-1]
   numLiving_min[ii] <- numLiving_min[ii-1] + annDiags[ii] -
     deaths_max[ii-1] - numLiving_min[ii-1] * allMigrateUpper[ii-1]
   numLiving_max[ii] <- numLiving_max[ii-1] + annDiags[ii] -

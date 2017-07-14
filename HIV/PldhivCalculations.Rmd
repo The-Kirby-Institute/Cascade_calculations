@@ -42,14 +42,14 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2015
 
-plots <- FALSE       # TRUE if we want to plot things
-bindCascade <- TRUE  # TRUE if we want to store all the cascade results 
-                     # one data frame
-
-saveCascade <- TRUE       # save final cascade dataframe
-saveNotifications <- TRUE # save cleaned notifications set
-saveResults <- TRUE       # save information national annual notifications
-savePldhiv <- TRUE        # save PLDHIV estimates separately
+# plots <- FALSE       # TRUE if we want to plot things
+# bindCascade <- TRUE  # TRUE if we want to store all the cascade results 
+#                      # one data frame
+# 
+# saveCascade <- TRUE       # save final cascade dataframe
+# saveNotifications <- TRUE # save cleaned notifications set
+# saveResults <- TRUE     # save information national annual notifications
+# savePldhiv <- TRUE        # save PLDHIV estimates separately
 
 # Set HIV subsetting function parameters----------------------------------
 
@@ -64,16 +64,12 @@ targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 
 excludeAborig <- FALSE
 ecdcData <- TRUE
-ecdcModel <- "all"
+ecdcModel <- "all" # name
 
 ```
 
 ```{r Functions}
-# Load and define useful functions for analysis 
-# POTENTIALLY PUT SOME FUNCTIONS INTO A SEPARATE SCRIPT FOR SOURCING
-
-# Load function to remove duplicates
-# source(file.path(Rcode,"RemoveDuplicates.R"), echo=TRUE)
+# Load functions used for analysis 
 
 # Load function to calculate number living with diagnosed HIV
 # source(file.path(Rcode,"LivingDiagnosed.R"), echo=TRUE)
@@ -87,13 +83,6 @@ source(file.path(Rcode, "Subset.R"), echo=TRUE)
 
 # Function for removing duplicates annually
 source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
-# source(file.path(Rcode, "RemoveDuplicatesAnnually.R"), echo=TRUE)
-
-# Function to create file name for deduplicted output
-# source(file.path(Rcode, "Deduplicate.R"), echo=TRUE)
-
-# Function to create file name for deduplicted output
-# source(file.path(Rcode, "Deduplicate.R"), echo=TRUE)
 
 # Function to replace estimates
 source(file.path(Rcode, "ReplaceEstimates.R"), echo=TRUE)
@@ -274,8 +263,10 @@ hivInterstate <- read.csv(file.path(dataFolder,
                     toString(analysisYear), ".csv")))
 
 # WHERE I AM UP TO
-GetAdjustments(targetAge, targetExposure, targetCob, targetAtsi,
-               targetLocalRegion, targetGlobalRegion) 
+# Now get the death rates, migration rates, and proportion stay rates
+subsetRates <- GetAdjustments(hivBase, hivAdjustments, targetAge, 
+                              targetExposure, targetCob, targetAtsi,
+                              targetLocalRegion, targetGlobalRegion) 
  
 ```
 
