@@ -60,10 +60,10 @@ EcdcWrite <- function(results, folder, category) {
                     "hivaids" = "HIVAIDS",
                     "aids" = "AIDS",
                     "cg500" = "HIV_CD4_1", 
-                    "c350-499" = "HIV_CD4_2", 
-                    "c200-349" = "HIV_CD4_3", 
+                    "c350_499" = "HIV_CD4_2", 
+                    "c200_349" = "HIV_CD4_3", 
                     "cl200" = "HIV_CD4_4",
-                    "not_eported_1" = "HIV_CD4_LM_1_0",
+                    "not_reported_1" = "HIV_CD4_LM_1_0",
                     "cl20_1" = "HIV_CD4_LM_1_1",
                     "c20_49_1" = "HIV_CD4_LM_1_2",
                     "c50_99_1" = "HIV_CD4_LM_1_3",
@@ -73,7 +73,7 @@ EcdcWrite <- function(results, folder, category) {
                     "c250_299_1" = "HIV_CD4_LM_1_7",
                     "c300_349_1" = "HIV_CD4_LM_1_8",
                     "cg350_1" = "HIV_CD4_LM_1_9",
-                    "Not Reported_2" = "HIV_CD4_LM_2_0",
+                    "not_reported_2" = "HIV_CD4_LM_2_0",
                     "cl20_2" = "HIV_CD4_LM_2_1",
                     "c20_49_2" = "HIV_CD4_LM_2_2",
                     "c50_99_2" = "HIV_CD4_LM_2_3",
@@ -102,7 +102,6 @@ typeDiag <- function(hivData, type, minYear = 1980,
     # Extract notifications
     if (type == "hiv") {
       diagType <- hivData %>%
-        # filter(typediagnosis %in% c("hiv", "hivaids")) %>%
         group_by(yeardiagnosis,  expgroup) %>%
         summarise(diags = n()) %>%
         ungroup() %>%
@@ -112,31 +111,12 @@ typeDiag <- function(hivData, type, minYear = 1980,
       diagType <- hivData %>%
         filter(typediagnosis %in% c("aids", "hivaids")) %>%
         # filter(typediagnosis %in% c("hivaids")) %>%
-        group_by(yeardiagnosis, expgroup) %>%
+        group_by(yearaids, expgroup) %>%
         summarise(diags = n()) %>%
         ungroup() %>%
         spread(expgroup, diags) %>%
-        rename(year = yeardiagnosis)
-      
-      # allYears <- minYear:max(hivData$yeardiagnosis)
-      # requiredYears <- allYears[!(allYears %in% diagType$year)]
-      # diagType <- FillDataFrame(requiredYears, diagType)
-      # diagType <- arrange(diagType, year)
-      # 
-      # diagType2 <- hivData %>%
-      #   filter(typediagnosis == "hivaids") %>%
-      #   group_by(yeardiagnosis,  expgroup) %>%
-      #   summarise(diags = n()) %>%
-      #   ungroup() %>%
-      #   spread(expgroup, diags) %>%
-      #   rename(year = yeardiagnosis)
-      # 
-      # allYears <- minYear:max(hivData$yeardiagnosis)
-      # requiredYears <- allYears[!(allYears %in% diagType2$year)]
-      # diagType2 <- FillDataFrame(requiredYears, diagType2)
-      # diagType2 <- arrange(diagType2, year)
-      # 
-      # diagType[, 2:6] <- diagType[, 2:6] + diagType2[, 2:6]
+        rename(year = yearaids) %>%
+        filter(year != 1956) # remove 1956 AIDS cases about 23. 
       
     } else {
       diagType <- hivData %>%
@@ -161,13 +141,12 @@ typeDiag <- function(hivData, type, minYear = 1980,
              pwid = ifelse(is.nan(pwid), 0, pwid),
              otherexp = ifelse(is.nan(otherexp), 0, otherexp)) %>%
       select(-known, -unknown)
-    
-    
-    # Fill in missing years
-    allYears <- minYear:max(hivData$yeardiagnosis)
-    requiredYears <- allYears[!(allYears %in% diagType$year)]
-    diagType <- FillDataFrame(requiredYears, diagType)
-    diagType <- arrange(diagType, year)
+
+      allYears <- minYear:max(hivData$yeardiagnosis)
+      requiredYears <- allYears[!(allYears %in% diagType$year)]
+      diagType <- FillDataFrame(requiredYears, diagType)
+      diagType <- arrange(diagType, year)
+    # }
     
     if (!is.null(adjustUnique)) {
       diagType$hetero <- AnnualUnique(diagType$hetero , adjustUnique)
@@ -182,7 +161,6 @@ typeDiag <- function(hivData, type, minYear = 1980,
     # Don't split by exposure group 
     if (type == "hiv") {
       diagType <- hivData %>%
-        # filter(typediagnosis %in% c("hiv", "hivaids")) %>%
         group_by(yeardiagnosis) %>%
         summarise(all = n()) %>%
         ungroup() %>%
@@ -190,11 +168,12 @@ typeDiag <- function(hivData, type, minYear = 1980,
     } else if (type == "aids") {
       diagType <- hivData %>%
         filter(typediagnosis %in% c("aids", "hivaids")) %>%
-        # filter(typediagnosis %in% c("hivaids")) %>%
-        group_by(yeardiagnosis) %>%
+        group_by(yearaids) %>%
         summarise(all = n()) %>%
         ungroup() %>%
-        rename(year = yeardiagnosis)
+        rename(year = yearaids) %>%
+        filter(year != 1956) # remove 1956 AIDS cases about 23.
+      
     } else {
       diagType <- hivData %>%
         filter(typediagnosis == "hivaids") %>%
@@ -202,6 +181,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
         summarise(all = n()) %>%
         ungroup() %>%
         rename(year = yeardiagnosis)
+      
     } 
     diagType[is.na(diagType)] <- 0
     
@@ -350,22 +330,6 @@ cd4Exposure <- function(hivData, cd4binGroup,
       rename(year = yeardiagnosis)
     
   }
-  # cd4DiagsExp[is.na(cd4DiagsExp)] <- 0  
-  
-  # cd4ExpBin <- cd4DiagsExp %>%
-  #   filter(cd4bin == cd4binGroup) %>%
-  #   # mutate(known = hetero+msm+otherexp+pwid) %>%
-  #   # mutate(hetero = hetero + unknown * hetero/known,
-  #   #        msm = msm + unknown * msm/known,
-  #   #        pwid = pwid + unknown * pwid/known,
-  #   #        otherexp = otherexp + unknown * otherexp/known) %>%
-  #   # mutate(hetero = ifelse(is.nan(hetero), 0, hetero), 
-  #   #        msm = ifelse(is.nan(msm), 0, msm),
-  #   #        pwid = ifelse(is.nan(pwid), 0, pwid),
-  #   #        otherexp = ifelse(is.nan(otherexp), 0, otherexp)) %>%
-  #   # select(-cd4bin, -known, -unknown) %>%
-  #   select(-cd4bin, -unknown) %>%
-  #   rename(year = yeardiagnosis)
   
   # Fill in missing years
   allYears <- minYear:max(cd4ExpBin$year)
