@@ -50,13 +50,20 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
       hivData$indigenous == "Aboriginal"] <- "indigenous"
     hivData$aboriggroup[hivData$cob == 1100 & 
       hivData$indigenous == "Non indigenous"] <- "non_indigenous" 
-  } else {
+  } else if (analysisYear == 2015) {
 
     hivData$aboriggroup[hivData$cob == 1100 & 
       hivData$indigenous == "Aboriginal"] <- "indigenous"
     hivData$aboriggroup[hivData$indigenous != "Aboriginal"] <- "non_indigenous"
     hivData$aboriggroup[is.na(hivData$aboriggroup)] <- "non_indigenous"
+  } else {
+    hivData$aboriggroup[hivData$cob == 1100 & 
+                          hivData$indig == 1] <- "indigenous"
+    hivData$aboriggroup[hivData$indig != 1] <- "non_indigenous"
+    hivData$aboriggroup[is.na(hivData$aboriggroup)] <- "non_indigenous"
   }
+  
+  
   
   # Country and region of birth--------------------------------------------
   

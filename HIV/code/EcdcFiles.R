@@ -6,17 +6,17 @@
 # the proportion of PLHIV undiagnosed. It relies on functions from
 # EcdcCalculations to be loaded. 
 
-EcdcFiles <- function(hivFrame, dataFolder) {
+EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL) {
   
   # All diagnoses----------------------------------------------------------
   
   # Incidence method
   hivcsvAll <- typeDiag(hivFrame, "hiv", exposure = FALSE, 
-                        adjustUnique = overallPropUnique)
+                        adjustUnique = propUnique)
   hivaidscsvAll <- typeDiag(hivFrame, "hivaids", exposure = FALSE, 
-                            adjustUnique = overallPropUnique)
+                            adjustUnique = propUnique)
   aidscsvAll <- typeDiag(hivFrame, "aids", exposure = FALSE, 
-                         adjustUnique = overallPropUnique)
+                         adjustUnique = propUnique)
   
   EcdcWrite(hivcsvAll, dataFolder[[1]], "hiv")
   EcdcWrite(hivaidscsvAll, dataFolder[[1]], "hivaids")
@@ -81,11 +81,11 @@ EcdcFiles <- function(hivFrame, dataFolder) {
   
   # Incidence method
   hivcsvExp <- typeDiag(hivFrame, "hiv",
-                        adjustUnique = overallPropUnique)
+                        adjustUnique = propUnique)
   hivaidscsvExp <- typeDiag(hivFrame, "hivaids", 
-                            adjustUnique = overallPropUnique)
+                            adjustUnique = propUnique)
   aidscsvExp <- typeDiag(hivFrame, "aids",
-                         adjustUnique = overallPropUnique)
+                         adjustUnique = propUnique)
   
   EcdcWrite(hivcsvExp, dataFolder[[2]], "hiv")
   EcdcWrite(hivaidscsvExp, dataFolder[[2]], "hivaids")
