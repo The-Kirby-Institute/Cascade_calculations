@@ -5,8 +5,9 @@
 # R function to extract subset of interest from notifications
 
 GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate, targetAge, 
-                           targetExposure, targetCob, targetAtsi,
-                           targetLocalRegion, targetGlobalRegion) {
+                           targetGender,targetExposure, targetCob, targetAtsi,
+                           targetLocalRegion, targetState,
+                           targetGlobalRegion) {
   
   adjustments <- data.frame(year = hivBase$year)
   
@@ -43,8 +44,8 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate, targetAge,
   }
   
   # Adjust  migration rate for location
-  if (targetLocalRegion != "all") {
-    mrate <- switch(targetLocalRegion,
+  if (targetState != "all") {
+    mrate <- switch(targetState,
                     "nsw" = hivAdjustments$mrate_nsw,
                     "vic" = hivAdjustments$mrate_nsw,
                     "qld" = hivAdjustments$mrate_nsw,
@@ -60,28 +61,28 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate, targetAge,
   }
 
   # Adjust interstate migration rate for location
-  if (targetLocalRegion != "all") {
-    arriverate <- switch(targetLocalRegion,
-                    "nsw" = filter(hivInterstatestate == "nsw")$arriverate,
-                    "vic" = filter(hivInterstatestate == "vic")$arriverate,
-                    "qld" = filter(hivInterstatestate == "qld")$arriverate,
-                    "nt" = filter(hivInterstatestate == "nt")$arriverate,
-                    "wa" = filter(hivInterstatestate == "wa")$arriverate,
-                    "sa" = filter(hivInterstatestate == "sa")$arriverate,
-                    "tas" = filter(hivInterstatestate == "tas")$arriverate,
-                    "act" = filter(hivInterstatestate == "act")$arriverate)
+  if (targetState != "all") {
+    arriverate <- switch(targetState,
+                    "nsw" = filter(hivInterstate, state == "nsw")$arriverate,
+                    "vic" = filter(hivInterstate, state == "vic")$arriverate,
+                    "qld" = filter(hivInterstate, state == "qld")$arriverate,
+                    "nt" = filter(hivInterstate, state == "nt")$arriverate,
+                    "wa" = filter(hivInterstate, state == "wa")$arriverate,
+                    "sa" = filter(hivInterstate, state == "sa")$arriverate,
+                    "tas" = filter(hivInterstate, state == "tas")$arriverate,
+                    "act" = filter(hivInterstate, state == "act")$arriverate)
     
     adjustments$inter_arriverate <- arriverate
     
-    departrate <- switch(targetLocalRegion,
-                         "nsw" = filter(hivInterstatestate == "nsw")$departrate,
-                         "vic" = filter(hivInterstatestate == "vic")$departrate,
-                         "qld" = filter(hivInterstatestate == "qld")$departrate,
-                         "nt" = filter(hivInterstatestate == "nt")$departrate,
-                         "wa" = filter(hivInterstatestate == "wa")$departrate,
-                         "sa" = filter(hivInterstatestate == "sa")$departrate,
-                         "tas" = filter(hivInterstatestate == "tas")$departrate,
-                         "act" = filter(hivInterstatestate == "act")$departrate)
+    departrate <- switch(targetState,
+                         "nsw" = filter(hivInterstate, state == "nsw")$departrate,
+                         "vic" = filter(hivInterstate, state == "vic")$departrate,
+                         "qld" = filter(hivInterstate, state == "qld")$departrate,
+                         "nt" = filter(hivInterstate, state == "nt")$departrate,
+                         "wa" = filter(hivInterstate, state == "wa")$departrate,
+                         "sa" = filter(hivInterstate, state == "sa")$departrate,
+                         "tas" = filter(hivInterstate, state == "tas")$departrate,
+                         "act" = filter(hivInterstate, state == "act")$departrate)
     
     adjustments$inter_departrate <- departrate
     
@@ -131,24 +132,40 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate, targetAge,
       hivAdjustments$pstay_indigenous
   }
   
-  # Further adjust propstay by location
+  # Further adjust propstay and deathrate by location
   # Now adjust for location only have this for nsw and vic
-  if (targetLocalRegion == "nsw") {
+  if (targetState == "nsw") {
     adjustments$propstay <- adjustments$propstay * 
       hivAdjustments$pstay_nsw
     adjustments$propstay_lower <- adjustments$propstay_lower * 
       hivAdjustments$pstay_nsw_lower
     adjustments$propstay_upper <- adjustments$propstay_upper * 
       hivAdjustments$pstay_nsw_upper
+    
+    adjustments$deathrate <- adjustments$deathrate * 
+      hivAdjustments$drate_nsw
+    adjustments$deathrate_lower <- adjustments$deathrate_lower * 
+      hivAdjustments$drate_nsw_lower
+    adjustments$deathrate_upper <- adjustments$deathrate_upper * 
+      hivAdjustments$drate_nsw_upper
+    
   } 
   
-  if (targetLocalRegion == "vic") {
+  if (targetState == "vic") {
     adjustments$propstay <- adjustments$propstay * 
       hivAdjustments$pstay_vic
     adjustments$propstay_lower <- adjustments$propstay_lower * 
       hivAdjustments$pstay_vic_lower
     adjustments$propstay_upper <- adjustments$propstay_upper * 
       hivAdjustments$pstay_vic_upper
+    
+    adjustments$deathrate <- adjustments$deathrate * 
+      hivAdjustments$drate_vic
+    adjustments$deathrate_lower <- adjustments$deathrate_lower * 
+      hivAdjustments$drate_vic_lower
+    adjustments$deathrate_upper <- adjustments$deathrate_upper * 
+      hivAdjustments$drate_vic_upper
+    
   }
   
   return(adjustments)
