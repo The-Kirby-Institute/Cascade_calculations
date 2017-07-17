@@ -77,7 +77,7 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   # Initialize output array
   nliving <- rep(NA,nyears)
   nliving[1] <- annualdiags[1]
-
+  
   nduplicates <- rep(NA,nyears)
   nduplicates[1] <- 0
     
@@ -98,22 +98,40 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   
   # Loop through input parameters and calculate numLiving
   for (ii in 2:nyears) {
-    nliving[ii] <- nliving[ii-1] + propstay[ii] * propunique[ii] * 
-      annualdiags[ii] - (deathrate[ii-1] + migration[ii-1] + 
-                           departs[ii-1]) * nliving[ii-1] + 
-      arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
     
+    # The following formula needs to have the same form as the formula in
+    # 0-GenerateAdjustments.Rmd to ensure the deathrates/deaths match
+    
+    # Old formula. Based on an Euler approximation approach but given the
+    # annual time difference doesn't really capture what we want on an 
+    # annual basis.
+    
+    # nliving[ii] <- nliving[ii-1] + propstay[ii] * propunique[ii] *
+    #   annualdiags[ii] - (deathrate[ii-1] + migration[ii-1] +
+    #                        departs[ii-1]) * nliving[ii-1] +
+    #   arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
+    
+    # New formula. Calculations provide the number at the end of the
+    # year using the number at the end of the previous year and changes
+    # through the year (assumes new diagnoses stay in the population 
+    # except for those who leave immediately) 
+    nliving[ii] <- nliving[ii-1] + propstay[ii] * propunique[ii] *
+      annualdiags[ii] - (deathrate[ii] + migration[ii] +
+                           departs[ii]) * nliving[ii-1] +
+      arrivals[ii] * (pldhiv[ii-1] - nliving[ii-1])
+    
+    # Annual estimates
     nduplicates[ii] <- (1 - propunique[ii]) * annualdiags[ii]
-    
-    ndead[ii] <- deathrate[ii-1] * nliving[ii-1]
-      
-    nmigrants[ii] <- migration[ii-1] * nliving[ii-1]
-      
-    ndeparts[ii] <- departs[ii-1] * nliving[ii-1]
-    
-    narrivals[ii] <- arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
-    
-    nleave[ii] <- (1 - propstay[ii]) * propunique[ii] * 
+
+    ndead[ii] <- deathrate[ii] * nliving[ii-1]
+
+    nmigrants[ii] <- migration[ii] * nliving[ii-1]
+
+    ndeparts[ii] <- departs[ii] * nliving[ii-1]
+
+    narrivals[ii] <- arrivals[ii] * (pldhiv[ii-1] - nliving[ii-1])
+
+    nleave[ii] <- (1 - propstay[ii]) * propunique[ii] *
       annualdiags[ii]
     
   }
