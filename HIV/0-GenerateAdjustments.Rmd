@@ -40,7 +40,7 @@ source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
  
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2015
+analysisYear <- 2016
 startYear <- 1980 # First year in HIV registry is 1980
 
 allYears <- startYear:analysisYear 
@@ -318,6 +318,11 @@ maleAdultsAdjust <- c(1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 1.2499,
                       1.2392, 1.2285, 1.2178, 1.2071, 1.1964, 1.1857,
                       1.175, 1.1643, 1.1536, 1.1429, 1.1322, 1.1322)
 
+if (analysisYear > 2015) {
+  allAdultsAdjust <- c(allAdultsAdjust, tail(allAdultsAdjust, 1))
+  maleAdultsAdjust <- c(maleAdultsAdjust, tail(maleAdultsAdjust, 1))
+}
+
 femaleAdultsAdjust <- rep(1, length(allYears))
 
 # Start storing things
@@ -481,33 +486,67 @@ numLiving[1] <- annDiags[1]
 numLiving_min[1] <- annDiags[1]
 numLiving_max[1] <- annDiags[1]
 
+templiving <- numLiving
+
 # Overall migration rate for deaths estimate
 allMigrate <- baseMigration * allAdultsAdjust
 allMigrateLower <- baseMigrationLower * allAdultsAdjust
 allMigrateUpper<- baseMigrationUpper * allAdultsAdjust
 
 for (ii in 2:length(annDiags)) {
-  numLiving[ii] <- numLiving[ii-1] + annDiags[ii] - deaths[ii-1] 
-   - numLiving[ii-1] * allMigrate[ii-1]
-  numLiving_min[ii] <- numLiving_min[ii-1] + annDiags[ii] -
-    deaths_max[ii-1] - numLiving_min[ii-1] * allMigrateUpper[ii-1]
-  numLiving_max[ii] <- numLiving_max[ii-1] + annDiags[ii] -
-    deaths_min[ii-1] - numLiving_max[ii-1] * allMigrateLower[ii-1]
+  # The following formula needs to have the same form as the formula in
+  # LivingDiagnosed.R to ensure the deathrates match and the number
+  # of deaths at the end of 2003 is correct. 
+  # 
+  # TODO: replace the calculation below with LivingDiagnosed.R so that
+  # accidently differences are prevented.
+
+  # Old formula. Based on an Euler approximation approach. 
+  # numLiving[ii] <- numLiving[ii-1] + hivBaseRates$propstay[ii] *
+  #   annDiags[ii] - deaths[ii-1] - numLiving[ii-1] * allMigrate[ii-1]
+  # numLiving_min[ii] <- numLiving_min[ii-1] + 
+  #   hivBaseRates$propstay_upper[ii-1] * annDiags[ii] -
+  #   deaths_max[ii-1] - numLiving_min[ii-1] * allMigrateUpper[ii-1]
+  # numLiving_max[ii] <- numLiving_max[ii-1] + 
+  #   hivBaseRates$propstay_lower[ii-1] * annDiags[ii] -
+  #   deaths_min[ii-1] - numLiving_max[ii-1] * allMigrateLower[ii-1]
+  
+  # New formula. Calculations provide the number at the end of the
+  # year using the number at the end of the previous year and changes
+  # through the year (assumes new diagnoses stay in the population 
+  # except for those who leave immediately) 
+  numLiving[ii] <- numLiving[ii-1] + hivBaseRates$propstay[ii] *
+    annDiags[ii] - deaths[ii] - numLiving[ii-1] * allMigrate[ii]
+  numLiving_min[ii] <- numLiving_min[ii-1] + 
+    hivBaseRates$propstay_upper[ii] * annDiags[ii] -
+    deaths_max[ii] - numLiving_min[ii-1] * allMigrateUpper[ii]
+  numLiving_max[ii] <- numLiving_max[ii-1] + 
+    hivBaseRates$propstay_lower[ii] * annDiags[ii] -
+    deaths_min[ii] - numLiving_max[ii-1] * allMigrateLower[ii]
+
 }
 
 # Calculate crude average annual mortality rates up to 2003
-linkageMortality <- deaths / numLiving
-linkageMortalityMin <- deaths_min / numLiving_max
-linkageMortalityMax <- deaths_max / numLiving_min
+# Old formula
+# linkageMortality <- deaths / numLiving
+# linkageMortalityMin <- deaths_min / numLiving_max
+# linkageMortalityMax <- deaths_max / numLiving_min
 
-# Append AHOD mortality --------------------------------------------------
+# New formula
+linkageMortality <- deaths / c(numLiving[1], head(numLiving, -1))
+linkageMortalityMin <- deaths_min / 
+  c(numLiving_max[1], head(numLiving_max, -1))
+linkageMortalityMax <- deaths_max / 
+  c(numLiving_min[1], head(numLiving_min, -1))
+
+# Append AHOD mortality -------------------------------------------------
 
 # Calculate crude death rate for each state and year - use 95% CI as the
 #  upper and lower bound
 
 ahodDeaths <- ahodData %>% 
   filter(population == "ALL") %>%
-  group_by(state, year) %>%
+  group_by(year, state, population) %>%
   summarise(n = sum(n_id), 
     deaths = sum(n_death), 
     deathrate = unname(prop.test(sum(n_death), 
@@ -541,6 +580,16 @@ hivBaseRates$deathrate <- deathRate
 hivBaseRates$deathrate_lower <- deathRate_min
 hivBaseRates$deathrate_upper <- deathRate_max
 
+# Because we are dividing sometimes remove zeos
+deathrateDiv <- hivBaseRates$deathrate
+deathrateDiv[deathrateDiv == 0] <- 1
+
+deathrateDiv_lower <- hivBaseRates$deathrate_lower
+deathrateDiv_lower[deathrateDiv_lower == 0] <- 1
+
+deathrateDiv_upper <- hivBaseRates$deathrate_upper
+deathrateDiv_upper[deathrateDiv_upper == 0] <- 1
+
 # Adjustments for Indigenous vs nonIndigenous
 nonAborigMortalityFactor <- 
   ((1-aborigMortality) * aborigDiags + nonAborigDiags) / nonAborigDiags
@@ -553,15 +602,82 @@ nonAborigMortalityFactorUpper <-
 # need to shorten some variable names. 
 hivAdjustments$drate_indigenous <- aborigMortality
 hivAdjustments$drate_indigenous_lower <- aborigMortalityMin / 
-  hivBaseRates$deathrate_lower
+  deathrateDiv_lower
 hivAdjustments$drate_indigenous_upper <- aborigMortalityMax /
-  hivBaseRates$deathrate_upper
+  deathrateDiv_upper
 
 hivAdjustments$drate_non_indigenous <- nonAborigMortalityFactor
 hivAdjustments$drate_non_indigenous_lower <- 
-  nonAborigMortalityFactorLower / hivBaseRates$deathrate_lower
+  nonAborigMortalityFactorLower / deathrateDiv_lower
 hivAdjustments$drate_non_indigenous_upper <- 
-  nonAborigMortalityFactorUpper / hivBaseRates$deathrate_upper
+  nonAborigMortalityFactorUpper / deathrateDiv_upper
+
+# Adjustments for key states
+
+# Because we are dividing remove zeos
+deathrateDiv <- hivBaseRates$deathrate
+deathrateDiv[deathrateDiv == 0] <- 1
+
+deathrateDiv_lower <- hivBaseRates$deathrate_lower
+deathrateDiv_lower[deathrateDiv_lower == 0] <- 1
+
+deathrateDiv_upper <- hivBaseRates$deathrate_upper
+deathrateDiv_upper[deathrateDiv_upper == 0] <- 1 
+
+hivAdjustments$drate_nsw <- hivBaseRates$deathrate 
+hivAdjustments$drate_nsw[(indexLinkage+1):length(deathRate)] <-
+  filter(ahodDeaths, state == "nsw")$deathrate
+hivAdjustments$drate_nsw <- hivAdjustments$drate_nsw /
+  deathrateDiv
+
+hivAdjustments$drate_nsw_lower <- hivBaseRates$deathrate_lower 
+hivAdjustments$drate_nsw_lower[(indexLinkage+1):length(deathRate)] <-
+  filter(ahodDeaths, state == "nsw")$lower
+hivAdjustments$drate_nsw_lower <- hivAdjustments$drate_nsw_lower /
+  deathrateDiv_lower
+
+hivAdjustments$drate_nsw_upper <- hivBaseRates$deathrate_upper
+hivAdjustments$drate_nsw_upper[(indexLinkage+1):length(deathRate)] <-
+  filter(ahodDeaths, state == "nsw")$upper
+hivAdjustments$drate_nsw_upper <- hivAdjustments$drate_nsw_upper /
+  deathrateDiv_upper
+
+hivAdjustments$drate_vic <- hivBaseRates$deathrate
+hivAdjustments$drate_vic[(indexLinkage+1):length(deathRate)] <-
+  filter(ahodDeaths, state == "vic")$deathrate
+hivAdjustments$drate_vic <- hivAdjustments$drate_vic /
+  deathrateDiv
+
+hivAdjustments$drate_vic_lower <- hivBaseRates$deathrate_lower
+hivAdjustments$drate_vic_lower[(indexLinkage+1):length(deathRate)] <-
+  filter(ahodDeaths, state == "vic")$lower
+hivAdjustments$drate_vic_lower <- hivAdjustments$drate_vic_lower /
+  deathrateDiv_lower
+
+hivAdjustments$drate_vic_upper <- hivBaseRates$deathrate_upper 
+hivAdjustments$drate_vic_upper[(indexLinkage+1):length(deathRate)] <-
+  filter(ahodDeaths, state == "vic")$upper
+hivAdjustments$drate_vic_upper <- hivAdjustments$drate_vic_upper /
+  deathrateDiv_upper
+
+hivAdjustments$drate_qld <- hivBaseRates$deathrate
+hivAdjustments$drate_qld[(indexLinkage+1):length(deathRate)] <-
+  filter(ahodDeaths, state == "qld")$deathrate
+hivAdjustments$drate_qld <- hivAdjustments$drate_qld /
+  deathrateDiv
+
+hivAdjustments$drate_qld_lower <- hivBaseRates$deathrate_lower 
+hivAdjustments$drate_qld_lower[(indexLinkage+1):length(deathRate)] <-
+  filter(ahodDeaths, state == "qld")$lower
+hivAdjustments$drate_qld <- hivAdjustments$drate_qld_lower /
+  deathrateDiv_lower
+
+hivAdjustments$drate_qld_upper <- hivBaseRates$deathrate_upper 
+hivAdjustments$drate_qld_upper[(indexLinkage+1):length(deathRate)] <-
+  filter(ahodDeaths, state == "qld")$upper
+hivAdjustments$drate_qld <- hivAdjustments$drate_qld_upper /
+  deathrateDiv_upper
+
 
 ```
 
