@@ -5,9 +5,9 @@ author: Neil Bretana and Richard T. Gray
 ---
 
 This is a draft [R Markdown](http://rmarkdown.rstudio.com) Notebook for 
-calculating the number of people living with HIV in Australia. This is one
-of the key steps for producing the estimates of the Australian HIV
-diagnosis and care cascade. 
+calculating the number of people living with diagnosed HIV in Australia.
+This is one of the key steps for producing the estimates of the Australian
+HIV diagnosis and care cascade. 
 
 This notebook is currently in draft form for updating the HIV cascade 
 calculation scripts to version 3.0.
@@ -41,11 +41,11 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- FALSE 
+saveResults <- TRUE 
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("nsw-", toString(analysisYear)) 
+cascadeName <- paste0("all-", toString(analysisYear)) 
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
@@ -56,7 +56,7 @@ targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 
 excludeAborig <- FALSE
-ecdcData <- FALSE
+ecdcData <- TRUE
 excludeOS <- FALSE
 ecdcModel <- cascadeName # name
 if (excludeOS) {
