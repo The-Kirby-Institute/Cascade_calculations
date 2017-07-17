@@ -45,7 +45,7 @@ saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("all-", toString(analysisYear)) 
+cascadeName <- paste0("nsw-", toString(analysisYear)) 
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
@@ -56,7 +56,7 @@ targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 
 excludeAborig <- FALSE
-ecdcData <- TRUE
+ecdcData <- FALSE
 excludeOS <- FALSE
 ecdcModel <- cascadeName # name
 if (excludeOS) {
@@ -338,7 +338,7 @@ if (interState) {
     mutate(year = allYears) %>%
     select(year, everything())
   
-  
+  # Use best estimate overall for min and max
   pldhivAllMin <- LivingDiagnosed(adjustDiags$included,
                                   annPropUnique, 
                                   subsetRates$deathrate_upper,
@@ -346,7 +346,7 @@ if (interState) {
                                   subsetRates$propstay_lower,
                                   arrivals = subsetRates$inter_arriverate,
                                   departs = subsetRates$inter_departrate,
-                                  pldhiv = pldhivOverallMin$pldhiv) %>%
+                                  pldhiv = pldhivOverall$pldhiv) %>%
     mutate(year = allYears) %>%
     select(year, everything())
   
@@ -357,7 +357,7 @@ if (interState) {
                                   subsetRates$propstay_upper,
                                   arrivals = subsetRates$inter_arriverate,
                                   departs = subsetRates$inter_departrate,
-                                  pldhiv = pldhivOverallMax$pldhiv) %>%
+                                  pldhiv = pldhivOverall$pldhiv) %>%
     mutate(year = allYears) %>%
     select(year, everything())
   
