@@ -501,7 +501,10 @@ for (ii in 2:length(annDiags)) {
   # TODO: replace the calculation below with LivingDiagnosed.R so that
   # accidently differences are prevented.
 
-  # Old formula. Based on an Euler approximation approach. 
+  # Old formula. Based on an Euler approximation approach but given the
+  # annual time difference doesn't really capture what we want on an 
+  # annual basis. 
+  
   # numLiving[ii] <- numLiving[ii-1] + hivBaseRates$propstay[ii] *
   #   annDiags[ii] - deaths[ii-1] - numLiving[ii-1] * allMigrate[ii-1]
   # numLiving_min[ii] <- numLiving_min[ii-1] + 
