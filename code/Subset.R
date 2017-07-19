@@ -69,7 +69,7 @@ subhivset <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, fStat
   }
   
   if(fGlobalRegion != 'all'){
-    unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(localregion)))
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(globalregion)))
     excludeframe <- bind_rows(excludeframe, filter(includeframe, localregion != globalregion))
     includeframe <- filter(includeframe, globalregion == fGlobalRegion)
   }
