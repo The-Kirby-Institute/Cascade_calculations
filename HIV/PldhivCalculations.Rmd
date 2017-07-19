@@ -45,18 +45,19 @@ saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("all-", toString(analysisYear)) 
+cascadeName <- paste0("sa-", toString(analysisYear)) 
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
 targetExposure <- 'all'
 targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
-targetState <- 'nsw' # NSW, VIC, etc
+targetState <- 'sa' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 
 excludeAborig <- FALSE
 ecdcData <- TRUE
+ecdcVersion <- '1.2.2'
 excludeOS <- FALSE
 ecdcModel <- cascadeName # name
 if (excludeOS) {
@@ -66,6 +67,8 @@ if (excludeOS) {
 }
 
 interState <-ifelse(targetState != "all", TRUE, FALSE)
+
+hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob, targetExposure, targetAtsi, targetState, targetLocalRegion, targetGlobalRegion, excludeAborig, ecdcData, ecdcVersion, excludeOS, interState)
 
 ```
 
@@ -259,6 +262,16 @@ if (ecdcData) {
     dataAll <- EcdcFolders(outputFolder, ecdcModel)
     EcdcFiles(hivSet, dataAll, propUnique = overallPropUnique) 
   }
+
+# Create output directory
+resultsEcdcPath <- file.path(outputFolder, "ECDC_models", cascadeName)
+  
+#save parameters 
+saveStringParams <- file.path(resultsEcdcPath, "Parameters")
+  
+# Write to csv
+write_csv(hivParams, paste0(saveStringParams, ".csv"))
+    
 }
 
 ```
@@ -475,6 +488,12 @@ if (saveResults) {
   
   # Write to csv
   write_csv(hivDiagnosed, paste0(saveStringPldhiv, ".csv"))
+  
+  #save parameters 
+  saveStringParams <- file.path(resultsPath, "Parameters")
+  
+  # Write to csv
+  write_csv(hivParams, paste0(saveStringParams, ".csv"))
 }
 
 ```
