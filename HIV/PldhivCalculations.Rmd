@@ -41,7 +41,7 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- TRUE 
+saveResults <- FALSE 
 
 # Set HIV subsetting function parameters----------------------------------
 
@@ -58,6 +58,7 @@ targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 excludeAborig <- FALSE
 ecdcData <- FALSE
 excludeOS <- FALSE
+
 ecdcModel <- cascadeName # name
 if (excludeOS) {
   # If excludeOS don't save the pldhiv estimates as we ate only using this
