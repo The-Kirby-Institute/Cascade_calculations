@@ -45,15 +45,15 @@ saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("SSA-", toString(analysisYear)) 
+cascadeName <- paste0("Unknown-", toString(analysisYear)) 
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'all' #hetero, msm, pwid, unknown, otherexp 
+targetExposure <- 'unknown' #hetero, msm, pwid, unknown, otherexp 
 targetAtsi <- 'all' # non_indigenous or indigenous # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'Sub-Saharan Africa' #South-east Asia, Oceania, South American, etc
+targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 
 doAge <- FALSE
 
@@ -461,8 +461,15 @@ if (ecdcData) {
     mutate(cumnotifications = cumsum(notifications)) %>%
     ungroup() %>% 
     select(-notifications) %>%
-    spread(expgroup, cumnotifications) %>%
-    select(-unknown) %>%
+    spread(expgroup, cumnotifications) 
+  
+  if (!("hetero" %in% names(hivExpCum))) hivExpCum$hetero <- 0
+  if (!("msm" %in% names(hivExpCum))) hivExpCum$msm <- 0
+  if (!("otherexp" %in% names(hivExpCum))) hivExpCum$otherexp <- 0
+  if (!("pwid" %in% names(hivExpCum))) hivExpCum$pwid <- 0
+  if (!("unknown" %in% names(hivExpCum))) hivExpCum$unknown <- 0
+  
+  hivExpCum <- hivExpCum %>% select(-unknown) %>%
     gather("expgroup", "cumnotifications", 2:5) %>%
     mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
                                      cumnotifications)) %>%

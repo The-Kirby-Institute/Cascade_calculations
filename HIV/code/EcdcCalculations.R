@@ -256,6 +256,12 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
   # Fix cd4 string so it can be read by Select
   cd4binSelect <- cd4binGroup # paste0("`", cd4binGroup, "`")
   
+  # add missing columns
+  if (!(cd4binSelect %in% names(cd4DiagsAll))){
+    cd4DiagsAll$cd4binSelect <- 0
+    names(cd4DiagsAll)[ncol(cd4DiagsAll)] <- cd4binSelect
+  } 
+  
   # Select what we want
   cd4Diags <- cd4DiagsAll %>%
     select_("year", cd4binSelect)
@@ -314,11 +320,11 @@ cd4Exposure <- function(hivData, cd4binGroup,
     
     cd4DiagsExp[is.na(cd4DiagsExp)] <- 0 
     
-    if (!("hetero" %in% names(cd4DiagsExp))) diagType$hetero <- 0
-    if (!("msm" %in% names(cd4DiagsExp))) diagType$msm <- 0
-    if (!("otherexp" %in% names(cd4DiagsExp))) diagType$otherexp <- 0
-    if (!("pwid" %in% names(cd4DiagsExp))) diagType$pwid <- 0
-    if (!("unknown" %in% names(cd4DiagsExp))) diagType$unknown <- 0
+    if (!("hetero" %in% names(cd4DiagsExp))) cd4DiagsExp$hetero <- 0
+    if (!("msm" %in% names(cd4DiagsExp))) cd4DiagsExp$msm <- 0
+    if (!("otherexp" %in% names(cd4DiagsExp))) cd4DiagsExp$otherexp <- 0
+    if (!("pwid" %in% names(cd4DiagsExp))) cd4DiagsExp$pwid <- 0
+    if (!("unknown" %in% names(cd4DiagsExp))) cd4DiagsExp$unknown <- 0
     
     cd4ExpBin <- cd4DiagsExp %>%
       filter(cd4London == cd4binGroup) %>%
@@ -338,11 +344,11 @@ cd4Exposure <- function(hivData, cd4binGroup,
     
     cd4DiagsExp[is.na(cd4DiagsExp)] <- 0  
     
-    if (!("hetero" %in% names(cd4DiagsExp))) diagType$hetero <- 0
-    if (!("msm" %in% names(cd4DiagsExp))) diagType$msm <- 0
-    if (!("otherexp" %in% names(cd4DiagsExp))) diagType$otherexp <- 0
-    if (!("pwid" %in% names(cd4DiagsExp))) diagType$pwid <- 0
-    if (!("unknown" %in% names(cd4DiagsExp))) diagType$unknown <- 0
+    if (!("hetero" %in% names(cd4DiagsExp))) cd4DiagsExp$hetero <- 0
+    if (!("msm" %in% names(cd4DiagsExp))) cd4DiagsExp$msm <- 0
+    if (!("otherexp" %in% names(cd4DiagsExp))) cd4DiagsExp$otherexp <- 0
+    if (!("pwid" %in% names(cd4DiagsExp))) cd4DiagsExp$pwid <- 0
+    if (!("unknown" %in% names(cd4DiagsExp))) cd4DiagsExp$unknown <- 0
     
     cd4ExpBin <- cd4DiagsExp %>%
       filter(cd4bin == cd4binGroup) %>%
@@ -351,8 +357,13 @@ cd4Exposure <- function(hivData, cd4binGroup,
     
   }
   
+  #remove rows with NAs
+  cd4ExpBin <- cd4ExpBin[!apply(is.na(cd4ExpBin), 1, all),]
+  
   # Fill in missing years
-  allYears <- minYear:max(cd4ExpBin$year)
+  if(nrow(cd4ExpBin)!=0){
+    allYears <- minYear:max(cd4ExpBin$year)
+  }else allYears <- minYear
   requiredYears <- allYears[!(allYears %in% cd4ExpBin$year)]
   cd4ExpBin <- FillDataFrame(requiredYears, cd4ExpBin) %>%
     arrange(year)
