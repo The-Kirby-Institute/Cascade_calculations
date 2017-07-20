@@ -104,7 +104,8 @@ ahodDeaths <- ahodData %>%
   filter(year > 2003)
 
 # First find index corresponding to year of linkage 
-indexLinkage <- max(seq(along = min(hivResults$yeardiagnosis):linkageYear))
+# indexLinkage <- max(seq(along = min(hivResults$yeardiagnosis):linkageYear))
+indexLinkage <- max(seq(along = 1980:linkageYear))
 
 # Save in deathrate
 deathRate <- rep(NA, length(allYears))

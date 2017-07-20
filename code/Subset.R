@@ -2,43 +2,77 @@
 
 # N.A. Bretana
 
-subhivset <- function(hivdataframe, fAge, fExposure, fCob, fAtsi, fLocalRegion, fGlobalRegion){
+subhivset <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, fState, fGlobalRegion){
   
   subframe <- hivdataframe
+  includeframe <- subframe
+  unknownframe <- data_frame()
+  excludeframe <- data_frame()
   
   if(fAge!='all'){
-    #to be filled later
-  }
-  if(fExposure!='all'){
-    subframe <- filter(subframe, exposure == fExposure)
-  }
-  if(fCob!='all'){
-    if(fCob=='non-australia'){
-      subframe <- filter(subframe, cob!='Not Reported') #remove all missings
-      subframe <- filter(subframe, !is.na(cob)) #remove all missings
-      subframe <- filter(subframe, cob != 'Australia') #get only non-Australians
-    }else{
-      subframe <- filter(subframe, cob == fCob)
-    }
-  }
-  if(fAtsi!='all'){
-    if(fAtsi=='non-australia'){
-      #subframe <- filter(subframe, aboriggroup == 'othercob')
-    }else{
-      if(fAtsi=='non-atsi'){
-        subframe <- filter(subframe, aboriggroup == 'non-indigenous') 
-      }else if(fAtsi=='atsi'){
-        subframe <- filter(subframe, aboriggroup == 'indigenous') 
-      }
-    }
-    #what to do with NA's?
-  }
-  if(fLocalRegion!='all'){
-    subframe <- filter(subframe, localregion == fLocalRegion)
-  }
-  if(fGlobalRegion!='all'){
-    subframe <- filter(subframe, globalregion == fGlobalRegion)
+    unknownframe <- filter(subframe, agebin == 'Not Reported')
+    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(agebin)))
+    includeframe <- filter(includeframe, agebin!='Not Reported') 
+    includeframe <- filter(includeframe, !is.na(agebin))
+    excludeframe <- filter(includeframe, agebin != fAge)
+    includeframe <- filter(includeframe, agebin == fAge) 
   }
   
-  return(subframe)
+  if(fGender!='all'){
+    unknownframe <- filter(unknownframe, sex == 'Not Reported')
+    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(sex)))
+    includeframe <- filter(includeframe, sex!='Not Reported') 
+    includeframe <- filter(includeframe, !is.na(sex))
+    excludeframe <- filter(includeframe, sex != fGender)
+    includeframe <- filter(includeframe, sex == fGender)     
+  }
+  
+  if(fExposure!='all'){
+    unknownframe <- filter(unknownframe, expgroup == 'Not Reported')
+    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(expgroup)))
+    includeframe <- filter(includeframe, expgroup!='Not Reported') 
+    includeframe <- filter(includeframe, !is.na(expgroup))
+    excludeframe <- filter(includeframe, expgroup != fExposure)
+    includeframe <- filter(includeframe, expgroup == fExposure) 
+  }
+  
+  if(fCob!='all'){
+    unknownframe <- filter(unknownframe, cob == 'Not Reported')
+    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(cob)))
+    if(fCob=='non-australia'){
+      excludeframe <- filter(includeframe, cob == 'Australia')
+      includeframe <- filter(includeframe, cob!='Not Reported') #remove all missings
+      includeframe <- filter(includeframe, !is.na(cob)) #remove all missings
+      includeframe <- filter(includeframe, cob != 'Australia') #get only non-Australians
+    }else{
+      excludeframe <- filter(includeframe, cob != fCob)
+      excludeframe <- filter(excludeframe, cob != 'Not Reported')
+      excludeframe <- filter(excludeframe, !is.na(cob))
+      includeframe <- filter(includeframe, cob == fCob)
+    }
+    
+  }
+  
+  if(fAtsi!='all'){
+    unknownframe <- filter(unknownframe, aboriggroup == 'Not Reported')
+    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(aboriggroup)))
+    includeframe <- filter(includeframe, aboriggroup!='Not Reported') 
+    includeframe <- filter(includeframe, !is.na(aboriggroup))
+    excludeframe <- filter(includeframe, aboriggroup != fAtsi)
+    includeframe <- filter(includeframe, aboriggroup == fAtsi)  
+  }
+  
+  if(fState != 'all'){
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(state)))
+    excludeframe <- bind_rows(excludeframe, filter(includeframe, state != fState))
+    includeframe <- filter(includeframe, state == fState)
+  }
+  
+  if(fGlobalRegion != 'all'){
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(globalregion)))
+    excludeframe <- bind_rows(excludeframe, filter(includeframe, globalregion != fGlobalRegion))
+    includeframe <- filter(includeframe, globalregion == fGlobalRegion)
+  }
+  
+  return(list(includeframe, excludeframe, unknownframe))
 }
