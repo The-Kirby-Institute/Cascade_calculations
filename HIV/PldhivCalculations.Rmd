@@ -45,15 +45,15 @@ saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("Unknown-", toString(analysisYear)) 
+cascadeName <- paste0("Othercob-", toString(analysisYear)) 
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'unknown' #hetero, msm, pwid, unknown, otherexp 
+targetExposure <- 'all' #hetero, msm, pwid, unknown, otherexp 
 targetAtsi <- 'all' # non_indigenous or indigenous # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
+targetGlobalRegion <- 'Other cob' #South-east Asia, Oceania, South American, etc
 
 doAge <- FALSE
 

@@ -70,8 +70,15 @@ subhivset <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, fStat
   
   if(fGlobalRegion != 'all'){
     unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(globalregion)))
-    excludeframe <- bind_rows(excludeframe, filter(includeframe, globalregion != fGlobalRegion))
-    includeframe <- filter(includeframe, globalregion == fGlobalRegion)
+    if(fGlobalRegion=="Other cob"){
+      excludeframe <- bind_rows(excludeframe, filter(includeframe, globalregion == "South-East Asia"))
+      excludeframe <- bind_rows(excludeframe, filter(includeframe, globalregion == "Sub-Saharan Africa"))
+      includeframe <- filter(includeframe, globalregion != "South-East Asia")
+      includeframe <- filter(includeframe, globalregion != "Sub-Saharan Africa")
+    }else{
+      excludeframe <- bind_rows(excludeframe, filter(includeframe, globalregion != fGlobalRegion))
+      includeframe <- filter(includeframe, globalregion == fGlobalRegion)
+    }
   }
   
   return(list(includeframe, excludeframe, unknownframe))
