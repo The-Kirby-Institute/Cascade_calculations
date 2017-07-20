@@ -126,9 +126,17 @@ typeDiag <- function(hivData, type, minYear = 1980,
         ungroup() %>%
         spread(expgroup, diags) %>%
         rename(year = yeardiagnosis)
+      
     } 
     
     diagType[is.na(diagType)] <- 0
+    
+    if (!("hetero" %in% names(diagType))) diagType$hetero <- 0
+    if (!("msm" %in% names(diagType))) diagType$msm <- 0
+    if (!("otherexp" %in% names(diagType))) diagType$otherexp <- 0
+    if (!("pwid" %in% names(diagType))) diagType$pwid <- 0
+    if (!("unknown" %in% names(diagType))) diagType$unknown <- 0
+    
     
     diagType <- diagType %>%
       mutate(known = hetero+msm+otherexp+pwid) %>%
@@ -306,6 +314,12 @@ cd4Exposure <- function(hivData, cd4binGroup,
     
     cd4DiagsExp[is.na(cd4DiagsExp)] <- 0 
     
+    if (!("hetero" %in% names(cd4DiagsExp))) diagType$hetero <- 0
+    if (!("msm" %in% names(cd4DiagsExp))) diagType$msm <- 0
+    if (!("otherexp" %in% names(cd4DiagsExp))) diagType$otherexp <- 0
+    if (!("pwid" %in% names(cd4DiagsExp))) diagType$pwid <- 0
+    if (!("unknown" %in% names(cd4DiagsExp))) diagType$unknown <- 0
+    
     cd4ExpBin <- cd4DiagsExp %>%
       filter(cd4London == cd4binGroup) %>%
       select(-cd4London, -unknown) %>%
@@ -323,6 +337,12 @@ cd4Exposure <- function(hivData, cd4binGroup,
       spread(expgroup, diags)
     
     cd4DiagsExp[is.na(cd4DiagsExp)] <- 0  
+    
+    if (!("hetero" %in% names(cd4DiagsExp))) diagType$hetero <- 0
+    if (!("msm" %in% names(cd4DiagsExp))) diagType$msm <- 0
+    if (!("otherexp" %in% names(cd4DiagsExp))) diagType$otherexp <- 0
+    if (!("pwid" %in% names(cd4DiagsExp))) diagType$pwid <- 0
+    if (!("unknown" %in% names(cd4DiagsExp))) diagType$unknown <- 0
     
     cd4ExpBin <- cd4DiagsExp %>%
       filter(cd4bin == cd4binGroup) %>%

@@ -45,15 +45,17 @@ saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("sa-", toString(analysisYear)) 
+cascadeName <- paste0("SSA-", toString(analysisYear)) 
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'all'
-targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
-targetState <- 'sa' # nsw, sa, nt, qld, vic, wa, act, tas 
+targetExposure <- 'all' #hetero, msm, pwid, unknown, otherexp 
+targetAtsi <- 'all' # non_indigenous or indigenous # Only used if country is Australia
+targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
+targetGlobalRegion <- 'Sub-Saharan Africa' #South-east Asia, Oceania, South American, etc
+
+doAge <- FALSE
 
 excludeAborig <- FALSE
 ecdcData <- TRUE
@@ -234,18 +236,37 @@ hivResults <- data_frame(year = adjustDiags$year,
 # For the known diagnoses calculate proportion by age bin, exposure group,
 # cd4 count category and diagnosis type. This will be used to distribute 
 # annual notifications for aging PLDHIV.  
+if (doAge) {
+  agedDiags <- hivSet %>%
+    group_by(yeardiagnosis, agebin) %>%
+    summarise(diags = n()) %>%
+    ungroup() %>%
+    spread(agebin, diags) 
+  
+  #fill missing years
+  fillYears <- includeDiags$year[!(includeDiags$year %in% agedDiags$yeardiagnosis)]
+  fillDiags <- agedDiags[0,]
+  fillDiags[1:length(fillYears),] <- NA
+  fillDiags$yeardiagnosis <- fillYears
+  agedDiags <- rbind(agedDiags, fillDiags)
+  agedDiags <- agedDiags[order(agedDiags$yeardiagnosis),]
 
-agedDiags <- hivSet %>%
-  group_by(yeardiagnosis, agebin) %>%
-  summarise(diags = n()) %>%
-  ungroup() %>%
-  spread(agebin, diags) %>%
-  select(-yeardiagnosis, -not_reported) 
-agedDiags[is.na(agedDiags)] <- 0
-propAge <- t(apply(agedDiags, 1, 
-                 function(row) row/sum(row)))
-agedSubset <- bind_cols(includeDiags, agedDiags)
-agedSubsetProp <- bind_cols(includeDiags, as.data.frame(propAge))
+
+
+  if("not_reported" %in% names(hivSet)){  
+    agedDiags <- agedDiags %>% select(-yeardiagnosis, -not_reported)
+  }else{
+    agedDiags <- agedDiags %>% select(-yeardiagnosis)
+  }
+  
+  agedDiags[is.na(agedDiags)] <- 0
+  propAge <- t(apply(agedDiags, 1, 
+                     function(row) row/sum(row)))
+  agedSubset <- bind_cols(includeDiags, agedDiags)
+  
+  agedSubsetProp <- bind_cols(includeDiags, as.data.frame(propAge))
+
+}
 
 ```
 
@@ -263,14 +284,14 @@ if (ecdcData) {
     EcdcFiles(hivSet, dataAll, propUnique = overallPropUnique) 
   }
 
-# Create output directory
-resultsEcdcPath <- file.path(outputFolder, "ECDC_models", cascadeName)
-  
-#save parameters 
-saveStringParams <- file.path(resultsEcdcPath, "Parameters")
-  
-# Write to csv
-write_csv(hivParams, paste0(saveStringParams, ".csv"))
+  # Create output directory
+  resultsEcdcPath <- file.path(outputFolder, "ECDC_models", cascadeName)
+    
+  #save parameters 
+  saveStringParams <- file.path(resultsEcdcPath, "Parameters")
+    
+  # Write to csv
+  write_csv(hivParams, paste0(saveStringParams, ".csv"))
     
 }
 
