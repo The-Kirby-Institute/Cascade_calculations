@@ -53,7 +53,9 @@ targetExposure <- 'all'
 targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
+targetGlobalRegion <- 'Other cob' #South-east Asia, Oceania, South American, etc
+
+doAge <- FALSE
 
 excludeAborig <- FALSE
 ecdcData <- FALSE
@@ -69,7 +71,10 @@ if (excludeOS) {
 
 interState <-ifelse(targetState != "all", TRUE, FALSE)
 
-hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob, targetExposure, targetAtsi, targetState, targetLocalRegion, targetGlobalRegion, excludeAborig, ecdcData, ecdcVersion, excludeOS, interState)
+hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
+                        targetExposure, targetAtsi, targetState,
+                        targetLocalRegion, targetGlobalRegion, excludeAborig,
+                        ecdcData, ecdcVersion, excludeOS, interState)
 
 ```
 
@@ -235,18 +240,37 @@ hivResults <- data_frame(year = adjustDiags$year,
 # For the known diagnoses calculate proportion by age bin, exposure group,
 # cd4 count category and diagnosis type. This will be used to distribute 
 # annual notifications for aging PLDHIV.  
+if (doAge) {
+  agedDiags <- hivSet %>%
+    group_by(yeardiagnosis, agebin) %>%
+    summarise(diags = n()) %>%
+    ungroup() %>%
+    spread(agebin, diags) 
+  
+  #fill missing years
+  fillYears <- includeDiags$year[!(includeDiags$year %in% agedDiags$yeardiagnosis)]
+  fillDiags <- agedDiags[0,]
+  fillDiags[1:length(fillYears),] <- NA
+  fillDiags$yeardiagnosis <- fillYears
+  agedDiags <- rbind(agedDiags, fillDiags)
+  agedDiags <- agedDiags[order(agedDiags$yeardiagnosis),]
 
-agedDiags <- hivSet %>%
-  group_by(yeardiagnosis, agebin) %>%
-  summarise(diags = n()) %>%
-  ungroup() %>%
-  spread(agebin, diags) %>%
-  select(-yeardiagnosis, -not_reported) 
-agedDiags[is.na(agedDiags)] <- 0
-propAge <- t(apply(agedDiags, 1, 
-                 function(row) row/sum(row)))
-agedSubset <- bind_cols(includeDiags, agedDiags)
-agedSubsetProp <- bind_cols(includeDiags, as.data.frame(propAge))
+
+
+  if("not_reported" %in% names(hivSet)){  
+    agedDiags <- agedDiags %>% select(-yeardiagnosis, -not_reported)
+  }else{
+    agedDiags <- agedDiags %>% select(-yeardiagnosis)
+  }
+  
+  agedDiags[is.na(agedDiags)] <- 0
+  propAge <- t(apply(agedDiags, 1, 
+                     function(row) row/sum(row)))
+  agedSubset <- bind_cols(includeDiags, agedDiags)
+  
+  agedSubsetProp <- bind_cols(includeDiags, as.data.frame(propAge))
+
+}
 
 ```
 
@@ -264,14 +288,14 @@ if (ecdcData) {
     EcdcFiles(hivSet, dataAll, propUnique = overallPropUnique) 
   }
 
-# Create output directory
-resultsEcdcPath <- file.path(outputFolder, "ECDC_models", cascadeName)
-  
-#save parameters 
-saveStringParams <- file.path(resultsEcdcPath, "Parameters")
-  
-# Write to csv
-write_csv(hivParams, paste0(saveStringParams, ".csv"))
+  # Create output directory
+  resultsEcdcPath <- file.path(outputFolder, "ECDC_models", cascadeName)
+    
+  #save parameters 
+  saveStringParams <- file.path(resultsEcdcPath, "Parameters")
+    
+  # Write to csv
+  write_csv(hivParams, paste0(saveStringParams, ".csv"))
     
 }
 
@@ -441,8 +465,15 @@ if (ecdcData) {
     mutate(cumnotifications = cumsum(notifications)) %>%
     ungroup() %>% 
     select(-notifications) %>%
-    spread(expgroup, cumnotifications) %>%
-    select(-unknown) %>%
+    spread(expgroup, cumnotifications) 
+  
+  if (!("hetero" %in% names(hivExpCum))) hivExpCum$hetero <- 0
+  if (!("msm" %in% names(hivExpCum))) hivExpCum$msm <- 0
+  if (!("otherexp" %in% names(hivExpCum))) hivExpCum$otherexp <- 0
+  if (!("pwid" %in% names(hivExpCum))) hivExpCum$pwid <- 0
+  if (!("unknown" %in% names(hivExpCum))) hivExpCum$unknown <- 0
+  
+  hivExpCum <- hivExpCum %>% select(-unknown) %>%
     gather("expgroup", "cumnotifications", 2:5) %>%
     mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
                                      cumnotifications)) %>%

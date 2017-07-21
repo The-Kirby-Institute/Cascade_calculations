@@ -119,6 +119,7 @@ EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL) {
                             lmset = TRUE)
   cd4LMexp18 <- cd4Exposure(hivFrame, "c300_349", london = TRUE, 
                             lmset = TRUE)
+  
   cd4LMexp19 <- cd4Exposure(hivFrame, "cg350", london = TRUE, 
                             lmset = TRUE)
   

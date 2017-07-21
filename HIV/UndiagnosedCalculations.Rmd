@@ -1,0 +1,107 @@
+---
+title: "PLHIV and Unidagnosed"
+output: html_notebook
+author: Neil Bretana and Richard T. Gray
+---
+
+This is a draft [R Markdown](http://rmarkdown.rstudio.com) Notebook for 
+calculating the number of people living with HIV in Australia from the
+estimates of people living with diagnosed HIV and the number undiganosed 
+produced by the ECDC HIV Modelling tool. 
+
+This notebook is currently in draft form for updating the HIV cascade 
+calculation scripts to version 3.0.
+
+```{r Initialization}
+# Chunk to setup everything
+# Clear workspace
+rm(list=ls()) 
+
+# Setup directories
+basePath <- file.path(dirname(getwd()), "HIV")
+
+Rcode <- file.path(dirname(getwd()), "code") 
+HIVcode <- file.path(basePath, "code") 
+dataFolder <- file.path(basePath, "data")
+outputFolder <- file.path(basePath, "output")
+
+# Set working directory to source file loaction
+
+# Load standard libraries and options ----------------------------------
+source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
+source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+
+```
+
+```{r Script parameters}
+# Chunk to enter all the script parameters we will use
+analysisYear <- 2016
+saveResults <- TRUE 
+cascadeFlag <- "all"
+
+# Produce cascadeName from the flag and analysis year. 
+cascadeName <- paste0(cascadeFlag, "-", toString(analysisYear))
+
+```
+
+```{r Load data}
+# Chunk to load the PLDHIV estimates and ECDC undiagnosed estimates
+pldhiv <- read.csv(file.path(outputFolder, cascadeName, 
+                             paste0("HIVpldhivEstimates-",
+                             toString(analysisYear), ".csv")))
+
+undiagnosed <- read_excel(file.path(outputFolder, cascadeName,
+                                    "ecdc_undiagnosed.xlsx"))
+
+# Merge data into one data frame
+mergedData <- pldhiv %>%
+  select(-population, - stage) %>%
+  rename(pldhiv = value,
+         pldhiv_lower = lower,
+         pldhiv_upper = upper) %>%
+  left_join(., undiagnosed, by = "year")
+
+population <- as.character(pldhiv$population[1])
+
+```
+
+
+```{r Undiagnosed calculations}
+# This chunk produces the final calcaultions
+plhiv <- mergedData %>%
+  mutate(pnumber = pldhiv/(1 - percent / 100) - pldhiv,
+         pnumber_lower = pldhiv_lower/(1 - plower / 100) - pldhiv_lower,
+         pnumber_upper = pldhiv_upper/(1 - pupper / 100) - pldhiv_upper) %>%
+  group_by(year) %>%
+  mutate(undiag = (pnumber + number)/2,
+         undiag_lower = min(pnumber_lower, nlower),
+         undiag_upper = max(pnumber_upper, nupper)) %>%
+  mutate(plhiv = undiag + pldhiv,
+         plhiv_lower = undiag_lower + pldhiv_lower,
+         plhiv_upper = undiag_upper + pldhiv_upper) %>%
+  mutate(undiag_percent = undiag/plhiv,
+         uplower = undiag_lower/plhiv_upper,
+         upupper = undiag_upper/plhiv_lower) 
+
+# Extract cascade results
+plhivResults <- plhiv %>% 
+  mutate(stage = "infected",
+         population = population) %>%
+  select(stage, year, population, plhiv, plhiv_lower, plhiv_upper) %>%
+  rename(estimate = plhiv,
+         lower = plhiv_lower,
+         upper = plhiv_upper)
+
+
+# Save results
+if (saveResults) {
+ # Save
+  saveStringPlhiv <- file.path(outputFolder, cascadeName, 
+    paste0("HIVpositiveEstimates-", toString(analysisYear)))
+  
+  # Write to csv
+  write_csv(plhivResults, paste0(saveStringPlhiv, ".csv")) 
+  
+}
+```
