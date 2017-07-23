@@ -70,7 +70,10 @@ if (excludeOS) {
 
 interState <-ifelse(targetState != "all", TRUE, FALSE)
 
-hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob, targetExposure, targetAtsi, targetState, targetLocalRegion, targetGlobalRegion, excludeAborig, ecdcData, ecdcVersion, excludeOS, interState)
+hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
+                        targetExposure, targetAtsi, targetState,
+                        targetLocalRegion, targetGlobalRegion, excludeAborig,
+                        ecdcData, ecdcVersion, excludeOS, interState)
 
 ```
 
