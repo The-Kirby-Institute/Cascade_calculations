@@ -14,11 +14,12 @@ markdown v2 within Rstudio (version 0.98.1091 with R version`r
 rm(list=ls()) 
 
 # Setup directories
-basePath <- dirname(getwd())
+basePath <- file.path(dirname(getwd()), "HIV")
 
 Rcode <- file.path(dirname(getwd()), "code") 
-dataFolder <- file.path(basePath, "HIV", "data")
-outputFolder <- file.path(basePath, "HIV", "output")
+dataFolder <- file.path(basePath, "data")
+outputFolder <- file.path(basePath, "output")
+HIVcode <- file.path(basePath, "code") 
 figuresFolder <- file.path(basePath, "output","figures")
 
 # Load standard libraries and options ----------------------------------
@@ -30,9 +31,12 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 analysisYear <- 2015
 startYear <- 1990
-replaceValues = FALSE
-saveNotifications = FALSE
-bindCascade = TRUE
+replaceValues <- TRUE
+saveNotifications <- FALSE
+bindCascade = TRUE  # TRUE if we want to store all the cascade results 
+excludeOS <- FALSE
+excludeAborig <- FALSE
+saveResults <- TRUE
 
 targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
@@ -53,124 +57,159 @@ plots = FALSE
 ```{r functions}
 # Function to easily extract sub-populations of interest 
 source(file.path(Rcode, "Subset.R"), echo=TRUE)
-
 # Function is replace current estimates with estimates for 
 # specific populations obtained separately for a specific time period. 
 # Function to easily extract sub-populations of interest 
 source(file.path(Rcode, "ReplaceEstimates.R"), echo=TRUE)
+# Function to tidy notifications
+source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
+# Load function to calculate number living with diagnosed HIV
+source(file.path(Rcode,"LivingDiagnosed.R"), echo=TRUE)
+# Source functions for filling in missing data
+source(file.path(Rcode, "FillMissing.R"), echo=TRUE)
+source(file.path(Rcode, "FillDataFrame.R"), echo=TRUE)
+# Function for removing duplicates annually
+source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
+# Function to replace estimates
+source(file.path(Rcode, "ReplaceEstimates.R"), echo=TRUE)
+# Function to tidy notifications
+source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
+# Functions to output ECDC model data
+source(file.path(HIVcode, "EcdcCalculations.R"), echo=TRUE)
+source(file.path(HIVcode, "EcdcFiles.R"), echo=TRUE)
+# Function for adjustments
+source(file.path(HIVcode, "GetAdjustments.R"), echo=TRUE)
+
 ```
 
 ## Estimate cumulative HIV notifications 
 
-```{r startAnalysis}
-# Load clean file
-hivData <- read.csv(file.path(dataFolder, paste("hivnotifications",
-                    toString(analysisYear), ".csv", sep = ""))) #, 
-#                     as.is = c(1:3, 6, 9, 11, 16:18))
+```{r Clean notifications}
+# This chunk loads the national notifications and subsets based on the
+# specified criteria in Script paramaters
 
-if (replaceValues) {
-  # Replace with hard coded estimates where necessary
-  
-  # Load hard coded estimates
-  hardCodeValues <- read.csv(file.path(dataFolder,
-                                       "Hard_coded_estimates.csv"))
-}
+# Load cleaned notifications data
+origHivData <- read.csv(file.path(dataFolder, paste0("hivnotifications",
+                    toString(analysisYear), ".csv"))) 
 
-# Setup overarching analysis                   
-years <- startYear:analysisYear # Years to calculate and plot 
+# Read in country code data
+countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
 
-# Setup extra columns for analysis
-hivData$yeardiagnosis <- as.numeric(substr(hivData$datediagnosis, 1, 4))
-hivData$yeardeath <- as.numeric(substr(hivData$datedeath, 1, 4))
+# Tidy up notifications for calculations
+hivData <- TidyNotifications(origHivData, analysisYear, countryCodes)
 
-allYears <- min(hivData$yeardiagnosis):analysisYear # All years of data
+# Data checks-------------------------------------------------------------
 
-# transfer cob to cobCode
-hivData$cobcode <- hivData$cob
-
-# load cob and region codes
-crCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
-
-# if cob is not in crCodes/NA, change to Not Reported 
-hivData$cob[!(hivData$cobcode %in% crCodes$COUNTRY_CODE)] <- "Not Reported"
-
-# change cob from code to String
-hivData$cob <- crCodes$COUNTRY_NAME[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
-
-#add region
-hivData$globalregion <- crCodes$REGION[match(hivData$cobcode, crCodes$COUNTRY_CODE)]
-  
-#clean aboriggroup
-hivData$aboriggroup <- rep(NA,nrow(hivData))
-
-if (analysisYear < 2015) {
-  hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
-  hivData$aboriggroup[hivData$cob==0] <- NA
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non indigenous"] <- "non-indigenous" 
-} else {
-  hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
-  hivData$aboriggroup[hivData$cob==0] <- NA
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Aboriginal"] <- "indigenous"
-  hivData$aboriggroup[hivData$cob == 1100 & hivData$indigenous == "Non indigenous"] <- "non-indigenous" 
-}
-
-# Quick checks that we are not doing analysis outside of the data.
+# Quick check that we are not doing analysis outside of the data
 if (max(hivData$yeardiagnosis) < analysisYear) {
   stop("No data specified for final year of analysis.")
 }
 
-if (min(hivData$yeardiagnosis) > startYear) {
-  stop("No data specified for first year of analysis.")
+# HIV data variables------------------------------------------------------
+
+# Setup variables for overarching analysis                  
+allYears <- min(hivData$yeardiagnosis):analysisYear # all years of data
+
+```
+
+```{r Subset notifications}
+# Create subsetted notifications dataframe. May have to do this multiple
+# times to get the extact number of specific category and those excluded
+# for inter-regional movement. E.g. MSM only in NSW as excluded will have
+# non-MSM and non-NSW
+
+if (excludeOS) {
+  hivData <- filter(hivData, is.na(previ_diag_overseas))
 }
 
-# Setup our working data frame
-#### hivSet <- filter(hivData, yeardiagnosis <= analysisYear)
-#### replace this with a function to get hivSet based on input parameters
-hivSet <- filter(hivData, yeardiagnosis <= analysisYear)
-hivSetOrig <- filter(hivData, yeardiagnosis <= analysisYear)
 hivSetAll <- filter(hivData, yeardiagnosis <= analysisYear)
 annDiagsOrig <- hivSetAll %>% 
   group_by(yeardiagnosis) %>%
   summarise(notifications = n()) %>%
   mutate(totalnotifications = cumsum(notifications)) %>%
   ungroup() 
-hivSet <- subhivset(hivSetAll, targetAge, targetGender,
+
+# Possibly temporary as this may be generated elsewhere
+overallPropUnique <- ProportionUnique(hivSetAll,
+                                      annDiagsOrig$totalnotifications,
+                                      allYears)
+annPropUnique <- AnnualUnique(annDiagsOrig$notifications,
+                              overallPropUnique) /
+  annDiagsOrig$notifications
+
+if (excludeAborig) {
+  # Set indigenous aside separately to add on later if required
+  hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
+  hivSetAll <- filter(hivSetAll, aboriggroup == 'non-indigenous')
+}
+  
+hivSetReturn <- subhivset(hivSetAll, targetAge, targetGender,
                           targetExposure, targetCob, targetAtsi,
                           targetState, targetGlobalRegion)
 
-##get set of Au cob and unknowns to distribute proportion
-hivSetKnown <- filter(hivData, yeardiagnosis <= analysisYear)
-hivSetKnown <- subset(hivSetKnown, cob!="Not Reported")
-hivSetKnown <- subset(hivSetKnown, !is.na(cob))
+hivSet <- hivSetReturn[[1]]
+hivSetExcluded <- hivSetReturn[[2]]
+hivSetUnknown <- hivSetReturn[[3]]
 
-hivSetUnknown <- filter(hivData, yeardiagnosis <= analysisYear)
-hivSetUnknown <- subset(hivSetUnknown, is.na(cob) | cob=="Not Reported")
+```
+
+```{r Annual notifications and proportions}
+# This chunk creates a dataframe of the annual notifications for the
+# specified criteria.
+
+includeDiags <- hivSet %>% 
+  group_by(yeardiagnosis) %>%
+  summarise(included = n()) %>%
+  ungroup() %>%
+  rename(year = yeardiagnosis)
+includeDiags <- FillDataFrame(allYears, includeDiags)
 
 
-if (saveNotifications) {
-  # Directory and file name
-  saveString <- file.path(outputFolder, paste("HIVset-", 
-    toString(analysisYear), sep = ""))
-  
-  # Write to csv
-  write.csv(hivSet, file = paste(saveString, ".csv", sep = ""), 
-            row.names = FALSE)
-
-  # Save as R object
-  save(hivSet, file = paste(saveString, ".rda", sep = ""))  
+# If excluded and unknown is empty replace with zeros
+if (length(hivSetExcluded) == 0) {
+  excludedDiags <- data_frame(year = allYears,
+                            excluded = 0)
+} else {
+  excludedDiags <- hivSetExcluded %>%
+    group_by(yeardiagnosis) %>% 
+    summarise(excluded = n()) %>%
+    rename(year = yeardiagnosis)
   
 }
+excludedDiags <- FillDataFrame(allYears, excludedDiags)
 
-# Initialize final results data frame
-if (bindCascade) {
-  hivCascade <- data.frame(stage = character(), 
-                         year = double(),
-                         population = character(),
-                         estimate = double(),
-                         lower = double(),
-                         upper = double())
+if (length(hivSetUnknown) == 0) {
+ unknownDiags <- data_frame(year = allYears,
+                            unknown = 0)
+} else {
+unknownDiags <- hivSetUnknown %>%
+  group_by(yeardiagnosis) %>% 
+  summarise(unknown = n()) %>%
+  rename(year = yeardiagnosis)
 }
+unknownDiags <- FillDataFrame(allYears, unknownDiags)
+
+# Adjust included and excluded annual diagnoses propotionally to replace
+# unknwons
+adjustDiags <- includeDiags %>% 
+  left_join(excludedDiags, by = "year") %>%
+  left_join(unknownDiags, by = "year") %>%
+  mutate(all = included + excluded + unknown) %>%
+  mutate(included = ifelse(is.na(included), 0, included),
+         excluded = ifelse(is.na(excluded), 0, excluded),
+         unknown = ifelse(is.na(unknown), 0, unknown)) %>%
+  mutate(prop_included = included / (included + excluded),
+         prop_excluded = excluded / (included + excluded)) %>%
+  mutate(prop_included = ifelse(is.nan(prop_included), 0, prop_included), 
+         prop_excluded = ifelse(is.nan(prop_excluded), 0, 
+                                prop_excluded)) %>%
+  mutate(adjusted_included = included  + unknown * prop_included,
+         adjusted_excluded = excluded + unknown * prop_excluded)
+
+hivResults <- data_frame(year = adjustDiags$year,
+                         notifications = adjustDiags$adjusted_included,
+                         cumnotifications =
+                           cumsum(adjustDiags$adjusted_included))
 
 ```
 
@@ -367,11 +406,12 @@ if (plots) {
 }
 
 # Replace values with hard coded if necessary
-#hardCodeValues <- read.csv(file.path(dataFolder, "Hard_coded_estimates.csv"))
+hardCodeValues <- read.csv(file.path(dataFolder, "Hard_coded_estimates.csv"))
 if (replaceValues) {
+  hardCodeValues <- read.csv(file.path(dataFolder, "Hard_coded_estimates.csv"))
   tempHardCode <- filter(hardCodeValues, stage == "numART")
   if (nrow(tempHardCode) > 0) {
-    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+    hivTreated <- replaceEstimates(hivTreated, tempHardCode)
   }
 }
 
@@ -394,7 +434,7 @@ ahodData <- read.csv(file.path(dataFolder,
   paste0("ahod", toString(analysisYear), ".csv")))
 
 # Extract the viral suppression data
-propSuppressed <- ahodData %>%
+propSuppressedState <- ahodData %>%
 # filter(state == "all") %>%
   select(one_of(c("year", "state", "population", "n_id")), 
          starts_with("n_rx"), -n_rx) %>% 
@@ -412,7 +452,7 @@ propSuppressed <- ahodData %>%
   rename(population = state)
 
 # Append male and female data
-propSuppressed <- ahodData %>%
+propSuppressedGender <- ahodData %>%
   select(one_of(c("year", "state", "population", "n_id")), 
          starts_with("n_rx"), -n_rx) %>% 
   filter(population %in% c("MALE", "FEMALE"), state == "all") %>%
@@ -427,8 +467,10 @@ propSuppressed <- ahodData %>%
            sqrt(prop200 * (1 - prop200) / n),
          prop200upper = prop200 + qnorm(0.975) * 
            sqrt(prop200 * (1 - prop200) / n)) %>%
-  filter(year <= analysisYear) %>%
-  bind_rows(propSuppressed, .)
+  filter(year <= analysisYear) 
+
+propSuppressedState$population <- as.character(propSuppressedState$population)
+propSuppressed <- rbind(as.data.frame(propSuppressedState), as.data.frame(propSuppressedGender))
 
 dataStart <- min(propSuppressed$year) 
 
@@ -439,7 +481,7 @@ populations <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas",
                  "all", "male", "female")
 availablePops <- c("all", "nsw", "vic", "qld", "male", "female")
 
-for (pop %in% populations) {
+for (pop in populations) {
   # Proportion suppressed
   if(pop %in% availablePops) {
     tempDf <- filter(propSuppressed, population == pop)
@@ -452,7 +494,7 @@ for (pop %in% populations) {
   tempPropMax <- tempDf$prop200upper
   
   # Number treated 
-  treatDf <- filter(hivCascade, stage == "numART", 
+  treatDf <- filter(hivTreated, stage == "numART", 
                     population == pop, year >= dataStart)
   tempTreat <- treatDf$value
   tempTreatMin <- treatDf$lower
@@ -470,19 +512,11 @@ for (pop %in% populations) {
                          upper = tempTreatMax * tempPropMax)) 
 }
 
-### TODO: number suppressed by exposure and country of birth. 
-# Once we work out how to do it
-
-# Finally bind to overall results
-if (bindCascade) {
-  hivCascade <- rbind(hivCascade, hivSuppressed)
-}
-
 # Replace values with hard coded if necessary
 if (replaceValues) {
   tempHardCode <- filter(hardCodeValues, stage == "suppressed")
   if (nrow(tempHardCode) > 0) {
-    hivCascade <- replaceEstimates(hivCascade, tempHardCode)
+    hivSuppressed <- replaceEstimates(hivSuppressed, tempHardCode)
   }
 }
 
@@ -490,59 +524,20 @@ if (replaceValues) {
 
 
 ```{r cleanup}
+# Finally bind to overall results
+if (bindCascade) {
+  hivCascade <- rbind(hivTreated, hivSuppressed)
+}
+
 # Save HIV results dataframe
 if (saveResults) {
   # Directory and file name
   saveString <- file.path(outputFolder, 
-    paste("HIVresults-", toString(analysisYear), sep = ""))
-  
-  # Write to csv
-  write.csv(hivResults, file = paste(saveString, ".csv", sep =""), 
-            row.names = FALSE)
-  
-  # Save as R object
-  save(hivResults, file = paste(saveString, ".rda", sep =""))
-  save(hivGender, hivDiagGender, 
-       file = paste(saveString, "_gender.rda", sep =""))
-}
-
-# Save PLDHIV stage and hivInterstate - used for the ECDC model estimates
-if (savePldhiv) {
-  # Directory and file name - PLDHIV
-  saveStringPldhiv <- file.path(outputFolder, 
-    paste("HIVpldhivEstimates-", toString(analysisYear), sep = ""))
-  
-  # Write to csv
-  write.csv(hivDiagnosed, file = paste(saveStringPldhiv, ".csv", sep =""), 
-            row.names = FALSE)
-  
-  # Save as R object
-  save(hivDiagnosed, file = paste(saveStringPldhiv, ".rda", sep =""))
-  
-  # Directory and file name - hivInterstate
-  saveStringInter<- file.path(outputFolder, 
-    paste("HIVinterstateEstimates-", toString(analysisYear), sep = ""))
-  
-  # Write to csv
-  write.csv(hivInterstate, file = paste(saveStringInter, ".csv", sep =""), 
-            row.names = FALSE)
-  
-  # Save as R object
-  save(hivInterstate, file = paste(saveStringInter, ".rda", sep =""))
-}
-
-# Save final HIV cascades data frame
-if (saveCascade) {
-  # Directory and file name
-  saveString <- file.path(outputFolder, paste("HIVcascadeEstimates-", 
-    toString(analysisYear), sep = ""))
+    paste("HIVtreatment-", toString(analysisYear), sep = ""))
   
   # Write to csv
   write.csv(hivCascade, file = paste(saveString, ".csv", sep =""), 
             row.names = FALSE)
-  
-  # Save as R object
-  save(hivCascade, file = paste(saveString, ".rda", sep =""))
 }
 
 ```
