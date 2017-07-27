@@ -2,7 +2,7 @@
 
 # N.A. Bretana
 
-subhivset <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, fState, fGlobalRegion){
+SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, fState, fGlobalRegion){
   
   subframe <- hivdataframe
   includeframe <- subframe

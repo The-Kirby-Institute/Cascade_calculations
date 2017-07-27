@@ -50,13 +50,13 @@ targetExposure <- 'all'
 targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'Other cob' #South-east Asia, Oceania, South American, etc
+targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 
 # Script options for calculations
 interState <- ifelse(targetState != "all", TRUE, FALSE)
 excludeAborig <- FALSE
 doAge <- FALSE # TRUE for aging calculations
-doRetained <- FALSE #TRUE for appending retained in care
+doRetained <- TRUE #TRUE for appending retained in care
 if (doRetained) {
   # Need to specify years for reatined in care calculations
   # This is simply a proportion based on James McMahon's paper
@@ -80,8 +80,8 @@ if (excludeOS) {
 hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
                         targetExposure, targetAtsi, targetState,
                         targetLocalRegion, targetGlobalRegion,
-                        excludeAborig, ecdcData, ecdcVersion, excludeOS,
-                        interState)
+                        interState, doAge, doRetained,
+                        excludeAborig, ecdcData, ecdcVersion, excludeOS)
 
 ```
 
@@ -102,7 +102,7 @@ source(file.path(HIVcode, "SubHivSet.R"), echo=TRUE)
 source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
 
 # Function to replace estimates
-source(file.path(Rcode, "ReplaceEstimates.R"), echo=TRUE)
+source(file.path(HIVcode, "ReplaceEstimates.R"), echo=TRUE)
 
 # Function to tidy notifications
 source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
@@ -341,8 +341,6 @@ if (interState) {
 # This chunk fianlly calculates the number of people living with diagnosed
 # HIV
 
-
-
 if (interState) {
   # Calculate for interregional migration
   pldhivOverall <- LivingDiagnosed(adjustDiags$all,
@@ -517,12 +515,49 @@ hivDiagnosed <- data.frame(stage = "pldhiv",
                            lower = pldhivAllMin$pldhiv,
                            upper = pldhivAllMax$pldhiv)
 
+
+```
+
+```{r Append retained}
+if (doRetained) {
+ # Perform and append retained in care calculations
+ source(file.path(HIVcode, "RetainedCare.R"))
+  
+  # Load retained in care data - Use McMahon et al data for 2013 onwards
+  # Hardcoded: value, lower, upper.  Lower and upper ranges correspond 
+  # to the range for the percentage retained after follow-up in McMahon 
+  # et al., Clinic Network Collaboration and Patient Tracing to Maximize 
+  # Retention in HIV Care, PLOS One, May 26, 2015.
+  hivParams <- read.csv(file.path(dataFolder, 
+                                "individualHIVparameters.csv"), as.is = 1)
+  hivParams <- select(hivParams, parameter, value)
+  
+  for (ii in 1:nrow(hivParams)) {
+    assign(hivParams$parameter[ii], hivParams$value[ii])
+  }
+  
+  retained <- vicClinicRetained
+  retainedLower <- vicClinicRetainedLower
+  retainedUpper <- vicClinicRetainedUpper
+  
+  hivRetained <- RetainedCare(hivDiagnosed, retained, retainedLower,
+                              retainedUpper, retainedYears)
+  
+  # Merge with hivDiagnosed
+  hivDiagnosed <- bind_rows(hivDiagnosed, hivRetained)
+  
+}
+```
+
+```{r Save results}
 if (saveResults) {
   # Create output directory
   resultsPath <- file.path(outputFolder, cascadeName)
   dir.create(resultsPath, showWarnings = FALSE, recursive = TRUE)
   
-  # Save
+  # Save all estimates
+  
+  # Save main results
   saveStringPldhiv <- file.path(resultsPath, 
     paste0("HIVpldhivEstimates-", toString(analysisYear)))
   
