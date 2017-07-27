@@ -88,15 +88,15 @@ hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
 ```{r Functions}
 # Load functions used for analysis 
 
-# Load function to calculate number living with diagnosed HIV
-source(file.path(Rcode,"LivingDiagnosed.R"), echo=TRUE)
-
 # Source functions for filling in missing data
 source(file.path(Rcode, "FillMissing.R"), echo=TRUE)
 source(file.path(Rcode, "FillDataFrame.R"), echo=TRUE)
 
+# Load function to calculate number living with diagnosed HIV
+source(file.path(HIVcode,"LivingDiagnosed.R"), echo=TRUE)
+
 # Function to easily extract sub-populations of interest 
-source(file.path(Rcode, "Subset.R"), echo=TRUE)
+source(file.path(HIVcode, "SubHivSet.R"), echo=TRUE)
 
 # Function for removing duplicates annually
 source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
@@ -175,7 +175,7 @@ if (excludeAborig) {
   hivSetAll <- filter(hivSetAll, aboriggroup == 'non-indigenous')
 }
   
-hivSetReturn <- subhivset(hivSetAll, targetAge, targetGender,
+hivSetReturn <- SubHivSet(hivSetAll, targetAge, targetGender,
                           targetExposure, targetCob, targetAtsi,
                           targetState, targetGlobalRegion)
 
@@ -255,7 +255,8 @@ if (doAge) {
     spread(agebin, diags) 
   
   #fill missing years
-  fillYears <- includeDiags$year[!(includeDiags$year %in% agedDiags$yeardiagnosis)]
+  fillYears <- includeDiags$year[!(includeDiags$year %in%
+                                     agedDiags$yeardiagnosis)]
   fillDiags <- agedDiags[0,]
   fillDiags[1:length(fillYears),] <- NA
   fillDiags$yeardiagnosis <- fillYears
