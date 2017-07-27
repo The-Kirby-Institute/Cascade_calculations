@@ -5,7 +5,7 @@
 # specific populations obtained separately for a specific time period. 
 # These values are read in from a csv file. 
 
-replaceEstimates <- function(cascade, hardcode) {  
+ReplaceEstimates <- function(cascade, hardcode) {  
   # Replace with updated values
   for (ii in 1:nrow(hardcode)) {
     cascade <- cascade %>%

@@ -38,7 +38,7 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- FALSE 
+saveResults <- TRUE 
 
 # Set HIV subsetting function parameters----------------------------------
 
@@ -65,7 +65,7 @@ if (doRetained) {
 }
 
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- FALSE
+ecdcData <- TRUE
 ecdcVersion <- '1.2.2'
 excludeOS <- FALSE
 
@@ -556,16 +556,19 @@ if (saveResults) {
   dir.create(resultsPath, showWarnings = FALSE, recursive = TRUE)
   
   # Save all estimates
+  saveStringDetails <- file.path(resultsPath, 
+    paste0("pldhiv-", toString(analysisYear), "-"))
+  write_csv(pldhivAll, paste0(saveStringDetails, "all.csv"))
+  write_csv(pldhivAllMax, paste0(saveStringDetails, "max.csv"))
+  write_csv(pldhivAllMin, paste0(saveStringDetails, "min.csv"))
   
   # Save main results
   saveStringPldhiv <- file.path(resultsPath, 
     paste0("HIVpldhivEstimates-", toString(analysisYear)))
-  
-  # Write to csv
   write_csv(hivDiagnosed, paste0(saveStringPldhiv, ".csv"))
   
   #save parameters 
-  saveStringParams <- file.path(resultsPath, "Parameters")
+  saveStringParams <- file.path(resultsPath, "PldhivParameters")
   
   # Write to csv
   write_csv(hivParams, paste0(saveStringParams, ".csv"))

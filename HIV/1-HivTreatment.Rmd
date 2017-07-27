@@ -1,13 +1,7 @@
-HIV Cascades Calculations
-=========================
+HIV Tretament and Suppression
+=============================
   
-  Author: Richard T. Gray, Neil Arvin Bretana
-
-This script describes and contains the code for producing the HIV care 
-cascade estimates for Australia. It is written in dynamic format using R 
-markdown v2 within Rstudio (version 0.98.1091 with R version`r 
-                            substr(R.Version()$version.string,1,15)`) (see 
-                                                                       <http://rmarkdown.rstudio.com>). 
+Neil Arvin Bretana and Richard T. Gray, 
 
 ```{r initialization}
 # Clear workspace
@@ -20,7 +14,6 @@ Rcode <- file.path(dirname(getwd()), "code")
 dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
 HIVcode <- file.path(basePath, "code") 
-figuresFolder <- file.path(basePath, "output","figures")
 
 # Load standard libraries and options ----------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
@@ -28,63 +21,20 @@ source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Primary script parameters
-currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 analysisYear <- 2015
-startYear <- 1990
 replaceValues <- TRUE
-saveNotifications <- FALSE
-bindCascade = TRUE  # TRUE if we want to store all the cascade results 
-excludeOS <- FALSE
-excludeAborig <- FALSE
 saveResults <- TRUE
-
-targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
-targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'all' #hetero, msm, pwid, unknown, otherexp 
-targetAtsi <- 'all' # non_indigenous or indigenous # Only used if country is Australia
-targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
-targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
-
-# Treated
 addTempRes <- TRUE # Add estimates for temporary residents on ART
-
-# Plotting
-plots = FALSE
-
 ```
-```{r functions}
-# Function to easily extract sub-populations of interest 
-source(file.path(Rcode, "Subset.R"), echo=TRUE)
-# Function is replace current estimates with estimates for 
-# specific populations obtained separately for a specific time period. 
-# Function to easily extract sub-populations of interest 
-source(file.path(Rcode, "ReplaceEstimates.R"), echo=TRUE)
-# Function to tidy notifications
-source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
-# Load function to calculate number living with diagnosed HIV
-source(file.path(Rcode,"LivingDiagnosed.R"), echo=TRUE)
-# Source functions for filling in missing data
-source(file.path(Rcode, "FillMissing.R"), echo=TRUE)
-source(file.path(Rcode, "FillDataFrame.R"), echo=TRUE)
-# Function for removing duplicates annually
-source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
-# Function to replace estimates
-source(file.path(Rcode, "ReplaceEstimates.R"), echo=TRUE)
-# Function to tidy notifications
-source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
-# Functions to output ECDC model data
-source(file.path(HIVcode, "EcdcCalculations.R"), echo=TRUE)
-source(file.path(HIVcode, "EcdcFiles.R"), echo=TRUE)
-# Function for adjustments
-source(file.path(HIVcode, "GetAdjustments.R"), echo=TRUE)
+
+```{r Functions}
+source(file.path(HIVcode, "pharmDashError.R"), echo=TRUE)
+
+source(file.path(HIVcode, "ReplaceEstimates.R"), echo=TRUE)
 
 ```
 
-## Number taking ART
-
-```{r treatment}
+```{r Treatment}
 # Calculate the number taking ART during the year. This uses a mixture of 
 # data sets as the Prospection data is only available for 2013-2014. For 
 # the  national overall estimates we use previously generated estimates
@@ -98,7 +48,10 @@ source(file.path(HIVcode, "GetAdjustments.R"), echo=TRUE)
 artEstimates <- read.csv(file.path(dataFolder, "ART_Estimates-2014.csv"))
 
 # Reload Prospection PBS data to get gender and state estimates
-prospectionData <- read.csv(file.path(dataFolder, paste0("pharmdash_HIVpatients", toString(analysisYear), ".csv")), as.is = c(1, 2))
+prospectionData <- read.csv(file.path(dataFolder,
+                                      paste0("pharmdash_HIVpatients",
+                                             toString(analysisYear),
+                                             ".csv")), as.is = c(1, 2))
 
 # Tidy up the prospection data
 hivTreatedPbs <- prospectionData %>%
@@ -149,14 +102,15 @@ hivTreated <- rbind(filter(select(artEstimates, -contains("trend")),
 # Add stage column
 hivTreated$stage <- "numART"
 
-# Calculate number on treatment for states and genders --------------------
+# Calculate number on treatment for states and genders -------------------
 
 # Use the relative rates to number in states
 
 populations <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act", 
             "male", "female")
 
-# Estimate state values for 2000-2012 using artEstimate trends (up to 2014)
+# Estimate state values for 2000-2012 using artEstimate trends (up to 
+# 2014)
 for (pop in populations) {
   # Extract final year data 
   treatFinal <- filter(hivTreated, population == pop,
@@ -187,11 +141,11 @@ hivTreated <- hivTreated %>%
   filter(year <= analysisYear)
 
 
-# calculate uncertainty in Prospection data -------------------------------
+# calculate uncertainty in Prospection data ------------------------------
 popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
                                 "ABS_population_sizes.xlsx"),
                       sheet = 2)
-source(file.path(Rcode, "pharmDashError.R"), echo=TRUE)
+
 
 # Loop through years and regions appending lower and upper
 prospectionYears <- c(2013, 2014, 2015)
@@ -240,47 +194,15 @@ if (addTempRes) {
   }
 }
 
-# Do some plots if required -----------------------------------------------
-if (plots) {
-  treatPlot1 <- ggplot(data = relTreat, aes(x = year, y = fit)) + 
-    geom_point(data = s100data, aes(x = year, y =  relative), 
-               color = "black", size = 4) + 
-    geom_line(color = "red") +
-    geom_line(aes(y = lwr), color = "blue", linetype = "dashed") +
-    geom_line(aes(y = upr), color = "blue", linetype = "dashed") +
-    scale_x_continuous(breaks = seq(2005, analysisYear, by =2)) +
-    ylim(c(0,1.5)) +  
-    ylab("Relative number on treatment") + xlab("Year") + 
-    ggtitle("Fitted number on ART relative to 2012 
-            (based on s100 spending)") + 
-    plotOpts
-  
-  treatPlot2 <- ggplot(data = filter(hivTreated, population == "all"), 
-                       aes(x = year, y = value)) +
-    geom_line(color = "red") + 
-    geom_line(aes(y = lower), color = "blue", linetype = "dashed") + 
-    geom_line(aes(y = upper), color = "blue", linetype = "dashed") + 
-    geom_point(data = filter(hivTreated, population == "all", 
-                             year >= 2013), color = "black", size = 4) +
-    scale_x_continuous(breaks = seq(2005, analysisYear, by =2)) +
-    ylim(0,NA) + 
-    ylab("Number on treatment") + xlab("Year") + 
-    ggtitle("National number on ART") + 
-    plotOpts
-  
-  # Save to file 
-  treatPlot <- grid.arrange(treatPlot1, treatPlot2, ncol = 2)
-  ggsave(file.path(figuresFolder, "treatment_rate.png"),
-         plot = treatPlot, width = 15, height = 5)
-}
-
 # Replace values with hard coded if necessary
-hardCodeValues <- read.csv(file.path(dataFolder, "Hard_coded_estimates.csv"))
+hardCodeValues <- read.csv(file.path(dataFolder,
+                                     "Hard_coded_estimates.csv"))
 if (replaceValues) {
-  hardCodeValues <- read.csv(file.path(dataFolder, "Hard_coded_estimates.csv"))
+  hardCodeValues <- read.csv(file.path(dataFolder,
+                                       "Hard_coded_estimates.csv"))
   tempHardCode <- filter(hardCodeValues, stage == "numART")
   if (nrow(tempHardCode) > 0) {
-    hivTreated <- replaceEstimates(hivTreated, tempHardCode)
+    hivTreated <- ReplaceEstimates(hivTreated, tempHardCode)
   }
 }
 
@@ -338,12 +260,12 @@ propSuppressedGender <- ahodData %>%
            sqrt(prop200 * (1 - prop200) / n)) %>%
   filter(year <= analysisYear) 
 
-propSuppressedState$population <- as.character(propSuppressedState$population)
-propSuppressed <- rbind(as.data.frame(propSuppressedState), as.data.frame(propSuppressedGender))
+propSuppressedState$population <-
+  as.character(propSuppressedState$population)
+propSuppressed <- rbind(as.data.frame(propSuppressedState),
+                        as.data.frame(propSuppressedGender))
 
 dataStart <- min(propSuppressed$year) 
-
-# TODO: by exposure mode
 
 # Loop through populations and calculate number suppressed. 
 populations <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas",
@@ -385,27 +307,25 @@ for (pop in populations) {
 if (replaceValues) {
   tempHardCode <- filter(hardCodeValues, stage == "suppressed")
   if (nrow(tempHardCode) > 0) {
-    hivSuppressed <- replaceEstimates(hivSuppressed, tempHardCode)
+    hivSuppressed <- ReplaceEstimates(hivSuppressed, tempHardCode)
   }
 }
 
 ```
 
 
-```{r cleanup}
-# Finally bind to overall results
-if (bindCascade) {
-  hivCascade <- rbind(hivTreated, hivSuppressed)
-}
-
-# Save HIV results dataframe
+```{r Save results}
+# Save ART and suppression results dataframe
 if (saveResults) {
+  
+  finalResults <- bind_rows(hivTreated, hivSuppressed)
+  
   # Directory and file name
   saveString <- file.path(outputFolder, 
     paste("HIVtreatment-", toString(analysisYear), sep = ""))
   
   # Write to csv
-  write.csv(hivCascade, file = paste(saveString, ".csv", sep =""), 
+  write.csv(finalResults, file = paste(saveString, ".csv", sep =""), 
             row.names = FALSE)
 }
 
