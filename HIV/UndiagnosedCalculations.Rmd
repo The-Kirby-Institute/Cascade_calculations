@@ -1,13 +1,11 @@
----
-title: "PLHIV and Unidagnosed"
-output: html_notebook
-author: Neil Bretana and Richard T. Gray
----
+PLHIV and Unidagnosed
+=====================
 
-This is a draft [R Markdown](http://rmarkdown.rstudio.com) Notebook for 
-calculating the number of people living with HIV in Australia from the
-estimates of people living with diagnosed HIV and the number undiganosed 
-produced by the ECDC HIV Modelling tool. 
+Neil Bretana and Richard T. Gray
+
+This script calculates the number of people living with HIV in
+Australia from the estimates of people living with diagnosed HIV and
+the number undiganosed produced by the ECDC HIV Modelling tool. 
 
 This notebook is currently in draft form for updating the HIV cascade 
 calculation scripts to version 3.0.
