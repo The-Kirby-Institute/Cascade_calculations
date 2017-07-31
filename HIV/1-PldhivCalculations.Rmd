@@ -1,5 +1,6 @@
 Calculation for number of people living with diagnosed HIV
 ==========================================================
+
 Neil Bretana and Richard T. Gray
 
 This script is used for calculating the number of people living with
@@ -42,8 +43,8 @@ saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("all-", toString(analysisYear)) 
-targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
+cascadeName <- paste0("Female-", toString(analysisYear)) 
+targetGender <- 'female' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
 targetExposure <- 'all'
@@ -56,7 +57,7 @@ targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 interState <- ifelse(targetState != "all", TRUE, FALSE)
 excludeAborig <- FALSE
 doAge <- FALSE # TRUE for aging calculations
-doRetained <- TRUE #TRUE for appending retained in care
+doRetained <- FALSE # TRUE for appending retained in care
 if (doRetained) {
   # Need to specify years for reatined in care calculations
   # This is simply a proportion based on James McMahon's paper

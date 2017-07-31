@@ -1,7 +1,12 @@
 HIV Tretament and Suppression
 =============================
   
-Neil Arvin Bretana and Richard T. Gray, 
+Neil Arvin Bretana and Richard T. Gray
+
+For this script to work the following data files are required or need 
+updating:
+- pharmdash_HIVpatientsYEAR.csv
+- ~/project_care_cascades/data/ABS_population_sizes.xlsx
 
 ```{r initialization}
 # Clear workspace
@@ -21,10 +26,12 @@ source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Primary script parameters
-analysisYear <- 2015
+analysisYear <- 2016
 replaceValues <- TRUE
 saveResults <- TRUE
 addTempRes <- TRUE # Add estimates for temporary residents on ART
+
+
 ```
 
 ```{r Functions}
@@ -148,7 +155,7 @@ popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
 
 
 # Loop through years and regions appending lower and upper
-prospectionYears <- c(2013, 2014, 2015)
+prospectionYears <- c(2013, 2014, 2015, 2016)
 regions <- c(populations, "all")
 
 for (nyear in prospectionYears) {
@@ -170,10 +177,16 @@ for (nyear in prospectionYears) {
 if (addTempRes) {
   
   # Load the temporary resident estimates
-  tempResArt <- read.csv(file.path(dataFolder,
-                                   "ART_medicare_ineligible.csv"))
+  if (analysisYear <= 2015) {
+    tempResArt <- read.csv(file.path(dataFolder,
+                                     "ART_medicare_ineligible-2015.csv"))
+  } else {
+    tempResArt <- read.csv(file.path(dataFolder,
+      paste0("ART_medicare_ineligible-", toString(analysisYear), ".csv")))
+  }
   
   # Replace with updated values
+  
   for (ii in 1:nrow(tempResArt)) {
     hivTreated <- hivTreated %>%
       mutate(value = ifelse(population == tempResArt$population[ii] &
