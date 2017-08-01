@@ -19,7 +19,7 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   
   if(fAge!='all'){
     unknownframe <- filter(unknownframe, agebin == 'not_reported')
-    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(agebin)))
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(agebin)))
     includeframe <- filter(includeframe, agebin!='not_reported') 
     includeframe <- filter(includeframe, !is.na(agebin))
     excludeframe <- filter(includeframe, agebin != fAge)
@@ -28,7 +28,7 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   
   if(fGender!='all'){
     unknownframe <- filter(unknownframe, sex == 'unknown')
-    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(sex)))
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(sex)))
     includeframe <- filter(includeframe, sex!='unknown') 
     includeframe <- filter(includeframe, !is.na(sex))
     excludeframe <- filter(includeframe, sex != fGender)
@@ -37,7 +37,7 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   
   if(fExposure!='all'){
     unknownframe <- filter(unknownframe, expgroup == 'unknown')
-    unknownframe <- bind_rows(unknownframe, filter(subframe, 
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, 
                                                    is.na(expgroup)))
     includeframe <- filter(includeframe, expgroup!='unknown') 
     includeframe <- filter(includeframe, !is.na(expgroup))
@@ -47,7 +47,7 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   
   if(fCob!='all'){
     unknownframe <- filter(unknownframe, cob == 'Not Reported')
-    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(cob)))
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(cob)))
     if(fCob=='non-australia'){
       excludeframe <- filter(includeframe, cob == 'Australia')
       includeframe <- filter(includeframe, cob!='Not Reported') #remove all missings
@@ -63,7 +63,7 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   
   if(fAtsi!='all'){
     unknownframe <- filter(unknownframe, aboriggroup == 'Not Reported')
-    unknownframe <- bind_rows(unknownframe, filter(subframe, 
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, 
                                                    is.na(aboriggroup)))
     includeframe <- filter(includeframe, aboriggroup!='Not Reported') 
     includeframe <- filter(includeframe, !is.na(aboriggroup))

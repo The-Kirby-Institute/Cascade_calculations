@@ -39,23 +39,23 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- FALSE 
+saveResults <- TRUE 
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("MSM-", toString(analysisYear)) 
-targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
+cascadeName <- paste0("TAS-", toString(analysisYear)) 
+targetGender <- 'all' #male or female, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'msm'
-targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
-targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
+targetCob <- 'all' # all=including n/a, Thailand, Australia, etc.
+targetExposure <- 'all' #msm, unknown, hetero, pwid, otherexp
+targetAtsi <- 'all' # non_indigenous, indigenous
+targetState <- 'tas' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
+targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
 
 # Script options for calculations
 interState <- ifelse(targetState != "all", TRUE, FALSE)
-excludeAborig <- TRUE
+excludeAborig <- FALSE
 doAge <- FALSE # TRUE for aging calculations
 doRetained <- FALSE # TRUE for appending retained in care
 if (doRetained) {
