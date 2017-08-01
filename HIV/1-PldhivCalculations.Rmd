@@ -44,10 +44,10 @@ saveResults <- FALSE
 # Set HIV subsetting function parameters----------------------------------
 
 cascadeName <- paste0("MSM-", toString(analysisYear)) 
-targetGender <- 'male' #M or F, Null both, add code for including/excluding NA's or missings 
+targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'all'
+targetExposure <- 'msm'
 targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
@@ -55,7 +55,7 @@ targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 
 # Script options for calculations
 interState <- ifelse(targetState != "all", TRUE, FALSE)
-excludeAborig <- FALSE
+excludeAborig <- TRUE
 doAge <- FALSE # TRUE for aging calculations
 doRetained <- FALSE # TRUE for appending retained in care
 if (doRetained) {
@@ -173,7 +173,7 @@ annPropUnique <- AnnualUnique(annDiagsOrig$notifications,
 if (excludeAborig) {
   # Set indigenous aside separately to add on later if required
   hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
-  hivSetAll <- filter(hivSetAll, aboriggroup == 'non-indigenous')
+  hivSetAll <- filter(hivSetAll, aboriggroup == 'non_indigenous')
 }
   
 hivSetReturn <- SubHivSet(hivSetAll, targetAge, targetGender,
