@@ -43,11 +43,11 @@ saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("Female-", toString(analysisYear)) 
-targetGender <- 'female' #M or F, Null both, add code for including/excluding NA's or missings 
+cascadeName <- paste0("MSM-", toString(analysisYear)) 
+targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'all'
+targetExposure <- 'msm'
 targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
