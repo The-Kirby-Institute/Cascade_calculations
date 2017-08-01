@@ -1,0 +1,86 @@
+Merge HIV Cascades
+==================
+  
+Neil Arvin Bretana and Richard T. Gray
+
+```{r Initialization}
+# Clear workspace
+rm(list=ls()) 
+
+# Setup directories
+basePath <- file.path(dirname(getwd()), "HIV")
+
+Rcode <- file.path(dirname(getwd()), "code") 
+dataFolder <- file.path(basePath, "data")
+outputFolder <- file.path(basePath, "output")
+HIVcode <- file.path(basePath, "code") 
+
+# Load standard libraries and options -----------------------------------------
+source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
+source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+
+# Primary script parameters ---------------------------------------------------
+analysisYear <- 2016
+cascadeNames <- "nsw" # c("all", "male", "females")
+
+mergeAll <- TRUE
+saveResults <- TRUE
+
+currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
+
+```
+
+```{r Load and merge cascade results}
+
+yearStr <- toString(analysisYear)
+
+# The treatment file is the same for all cascades
+artFile <- file.path(outputFolder, paste0("HIVtreatment-", yearStr, ".csv"))
+
+artSuppression <- read_csv(artFile) %>%
+  select(stage, everything())
+
+hivCascadeAll <- NULL
+
+for (ii in 1:length(cascadeNames)) {
+  
+  # Specify cascade folders
+  cascadeFolder <- file.path(outputFolder, paste0(cascadeNames[ii], 
+                                                  "-", yearStr))
+  pldhivFile <- file.path(cascadeFolder, paste0("HIVpldhivEstimates-",
+                                                yearStr, ".csv"))
+  livingFile <- file.path(cascadeFolder, paste0("HIVpositiveEstimates-",
+                                                yearStr, ".csv"))
+  
+  # Read in cascade results for this cascade
+  living <- read_csv(livingFile)
+  pldhiv <- read_csv(pldhivFile)
+  
+  treatment <- artSuppression %>%
+    filter(population == cascadeNames[ii]) 
+  
+  # Bind cascade
+  hivCascade <- bind_rows(living, pldhiv, treatment)
+  
+  # Save if required
+  if (saveResults) {
+    write_csv(hivCascade, paste0(cascadeFolder, "/HIVcascadeEstimates-",
+                                 yearStr, ".csv"))
+  }
+  
+  # Merge with other cascades if required
+  if (mergeAll) {
+    hivCascadeAll <- bind_rows(hivCascadeAll, hivCascade)
+  }
+  
+}
+
+# Save final cascade if required
+if (saveResults) {
+  write_csv(hivCascadeAll, paste0(outputFolder, "/HIVcascadeEstimates-",
+                                  yearStr, "_", currTime, ".csv"))
+}
+
+```
+
