@@ -2,15 +2,23 @@
 
 # N.A. Bretana
 
-SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, fState, fGlobalRegion){
+SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, 
+                      fState, fGlobalRegion){
   
   subframe <- hivdataframe
   includeframe <- subframe
   unknownframe <- data_frame()
   excludeframe <- data_frame()
   
+  if(fAge=='all' && fGender =='all' && fExposure=='all' && fCob=='all'&& 
+     fAtsi=='all' && fState=='all' && fGlobalRegion=='all'){
+    unknownframe <- data_frame()
+  }else{
+    unknownframe <- subframe
+  }
+  
   if(fAge!='all'){
-    unknownframe <- filter(subframe, agebin == 'Not Reported')
+    unknownframe <- filter(unknownframe, agebin == 'not_reported')
     unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(agebin)))
     includeframe <- filter(includeframe, agebin!='Not Reported') 
     includeframe <- filter(includeframe, !is.na(agebin))
@@ -19,7 +27,7 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, fStat
   }
   
   if(fGender!='all'){
-    unknownframe <- filter(unknownframe, sex == 'Not Reported')
+    unknownframe <- filter(unknownframe, sex == 'unknown')
     unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(sex)))
     includeframe <- filter(includeframe, sex!='Not Reported') 
     includeframe <- filter(includeframe, !is.na(sex))
@@ -28,8 +36,9 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, fStat
   }
   
   if(fExposure!='all'){
-    unknownframe <- filter(subframe, expgroup == 'unknown')
-    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(expgroup)))
+    unknownframe <- filter(unknownframe, expgroup == 'unknown')
+    unknownframe <- bind_rows(unknownframe, filter(subframe, 
+                                                   is.na(expgroup)))
     includeframe <- filter(includeframe, expgroup!='unknown') 
     includeframe <- filter(includeframe, !is.na(expgroup))
     excludeframe <- filter(includeframe, expgroup != fExposure)
@@ -50,12 +59,12 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, fStat
       excludeframe <- filter(excludeframe, !is.na(cob))
       includeframe <- filter(includeframe, cob == fCob)
     }
-    
   }
   
   if(fAtsi!='all'){
     unknownframe <- filter(unknownframe, aboriggroup == 'Not Reported')
-    unknownframe <- bind_rows(unknownframe, filter(subframe, is.na(aboriggroup)))
+    unknownframe <- bind_rows(unknownframe, filter(subframe, 
+                                                   is.na(aboriggroup)))
     includeframe <- filter(includeframe, aboriggroup!='Not Reported') 
     includeframe <- filter(includeframe, !is.na(aboriggroup))
     excludeframe <- filter(includeframe, aboriggroup != fAtsi)
@@ -63,20 +72,32 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, fStat
   }
   
   if(fState != 'all'){
-    unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(state)))
-    excludeframe <- bind_rows(excludeframe, filter(includeframe, state != fState))
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, 
+                                                   is.na(state)))
+    excludeframe <- bind_rows(excludeframe, filter(includeframe, 
+                                                   state != fState))
     includeframe <- filter(includeframe, state == fState)
   }
   
   if(fGlobalRegion != 'all'){
-    unknownframe <- bind_rows(unknownframe, filter(includeframe, is.na(globalregion)))
+    unknownframe <- filter(unknownframe, globalregion == 'Not Reported')
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, 
+                                                   is.na(globalregion)))
     if(fGlobalRegion=="Other cob"){
-      excludeframe <- bind_rows(excludeframe, filter(includeframe, globalregion == "South-East Asia"))
-      excludeframe <- bind_rows(excludeframe, filter(includeframe, globalregion == "Sub-Saharan Africa"))
-      includeframe <- filter(includeframe, globalregion != "South-East Asia")
-      includeframe <- filter(includeframe, globalregion != "Sub-Saharan Africa")
+      excludeframe <- bind_rows(excludeframe, 
+                                filter(includeframe, 
+                                       globalregion == "South-East Asia"))
+      excludeframe <- bind_rows(excludeframe, 
+                                filter(includeframe, 
+                                       globalregion == "Sub-Saharan Africa"))
+      includeframe <- filter(includeframe, 
+                             globalregion != "South-East Asia")
+      includeframe <- filter(includeframe, 
+                             globalregion != "Sub-Saharan Africa")
     }else{
-      excludeframe <- bind_rows(excludeframe, filter(includeframe, globalregion != fGlobalRegion))
+      excludeframe <- bind_rows(excludeframe, 
+                                filter(includeframe, 
+                                       globalregion != fGlobalRegion))
       includeframe <- filter(includeframe, globalregion == fGlobalRegion)
     }
   }
