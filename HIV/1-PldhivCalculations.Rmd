@@ -39,12 +39,12 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- TRUE 
+saveResults <- FALSE 
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("Female-", toString(analysisYear)) 
-targetGender <- 'female' #M or F, Null both, add code for including/excluding NA's or missings 
+cascadeName <- paste0("MSM-", toString(analysisYear)) 
+targetGender <- 'male' #M or F, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
 targetExposure <- 'all'
@@ -66,13 +66,13 @@ if (doRetained) {
 }
 
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- TRUE
+ecdcData <- FALSE
 ecdcVersion <- '1.2.2'
 excludeOS <- FALSE
 
 ecdcModel <- cascadeName # name
 if (excludeOS) {
-  # If excludeOS don't save the pldhiv estimates as we ate only using this
+  # If excludeOS don't save the pldhiv estimates as we are only using this
   # for ECDC calculations
   saveResults <- FALSE
 }
@@ -352,7 +352,7 @@ if (interState) {
     mutate(year = allYears) %>%
     select(year, everything())
   
-  pldhivOverallMin <- LivingDiagnosed(adjustDiags$included,
+  pldhivOverallMin <- LivingDiagnosed(adjustDiags$adjusted_included,
                                   annPropUnique, 
                                   subsetRatesAll$deathrate_upper,
                                   subsetRatesAll$mrate_upper,
@@ -360,7 +360,7 @@ if (interState) {
     mutate(year = allYears) %>%
     select(year, everything())
   
-  pldhivOverallMax <- LivingDiagnosed(adjustDiags$included,
+  pldhivOverallMax <- LivingDiagnosed(adjustDiags$adjusted_included,
                                   annPropUnique, 
                                   subsetRatesAll$deathrate_lower,
                                   subsetRatesAll$mrate_lower,
@@ -372,7 +372,7 @@ if (interState) {
   
   
   # Now do regional migration
-  pldhivAll <- LivingDiagnosed(adjustDiags$included,
+  pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
                                annPropUnique, 
                                subsetRates$deathrate,
                                subsetRates$mrate,
@@ -384,7 +384,7 @@ if (interState) {
     select(year, everything())
   
   # Use best estimate overall for min and max
-  pldhivAllMin <- LivingDiagnosed(adjustDiags$included,
+  pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
                                   annPropUnique, 
                                   subsetRates$deathrate_upper,
                                   subsetRates$mrate_upper,
@@ -395,7 +395,7 @@ if (interState) {
     mutate(year = allYears) %>%
     select(year, everything())
   
-  pldhivAllMax <- LivingDiagnosed(adjustDiags$included,
+  pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
                                   annPropUnique, 
                                   subsetRates$deathrate_lower,
                                   subsetRates$mrate_lower,
@@ -410,7 +410,7 @@ if (interState) {
 } else {
   
   # Now do regional migration
-  pldhivAll <- LivingDiagnosed(adjustDiags$included,
+  pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
                                annPropUnique, 
                                subsetRates$deathrate,
                                subsetRates$mrate,
@@ -418,7 +418,7 @@ if (interState) {
     mutate(year = allYears) %>%
     select(year, everything())
   
-  pldhivAllMin <- LivingDiagnosed(adjustDiags$included,
+  pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
                                   annPropUnique, 
                                   subsetRates$deathrate_upper,
                                   subsetRates$mrate_upper,
@@ -426,7 +426,7 @@ if (interState) {
     mutate(year = allYears) %>%
     select(year, everything())
   
-  pldhivAllMax <- LivingDiagnosed(adjustDiags$included,
+  pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
                                   annPropUnique, 
                                   subsetRates$deathrate_lower,
                                   subsetRates$mrate_lower,

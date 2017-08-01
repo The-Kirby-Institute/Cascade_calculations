@@ -36,36 +36,45 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
 saveResults <- TRUE 
-cascadeFlag <- "nsw"
+cascadeFlag <- "all"
 ecdcChart <- "all" # ECDC group used for calculations
 
+if (cascadeFlag %in% c("msm", "hetero", "otherexp", "pwid", "non-msm")) {
+  ecdcChart <- cascadeFlag
+  cascadeFolder <- "all"
+} else {
+  cascadeFolder <- cascadeFlag
+}
+
 # Produce cascadeName from the flag and analysis year. 
-cascadeName <- paste0(cascadeFlag, "-", toString(analysisYear))
-ecdcChart <- paste0(ecdcChart, "-charts.xlsx")
+cascadeName <- paste0(cascadeFolder, "-", toString(analysisYear))
+ecdcChart <- paste0(ecdcChart, "_charts.xlsx")
 
 ```
 
 ```{r Load data}
-# Chunk to load the PLDHIV estimates and ECDC undiagnosed estimates
+# Chunk to load the PLDHIV estimates and ECDC undiagnosed estimates. 
+# For file to be read in properly make sure hidden rows are unhidden and
+# the file name changed into the correct format. 
 pldhiv <- read.csv(file.path(outputFolder, cascadeName, 
                              paste0("HIVpldhivEstimates-",
                              toString(analysisYear), ".csv")))
 
 numberUndiagnosed <- read_excel(file.path(outputFolder, cascadeName,
                                     ecdcChart),
-           sheet = 2, col_names = FALSE, skip = 129) %>%
-  select(X1, X10, X11, X12) %>%
-  rename(year = X1, undiagnosed = X10, undiagnosed_lower = X11,
-         undiagnosed_upper = X12) %>%
+           sheet = 2, col_names = FALSE, skip = 131) %>%
+  select(X__1, X__10, X__11, X__12) %>%
+  rename(year = X__1, undiagnosed = X__10, undiagnosed_lower = X__11,
+         undiagnosed_upper = X__12) %>%
   slice(1:length(1980:analysisYear)) %>%
   mutate(year = as.numeric(year))
 
 percentUndiagnosed <- read_excel(file.path(outputFolder, cascadeName,
                                     ecdcChart),
-           sheet = 2, col_names = FALSE, skip = 192) %>%
-  select(X1, X2, X3, X4) %>%
-  rename(year = X1, percent = X2, percent_lower = X3,
-         percent_upper = X4) %>%
+           sheet = 2, col_names = FALSE, skip = 195) %>%
+  select(X__1, X__2, X__3, X__4) %>%
+  rename(year = X__1, percent = X__2, percent_lower = X__3,
+         percent_upper = X__4) %>%
   slice(1:length(1980:analysisYear))
   
 undiagnosed <- left_join(numberUndiagnosed, percentUndiagnosed, 
