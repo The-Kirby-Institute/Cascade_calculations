@@ -43,11 +43,11 @@ saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("MSM-", toString(analysisYear)) 
-targetGender <- 'all' #M or F, Null both, add code for including/excluding NA's or missings 
+cascadeName <- paste0("Female-", toString(analysisYear)) 
+targetGender <- 'female' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'msm'
+targetExposure <- 'all'
 targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
@@ -55,9 +55,9 @@ targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
 
 # Script options for calculations
 interState <- ifelse(targetState != "all", TRUE, FALSE)
-excludeAborig <- TRUE
+excludeAborig <- FALSE
 doAge <- FALSE # TRUE for aging calculations
-doRetained <- FALSE # TRUE for appending retained in care
+doRetained <- TRUE # TRUE for appending retained in care
 if (doRetained) {
   # Need to specify years for reatined in care calculations
   # This is simply a proportion based on James McMahon's paper
@@ -162,14 +162,7 @@ annDiagsOrig <- hivSetAll %>%
   mutate(totalnotifications = cumsum(notifications)) %>%
   ungroup() 
 
-# Possibly temporary as this may be generated elsewhere
-overallPropUnique <- ProportionUnique(hivSetAll,
-                                      annDiagsOrig$totalnotifications,
-                                      allYears)
-annPropUnique <- AnnualUnique(annDiagsOrig$notifications,
-                              overallPropUnique) /
-  annDiagsOrig$notifications
-
+# May not need to do this anymore.
 if (excludeAborig) {
   # Set indigenous aside separately to add on later if required
   hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
@@ -183,6 +176,46 @@ hivSetReturn <- SubHivSet(hivSetAll, targetAge, targetGender,
 hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
+
+
+# Possibly temporary as this may be generated elsewhere
+# Need to consider males and females deparately as there were not many 
+# duplicates in the early years for females in the epidemic. 
+if (targetGender == "female") {
+  duplicateSet <- hivSetAll %>%
+    filter(sex != "male")
+  duplicateNotifications <- duplicateSet %>% 
+    group_by(yeardiagnosis) %>%
+    summarise(notifications = n()) %>%
+    mutate(totalnotifications = cumsum(notifications)) %>%
+    ungroup() %>%
+    rename(year = yeardiagnosis)
+  duplicateNotifications <- FillDataFrame(allYears, 
+                                          duplicateNotifications)
+} else if (targetGender == "male" || targetExposure == "msm") {
+  duplicateSet <- hivSetAll %>%
+    filter(sex == "male")
+  duplicateNotifications <- duplicateSet %>% 
+    group_by(yeardiagnosis) %>%
+    summarise(notifications = n()) %>%
+    mutate(totalnotifications = cumsum(notifications)) %>%
+    ungroup() %>%
+    rename(year = yeardiagnosis)
+  duplicateNotifications <- FillDataFrame(allYears, 
+                                          duplicateNotifications)
+} else {
+  duplicateSet <- hivSetAll
+  duplicateNotifications <- annDiagsOrig$totalnotifications
+}
+
+overallPropUnique <- ProportionUnique(duplicateSet,
+  duplicateNotifications$totalnotifications,
+  allYears)
+
+annPropUnique <- AnnualUnique(duplicateNotifications$notifications,
+                              overallPropUnique) /
+  duplicateNotifications$notifications
+annPropUnique[is.nan(annPropUnique)] <- 0 # replace infinite numbers
 
 ```
 
