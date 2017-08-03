@@ -22,9 +22,9 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Primary script parameters ---------------------------------------------------
 analysisYear <- 2016
-cascadeNames <- "nsw" # c("all", "male", "females")
+cascadeNames <- "Female" # c("all", "male", "females")
 
-mergeAll <- TRUE
+mergeAll <- FALSE
 saveResults <- TRUE
 
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
@@ -58,10 +58,11 @@ for (ii in 1:length(cascadeNames)) {
   pldhiv <- read_csv(pldhivFile)
   
   treatment <- artSuppression %>%
-    filter(population == cascadeNames[ii]) 
+    filter(population == tolower(cascadeNames[ii])) 
   
   # Bind cascade
   hivCascade <- bind_rows(living, pldhiv, treatment)
+  hivCascade$population <- cascadeNames[ii]
   
   # Save if required
   if (saveResults) {
@@ -77,7 +78,7 @@ for (ii in 1:length(cascadeNames)) {
 }
 
 # Save final cascade if required
-if (saveResults) {
+if (saveResults && mergeAll) {
   write_csv(hivCascadeAll, paste0(outputFolder, "/HIVcascadeEstimates-",
                                   yearStr, "_", currTime, ".csv"))
 }

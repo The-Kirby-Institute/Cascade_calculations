@@ -4,8 +4,9 @@
 
 # R function to extract subset of interest from notifications
 
-GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate, targetAge, 
-                           targetGender,targetExposure, targetCob, targetAtsi,
+GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
+                           targetAge, targetGender,targetExposure,
+                           targetCob, targetAtsi,
                            targetLocalRegion, targetState,
                            targetGlobalRegion) {
   
@@ -16,6 +17,17 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate, targetAge,
   #                targetLocalRegion, targetGlobalRegion)
   
   # Now extract and calculate the variables we want
+  
+  # Extract proportion notifications unique
+  if (targetGender == "male" | targetExposure == "msm") {
+    adjustments$propunique <-  hivBase$propunique_male
+  } else if (targetGender == "female") {
+    adjustments$propunique <-  hivBase$propunique_female
+  } else if (targetAtsi == "indigenous") {
+    adjustments$propunique <-  1
+  } else {
+    adjustments$propunique <-  hivBase$propunique_all
+  }
   
   # Extract migration rate
   # First set up base
@@ -60,7 +72,7 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate, targetAge,
     adjustments$mrate_upper <- adjustments$mrate_upper * mrate
   }
 
-  # Adjust migration rate for location
+  # Adjust migration rate for Indigenous population
   if (targetAtsi == "indigenous") {
     adjustments$mrate <- 0
     adjustments$mrate_lower <- 0
@@ -70,26 +82,42 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate, targetAge,
   # Adjust interstate migration rate for location
   if (targetState != "all") {
     arriverate <- switch(targetState,
-                    "nsw" = filter(hivInterstate, state == "nsw")$arriverate,
-                    "vic" = filter(hivInterstate, state == "vic")$arriverate,
-                    "qld" = filter(hivInterstate, state == "qld")$arriverate,
-                    "nt" = filter(hivInterstate, state == "nt")$arriverate,
-                    "wa" = filter(hivInterstate, state == "wa")$arriverate,
-                    "sa" = filter(hivInterstate, state == "sa")$arriverate,
-                    "tas" = filter(hivInterstate, state == "tas")$arriverate,
-                    "act" = filter(hivInterstate, state == "act")$arriverate)
+                    "nsw" = filter(hivInterstate, 
+                                   state == "nsw")$arriverate,
+                    "vic" = filter(hivInterstate, 
+                                   state == "vic")$arriverate,
+                    "qld" = filter(hivInterstate, 
+                                   state == "qld")$arriverate,
+                    "nt" = filter(hivInterstate, 
+                                  state == "nt")$arriverate,
+                    "wa" = filter(hivInterstate, 
+                                  state == "wa")$arriverate,
+                    "sa" = filter(hivInterstate, 
+                                  state == "sa")$arriverate,
+                    "tas" = filter(hivInterstate, 
+                                   state == "tas")$arriverate,
+                    "act" = filter(hivInterstate, 
+                                   state == "act")$arriverate)
     
     adjustments$inter_arriverate <- arriverate
     
     departrate <- switch(targetState,
-                         "nsw" = filter(hivInterstate, state == "nsw")$departrate,
-                         "vic" = filter(hivInterstate, state == "vic")$departrate,
-                         "qld" = filter(hivInterstate, state == "qld")$departrate,
-                         "nt" = filter(hivInterstate, state == "nt")$departrate,
-                         "wa" = filter(hivInterstate, state == "wa")$departrate,
-                         "sa" = filter(hivInterstate, state == "sa")$departrate,
-                         "tas" = filter(hivInterstate, state == "tas")$departrate,
-                         "act" = filter(hivInterstate, state == "act")$departrate)
+                         "nsw" = filter(hivInterstate, 
+                                        state == "nsw")$departrate,
+                         "vic" = filter(hivInterstate, 
+                                        state == "vic")$departrate,
+                         "qld" = filter(hivInterstate, 
+                                        state == "qld")$departrate,
+                         "nt" = filter(hivInterstate, 
+                                       state == "nt")$departrate,
+                         "wa" = filter(hivInterstate, 
+                                       state == "wa")$departrate,
+                         "sa" = filter(hivInterstate, 
+                                       state == "sa")$departrate,
+                         "tas" = filter(hivInterstate, 
+                                        state == "tas")$departrate,
+                         "act" = filter(hivInterstate, 
+                                        state == "act")$departrate)
     
     adjustments$inter_departrate <- departrate
     
@@ -137,6 +165,25 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate, targetAge,
       hivAdjustments$pstay_indigenous
     adjustments$propstay_upper <- hivBase$propstay_upper *
       hivAdjustments$pstay_indigenous
+  }
+  
+  # Adjust deathrates for males and females
+  if (targetGender == "male" || targetExposure == "msm") {
+    adjustments$deathrate <- hivBase$deathrate * 
+      hivAdjustments$drate_male
+    adjustments$deathrate_lower <- hivBase$deathrate_lower * 
+      hivAdjustments$drate_male
+    adjustments$deathrate_upper <- hivBase$deathrate_upper * 
+      hivAdjustments$drate_male
+  } 
+
+  if (targetGender == "female") {
+    adjustments$deathrate <- hivBase$deathrate * 
+      hivAdjustments$drate_female
+    adjustments$deathrate_lower <- hivBase$deathrate_lower * 
+      hivAdjustments$drate_female
+    adjustments$deathrate_upper <- hivBase$deathrate_upper * 
+      hivAdjustments$drate_female
   }
   
   # Further adjust propstay and deathrate by location

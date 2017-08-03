@@ -31,6 +31,7 @@ dataFolder <- file.path(basePath, "data")
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+source(file.path(Rcode, "FillDataFrame.R"), echo=TRUE)
 
 # Useful functions -------------------------------------------------------
 source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
@@ -80,7 +81,9 @@ if (min(hivData$yeardiagnosis) > startYear) {
 
 # Setup our working data frame
 hivSet <- filter(hivData, yeardiagnosis <= analysisYear)
-
+                
+# Start storing things
+hivBaseRates <- data.frame(year = allYears) 
 ```
 
 ```{r Annual and cummulative diagnoses}
@@ -188,7 +191,7 @@ hivGenderAnn <- hivSet %>%
          transgender = ifelse(is.na(transgender), 0, transgender)) %>%
   rename(year = yeardiagnosis)
 
-hivGenderAnn <- hivSet %>% 
+hivGenderCum <- hivSet %>% 
   group_by(yeardiagnosis, sex) %>% 
   summarise(notifications = n()) %>% 
   ungroup() %>% 
@@ -254,6 +257,75 @@ hivCobCum <- hivSet %>%
 
 ```
 
+```{r Annual proportion unique}
+# This chunk is used to estimate the annual proportion of notifications 
+# that are unique
+
+# Need to consider males and females deparately as there were not many 
+# duplicates in the early years for females in the epidemic.
+
+# Females/non-Males
+duplicateSet <- hivSet %>%
+  filter(sex != "male")
+duplicateNotifications <- duplicateSet %>% 
+  group_by(yeardiagnosis) %>%
+  summarise(notifications = n()) %>%
+  mutate(totalnotifications = cumsum(notifications)) %>%
+  ungroup() %>%
+  rename(year = yeardiagnosis)
+duplicateNotifications <- FillDataFrame(allYears, 
+                                        duplicateNotifications)
+
+overallPropUnique <- ProportionUnique(duplicateSet,             
+  duplicateNotifications$totalnotifications,
+                                      allYears)
+
+annPropUnique <- AnnualUnique(duplicateNotifications$notifications,
+                              overallPropUnique) /
+  duplicateNotifications$notifications
+annPropUnique[is.nan(annPropUnique)] <- 0 # replace infinite numbers  
+hivBaseRates$propunique_female <- annPropUnique
+  
+# Males or MSM  
+duplicateSet <- hivSet %>%
+  filter(sex == "male")
+duplicateNotifications <- duplicateSet %>% 
+  group_by(yeardiagnosis) %>%
+  summarise(notifications = n()) %>%
+  mutate(totalnotifications = cumsum(notifications)) %>%
+  ungroup() %>%
+  rename(year = yeardiagnosis)
+duplicateNotifications <- FillDataFrame(allYears, 
+                                        duplicateNotifications)
+overallPropUnique <- ProportionUnique(duplicateSet,             
+  duplicateNotifications$totalnotifications,
+                                      allYears)
+
+annPropUnique <- AnnualUnique(duplicateNotifications$notifications,
+                              overallPropUnique) /
+  duplicateNotifications$notifications
+annPropUnique[is.nan(annPropUnique)] <- 0 # replace infinite numbers  
+hivBaseRates$propunique_male <- annPropUnique
+
+#All
+duplicateSet <- hivSet
+duplicateNotifications <- hivResults
+
+overallPropUnique <- ProportionUnique(duplicateSet,             
+  duplicateNotifications$totalnotifications,
+                                      allYears)
+
+annPropUnique <- AnnualUnique(duplicateNotifications$notifications,
+                              overallPropUnique) /
+  duplicateNotifications$notifications
+annPropUnique[is.nan(annPropUnique)] <- 0 # replace infinite numbers  
+hivBaseRates$propunique_all <- annPropUnique
+
+# # Assume all indigenous notifications are unique
+# hivBaseRates$propunique_indigenous <- 1
+
+```
+
 ```{r Overseas migration rates}
 # This chunk converts the ABS overseas migration data into 
 # overseas population movement rates.
@@ -285,10 +357,9 @@ baseMigrationLower <- rep(0, length(allYears))
 baseMigrationUpper <- 2* mrate
 
 # Start storing things
-hivBaseRates <- data.frame(year = allYears,
-                           migrationrate = baseMigration,
-                           migrationrate_lower = baseMigrationLower,
-                           migrationrate_upper = baseMigrationUpper)
+hivBaseRates$migrationrate <- baseMigration
+hivBaseRates$migrationrate_lower <- baseMigrationLower
+hivBaseRates$migrationrate_upper <- baseMigrationUpper
 
 # Adjustments ------------------------------------------------------------
 
@@ -402,6 +473,8 @@ hivAdjustments$pstay_vic_lower <- propStayLowerVic /
 hivAdjustments$pstay_vic_upper <- propStayUpperVic /
   hivBaseRates$propstay_upper
 
+
+
 ```
 
 ```{r Death rates}
@@ -430,6 +503,15 @@ for (ii in 1:nrow(hivParams)) {
 ahodData <- read.csv(file.path(dataFolder, 
                                paste0("ahod", toString(analysisYear), 
                                      ".csv")))
+
+# Load gender deathrate ratios
+sexDrates <- read_excel(file.path(dataFolder,
+                                  "/HIV_Gender_Deathrates.xlsx"),
+                        sheet = 2) %>%
+  select(1,4,5) %>%
+  rename(year = Year)
+colnames(sexDrates)[2:3] <- c("males", "females")
+  
 
 # Pre-2003 death rates ---------------------------------------------------
 
@@ -626,9 +708,9 @@ hivAdjustments$drate_non_indigenous_lower <-
 hivAdjustments$drate_non_indigenous_upper <- 
   nonAborigMortalityFactorUpper / deathrateDiv_upper
 
-# Adjustments for key states
 
-# Because we are dividing remove zeos
+
+# Because we will be dividing remove zeos
 deathrateDiv <- hivBaseRates$deathrate
 deathrateDiv[deathrateDiv == 0] <- 1
 
@@ -637,6 +719,12 @@ deathrateDiv_lower[deathrateDiv_lower == 0] <- 1
 
 deathrateDiv_upper <- hivBaseRates$deathrate_upper
 deathrateDiv_upper[deathrateDiv_upper == 0] <- 1 
+
+# Adjustments for sex and key states
+hivAdjustments$drate_male <- sexDrates$males
+hivAdjustments$drate_female <- sexDrates$females
+
+# Adjustments for key states
 
 hivAdjustments$drate_nsw <- hivBaseRates$deathrate 
 hivAdjustments$drate_nsw[(indexLinkage+1):length(deathRate)] <-

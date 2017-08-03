@@ -42,13 +42,12 @@ analysisYear <- 2016
 saveResults <- FALSE 
 
 # Set HIV subsetting function parameters----------------------------------
-
-cascadeName <- paste0("Atsi-", toString(analysisYear)) 
-targetGender <- 'all' #male or female, Null both, add code for including/excluding NA's or missings 
+cascadeName <- paste0("Male-", toString(analysisYear)) 
+targetGender <- 'male' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'all' # all=including n/a, Thailand, Australia, etc.
-targetExposure <- 'all' #msm, unknown, hetero, pwid, otherexp
-targetAtsi <- 'indigenous' # non_indigenous, indigenous
+targetCob <- 'all' # all=including n/a, Thailand, etc.
+targetExposure <- 'all'
+targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
@@ -57,7 +56,7 @@ targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South
 interState <- ifelse(targetState != "all", TRUE, FALSE)
 excludeAborig <- FALSE
 doAge <- FALSE # TRUE for aging calculations
-doRetained <- FALSE # TRUE for appending retained in care
+doRetained <- TRUE # TRUE for appending retained in care
 if (doRetained) {
   # Need to specify years for reatined in care calculations
   # This is simply a proportion based on James McMahon's paper
@@ -162,14 +161,7 @@ annDiagsOrig <- hivSetAll %>%
   mutate(totalnotifications = cumsum(notifications)) %>%
   ungroup() 
 
-# Possibly temporary as this may be generated elsewhere
-overallPropUnique <- ProportionUnique(hivSetAll,
-                                      annDiagsOrig$totalnotifications,
-                                      allYears)
-annPropUnique <- AnnualUnique(annDiagsOrig$notifications,
-                              overallPropUnique) /
-  annDiagsOrig$notifications
-
+# May not need to do this anymore.
 if (excludeAborig) {
   # Set indigenous aside separately to add on later if required
   hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
@@ -350,7 +342,7 @@ if (targetAtsi == "indigenous") {
 if (interState) {
   # Calculate for interregional migration
   pldhivOverall <- LivingDiagnosed(adjustDiags$all,
-                                   annPropUnique, 
+                                   subsetRatesAll$propunique, 
                                    subsetRatesAll$deathrate,
                                    subsetRatesAll$mrate,
                                    subsetRatesAll$propstay) %>%
@@ -358,7 +350,7 @@ if (interState) {
     select(year, everything())
   
   pldhivOverallMin <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  annPropUnique, 
+                                  subsetRatesAll$propunique,  
                                   subsetRatesAll$deathrate_upper,
                                   subsetRatesAll$mrate_upper,
                                   subsetRatesAll$propstay_lower) %>%
@@ -366,7 +358,7 @@ if (interState) {
     select(year, everything())
   
   pldhivOverallMax <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  annPropUnique, 
+                                  subsetRatesAll$propunique,  
                                   subsetRatesAll$deathrate_lower,
                                   subsetRatesAll$mrate_lower,
                                   subsetRatesAll$propstay_upper) %>%
@@ -378,7 +370,7 @@ if (interState) {
   
   # Now do regional migration
   pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
-                               annPropUnique, 
+                               subsetRates$propunique,  
                                subsetRates$deathrate,
                                subsetRates$mrate,
                                subsetRates$propstay, 
@@ -390,7 +382,7 @@ if (interState) {
   
   # Use best estimate overall for min and max
   pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  annPropUnique, 
+                                  subsetRates$propunique,  
                                   subsetRates$deathrate_upper,
                                   subsetRates$mrate_upper,
                                   subsetRates$propstay_lower,
@@ -401,7 +393,7 @@ if (interState) {
     select(year, everything())
   
   pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  annPropUnique, 
+                                  subsetRates$propunique,  
                                   subsetRates$deathrate_lower,
                                   subsetRates$mrate_lower,
                                   subsetRates$propstay_upper,
@@ -416,7 +408,7 @@ if (interState) {
   
   # Now do regional migration
   pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
-                               annPropUnique, 
+                               subsetRates$propunique, 
                                subsetRates$deathrate,
                                subsetRates$mrate,
                                subsetRates$propstay) %>%
@@ -424,7 +416,7 @@ if (interState) {
     select(year, everything())
   
   pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  annPropUnique, 
+                                  subsetRates$propunique,  
                                   subsetRates$deathrate_upper,
                                   subsetRates$mrate_upper,
                                   subsetRates$propstay_lower) %>%
@@ -432,7 +424,7 @@ if (interState) {
     select(year, everything())
   
   pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  annPropUnique, 
+                                  subsetRates$propunique,  
                                   subsetRates$deathrate_lower,
                                   subsetRates$mrate_lower,
                                   subsetRates$propstay_upper) %>%
