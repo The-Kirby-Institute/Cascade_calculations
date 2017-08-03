@@ -431,6 +431,15 @@ ahodData <- read.csv(file.path(dataFolder,
                                paste0("ahod", toString(analysisYear), 
                                      ".csv")))
 
+# Load gender deathrate ratios
+sexDrates <- read_excel(file.path(dataFolder,
+                                  "/HIV_Gender_Deathrates.xlsx"),
+                        sheet = 2) %>%
+  select(1,4,5) %>%
+  rename(year = Year)
+colnames(sexDrates)[2:3] <- c("males", "females")
+  
+
 # Pre-2003 death rates ---------------------------------------------------
 
 # Extract number of known deaths and store in a central data frame
@@ -626,9 +635,9 @@ hivAdjustments$drate_non_indigenous_lower <-
 hivAdjustments$drate_non_indigenous_upper <- 
   nonAborigMortalityFactorUpper / deathrateDiv_upper
 
-# Adjustments for key states
 
-# Because we are dividing remove zeos
+
+# Because we will be dividing remove zeos
 deathrateDiv <- hivBaseRates$deathrate
 deathrateDiv[deathrateDiv == 0] <- 1
 
@@ -637,6 +646,12 @@ deathrateDiv_lower[deathrateDiv_lower == 0] <- 1
 
 deathrateDiv_upper <- hivBaseRates$deathrate_upper
 deathrateDiv_upper[deathrateDiv_upper == 0] <- 1 
+
+# Adjustments for sex and key states
+hivAdjustments$drate_male <- sexDrates$males
+hivAdjustments$drate_female <- sexDrates$females
+
+# Adjustments for key states
 
 hivAdjustments$drate_nsw <- hivBaseRates$deathrate 
 hivAdjustments$drate_nsw[(indexLinkage+1):length(deathRate)] <-
