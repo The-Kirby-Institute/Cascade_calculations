@@ -18,6 +18,17 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
   
   # Now extract and calculate the variables we want
   
+  # Extract proportion notifications unique
+  if (targetGender == "male" | targetExposure == "msm") {
+    adjustments$propunique <-  hivBase$propunique_male
+  } else if (targetGender == "female") {
+    adjustments$propunique <-  hivBase$propunique_female
+  } else if (targetAtsi == "indigenous") {
+    adjustments$propunique <-  1
+  } else {
+    adjustments$propunique <-  hivBase$propunique_all
+  }
+  
   # Extract migration rate
   # First set up base
   if (targetGender == "male" | targetExposure == "msm") {
@@ -61,7 +72,7 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     adjustments$mrate_upper <- adjustments$mrate_upper * mrate
   }
 
-  # Adjust migration rate for location
+  # Adjust migration rate for Indigenous population
   if (targetAtsi == "indigenous") {
     adjustments$mrate <- 0
     adjustments$mrate_lower <- 0
