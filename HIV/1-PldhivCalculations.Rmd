@@ -39,17 +39,17 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- TRUE 
+saveResults <- FALSE 
 
 # Set HIV subsetting function parameters----------------------------------
 
-cascadeName <- paste0("TAS-", toString(analysisYear)) 
+cascadeName <- paste0("Atsi-", toString(analysisYear)) 
 targetGender <- 'all' #male or female, Null both, add code for including/excluding NA's or missings 
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, Australia, etc.
 targetExposure <- 'all' #msm, unknown, hetero, pwid, otherexp
-targetAtsi <- 'all' # non_indigenous, indigenous
-targetState <- 'tas' # nsw, sa, nt, qld, vic, wa, act, tas 
+targetAtsi <- 'indigenous' # non_indigenous, indigenous
+targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
 
@@ -74,7 +74,7 @@ ecdcModel <- cascadeName # name
 if (excludeOS) {
   # If excludeOS don't save the pldhiv estimates as we are only using this
   # for ECDC calculations
-  saveResults <- FALSE
+  saveResults <- TRUE
 }
 
 # Store paramaters for saving
@@ -336,6 +336,11 @@ if (interState) {
                                    targetAtsi, targetLocalRegion,
                                    "all", targetGlobalRegion)  
 }
+
+if (targetAtsi == "indigenous") {
+  annPropUnique[] <- 1
+}
+
 ```
 
 ```{r Calculate PLDHIV}
