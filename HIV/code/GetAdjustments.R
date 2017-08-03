@@ -61,6 +61,13 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     adjustments$mrate_upper <- adjustments$mrate_upper * mrate
   }
 
+  # Adjust migration rate for location
+  if (targetAtsi == "indigenous") {
+    adjustments$mrate <- 0
+    adjustments$mrate_lower <- 0
+    adjustments$mrate_upper <- 0
+  }
+  
   # Adjust interstate migration rate for location
   if (targetState != "all") {
     arriverate <- switch(targetState,
@@ -202,6 +209,12 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     adjustments$deathrate_upper <- adjustments$deathrate_upper * 
       hivAdjustments$drate_vic_upper
     
+  }
+  
+  if (targetAtsi == "indigenous") {
+    adjustments$propstay <- 1
+    adjustments$propstay_lower <- 1
+    adjustments$propstay_upper <- 1
   }
   
   return(adjustments)

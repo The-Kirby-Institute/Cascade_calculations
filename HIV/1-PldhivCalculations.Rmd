@@ -42,7 +42,6 @@ analysisYear <- 2016
 saveResults <- FALSE 
 
 # Set HIV subsetting function parameters----------------------------------
-
 cascadeName <- paste0("Female-", toString(analysisYear)) 
 targetGender <- 'female' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
@@ -51,7 +50,7 @@ targetExposure <- 'all'
 targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'all' #South-east Asia, Oceania, South American, etc
+targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
 
 # Script options for calculations
 interState <- ifelse(targetState != "all", TRUE, FALSE)
@@ -74,7 +73,7 @@ ecdcModel <- cascadeName # name
 if (excludeOS) {
   # If excludeOS don't save the pldhiv estimates as we are only using this
   # for ECDC calculations
-  saveResults <- FALSE
+  saveResults <- TRUE
 }
 
 # Store paramaters for saving
@@ -369,6 +368,11 @@ if (interState) {
                                    targetAtsi, targetLocalRegion,
                                    "all", targetGlobalRegion)  
 }
+
+if (targetAtsi == "indigenous") {
+  annPropUnique[] <- 1
+}
+
 ```
 
 ```{r Calculate PLDHIV}
