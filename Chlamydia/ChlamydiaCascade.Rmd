@@ -41,9 +41,9 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
 resultsYear <- 2015 # year of cascade we will calculate and plot     
-saveCascade <- TRUE                    
-saveplots <- TRUE # Save plots as separate files
-retestRange <- TRUE # Caclulate variations in retested
+saveCascade <- FALSE                    
+saveplots <- FALSE # Save plots as separate files
+retestRange <- FALSE # Caclulate variations in retested
 
 ```
 
