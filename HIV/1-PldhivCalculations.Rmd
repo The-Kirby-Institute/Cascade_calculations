@@ -39,15 +39,15 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- FALSE 
+saveResults <- TRUE 
 
 # Set HIV subsetting function parameters----------------------------------
-cascadeName <- paste0("Male-", toString(analysisYear)) 
-targetGender <- 'male' # all, male, female
+cascadeName <- paste0("MSM-", toString(analysisYear)) 
+targetGender <- 'all' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'all'
-targetAtsi <- 'all' # 0 or 1 # Only used if country is Australia
+targetExposure <- 'msm' #msm, hetero, pwid, otherexp
+targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
@@ -65,7 +65,7 @@ if (doRetained) {
 }
 
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- FALSE
+ecdcData <- TRUE
 ecdcVersion <- '1.2.2'
 excludeOS <- FALSE
 
@@ -275,33 +275,6 @@ if (doAge) {
 
 ```
 
-```{r ECDC Outputs}
-# ECDC calculations-------------------------------------------------------
-if (ecdcData) {
-  if (excludeOS) {
-  # excluding OS diagnosis
-    dataAll <- EcdcFolders(outputFolder, ecdcModel, 
-                                  includeOS = FALSE)
-    EcdcFiles(hivSet, dataAll, propUnique = overallPropUnique)
-  } else {
-    # including OS diagnosis
-    dataAll <- EcdcFolders(outputFolder, ecdcModel)
-    EcdcFiles(hivSet, dataAll, propUnique = overallPropUnique) 
-  }
-
-  # Create output directory
-  resultsEcdcPath <- file.path(outputFolder, "ECDC_models", cascadeName)
-    
-  #save parameters 
-  saveStringParams <- file.path(resultsEcdcPath, "Parameters")
-    
-  # Write to csv
-  write_csv(hivParams, paste0(saveStringParams, ".csv"))
-    
-}
-
-```
-
 ```{r Load base and adjustment estimates}
 # This loads the adjustment files for adjusting the death rates and
 # migration rates  
@@ -329,9 +302,6 @@ if (interState) {
                                    "all", targetGlobalRegion)  
 }
 
-if (targetAtsi == "indigenous") {
-  annPropUnique[] <- 1
-}
 
 ```
 
@@ -433,7 +403,41 @@ if (interState) {
   
 }
 
-# Save deaths and emigrants into ECDC
+# Store results
+hivDiagnosed <- data.frame(stage = "pldhiv",
+                           year = allYears,
+                           population = "all",
+                           value = pldhivAll$pldhiv,
+                           lower = pldhivAllMin$pldhiv,
+                           upper = pldhivAllMax$pldhiv)
+
+
+```
+
+```{r ECDC Outputs}
+# ECDC calculations-------------------------------------------------------
+if (ecdcData) {
+  if (excludeOS) {
+  # excluding OS diagnosis
+    dataAll <- EcdcFolders(outputFolder, ecdcModel, 
+                                  includeOS = FALSE)
+    EcdcFiles(hivSet, dataAll, propUnique = subsetRates$propunique)
+  } else {
+    # including OS diagnosis
+    dataAll <- EcdcFolders(outputFolder, ecdcModel)
+    EcdcFiles(hivSet, dataAll, propUnique = subsetRates$propunique) 
+  }
+
+  # Create output directory
+  resultsEcdcPath <- file.path(outputFolder, "ECDC_models", cascadeName)
+    
+  #save parameters 
+  saveStringParams <- file.path(resultsEcdcPath, "Parameters")
+    
+  # Write to csv
+  write_csv(hivParams, paste0(saveStringParams, ".csv"))
+   
+  # Save deaths and emigrants into ECDC
 if (ecdcData) {
   # All deaths
   deaths <- pldhivAll %>%
@@ -504,15 +508,8 @@ if (ecdcData) {
   
   EcdcWrite(expEmig, dataAll[[2]], "emigrants")
 }
-
-# Store results
-hivDiagnosed <- data.frame(stage = "pldhiv",
-                           year = allYears,
-                           population = "all",
-                           value = pldhivAll$pldhiv,
-                           lower = pldhivAllMin$pldhiv,
-                           upper = pldhivAllMax$pldhiv)
-
+ 
+}
 
 ```
 

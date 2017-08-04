@@ -446,7 +446,7 @@ aborigDiags <- hivResults$totalnotifications *
 
 nonAborigMigrationFactor <- hivResults$totalnotifications / nonAborigDiags
 
-hivAdjustments$pstay_indigenous <- 0
+hivAdjustments$pstay_indigenous <- 1
 hivAdjustments$pstay_non_indigenous <- nonAborigMigrationFactor
 
 # Specific NSW estimates
@@ -506,7 +506,7 @@ ahodData <- read.csv(file.path(dataFolder,
 
 # Load gender deathrate ratios
 sexDrates <- read_excel(file.path(dataFolder,
-                                  "/HIV_Gender_Deathrates.xlsx"),
+                                  "HIV_Gender_Deathrates.xlsx"),
                         sheet = 2) %>%
   select(1,4,5) %>%
   rename(year = Year)
@@ -721,6 +721,7 @@ deathrateDiv_upper <- hivBaseRates$deathrate_upper
 deathrateDiv_upper[deathrateDiv_upper == 0] <- 1 
 
 # Adjustments for sex and key states
+sexDrates <- na.omit(sexDrates)
 hivAdjustments$drate_male <- sexDrates$males
 hivAdjustments$drate_female <- sexDrates$females
 
