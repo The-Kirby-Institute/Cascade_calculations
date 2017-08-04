@@ -42,8 +42,8 @@ analysisYear <- 2016
 saveResults <- TRUE 
 
 # Set HIV subsetting function parameters----------------------------------
-cascadeName <- paste0("TAS-", toString(analysisYear)) 
-targetGender <- 'all' # all, male, female
+cascadeName <- paste0("Female-", toString(analysisYear)) 
+targetGender <- 'female' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
 targetExposure <- 'all' #msm, hetero, pwid, otherexp
@@ -312,7 +312,7 @@ if (interState) {
 if (interState) {
   # Calculate for interregional migration
   pldhivOverall <- LivingDiagnosed(adjustDiags$all,
-                                   subsetRatesAll$propunique, 
+                                   subsetRates$annunique, 
                                    subsetRatesAll$deathrate,
                                    subsetRatesAll$mrate,
                                    subsetRatesAll$propstay) %>%
@@ -320,7 +320,7 @@ if (interState) {
     select(year, everything())
   
   pldhivOverallMin <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  subsetRatesAll$propunique,  
+                                  subsetRates$annunique,  
                                   subsetRatesAll$deathrate_upper,
                                   subsetRatesAll$mrate_upper,
                                   subsetRatesAll$propstay_lower) %>%
@@ -328,7 +328,7 @@ if (interState) {
     select(year, everything())
   
   pldhivOverallMax <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  subsetRatesAll$propunique,  
+                                  subsetRates$annunique,  
                                   subsetRatesAll$deathrate_lower,
                                   subsetRatesAll$mrate_lower,
                                   subsetRatesAll$propstay_upper) %>%
@@ -340,7 +340,7 @@ if (interState) {
   
   # Now do regional migration
   pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
-                               subsetRates$propunique,  
+                               subsetRates$annunique,  
                                subsetRates$deathrate,
                                subsetRates$mrate,
                                subsetRates$propstay, 
@@ -352,7 +352,7 @@ if (interState) {
   
   # Use best estimate overall for min and max
   pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  subsetRates$propunique,  
+                                  subsetRates$annunique,  
                                   subsetRates$deathrate_upper,
                                   subsetRates$mrate_upper,
                                   subsetRates$propstay_lower,
@@ -363,7 +363,7 @@ if (interState) {
     select(year, everything())
   
   pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  subsetRates$propunique,  
+                                  subsetRates$annunique,  
                                   subsetRates$deathrate_lower,
                                   subsetRates$mrate_lower,
                                   subsetRates$propstay_upper,
@@ -378,7 +378,7 @@ if (interState) {
   
   # Now do regional migration
   pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
-                               subsetRates$propunique, 
+                               subsetRates$annunique, 
                                subsetRates$deathrate,
                                subsetRates$mrate,
                                subsetRates$propstay) %>%
@@ -386,7 +386,7 @@ if (interState) {
     select(year, everything())
   
   pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  subsetRates$propunique,  
+                                  subsetRates$annunique,  
                                   subsetRates$deathrate_upper,
                                   subsetRates$mrate_upper,
                                   subsetRates$propstay_lower) %>%
@@ -394,7 +394,7 @@ if (interState) {
     select(year, everything())
   
   pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  subsetRates$propunique,  
+                                  subsetRates$annunique,  
                                   subsetRates$deathrate_lower,
                                   subsetRates$mrate_lower,
                                   subsetRates$propstay_upper) %>%
@@ -418,27 +418,27 @@ hivDiagnosed <- data.frame(stage = "pldhiv",
 # ECDC calculations-------------------------------------------------------
 if (ecdcData) {
   if (excludeOS) {
-  # excluding OS diagnosis
+    # excluding OS diagnosis
     dataAll <- EcdcFolders(outputFolder, ecdcModel, 
-                                  includeOS = FALSE)
-    EcdcFiles(hivSet, dataAll, propUnique = subsetRates$propunique)
+                           includeOS = FALSE)
+    EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique)
   } else {
     # including OS diagnosis
     dataAll <- EcdcFolders(outputFolder, ecdcModel)
-    EcdcFiles(hivSet, dataAll, propUnique = subsetRates$propunique) 
+    EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique) 
   }
-
+  
   # Create output directory
   resultsEcdcPath <- file.path(outputFolder, "ECDC_models", cascadeName)
-    
+  
   #save parameters 
   saveStringParams <- file.path(resultsEcdcPath, "Parameters")
-    
+  
   # Write to csv
   write_csv(hivParams, paste0(saveStringParams, ".csv"))
-   
+  
   # Save deaths and emigrants into ECDC
-if (ecdcData) {
+  
   # All deaths
   deaths <- pldhivAll %>%
     select(year, deaths) %>%
@@ -507,8 +507,7 @@ if (ecdcData) {
     matrix(rep(emigrants$all, 4), ncol = 4)
   
   EcdcWrite(expEmig, dataAll[[2]], "emigrants")
-}
- 
+
 }
 
 ```

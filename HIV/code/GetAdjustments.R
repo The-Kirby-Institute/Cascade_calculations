@@ -20,13 +20,17 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
   
   # Extract proportion notifications unique
   if (targetGender == "male" | targetExposure == "msm") {
-    adjustments$propunique <-  hivBase$propunique_male
+    adjustments$cumunique <-  hivBase$cumunique_male
+    adjustments$annunique <-  hivBase$annunique_male
   } else if (targetGender == "female") {
-    adjustments$propunique <-  hivBase$propunique_female
+    adjustments$cumunique <-  hivBase$cumunique_female
+    adjustments$annunique <-  hivBase$annunique_female
   } else if (targetAtsi == "indigenous") {
-    adjustments$propunique <-  1
+    adjustments$cumunique <-  1
+    adjustments$annunique <-  1
   } else {
-    adjustments$propunique <-  hivBase$propunique_all
+    adjustments$cumunique <-  hivBase$cumunique_all
+    adjustments$annunique <-  hivBase$annunique_all
   }
   
   # Extract migration rate

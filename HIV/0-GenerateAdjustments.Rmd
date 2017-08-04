@@ -283,8 +283,9 @@ overallPropUnique <- ProportionUnique(duplicateSet,
 annPropUnique <- AnnualUnique(duplicateNotifications$notifications,
                               overallPropUnique) /
   duplicateNotifications$notifications
-annPropUnique[is.nan(annPropUnique)] <- 0 # replace infinite numbers  
-hivBaseRates$propunique_female <- annPropUnique
+annPropUnique[is.nan(annPropUnique)] <- 0 # replace infinite numbers 
+hivBaseRates$cumunique_female <- overallPropUnique
+hivBaseRates$annunique_female <- annPropUnique
   
 # Males or MSM  
 duplicateSet <- hivSet %>%
@@ -305,7 +306,8 @@ annPropUnique <- AnnualUnique(duplicateNotifications$notifications,
                               overallPropUnique) /
   duplicateNotifications$notifications
 annPropUnique[is.nan(annPropUnique)] <- 0 # replace infinite numbers  
-hivBaseRates$propunique_male <- annPropUnique
+hivBaseRates$cumunique_male <- overallPropUnique
+hivBaseRates$annunique_male <- annPropUnique
 
 #All
 duplicateSet <- hivSet
@@ -319,7 +321,8 @@ annPropUnique <- AnnualUnique(duplicateNotifications$notifications,
                               overallPropUnique) /
   duplicateNotifications$notifications
 annPropUnique[is.nan(annPropUnique)] <- 0 # replace infinite numbers  
-hivBaseRates$propunique_all <- annPropUnique
+hivBaseRates$cumunique_all <- overallPropUnique
+hivBaseRates$annunique_all <- annPropUnique
 
 # # Assume all indigenous notifications are unique
 # hivBaseRates$propunique_indigenous <- 1
