@@ -39,16 +39,16 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- TRUE 
+saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
-cascadeName <- paste0("Female-", toString(analysisYear)) 
-targetGender <- 'female' # all, male, female
+cascadeName <- paste0("Otherexp-", toString(analysisYear)) 
+targetGender <- 'all' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'all' #msm, hetero, pwid, otherexp
+targetExposure <- 'otherexp' #msm, hetero, pwid, otherexp
 targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
-targetState <- 'tas' # nsw, sa, nt, qld, vic, wa, act, tas 
+targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
 
