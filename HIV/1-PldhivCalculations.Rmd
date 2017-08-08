@@ -42,19 +42,19 @@ analysisYear <- 2016
 saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
-cascadeName <- paste0("Otherexp-", toString(analysisYear)) 
+cascadeName <- paste0("Othercob-", toString(analysisYear)) 
 targetGender <- 'all' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'otherexp' #msm, hetero, pwid, otherexp
+targetExposure <- 'all' #msm, hetero, pwid, otherexp
 targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
-targetState <- 'nsw' # nsw, sa, nt, qld, vic, wa, act, tas 
+targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
+targetGlobalRegion <- 'Other cob' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
 
 # Script options for calculations
 interState <- ifelse(targetState != "all", TRUE, FALSE)
-excludeAborig <- FALSE
+excludeAborig <- TRUE
 doAge <- FALSE # TRUE for aging calculations
 doRetained <- TRUE # TRUE for appending retained in care
 if (doRetained) {
@@ -522,9 +522,9 @@ if (doRetained) {
   # to the range for the percentage retained after follow-up in McMahon 
   # et al., Clinic Network Collaboration and Patient Tracing to Maximize 
   # Retention in HIV Care, PLOS One, May 26, 2015.
-  hivParams <- read.csv(file.path(dataFolder, 
+  hivParameters <- read.csv(file.path(dataFolder, 
                                 "individualHIVparameters.csv"), as.is = 1)
-  hivParams <- select(hivParams, parameter, value)
+  hivParameters <- select(hivParameters, parameter, value)
   
   for (ii in 1:nrow(hivParams)) {
     assign(hivParams$parameter[ii], hivParams$value[ii])

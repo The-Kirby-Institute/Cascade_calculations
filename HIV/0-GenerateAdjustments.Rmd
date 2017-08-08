@@ -700,16 +700,14 @@ nonAborigMortalityFactorUpper <-
 # TODO: aborigMortality needs to be calculated over time. Also 
 # need to shorten some variable names. 
 hivAdjustments$drate_indigenous <- aborigMortality
-hivAdjustments$drate_indigenous_lower <- aborigMortalityMin / 
-  deathrateDiv_lower
-hivAdjustments$drate_indigenous_upper <- aborigMortalityMax /
-  deathrateDiv_upper
+hivAdjustments$drate_indigenous_lower <- aborigMortalityMin 
+hivAdjustments$drate_indigenous_upper <- aborigMortalityMax 
 
 hivAdjustments$drate_non_indigenous <- nonAborigMortalityFactor
 hivAdjustments$drate_non_indigenous_lower <- 
-  nonAborigMortalityFactorLower / deathrateDiv_lower
+  nonAborigMortalityFactorLower 
 hivAdjustments$drate_non_indigenous_upper <- 
-  nonAborigMortalityFactorUpper / deathrateDiv_upper
+  nonAborigMortalityFactorUpper 
 
 
 

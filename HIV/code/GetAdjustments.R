@@ -163,12 +163,9 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     adjustments$deathrate_upper <- hivBase$deathrate_upper * 
       hivAdjustments$drate_indigenous_upper
     
-    adjustments$propstay <- hivBase$propstay * 
-      hivAdjustments$pstay_indigenous
-    adjustments$propstay_lower <- hivBase$propstay_lower * 
-      hivAdjustments$pstay_indigenous
-    adjustments$propstay_upper <- hivBase$propstay_upper *
-      hivAdjustments$pstay_indigenous
+    adjustments$propstay <- 1
+    adjustments$propstay_lower <- 1
+    adjustments$propstay_upper <- 1
   }
   
   # Adjust deathrates for males and females
@@ -226,11 +223,11 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     
   }
   
-  if (targetAtsi == "indigenous") {
-    adjustments$propstay <- 1
-    adjustments$propstay_lower <- 1
-    adjustments$propstay_upper <- 1
-  }
+  # if (targetAtsi == "indigenous") {
+  #   adjustments$propstay <- 1
+  #   adjustments$propstay_lower <- 1
+  #   adjustments$propstay_upper <- 1
+  # }
   
   return(adjustments)
   

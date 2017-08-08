@@ -36,21 +36,43 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
 saveResults <- TRUE 
-cascadeFlag <- "Female"
-ecdcChart <- "All" # ECDC group used for calculations
-
-if (cascadeFlag %in% c("msm", "hetero", "otherexp", "pwid", "non-msm")) {
-  ecdcChart <- cascadeFlag
-  cascadeFolder <- "All"
-} else {
-  cascadeFolder <- cascadeFlag
-}
+cascadeFlag <- "AusNonAtsi"
+# ecdcChart <- "Female" # ECDC group used for calculations
+ecdcResults <- "exposure"
+updateECDC <- FALSE
 
 # Produce cascadeName from the flag and analysis year. 
-cascadeName <- paste0(cascadeFolder, "-", toString(analysisYear))
-ecdcChart <- paste0(ecdcChart, "_Charts.xlsx")
+cascadeName <- paste0(cascadeFlag, "-", toString(analysisYear))
+ecdcChart <- paste0(cascadeFlag, "_Charts.xlsx")
 
 ```
+
+```{r Copy ECDC output}
+# This chunk copies the appropriate ECDC file to the appropriate output 
+# file and renames the file.
+# Unfortunately have to manually open file and unhide rows. 
+
+if (cascadeFlag == "OtherExp") {
+  # Use overall undiagnosed
+  ecdcFile <- file.path(outputFolder, "ECDC_models", paste0("All-",
+    toString(analysisYear)), ecdcResults, "results/All_Charts.xlsx")
+} else {
+  ecdcFile <- file.path(outputFolder, "ECDC_models", cascadeName, 
+                      ecdcResults, "results/All_Charts.xlsx")
+}
+
+finalFile <- file.path(outputFolder, cascadeName, ecdcChart)
+
+fileFlag <- FALSE
+
+if (!file.exists(finalFile) || updateECDC) {
+  file.copy(ecdcFile, finalFile)
+  fileFlag <- TRUE
+  stop("You need to unhide hidden rows otherwise results are incorrect")
+} # else it exists so you can carry on
+  
+```
+
 
 ```{r Load data}
 # Chunk to load the PLDHIV estimates and ECDC undiagnosed estimates. 
@@ -95,23 +117,30 @@ population <- as.character(pldhiv$population[1])
 
 
 ```{r Undiagnosed calculations}
-# This chunk produces the final calcaultions
-plhiv <- mergedData %>%
-  mutate(pnumber = pldhiv/(1 - percent / 100) - pldhiv,
-         pnumber_lower = pldhiv_lower/(1 - percent_lower / 100) -
-           pldhiv_lower,
-         pnumber_upper = pldhiv_upper/(1 - percent_upper / 100) -
-           pldhiv_upper) %>%
-  group_by(year) %>%
-  mutate(undiag = (pnumber + undiagnosed)/2,
-         undiag_lower = min(pnumber_lower, undiagnosed_lower),
-         undiag_upper = max(pnumber_upper, undiagnosed_upper)) %>%
-  mutate(plhiv = undiag + pldhiv,
-         plhiv_lower = undiag_lower + pldhiv_lower,
-         plhiv_upper = undiag_upper + pldhiv_upper) %>%
-  mutate(undiag_percent = undiag/plhiv,
-         uplower = undiag_lower/plhiv_upper,
-         upupper = undiag_upper/plhiv_lower) 
+# This chunk produces the final calculations
+if (cascadeFlag == "OtherExp") {
+  plhiv <- mergedData %>%
+    mutate(plhiv = pldhiv/(1 - percent / 100),
+           plhiv_lower = pldhiv_lower/(1 - percent_lower / 100),
+           plhiv_upper = pldhiv_upper/(1 - percent_upper / 100))
+} else {
+  plhiv <- mergedData %>%
+    mutate(pnumber = pldhiv/(1 - percent / 100) - pldhiv,
+           pnumber_lower = pldhiv_lower/(1 - percent_lower / 100) -
+             pldhiv_lower,
+           pnumber_upper = pldhiv_upper/(1 - percent_upper / 100) -
+             pldhiv_upper) %>%
+    group_by(year) %>%
+    mutate(undiag = (pnumber + undiagnosed)/2,
+           undiag_lower = min(pnumber_lower, undiagnosed_lower),
+           undiag_upper = max(pnumber_upper, undiagnosed_upper)) %>%
+    mutate(plhiv = undiag + pldhiv,
+           plhiv_lower = undiag_lower + pldhiv_lower,
+           plhiv_upper = undiag_upper + pldhiv_upper) %>%
+    mutate(undiag_percent = 100 * undiag/plhiv,
+           uplower = 100 * undiag_lower/plhiv_lower,
+           upupper = 100 * undiag_upper/plhiv_upper) 
+}
 
 # Extract cascade results
 plhivResults <- plhiv %>% 
@@ -125,12 +154,23 @@ plhivResults <- plhiv %>%
 
 # Save results
 if (saveResults) {
- # Save
+ # Save cascade estimates
   saveStringPlhiv <- file.path(outputFolder, cascadeName, 
     paste0("HIVpositiveEstimates-", toString(analysisYear)))
   
   # Write to csv
   write_csv(plhivResults, paste0(saveStringPlhiv, ".csv")) 
   
+  # Save plhiv
+  saveStringUndiagnosed <- file.path(outputFolder, cascadeName, 
+    paste0("plhivEstimates-", toString(analysisYear)))
+  
+  # Write to csv
+  write_csv(plhiv, paste0(saveStringUndiagnosed, ".csv"))
+  
 }
+
+if (fileFlag) {
+  stop("You need to unhide hidden rows otherwise results are incorrect")
+} 
 ```

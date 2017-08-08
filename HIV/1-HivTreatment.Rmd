@@ -189,15 +189,41 @@ if (addTempRes) {
     # Use percentage Medicare ineligible to inflate past treatment
     # estimates
     
-    endTempRes <- tail(tempResArt$value, 1)   
+    endTempRes <- tail(tempResArt$value, 1)  
+    endTempResMin <- tail(tempResArt$lower, 1)
+    endTempResMax <- tail(tempResArt$upper, 1)
+    
     endAll <- tail(filter(hivTreated, population == "all")$value, 1)
+    endLower <- tail(filter(hivTreated, population == "all")$lower, 1)
+    endUpper <- tail(filter(hivTreated, population == "all")$upper, 1)
     
     tempResPropAll <- endTempRes/(endTempRes + endAll)
+    tempResPropMin <- endTempResMin/(endTempResMin + endLower)
+    tempResPropMax <- endTempResMax/(endTempResMax + endUpper)
     
+    # Gender
     atrasMale <- 133/180
     atrasFemale <- 47/180
     
+    # States
+  
+    # Do adjustments
+    pops <- c("act", "all", "female", "male", "nsw", "nt", "qld", "sa", "tas",
+              "vic", "wa")
+    treatFactor <- c(1, 1, atrasFemale, atrasMale, 1, 1, 1, 1, 1, 1, 1)
     
+    for (pop in pops) {
+      tempTreated <- filter(hivTreated, population == pop)
+      
+      tempEnd <- tail(tempTreated$value, 1)
+      tempEndLower <- tail(tempTreated$lower, 1)
+      tempEndUpper <- tail(tempTreated$upper, 1)
+      
+      tempProp <- endTempRes/(endTempRes + tempEnd)
+      tempPropMin <- endTempResMin/(endTempResMin + tempEnd)
+      tempPropMax <- endTempResMax/(endTempResMax + tempEnd)
+      
+    }
     
     
     
