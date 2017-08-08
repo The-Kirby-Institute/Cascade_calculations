@@ -72,6 +72,7 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   }
   
   if(fState != 'all'){
+    unknownframe <- filter(unknownframe, state == 'Not Reported')
     unknownframe <- bind_rows(unknownframe, filter(includeframe, 
                                                    is.na(state)))
     excludeframe <- bind_rows(excludeframe, filter(includeframe, 

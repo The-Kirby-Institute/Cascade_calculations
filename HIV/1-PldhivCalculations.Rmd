@@ -48,7 +48,7 @@ targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'non-australia' # all=including n/a, Thailand, non-australia, etc.
 targetExposure <- 'all' #msm, hetero, pwid, otherexp
 targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
-targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
+targetState <- 'nsw' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
 
@@ -65,7 +65,7 @@ if (doRetained) {
 }
 
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- TRUE
+ecdcData <- FALSE
 ecdcVersion <- '1.2.2'
 excludeOS <- FALSE
 
@@ -319,7 +319,7 @@ if (interState) {
     mutate(year = allYears) %>%
     select(year, everything())
   
-  pldhivOverallMin <- LivingDiagnosed(adjustDiags$adjusted_included,
+  pldhivOverallMin <- LivingDiagnosed(adjustDiags$all,
                                   subsetRates$annunique,  
                                   subsetRatesAll$deathrate_upper,
                                   subsetRatesAll$mrate_upper,
@@ -327,7 +327,7 @@ if (interState) {
     mutate(year = allYears) %>%
     select(year, everything())
   
-  pldhivOverallMax <- LivingDiagnosed(adjustDiags$adjusted_included,
+  pldhivOverallMax <- LivingDiagnosed(adjustDiags$all,
                                   subsetRates$annunique,  
                                   subsetRatesAll$deathrate_lower,
                                   subsetRatesAll$mrate_lower,
