@@ -175,7 +175,6 @@ hivSetReturn <- SubHivSet(hivSetAll, targetAge, targetGender,
 hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
-# hivSetUnknown <- data.frame()
 
 ```
 
