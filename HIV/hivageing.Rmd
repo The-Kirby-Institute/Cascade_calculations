@@ -82,7 +82,7 @@ LoadLibrary(gridExtra)
 
 # Primary script parameters
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to saved files
-analysisYear <- 2015
+analysisYear <- 2016
 
 # Script options
 region <- "all"
@@ -98,27 +98,22 @@ plotGray <- FALSE # Use grayscale or colour in plots
 
 ```{r loaddresults, echo = FALSE, messages = FALSE, include=FALSE}
 # Load the previously saved hiv notifications data frame - hivSet
-load(file.path(resultsFolder, paste("HIVset-",
-                                    toString(analysisYear), ".rda", 
-                                    sep = "")))
+hivSet <- read.csv(file.path(resultsFolder, paste("HIVset-",  toString(analysisYear), ".csv", sep = "")), header=TRUE, sep=",")
 
 # Load the previously saved hivresults data frame - hivResults
-load(file.path(resultsFolder, paste("HIVresults-",
-                                    toString(analysisYear), ".rda", 
-                                    sep = "")))
+hivResults <- read.csv(file.path(resultsFolder, paste("HIVresults-",  toString(analysisYear), ".csv", sep = "")), header=TRUE, sep=",")
+
 
 # Load the previously saved hivrGender data frame - hivGender
-load(file.path(resultsFolder, paste("HIVresults-",
-                                    toString(analysisYear), "_gender.rda",
-                                    sep = "")))
+hivGender <- read.csv(file.path(resultsFolder, paste("HIVgender-",  toString(analysisYear), ".csv", sep = "")), header=TRUE, sep=",")
+
+hivDiagGender <- read.csv(file.path(resultsFolder, paste("HIVdiagGender-",  toString(analysisYear), ".csv", sep = "")), header=TRUE, sep=",")
 
 # Load current hiv cascade - hivCascade
-load(file.path(resultsFolder, paste("HIVcascadeEstimates-",
-                                    toString(analysisYear), ".rda", sep = "")))
+hivCascade <- read.csv(file.path(resultsFolder, paste("HIVcascade-",  toString(analysisYear), ".csv", sep = "")), header=TRUE, sep=",")
 
 # Load current hiv cascade - hivCascade
-load(file.path(resultsFolder, paste("HIVInterstateEstimates-",
-                                    toString(analysisYear), ".rda", sep = "")))
+hivInterstate <- read.csv(file.path(resultsFolder, paste("HIVinterstateEstimates-",  toString(analysisYear), ".csv", sep = "")), header=TRUE, sep=",")
 
 # Extract PLDHIV for overall population to 
 pldhivAll <- hivCascade %>%
@@ -447,9 +442,7 @@ unknownDeathsFemale <- estimateDeathsFemale - colSums(ageDeathFemale)
 # each group - (TODO): May replace with AHOD death rates if available
 
 # Load deathrates data from ABS for 2014
-absFolder <- file.path(path.expand("~"), "Research",
-                       "!Evaluation_Modelling", "data")
-absDeathRates <- read.csv(file.path(absFolder, 
+absDeathRates <- read.csv(file.path(dataFolder, 
                                     "ABS_Deathrate_Age_State_clean-2014.csv", 
                                     sep =""), as.is = c(1,2))
 

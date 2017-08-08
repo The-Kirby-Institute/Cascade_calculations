@@ -91,10 +91,15 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
       excludeframe <- bind_rows(excludeframe, 
                                 filter(includeframe, 
                                        globalregion == "Sub-Saharan Africa"))
+      excludeframe <- bind_rows(excludeframe, 
+                                filter(includeframe, 
+                                       globalregion == "Australia"))
       includeframe <- filter(includeframe, 
                              globalregion != "South-East Asia")
       includeframe <- filter(includeframe, 
                              globalregion != "Sub-Saharan Africa")
+      includeframe <- filter(includeframe, 
+                             globalregion != "Australia")
     }else{
       excludeframe <- bind_rows(excludeframe, 
                                 filter(includeframe, 
