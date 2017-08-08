@@ -36,7 +36,8 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 yearStr <- toString(analysisYear)
 
 # The treatment file is the same for all cascades
-artFile <- file.path(outputFolder, paste0("HIVtreatment-", yearStr, ".csv"))
+artFile <- file.path(outputFolder, paste0("HIVtreatment-", 
+                                          yearStr, ".csv"))
 
 artSuppression <- read_csv(artFile) %>%
   select(stage, everything())

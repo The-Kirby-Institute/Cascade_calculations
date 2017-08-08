@@ -36,12 +36,12 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
 saveResults <- TRUE 
-cascadeFlag <- "Female"
+cascadeFlag <- "NSW"
 ecdcChart <- "All" # ECDC group used for calculations
 
 if (cascadeFlag %in% c("msm", "hetero", "otherexp", "pwid", "non-msm")) {
   ecdcChart <- cascadeFlag
-  cascadeFolder <- "all"
+  cascadeFolder <- "All"
 } else {
   cascadeFolder <- cascadeFlag
 }

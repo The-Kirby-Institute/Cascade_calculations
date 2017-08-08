@@ -236,7 +236,7 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
       summarise(diags = n()) %>%
       ungroup() %>%
       spread(cd4London, diags) %>%
-      mutate(total = apply(select(., 2:6), 1, sum)) %>%
+      mutate(total = apply(select(., 2:10), 1, sum)) %>%
       rename(year = yeardiagnosis)
   } else {
     # First filter out concurrent aids cases

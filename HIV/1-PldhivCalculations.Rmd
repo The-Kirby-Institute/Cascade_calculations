@@ -39,16 +39,16 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- TRUE 
+saveResults <- FALSE 
 
 # Set HIV subsetting function parameters----------------------------------
-cascadeName <- paste0("Female-", toString(analysisYear)) 
-targetGender <- 'female' # all, male, female
+cascadeName <- paste0("NSW-", toString(analysisYear)) 
+targetGender <- 'all' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
 targetCob <- 'all' # all=including n/a, Thailand, etc.
 targetExposure <- 'all' #msm, hetero, pwid, otherexp
 targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
-targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
+targetState <- 'nsw' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
 targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
 
@@ -65,7 +65,7 @@ if (doRetained) {
 }
 
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- TRUE
+ecdcData <- FALSE
 ecdcVersion <- '1.2.2'
 excludeOS <- FALSE
 
@@ -175,6 +175,7 @@ hivSetReturn <- SubHivSet(hivSetAll, targetAge, targetGender,
 hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
+# hivSetUnknown <- data.frame()
 
 ```
 
@@ -319,7 +320,7 @@ if (interState) {
     mutate(year = allYears) %>%
     select(year, everything())
   
-  pldhivOverallMin <- LivingDiagnosed(adjustDiags$adjusted_included,
+  pldhivOverallMin <- LivingDiagnosed(adjustDiags$all,
                                   subsetRates$annunique,  
                                   subsetRatesAll$deathrate_upper,
                                   subsetRatesAll$mrate_upper,
@@ -327,7 +328,7 @@ if (interState) {
     mutate(year = allYears) %>%
     select(year, everything())
   
-  pldhivOverallMax <- LivingDiagnosed(adjustDiags$adjusted_included,
+  pldhivOverallMax <- LivingDiagnosed(adjustDiags$all,
                                   subsetRates$annunique,  
                                   subsetRatesAll$deathrate_lower,
                                   subsetRatesAll$mrate_lower,
