@@ -65,7 +65,7 @@ if (doRetained) {
 }
 
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- FALSE
+ecdcData <- TRUE
 ecdcVersion <- '1.2.2'
 excludeOS <- FALSE
 

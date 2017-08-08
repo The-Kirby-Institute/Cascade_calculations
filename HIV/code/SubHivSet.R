@@ -55,8 +55,8 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
       includeframe <- filter(includeframe, cob != 'Australia') #get only non-Australians
     }else{
       excludeframe <- filter(includeframe, cob != fCob)
-      excludeframe <- filter(excludeframe, cob != 'Not Reported')
-      excludeframe <- filter(excludeframe, !is.na(cob))
+      #excludeframe <- filter(excludeframe, cob != 'Not Reported')
+      #excludeframe <- filter(excludeframe, !is.na(cob))
       includeframe <- filter(includeframe, cob == fCob)
     }
   }
@@ -82,6 +82,8 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   
   if(fGlobalRegion != 'all'){
     unknownframe <- filter(unknownframe, globalregion == 'Not Reported')
+    unknownframe <- filter(unknownframe, globalregion == 'Not Known')
+    unknownframe <- filter(unknownframe, cob == 'Not Reported')    
     unknownframe <- bind_rows(unknownframe, filter(includeframe, 
                                                    is.na(globalregion)))
     if(fGlobalRegion=="Other cob"){
@@ -91,10 +93,20 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
       excludeframe <- bind_rows(excludeframe, 
                                 filter(includeframe, 
                                        globalregion == "Sub-Saharan Africa"))
+      excludeframe <- bind_rows(excludeframe, 
+                                filter(includeframe, 
+                                       cob == "Australia"))
+      includeframe <- filter(includeframe, cob!='Not Reported') #remove all missing cob
+      includeframe <- filter(includeframe, !is.na(cob)) #remove all missing cob
+      includeframe <- filter(includeframe, globalregion!='Not Reported') #remove all missing globalregion
+      includeframe <- filter(includeframe, globalregion!='Not Known') #remove all missing globalregion
+      includeframe <- filter(includeframe, !is.na(globalregion)) #remove all missing globalregion
       includeframe <- filter(includeframe, 
                              globalregion != "South-East Asia")
       includeframe <- filter(includeframe, 
                              globalregion != "Sub-Saharan Africa")
+      includeframe <- filter(includeframe, 
+                             cob != "Australia")
     }else{
       excludeframe <- bind_rows(excludeframe, 
                                 filter(includeframe, 
