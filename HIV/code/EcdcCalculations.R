@@ -235,8 +235,20 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
       group_by(yeardiagnosis, cd4London) %>%
       summarise(diags = n()) %>%
       ungroup() %>%
-      spread(cd4London, diags) %>%
-      mutate(total = apply(select(., 2:10), 1, sum)) %>%
+      spread(cd4London, diags)
+      
+    if (!("cl20" %in% names(cd4DiagsAll))) cd4DiagsAll$cl20 <- 0
+    if (!("c20_49" %in% names(cd4DiagsAll))) cd4DiagsAll$c20_49 <- 0
+    if (!("c50_99" %in% names(cd4DiagsAll))) cd4DiagsAll$c50_99 <- 0
+    if (!("c100_149" %in% names(cd4DiagsAll))) cd4DiagsAll$c100_149 <- 0
+    if (!("c150_199" %in% names(cd4DiagsAll))) cd4DiagsAll$c150_199 <- 0
+    if (!("c200_249" %in% names(cd4DiagsAll))) cd4DiagsAll$c200_249 <- 0
+    if (!("c250_299" %in% names(cd4DiagsAll))) cd4DiagsAll$c250_299 <- 0
+    if (!("c300_349" %in% names(cd4DiagsAll))) cd4DiagsAll$c300_349 <- 0
+    if (!("cg350" %in% names(cd4DiagsAll))) cd4DiagsAll$cg350 <- 0
+    if (!("not_reported" %in% names(cd4DiagsAll))) cd4DiagsAll$not_reported <- 0
+      
+    cd4DiagsAll <- cd4DiagsAll %>% mutate(total = apply(select(., 2:10), 1, sum)) %>%
       rename(year = yeardiagnosis)
   } else {
     # First filter out concurrent aids cases
@@ -288,6 +300,9 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
   if (!is.null(adjustUnique)) {
     cd4Diags$all <- AnnualUnique(cd4Diags$all, adjustUnique)
   }
+  
+  #remove rows with all NAs
+  cd4Diags <- cd4Diags[rowSums(is.na(cd4Diags)) != ncol(cd4Diags),]  #remove NA rows
   
   return(cd4Diags)
   
@@ -374,6 +389,9 @@ cd4Exposure <- function(hivData, cd4binGroup,
     cd4ExpBin$pwid <- AnnualUnique(cd4ExpBin$pwid , adjustUnique)
     cd4ExpBin$otherexp <- AnnualUnique(cd4ExpBin$otherexp , adjustUnique)
   }
+  
+  #remove rows with all NAs
+  cd4ExpBin <- cd4ExpBin[rowSums(is.na(cd4ExpBin)) != ncol(cd4ExpBin),]
   
   return(cd4ExpBin)
   
