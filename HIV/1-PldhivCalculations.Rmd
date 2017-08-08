@@ -39,18 +39,18 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- TRUE
+saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
 cascadeName <- paste0("Othercob-", toString(analysisYear)) 
 targetGender <- 'all' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'all' # all=including n/a, Thailand, etc.
+targetCob <- 'Australia' # all=including n/a, Thailand, etc.
 targetExposure <- 'all' #msm, hetero, pwid, otherexp
 targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'Other cob' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
+targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
 
 # Script options for calculations
 interState <- ifelse(targetState != "all", TRUE, FALSE)
@@ -65,7 +65,7 @@ if (doRetained) {
 }
 
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- TRUE
+ecdcData <- FALSE
 ecdcVersion <- '1.2.2'
 excludeOS <- FALSE
 

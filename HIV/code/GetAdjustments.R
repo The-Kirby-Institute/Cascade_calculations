@@ -81,6 +81,15 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     adjustments$mrate <- 0
     adjustments$mrate_lower <- 0
     adjustments$mrate_upper <- 0
+  } else if (targetAtsi == "non_indigenous" ||
+                  targetGlobalRegion != "all" ||
+                  targetCob == "Australia") {
+    adjustments$mrate <- adjustments$mrate * 
+      hivAdjustments$non_aborig_migration
+    adjustments$mrate_lower <- adjustments$mrate_lower * 
+      hivAdjustments$non_aborig_migration
+    adjustments$mrate_upper <- adjustments$mrate_upper * 
+      hivAdjustments$non_aborig_migration
   }
   
   # Adjust interstate migration rate for location
@@ -140,7 +149,9 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     adjustments$propstay_lower <- hivBase$propstay_lower
     adjustments$propstay_upper <- hivBase$propstay_upper
     
-  } else if (targetAtsi == "non_indigenous") {
+  } else if (targetAtsi == "non_indigenous" ||
+             targetGlobalRegion != "all" ||
+             targetCob == "Australia") {
     adjustments$deathrate <- hivBase$deathrate * 
       hivAdjustments$drate_non_indigenous
     adjustments$deathrate_lower <- hivBase$deathrate_lower * 
@@ -163,9 +174,9 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     adjustments$deathrate_upper <- hivBase$deathrate_upper * 
       hivAdjustments$drate_indigenous_upper
     
-    adjustments$propstay <- 1
-    adjustments$propstay_lower <- 1
-    adjustments$propstay_upper <- 1
+    adjustments$propstay <- hivAdjustments$pstay_indigenous
+    adjustments$propstay_lower <- hivAdjustments$pstay_indigenous
+    adjustments$propstay_upper <- hivAdjustments$pstay_indigenous
   }
   
   # Adjust deathrates for males and females

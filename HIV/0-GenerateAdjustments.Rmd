@@ -450,7 +450,10 @@ aborigDiags <- hivResults$totalnotifications *
 nonAborigMigrationFactor <- hivResults$totalnotifications / nonAborigDiags
 
 hivAdjustments$pstay_indigenous <- 1
-hivAdjustments$pstay_non_indigenous <- nonAborigMigrationFactor
+hivAdjustments$pstay_non_indigenous <- (1 - (1- hivBaseRates$propstay) * 
+  nonAborigMigrationFactor) / hivBaseRates$propstay
+
+hivAdjustments$non_aborig_migration <- nonAborigMigrationFactor
 
 # Specific NSW estimates
 propAus <- hivCobCum$australia

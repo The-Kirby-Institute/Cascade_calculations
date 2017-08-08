@@ -219,9 +219,13 @@ if (addTempRes) {
       tempEndLower <- tail(tempTreated$lower, 1)
       tempEndUpper <- tail(tempTreated$upper, 1)
       
+      
+      
       tempProp <- endTempRes/(endTempRes + tempEnd)
       tempPropMin <- endTempResMin/(endTempResMin + tempEnd)
       tempPropMax <- endTempResMax/(endTempResMax + tempEnd)
+      
+      
       
     }
     
