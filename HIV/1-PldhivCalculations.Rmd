@@ -42,15 +42,15 @@ analysisYear <- 2016
 saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
-cascadeName <- paste0("CALD-", toString(analysisYear)) 
+cascadeName <- paste0("SouthEastAsia-", toString(analysisYear)) 
 targetGender <- 'all' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'non-australia' # all=including n/a, Thailand, non-australia, etc.
+targetCob <- 'all' # all=including n/a, Thailand, non-australia, etc.
 targetExposure <- 'all' #msm, hetero, pwid, otherexp
 targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
-targetState <- 'nsw' # nsw, sa, nt, qld, vic, wa, act, tas 
+targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
 targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
+targetGlobalRegion <- 'South-East Asia' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
 
 # Script options for calculations
 interState <- ifelse(targetState != "all", TRUE, FALSE)
@@ -65,7 +65,7 @@ if (doRetained) {
 }
 
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- FALSE
+ecdcData <- TRUE
 ecdcVersion <- '1.2.2'
 excludeOS <- FALSE
 
