@@ -34,7 +34,7 @@ dataFolder <- file.path(basePath, "data")
 # Source useful functions
 source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 source(file.path(Rcode, "LoadLibrary.R"), echo = TRUE)
-source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+source(file.path(Rcode, "DataLibraries.R"), echo = TRUE)
 
 # Current time for appending to outputs
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
@@ -215,9 +215,10 @@ if (resultsYear >= 2015) {
   # 15-29 year old population due to missing data in 2015-2016 (from 
   # CT notifications_YEAR_National_Estimate.xlsx)
   
+  notificationsYear <- ifelse(resultsYear == 2015, 2016, resultsYear)
+  
   proportionsFile <- file.path(dataFolder, paste0("CT notifications_",
-                                                  toString(resultsYear),
-                                                  "_National_Estimate.xlsx"))
+    toString(notificationsYear), "_National_Estimate.xlsx"))
   
   vicProportion <- read_excel(proportionsFile, sheet = 2, skip = 23)
 
