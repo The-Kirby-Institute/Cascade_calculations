@@ -274,11 +274,11 @@ if (addTempRes) {
 }
 
 # Replace values with hard coded if necessary
-hardCodeValues <- read.csv(file.path(dataFolder,
-                                     "Hard_coded_estimates.csv"))
+# hardCodeValues <- read.csv(file.path(dataFolder,
+#                                      "Hard_coded_estimates.csv"))
 if (replaceValues) {
   hardCodeValues <- read.csv(file.path(dataFolder,
-                                       "Hard_coded_estimates.csv"))
+                                       "Hard_coded_estimates.csv"), as.is = 1:3)
   tempHardCode <- filter(hardCodeValues, stage == "numART")
   if (nrow(tempHardCode) > 0) {
     hivTreated <- ReplaceEstimates(hivTreated, tempHardCode)

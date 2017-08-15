@@ -1,6 +1,6 @@
 ---
 title: "Australian HIV Cascade"
-author: "Richard T. Gray"
+author: "Richard T. Gray and Neil Bretana"
 date: Latest version - `r format(Sys.Date(), format="%B %d %Y")`
 output:
   word_document:
@@ -55,10 +55,10 @@ source(file.path(Rcode, "GetLegend.R"))
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2015  # year of cascade we will plot
-minYear <- 10        # how long ago do we plot things
+resultsYear <- 2016  # year of cascade we will plot
+minYear <- 13        # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
-savePlots <- FALSE    # save plots as separate files
+savePlots <- TRUE    # save plots as separate files
 pubPlots <- FALSE     # create additional plots for publications
 if (pubPlots) {
   savePlots <- TRUE
@@ -75,20 +75,29 @@ if (excludeCare) {
 
 ```{r loadresults}
 # Load the previously saved hiv notifications data frame
-load(file.path(resultsFolder, paste("HIVset-",
-                    toString(resultsYear), ".rda", sep = "")))
+# load(file.path(resultsFolder, paste("HIVset-",
+#                     toString(resultsYear), ".rda", sep = "")))
+hivSet <- read.csv(file.path(resultsFolder, paste("HIVset-",
+                    toString(resultsYear), ".csv", sep = "")))
+
 
 # Load the previously saved hivresults data frame
-load(file.path(resultsFolder, paste("HIVresults-",
-                    toString(resultsYear), ".rda", sep = "")))
+# load(file.path(resultsFolder, paste("HIVresults-",
+#                     toString(resultsYear), ".rda", sep = "")))
+hivResults <- read.csv(file.path(resultsFolder, paste("HIVresults-",
+                    toString(resultsYear), ".csv", sep = "")))
 
 # Load hiv cascade dataframe
+# inputFile <- file.path(resultsFolder,paste("HIVcascadeEstimates-", 
+#   toString(resultsYear), ".rda", sep = ""))
+# load(inputFile)
+
 inputFile <- file.path(resultsFolder,paste("HIVcascadeEstimates-", 
-  toString(resultsYear), ".rda", sep = ""))
-load(inputFile)
+  toString(resultsYear), ".csv", sep = ""))
+hivCascade <- read.csv(inputFile)
 
 # Exclude linked to care if it exists
-hivCascade <- filter(hivCascade, !(stage == "linked"))
+# hivCascade <- filter(hivCascade, !(stage == "linked"))
 
 # Removed retained from hivCascade if specified but keep for final 
 # year bar chart
@@ -125,7 +134,7 @@ if (excludeCare) {
   stageNamesNeat <- stageNamesNeat[include]
 }
 
-# Create bar chart of current year's cascade and over time ----------------
+# Create bar chart of current year's cascade and over time ---------------
 
 # Sort out the data we want
 resultsAll <- filter(hivCascade,
@@ -134,7 +143,7 @@ resultsAll <- filter(hivCascade,
 
 resultsAllYear <- filter(resultsAll, year == resultsYear)
 
-# Plot a bar chart for the results year -----------------------------------
+# Plot a bar chart for the results year ----------------------------------
 plotBarAll <- ggplot(data = resultsAllYear, aes(x = stage, y = value)) + 
   geom_bar(stat = "identity", color = asrcols, 
            fill = asrcols, width = 0.8) +
@@ -234,7 +243,7 @@ if (pubPlots) {
 
 }
 
-# Plot time varying values for each stage ---------------------------------
+# Plot time varying values for each stage --------------------------------
 
 # Set up levels for faceting appropriately - have to do this manually
 resultsAll$stage <- factor(resultsAll$stage)
@@ -325,7 +334,7 @@ if (pubPlots) {
   
 }
 
-# Additional time trend plots for publications ----------------------------
+# Additional time trend plots for publications ---------------------------
 if (pubPlots) {
   
   # Plot cummulative unique cases
@@ -408,7 +417,7 @@ if (pubPlots) {
       saveFormat, sep = "")),
       plot = plotDeathRate, width = 7.5, height = 6, units = "cm")
   
-  # Treatment coverage plot -----------------------------------------------
+  # Treatment coverage plot ----------------------------------------------
   
   # Do our calculations and sort out data we want to plot
   treatData <- hivCascade %>%
@@ -439,7 +448,7 @@ if (pubPlots) {
       saveFormat, sep = "")),
       plot = coveragePlot, width = 7.5, height = 6, units = "cm")
   
-   # Suppresed percentage plot --------------------------------------------
+   # Suppresed percentage plot -------------------------------------------
   
   # Do our calculations and sort out data we want to plot
   suppressData <- hivCascade %>%
@@ -816,7 +825,6 @@ if (pubPlots) {
 ```
 
 
-
 ```{r linkageplots}
 # Create  a series of plot related to linkag to care for publication
 
@@ -825,7 +833,8 @@ if (pubPlots) {
   # Proportion linked -----------------------------------------------------
   
   # Do some organization and calculations so we can compare MSM to non-MSM 
-  uniqueDiags <- c(hivResults$uniquecases[1], diff(hivResults$uniquecases))
+  uniqueDiags <- c(hivResults$uniquecases[1],
+                   diff(hivResults$uniquecases))
   uniqueDiags <- tail(uniqueDiags, 10)
   
   # Create an overall data frame
@@ -1019,7 +1028,6 @@ if (pubPlots) {
 }
 ```
 
-
 ```{r statecascade}
 ### Create separate figures of each state cascade
 
@@ -1096,7 +1104,8 @@ for (ii in seq(along = states)){
   # Save if required
   if (savePlots) {
     png(file.path(figFolder, paste("HIVcascade-", states[ii] ,"-", 
-                                   toString(resultsYear), ".png",sep ="")),
+                                   toString(resultsYear), ".png",
+                                   sep ="")),
         width = 5, height = 5, units = "in", res = 300)
     print(plotbarState)
     dev.off()
@@ -1140,12 +1149,12 @@ for (ii in 1:nrow(tableAll)){
   }
 }
 
-# Reorder rows
-if (excludeCare) { 
-  finalTable[1:4,] <- finalTable[c(2, 1, 3, 4),]
-} else {
-  finalTable[1:5,] <- finalTable[c(2, 1, 4, 3, 5),]
-}
+# # Reorder rows
+# if (excludeCare) { 
+#   finalTable[1:4,] <- finalTable[c(2, 1, 3, 4),]
+# } else {
+#   finalTable[1:5,] <- finalTable[c(2, 1, 4, 3, 5),]
+# }
 
 # Remove NA from final range
 # finalTable[finalTable$stage == "numART",]$stimate <- "-"
@@ -1161,7 +1170,7 @@ finalTable <- rename(finalTable, "Cascade stage" = stage,
 
 **Table 1** -- Estimates and range for each stage of the HIV care and treatment cascade for Australia in `r resultsYear`.
 ```{r inserttable1, include = TRUE, results = "asis"}
-kable(finalTable, align = c("l", "c", "c"))
+kable(finalTable, align = c("l", "c", "c"), row.names = FALSE)
 ```
 
 # State estimates
@@ -1302,7 +1311,8 @@ finalTable$State[9] <- "National"
 **Table 2** -- The HIV care and treatment cascade estimates for each State and Territory in `r resultsYear`. The table shows the cascade estimates with ranges in brackets for each State and Territory.
 
 ```{r inserttable2, include = TRUE, results = "asis"}
-kable(finalTable, align = c("l", "c", "c", "c", "c", "c"))
+kable(finalTable, align = c("l", "c", "c", "c", "c", "c"), 
+      row.names = FALSE)
 ```
 
 # Key population group estimates
@@ -1312,20 +1322,25 @@ kable(finalTable, align = c("l", "c", "c", "c", "c", "c"))
 # Set up our population groupings
 modes <- c("msm", "hetero", "pwid", "otherexp")
 modeNames <- c("MSM", "Heterosexual", "PWID", "Other exposure") 
-pops <- c("non-indigenous", "indigenous", "bornssa", "bornsea","othercob")
-popNames <- c("Non-indigenous \n Australians", "Indigenous \n Australians", 
-              "Born in \n Sub-Saharan \n Africa", "Born in \n South East Asia", 
+# pops <- c("non-indigenous", "indigenous", "bornssa", "bornsea","othercob")
+pops <- c("ausnonatsi", "atsi", "ssa", "sea","othercob")
+popNames <- c("Non-indigenous \n Australians", 
+              "Indigenous \n Australians", 
+              "Born in \n Sub-Saharan \n Africa", 
+              "Born in \n South East Asia", 
               "Other country \n of birth") 
 
 # Extract the results
 expResults <- filter(hivCascade, population %in% modes, 
                      year == resultsYear, 
                      stage != "linked", stage != "retained")
-popResults <- filter(hivCascade, population %in% pops, year == resultsYear,
+popResults <- filter(hivCascade, population %in% pops, 
+                     year == resultsYear,
                      stage != "linked", stage != "retained")
 
 # Create the plots
-plotModeBar <- ggplot(data = expResults, aes(x = population, y = value, fill = stage)) + 
+plotModeBar <- ggplot(data = expResults, aes(x = population, y = value,
+                                             fill = stage)) + 
   geom_bar(position = "dodge", stat = "identity") + 
   geom_errorbar(aes(ymin = lower, ymax = upper), 
                 position = position_dodge(width = 0.9),
@@ -1339,7 +1354,8 @@ plotModeBar <- ggplot(data = expResults, aes(x = population, y = value, fill = s
   ylab("Number of people") + xlab("") +  
   plotOpts
 
-plotPopBar <- ggplot(data = popResults, aes(x = population, y = value, fill = stage)) + 
+plotPopBar <- ggplot(data = popResults, aes(x = population, y = value,
+                                            fill = stage)) + 
   geom_bar(position = "dodge", stat = "identity") + 
   geom_errorbar(aes(ymin = lower, ymax = upper), 
                 position = position_dodge(width = 0.9),
@@ -1391,6 +1407,9 @@ for (ii in 1:nrow(tableExp)){
 finalTable <- arrange(finalTable, population, stage)
 finalTable <- finalTable[c(3, 4, 1, 2, 7, 8, 5, 6),]
 
+finalTable$population <- as.character(finalTable$population)
+finalTable$stage <- as.character(finalTable$stage)
+
 # Rename first column
 finalTable[finalTable$stage == "infected",]$stage <- "Living with HIV"
 finalTable[finalTable$stage == "pldhiv",]$stage <- "Diagnosed"
@@ -1409,8 +1428,8 @@ finalTableExp <- rename(finalTable, "Cascade stage" = stage,
 ```
 
 **Table 3** -- Number of people living with HIV by exposure population in `r resultsYear`.
-```{r inserttable3, results = "asis"}
-kable(finalTableExp, align = c("l", "l", "c", "c"))
+```{r inserttable3, include = TRUE, results = "asis"}
+kable(finalTableExp, align = c("l", "l", "c", "c"), row.names = FALSE)
 ```
 
 **Figure 5** -- Number of people living with HIV by country of birth in `r resultsYear`.
@@ -1436,15 +1455,18 @@ for (ii in 1:nrow(tablePop)){
 finalTable <- arrange(finalTable, population, stage)
 finalTable <- finalTable[c(7, 8, 5, 6, 1, 2, 3, 4, 9, 10),]
 
+finalTable$population <- as.character(finalTable$population)
+finalTable$stage <- as.character(finalTable$stage)
+
 # Rename first column
 finalTable[finalTable$stage == "infected",]$stage <- "Living with HIV"
 finalTable[finalTable$stage == "pldhiv",]$stage <- "Diagnosed"
 
 # Rename second column
-finalTable[finalTable$population == "non-indigenous",]$population <- "Australian born non-indigenous"
-finalTable[finalTable$population == "indigenous",]$population <- "Australian born indigenous"
-finalTable[finalTable$population == "bornsea",]$population <- "Born in South East Asia"
-finalTable[finalTable$population == "bornssa",]$population <- "Born in sub-Saharan Africa"
+finalTable[finalTable$population == "ausnonatsi",]$population <- "Australian born non-indigenous"
+finalTable[finalTable$population == "atsi",]$population <- "Australian born indigenous"
+finalTable[finalTable$population == "sea",]$population <- "Born in South East Asia"
+finalTable[finalTable$population == "ssa",]$population <- "Born in sub-Saharan Africa"
 finalTable[finalTable$population == "othercob",]$population <- "Other"
 
 # Rename columns
@@ -1455,7 +1477,7 @@ finalTablePop <- rename(finalTable, "Cascade stage" = stage,
 
 **Table 4** -- Number of people living with HIV by country of birth in `r resultsYear`.
 ```{r inserttable4, include = TRUE, results = "asis"}
-kable(finalTablePop, align = c("l", "l", "c", "c"))
+kable(finalTablePop, align = c("l", "l", "c", "c"), row.names = FALSE)
 ```
 
 # HIV cascades for males and females in the overall population
@@ -1578,7 +1600,7 @@ print(grid.arrange(plotBarFemale, plotBarMale))
 
 **Table 5** -- Estimates and range for each stage of the HIV care and treatment cascade for Australian males and feamles in `r resultsYear`.
 ```{r inserttable5, include = TRUE, results = "asis"}
-kable(genderTable, align = c("l", "c", "c"))
+kable(genderTable, align = c("l", "c", "c"), row.names = FALSE)
 ```
 
 # Methods and data sources

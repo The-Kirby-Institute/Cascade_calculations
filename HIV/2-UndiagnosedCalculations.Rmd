@@ -36,7 +36,7 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
 saveResults <- TRUE 
-cascadeFlag <- "AusNonAtsi"
+cascadeFlag <- "Male"
 # ecdcChart <- "Female" # ECDC group used for calculations
 ecdcResults <- "exposure"
 updateECDC <- FALSE
@@ -52,7 +52,7 @@ ecdcChart <- paste0(cascadeFlag, "_Charts.xlsx")
 # file and renames the file.
 # Unfortunately have to manually open file and unhide rows. 
 
-if (cascadeFlag == "OtherExp") {
+if (cascadeFlag == "Otherexp") {
   # Use overall undiagnosed
   ecdcFile <- file.path(outputFolder, "ECDC_models", paste0("All-",
     toString(analysisYear)), ecdcResults, "results/All_Charts.xlsx")
@@ -118,11 +118,12 @@ population <- as.character(pldhiv$population[1])
 
 ```{r Undiagnosed calculations}
 # This chunk produces the final calculations
-if (cascadeFlag == "OtherExp") {
+if (cascadeFlag == "Otherexp") {
   plhiv <- mergedData %>%
     mutate(plhiv = pldhiv/(1 - percent / 100),
            plhiv_lower = pldhiv_lower/(1 - percent_lower / 100),
-           plhiv_upper = pldhiv_upper/(1 - percent_upper / 100))
+           plhiv_upper = pldhiv_upper/(1 - percent_upper / 100)) %>%
+    select(-undiagnosed, -undiagnosed_lower, -undiagnosed_upper)
 } else {
   plhiv <- mergedData %>%
     mutate(pnumber = pldhiv/(1 - percent / 100) - pldhiv,
