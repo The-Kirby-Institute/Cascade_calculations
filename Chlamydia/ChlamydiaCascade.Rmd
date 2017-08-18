@@ -40,10 +40,10 @@ source(file.path(Rcode, "DataLibraries.R"), echo = TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2016 # year of cascade we will calculate and plot     
+resultsYear <- 2014 # year of cascade we will calculate and plot     
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
-retestRange <- TRUE # Caclulate variations in retested
+retestRange <- FALSE # Caclulate variations in retested
 
 ```
 
@@ -52,7 +52,7 @@ retestRange <- TRUE # Caclulate variations in retested
 # results
 mainPackages <- c("readr","dplyr", "tidyr", "ggplot2")
 source(file.path(Rcode, "FrontMatter.R"))
-fmStr <- FrontMatter(mainPackages, rstudio = "1.0.136")
+fmStr <- FrontMatter(mainPackages, rstudio = "1.0.153")
 cat(fmStr)
 ```
 
@@ -628,6 +628,12 @@ stagesNeat <- c("infections" = "New \n infections",
             "treated" = "Received \n treatment \n following \n diagnosis",
             "retested" = "Completed \n follow-up")
 
+if (resultsYear == 2014) {
+  stages <- c(stages, "negative" = "Negative at re-test")
+  stagesNeat <- c(stagesNeat, "negative" = "Negative \n at re-test")
+}
+
+
 # Plot the bar chart -----------------------------------------------------
 
 # First sort out sex as a factor to order the bars
@@ -741,7 +747,12 @@ if (saveplots) {
 finalTable <- select(chlamcascade, year, stage, sex)
 finalTable$estimate <- NA
 
-skip <- c(9:12) # Not sure we need this
+if (resultsYear == 2014) {
+  skip <- 3:4 
+} else {
+  slip <- 100  
+}
+
 for (ii in 1:nrow(finalTable)){
   if (ii %in% skip) {
     finalTable$estimate[ii] <- FormatData(chlamcascade$estimate[ii], 
