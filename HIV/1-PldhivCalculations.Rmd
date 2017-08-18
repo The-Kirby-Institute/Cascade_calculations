@@ -42,10 +42,10 @@ analysisYear <- 2016
 saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
-cascadeName <- paste0("CALD-", toString(analysisYear)) 
+cascadeName <- paste0("AusNonAtsi-", toString(analysisYear)) 
 targetGender <- 'all' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'non-australia' # all=including n/a, Thailand, etc.
+targetCob <- 'Australia' # all=including n/a, Thailand, etc.
 targetExposure <- 'all' #msm, hetero, pwid, otherexp
 targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
@@ -65,7 +65,7 @@ if (doRetained) {
 }
 
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- FALSE
+ecdcData <- TRUE
 ecdcVersion <- '1.2.2'
 excludeOS <- FALSE
 
@@ -417,15 +417,21 @@ hivDiagnosed <- data.frame(stage = "pldhiv",
 ```{r ECDC Outputs}
 # ECDC calculations-------------------------------------------------------
 if (ecdcData) {
+  normalizeFactor <- adjustDiags$included / 
+    adjustDiags$adjusted_included
+  normalizeFactor[is.nan(normalizeFactor)] <- 1
+  
   if (excludeOS) {
     # excluding OS diagnosis
     dataAll <- EcdcFolders(outputFolder, ecdcModel, 
                            includeOS = FALSE)
-    EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique)
+    EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique,
+              propKnown = normalizeFactor)
   } else {
     # including OS diagnosis
     dataAll <- EcdcFolders(outputFolder, ecdcModel)
-    EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique) 
+    EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique,
+              propKnown = normalizeFactor) 
   }
   
   # Create output directory

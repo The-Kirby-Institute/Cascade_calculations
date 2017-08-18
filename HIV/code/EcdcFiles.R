@@ -6,17 +6,21 @@
 # the proportion of PLHIV undiagnosed. It relies on functions from
 # EcdcCalculations to be loaded. 
 
-EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL) {
+EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL,
+                      propKnown = NULL) {
   
   # All diagnoses----------------------------------------------------------
   
   # Incidence method
   hivcsvAll <- typeDiag(hivFrame, "hiv", exposure = FALSE, 
-                        adjustUnique = propUnique)
+                        adjustUnique = propUnique,
+                        normalize = propKnown)
   hivaidscsvAll <- typeDiag(hivFrame, "hivaids", exposure = FALSE, 
-                            adjustUnique = propUnique)
+                            adjustUnique = propUnique,
+                            normalize = propKnown)
   aidscsvAll <- typeDiag(hivFrame, "aids", exposure = FALSE, 
-                         adjustUnique = propUnique)
+                         adjustUnique = propUnique,
+                         normalize = propKnown)
   
   EcdcWrite(hivcsvAll, dataFolder[[1]], "hiv")
   EcdcWrite(hivaidscsvAll, dataFolder[[1]], "hivaids")
@@ -81,11 +85,14 @@ EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL) {
   
   # Incidence method
   hivcsvExp <- typeDiag(hivFrame, "hiv",
-                        adjustUnique = propUnique)
+                        adjustUnique = propUnique,
+                        normalize = propKnown)
   hivaidscsvExp <- typeDiag(hivFrame, "hivaids", 
-                            adjustUnique = propUnique)
+                            adjustUnique = propUnique,
+                            normalize = propKnown)
   aidscsvExp <- typeDiag(hivFrame, "aids",
-                         adjustUnique = propUnique)
+                         adjustUnique = propUnique,
+                         normalize = propKnown)
   
   EcdcWrite(hivcsvExp, dataFolder[[2]], "hiv")
   EcdcWrite(hivaidscsvExp, dataFolder[[2]], "hivaids")

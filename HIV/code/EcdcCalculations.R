@@ -96,7 +96,8 @@ EcdcWrite <- function(results, folder, category) {
 
 # Diagnosis type-----------------------------------------------------------
 typeDiag <- function(hivData, type, minYear = 1980,
-                     exposure = TRUE, adjustUnique = NULL) {
+                     exposure = TRUE, adjustUnique = NULL,
+                     normalize = NULL) {
   
   if (exposure) {
     # Extract notifications
@@ -149,11 +150,11 @@ typeDiag <- function(hivData, type, minYear = 1980,
              pwid = ifelse(is.nan(pwid), 0, pwid),
              otherexp = ifelse(is.nan(otherexp), 0, otherexp)) %>%
       select(-known, -unknown)
-
-      allYears <- minYear:max(hivData$yeardiagnosis)
-      requiredYears <- allYears[!(allYears %in% diagType$year)]
-      diagType <- FillDataFrame(requiredYears, diagType)
-      diagType <- arrange(diagType, year)
+    
+    allYears <- minYear:max(hivData$yeardiagnosis)
+    requiredYears <- allYears[!(allYears %in% diagType$year)]
+    diagType <- FillDataFrame(requiredYears, diagType)
+    diagType <- arrange(diagType, year)
     # }
     
     if (!is.null(adjustUnique)) {
@@ -164,6 +165,15 @@ typeDiag <- function(hivData, type, minYear = 1980,
     } else {
       warning("Notifications not adjusted for duplicates")
     }
+    
+    if (!is.null(normalize)) {
+      diagType$hetero <- diagType$hetero/normalize
+      diagType$msm <- diagType$msm/normalize
+      diagType$pwid <- diagType$pwid/normalize
+      diagType$otherexp <- diagType$otherexp/normalize
+    } else {
+      warning("Notifications not adjusted for unknowns")
+    }  
     
   } else {
     # Don't split by exposure group 
@@ -205,6 +215,12 @@ typeDiag <- function(hivData, type, minYear = 1980,
       warning("Notifications not adjusted for duplicates")
     }
     
+    if (!is.null(normalize)) {
+      diagType$all <- diagType$all/normalize
+    } else {
+      warning("Notifications not adjusted for unknowns")
+    }  
+    
   }
   
   # Replace any negatives with zero
@@ -223,7 +239,7 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
     if (lmset) {
       # HIV/AIDS only
       hivData <- hivData %>%
-      filter(typediagnosis %in% c("hivaids", "aids"))
+        filter(typediagnosis %in% c("hivaids", "aids"))
     } else {
       # HIV/AIDS + those with HIV symptoms
       hivData <- hivData %>%
@@ -236,7 +252,7 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
       summarise(diags = n()) %>%
       ungroup() %>%
       spread(cd4London, diags)
-      
+    
     if (!("cl20" %in% names(cd4DiagsAll))) cd4DiagsAll$cl20 <- 0
     if (!("c20_49" %in% names(cd4DiagsAll))) cd4DiagsAll$c20_49 <- 0
     if (!("c50_99" %in% names(cd4DiagsAll))) cd4DiagsAll$c50_99 <- 0
@@ -247,7 +263,7 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
     if (!("c300_349" %in% names(cd4DiagsAll))) cd4DiagsAll$c300_349 <- 0
     if (!("cg350" %in% names(cd4DiagsAll))) cd4DiagsAll$cg350 <- 0
     if (!("not_reported" %in% names(cd4DiagsAll))) cd4DiagsAll$not_reported <- 0
-      
+    
     cd4DiagsAll <- cd4DiagsAll %>% mutate(total = apply(select(., 2:10), 1, sum)) %>%
       rename(year = yeardiagnosis)
   } else {
