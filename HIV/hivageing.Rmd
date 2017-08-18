@@ -110,7 +110,7 @@ hivGender <- read.csv(file.path(resultsFolder, paste("HIVgender-",  toString(ana
 hivDiagGender <- read.csv(file.path(resultsFolder, paste("HIVdiagGender-",  toString(analysisYear), ".csv", sep = "")), header=TRUE, sep=",")
 
 # Load current hiv cascade - hivCascade
-hivCascade <- read.csv(file.path(resultsFolder, paste("HIVcascade-",  toString(analysisYear), ".csv", sep = "")), header=TRUE, sep=",")
+hivCascade <- read.csv(file.path(resultsFolder, paste("HIVcascadeEstimates-",  toString(analysisYear), ".csv", sep = "")), header=TRUE, sep=",")
 
 # Load current hiv cascade - hivCascade
 hivInterstate <- read.csv(file.path(resultsFolder, paste("HIVinterstateEstimates-",  toString(analysisYear), ".csv", sep = "")), header=TRUE, sep=",")
@@ -122,7 +122,7 @@ pldhivAll <- hivCascade %>%
 
 if (region == "all") {
   pldhiv <- pldhivAll
-  uniquecasesYear <- 0.98 * hivResults$uniquecases 
+  uniquecasesYear <- 0.98 * cumsum(hivResults$uniquecases) 
 } else {
   
   pldhiv <- hivCascade %>%
@@ -337,7 +337,7 @@ if (calculateGender) {
     # of unique cases 
     ageDiagMale[, ii] <- agebins * unqiueDiagsMale[ii]/sum(agebins) 
     
-    # Sort out deaths -----------------------------------------------------
+    # Sort out deaths ----------------------------------------------------
     
     # Extract deaths in this year and age at death
     yearDeaths <- hivSetMale %>% 
@@ -361,7 +361,7 @@ if (calculateGender) {
   for (ii in 1:nyears) {
     year <- 1980 + ii - 1
     
-    # Sort out diagnoses ---------------------------------------------------
+    # Sort out diagnoses -------------------------------------------------
     
     # Extract diagnoses in this year and age at diagnosis
     yearDiags <- hivSetFemale %>% 
@@ -705,13 +705,36 @@ graphics.off()
 pldhivTidy <- TidyLongitudinal(binPldhiv, 1980, firstCol = "age")
 pldhivTidy$age <- rep(sub("a", "", ageBins), nyears)
 
+# TEMP: merge bins into <30, 30-49, 50+
+pldhivTidyASR <- pldhivTidy %>% spread(age, value) %>%
+  mutate(`<30` = `<15` + `15-19` + `20-24` + `25-29`,
+         `30-49` = `30-34` + `35-39` + `40-44` + `45-49`,
+         `50+` = `50-54` + `55-59` + `60-64` + `65-69` + `70+`) %>%
+  select(year, `<30`, `30-49`, `50+`) %>%
+  gather("age", "value", 2:4)
+
 if (calculateGender) {
-  pldhivTidyMale <- TidyLongitudinal(binPldhivMale, 1980, firstCol = "age")
+  pldhivTidyMale <- TidyLongitudinal(binPldhivMale, 1980, 
+                                     firstCol = "age")
   pldhivTidyMale$age <- rep(sub("a", "", ageBins), nyears)
+  
+  pldhivTidyMaleASR <- pldhivTidyMale %>% spread(age, value) %>%
+    mutate(`<30` = `<15` + `15-19` + `20-24` + `25-29`,
+           `30-49` = `30-34` + `35-39` + `40-44` + `45-49`,
+           `50+` = `50-54` + `55-59` + `60-64` + `65-69` + `70+`) %>%
+    select(year, `<30`, `30-49`, `50+`) %>%
+    gather("age", "value", 2:4)
   
   pldhivTidyFemale <- TidyLongitudinal(binPldhivFemale, 1980, 
                                        firstCol = "age")
   pldhivTidyFemale$age <- rep(sub("a", "", ageBins), nyears)
+  
+  pldhivTidyFemaleASR <- pldhivTidyFemale %>% spread(age, value) %>%
+    mutate(`<30` = `<15` + `15-19` + `20-24` + `25-29`,
+           `30-49` = `30-34` + `35-39` + `40-44` + `45-49`,
+           `50+` = `50-54` + `55-59` + `60-64` + `65-69` + `70+`) %>%
+    select(year, `<30`, `30-49`, `50+`) %>%
+    gather("age", "value", 2:4)
 }
 
 # Setup some ploting variables
@@ -725,10 +748,14 @@ if (plotGray) {
   mainColours <- rev(getPalette(nages))
 }
 
-xValues <- seq(startYear, analysisYear, by = 7)
+xValues <- seq(startYear, analysisYear, by = 5)
 
 # Get the data we want to plot
 pldhivTidy <- pldhivTidy %>%
+  filter(year >= startYear) %>%
+  rename(number = value)
+
+pldhivTidyASR <- pldhivTidyASR %>%
   filter(year >= startYear) %>%
   rename(number = value)
 
@@ -738,7 +765,15 @@ if (calculateGender) {
     filter(year >= startYear) %>%
     rename(number = value)
   
+  pldhivTidyMaleASR <- pldhivTidyMaleASR %>%
+    filter(year >= startYear) %>%
+    rename(number = value)
+  
   pldhivTidyFemale <- pldhivTidyFemale %>%
+    filter(year >= startYear) %>%
+    rename(number = value)
+  
+  pldhivTidyFemaleASR <- pldhivTidyFemaleASR %>%
     filter(year >= startYear) %>%
     rename(number = value)
 }
@@ -747,10 +782,19 @@ if (calculateGender) {
 
 # Now do the barplot of number of PLDHIV
 barPlotAll <- ggplot(data = pldhivTidy, aes(x = year, y = number, 
-                                            fill = age)) + geom_bar(stat = "identity") + 
-  xlab("Year") + ylab("Number of PLDHIV") +
+  fill = age)) + geom_bar(stat = "identity") + 
+  xlab("Year") + ylab("Number of people") +
   scale_fill_manual(values = mainColours, name = "Age",
                     guide = guide_legend(reverse=TRUE)) + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "",
+                   legend.text = element_text(size = 8))
+
+
+barPlotAllASR <- ggplot(data = pldhivTidyASR, aes(x = year, y = number, 
+  fill = age)) + geom_bar(stat = "identity") + 
+  xlab("Year") + ylab("Number of people") +
+  scale_fill_manual(values = asrcols[c(1,3,5)], name = "Age") + 
   scale_x_continuous(breaks = xValues) + 
   plotOpts + theme(legend.position = "",
                    legend.text = element_text(size = 8))
@@ -758,9 +802,16 @@ barPlotAll <- ggplot(data = pldhivTidy, aes(x = year, y = number,
 # Now do the barplot of proportions
 propPlotAll <- ggplot(data = pldhivTidy, aes(x = year, y = number, 
                                              fill = age)) + geom_bar(stat="identity", position = "fill") + 
-  xlab("Year") + ylab("Proportion of PLDHIV") +
-  scale_fill_manual(values = mainColours, name = "Age",
-                    guide = guide_legend(reverse=TRUE)) + 
+  xlab("Year") + ylab("Proportion of people") +
+  scale_fill_manual(values = mainColours, name = "Age") + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "right",
+                   legend.text = element_text(size = 8))
+
+propPlotAllASR <- ggplot(data = pldhivTidyASR, aes(x = year, y = number, 
+  fill = age)) + geom_bar(stat="identity", position = "fill") + 
+  xlab("Year") + ylab("Proportion of people") +
+  scale_fill_manual(values = asrcols[c(1,3,5)], name = "Age") + 
   scale_x_continuous(breaks = xValues) + 
   plotOpts + theme(legend.position = "right",
                    legend.text = element_text(size = 8))
@@ -770,20 +821,37 @@ if (calculateGender) {
 
 # Now do the barplot of number of PLDHIV
 barPlotMale <- ggplot(data = pldhivTidyMale, aes(x = year, y = number, 
-                                                 fill = age)) + geom_bar(stat = "identity") + 
-  xlab("Year") + ylab("Number of PLDHIV (males)") +
+  fill = age)) + geom_bar(stat = "identity") + 
+  xlab("Year") + ylab("Number of people (males)") +
   scale_fill_manual(values = mainColours, name = "Age",
                     guide = guide_legend(reverse=TRUE)) + 
   scale_x_continuous(breaks = xValues) + 
   plotOpts + theme(legend.position = "",
                    legend.text = element_text(size = 8))
 
+barPlotMaleASR <- ggplot(data = pldhivTidyMaleASR, 
+                         aes(x = year, y = number,
+  fill = age)) + geom_bar(stat = "identity") + 
+  xlab("Year") + ylab("Number of people (males)") +
+  scale_fill_manual(values = asrcols[c(1,3,5)], name = "Age") + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "",
+                   legend.text = element_text(size = 8))
+
 # Now do the barplot of proportions
 propPlotMale <- ggplot(data = pldhivTidyMale, aes(x = year, y = number, 
-                                                  fill = age)) + geom_bar(stat="identity", position = "fill") + 
-  xlab("Year") + ylab("Proportion of PLDHIV (males)") +
-  scale_fill_manual(values = mainColours, name = "Age",
-                    guide = guide_legend(reverse=TRUE)) + 
+  fill = age)) + geom_bar(stat="identity", position = "fill") + 
+  xlab("Year") + ylab("Proportion of people (males)") +
+  scale_fill_manual(values = mainColours, name = "Age") + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "right",
+                   legend.text = element_text(size = 8))
+
+propPlotMaleASR <- ggplot(data = pldhivTidyMaleASR, 
+                          aes(x = year, y = number, 
+  fill = age)) + geom_bar(stat="identity", position = "fill") + 
+  xlab("Year") + ylab("Proportion of people (males)") +
+  scale_fill_manual(values = asrcols[c(1,3,5)], name = "Age") + 
   scale_x_continuous(breaks = xValues) + 
   plotOpts + theme(legend.position = "right",
                    legend.text = element_text(size = 8))
@@ -794,20 +862,37 @@ propPlotMale <- ggplot(data = pldhivTidyMale, aes(x = year, y = number,
 barPlotFemale <- ggplot(data = pldhivTidyFemale, 
                         aes(x = year, y = number, 
                             fill = age)) + geom_bar(stat = "identity") + 
-  xlab("Year") + ylab("Number of PLDHIV (females)") +
+  xlab("Year") + ylab("Number of people (females)") +
   scale_fill_manual(values = mainColours, name = "Age",
                     guide = guide_legend(reverse=TRUE)) + 
   scale_x_continuous(breaks = xValues) + 
   plotOpts + theme(legend.position = "",
                    legend.text = element_text(size = 8))
 
+barPlotFemaleASR <- ggplot(data = pldhivTidyFemaleASR, 
+                        aes(x = year, y = number, 
+                            fill = age)) + geom_bar(stat = "identity") + 
+  xlab("Year") + ylab("Number of people (females)") +
+  scale_fill_manual(values = asrcols[c(1,3,5)], name = "Age") + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "",
+                   legend.text = element_text(size = 8))
 # Now do the barplot of proportions
 propPlotFemale <- ggplot(data = pldhivTidyFemale, 
                          aes(x = year, y = number, 
                              fill = age)) + geom_bar(stat="identity", position = "fill") + 
-  xlab("Year") + ylab("Proportion of PLDHIV (females)") +
+  xlab("Year") + ylab("Proportion of people (females)") +
   scale_fill_manual(values = mainColours, name = "Age",
                     guide = guide_legend(reverse=TRUE)) + 
+  scale_x_continuous(breaks = xValues) + 
+  plotOpts + theme(legend.position = "right",
+                   legend.text = element_text(size = 8))
+
+propPlotFemaleASR <- ggplot(data = pldhivTidyFemaleASR, 
+                         aes(x = year, y = number, 
+                             fill = age)) + geom_bar(stat="identity", position = "fill") + 
+  xlab("Year") + ylab("Proportion of people (females)") +
+  scale_fill_manual(values = asrcols[c(1,3,5)], name = "Age") + 
   scale_x_continuous(breaks = xValues) + 
   plotOpts + theme(legend.position = "right",
                    legend.text = element_text(size = 8))
@@ -857,7 +942,7 @@ missing data.
 **Figure 2** - Number and proportion of PLDHIV by age-group in Australia 
 from 1986 to 2014.  
 ```{r insertyplots1, echo=FALSE, messages = FALSE, warning = FALSE, results = "hide"}
-print(grid.are(barPlotAll, propPlotAll, ncol = 2, widths = c(1, 1.2)))
+print(grid.arrange(barPlotAllASR, propPlotAllASR, ncol = 2, widths = c(1, 1.2)))
 ```
 
 ```{r create tables,echo=FALSE, messages = FALSE, warning = FALSE}
@@ -898,7 +983,7 @@ kable(propTable, digits = 3,
 **Figure 3** - Number and proportion of male PLDHIV by age-group 
 in Australia from 1986 to 2014.  
 ```{r insertyplots3, echo=FALSE, messages = FALSE, warning = FALSE, results = "hide"}
-print(grid.arrange(barPlotMale, propPlotMale, ncol = 2, 
+print(grid.arrange(barPlotMaleASR, propPlotMaleASR, ncol = 2, 
                    widths = c(1, 1.2)))
 ```
 
@@ -940,7 +1025,7 @@ kable(propTableMale, digits = 3,
 **Figure 4** - Number and proportion of female PLDHIV by age-group 
 in Australia from 1986 to 2014.  
 ```{r insertyplots4 , echo=FALSE, messages = FALSE, warning = FALSE, results = "hide"}
-print(grid.arrange(barPlotFemale, propPlotFemale, ncol = 2, 
+print(grid.arrange(barPlotFemaleASR, propPlotFemaleASR, ncol = 2, 
                    widths = c(1, 1.2)))
 ```
 

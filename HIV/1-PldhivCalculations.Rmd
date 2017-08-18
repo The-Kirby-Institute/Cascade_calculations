@@ -42,10 +42,10 @@ analysisYear <- 2016
 saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
-cascadeName <- paste0("Othercob-", toString(analysisYear)) 
+cascadeName <- paste0("CALD-", toString(analysisYear)) 
 targetGender <- 'all' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'Australia' # all=including n/a, Thailand, etc.
+targetCob <- 'non-australia' # all=including n/a, Thailand, etc.
 targetExposure <- 'all' #msm, hetero, pwid, otherexp
 targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
@@ -526,8 +526,8 @@ if (doRetained) {
                                 "individualHIVparameters.csv"), as.is = 1)
   hivParameters <- select(hivParameters, parameter, value)
   
-  for (ii in 1:nrow(hivParams)) {
-    assign(hivParams$parameter[ii], hivParams$value[ii])
+  for (ii in 1:nrow(hivParameters)) {
+    assign(hivParameters$parameter[ii], hivParameters$value[ii])
   }
   
   retained <- vicClinicRetained
