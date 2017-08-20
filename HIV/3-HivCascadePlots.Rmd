@@ -30,8 +30,9 @@ options(scipen=999)  # To get rid of scientific notation
 # Setup directories
 basePath <- getwd() #dirname(getwd())
 Rcode <- file.path(dirname(getwd()), "code")
+HIVcode <- file.path(basePath, "code") 
 docFolder <- file.path(basePath,"docs")
-figFolder <- file.path(basePath, "output","figures")
+dataFolder <- file.path(basePath, "data")
 resultsFolder <- file.path(basePath, "output")
 
 # Set working directory
@@ -51,6 +52,12 @@ source(file.path(Rcode, "FormatData.R"), echo=TRUE)
 # Useful functions 
 source(file.path(Rcode, "GetLegend.R"))
 
+# Function to tidy notifications
+source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
+
+# Function for adjustments
+source(file.path(HIVcode, "GetAdjustments.R"), echo=TRUE)
+
 # Current time for appending to outputs
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
@@ -58,12 +65,6 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 resultsYear <- 2016  # year of cascade we will plot
 minYear <- 13        # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
-savePlots <- TRUE    # save plots as separate files
-pubPlots <- FALSE     # create additional plots for publications
-if (pubPlots) {
-  savePlots <- TRUE
-}
-saveFormat <- ".png" # file extension for saved plots 
 
 # Include linked and retained in care?
 excludeCare <- FALSE
@@ -71,33 +72,35 @@ if (excludeCare) {
   asrcols <- asrcols[c(1, 2, 4, 5)]
 }
 
+savePlots <- FALSE # save plots as separate files
+pubPlots <- TRUE     # create additional plots for publications
+saveFormat <- ".png" # file extension for saved plots 
+
+if (pubPlots) {
+  savePlots <- TRUE
+}
+if (savePlots) {
+  # Create output directory
+  figFolder <- file.path(basePath, "output", "figures",
+                         toString(resultsYear))
+  dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
+}
+
 ```
 
 ```{r loadresults}
-# Load the previously saved hiv notifications data frame
-# load(file.path(resultsFolder, paste("HIVset-",
-#                     toString(resultsYear), ".rda", sep = "")))
-hivSet <- read.csv(file.path(resultsFolder, paste("HIVset-",
-                    toString(resultsYear), ".csv", sep = "")))
-
-
-# Load the previously saved hivresults data frame
-# load(file.path(resultsFolder, paste("HIVresults-",
-#                     toString(resultsYear), ".rda", sep = "")))
-hivResults <- read.csv(file.path(resultsFolder, paste("HIVresults-",
-                    toString(resultsYear), ".csv", sep = "")))
 
 # Load hiv cascade dataframe
 # inputFile <- file.path(resultsFolder,paste("HIVcascadeEstimates-", 
 #   toString(resultsYear), ".rda", sep = ""))
 # load(inputFile)
 
-inputFile <- file.path(resultsFolder,paste("HIVcascadeEstimates-", 
+inputFile <- file.path(resultsFolder, paste("HIVcascadeEstimates-", 
   toString(resultsYear), ".csv", sep = ""))
 hivCascade <- read.csv(inputFile)
 
 # Exclude linked to care if it exists
-# hivCascade <- filter(hivCascade, !(stage == "linked"))
+hivCascade <- filter(hivCascade, !(stage == "linked"))
 
 # Removed retained from hivCascade if specified but keep for final 
 # year bar chart
@@ -109,6 +112,80 @@ if (pubPlots) {
   newInfections <- read_excel(file.path(dirname(resultsFolder), "data",
                             "ecdc_new_infections-2015.xlsx"))
 }
+
+# Load the previously saved hiv notifications data frame
+# load(file.path(resultsFolder, paste("HIVset-",
+#                     toString(resultsYear), ".rda", sep = "")))
+# hivSet <- read.csv(file.path(resultsFolder, paste("HIVset-",
+#                     toString(resultsYear), ".csv", sep = "")))
+
+if (pubPlots) {
+
+  # Load cleaned notifications data and tidy up for calculations
+  origHivData <- read.csv(file.path(dataFolder,
+    paste0("hivnotifications", toString(resultsYear), ".csv"))) 
+  countryCodes <- read.csv(file.path(dataFolder, 
+    "countryRegionCodes.csv"))
+  hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes)
+  
+  # Load the previously saved results for the national cascade
+  cascadeFolder <- file.path(resultsFolder, paste0("All-",
+    toString(resultsYear)))
+  
+  pldhivAll <- read.csv(file.path(cascadeFolder, paste0("pldhiv-",
+    toString(resultsYear), "-all.csv")))
+  pldhivMin <- read.csv(file.path(cascadeFolder, paste0("pldhiv-",
+    toString(resultsYear), "-min.csv")))
+  pldhivMax <- read.csv(file.path(cascadeFolder, paste0("pldhiv-",
+    toString(resultsYear), "-max.csv")))
+  
+  hivResults <- data_frame(yeardiagnosis = pldhivAll$year)
+  hivResults$deaths <- cumsum(pldhivAll$deaths)
+  hivResults$deaths_min <- cumsum(pldhivMin$deaths)
+  hivResults$deaths_max <- cumsum(pldhivMax$deaths)
+  
+  # Load the previously saved hivresults data frame
+  # load(file.path(resultsFolder, paste("HIVresults-",
+  #                     toString(resultsYear), ".rda", sep = "")))
+  # hivResults <- read.csv(file.path(resultsFolder, paste("HIVresults-",
+  #                     toString(resultsYear), ".csv", sep = "")))
+  
+  # Load and extract specific results for all for publications plots
+  
+  hivBase <- read.csv(file.path(dataFolder, paste0("HIVbaseEstimates-",
+    toString(resultsYear), ".csv")))
+  hivAdjustments <- read.csv(file.path(dataFolder,
+    paste0("HIVadjustments-", toString(resultsYear), ".csv")))
+  hivInterstate <- read.csv(file.path(dataFolder,
+    paste0("HIVinterstateEstimates-", toString(resultsYear), ".csv")))
+
+  # Now get the death rates, migration rates, and proportion stay rates
+  subsetRates <- GetAdjustments(hivBase, hivAdjustments, hivInterstate, 
+                                "all", "all", "all", "all", "all", "all",
+                                "all", "all")
+
+  hivResults$propunique <- subsetRates$cumunique
+  hivResults$deathrate <- subsetRates$deathrate
+  hivResults$drlower <- subsetRates$deathrate_lower
+  hivResults$drupper <- subsetRates$deathrate_upper
+  
+  annualDiags <- hivSet %>% 
+    group_by(yearhiv) %>%
+    summarise(notifications = n(),
+              numlinked = sum(linked == "yes")) %>%
+    mutate(totalnotifications = cumsum(notifications),
+           proplinked = numlinked / notifications)
+  
+  hivResults$notifications <- annualDiags$notifications
+  hivResults$totalnotifications <- annualDiags$totalnotifications
+  hivResults$numlinked <- annualDiags$numlinked
+  hivResults$proplinked <- annualDiags$proplinked
+  
+  hivResults <- hivResults %>%
+    mutate(uniquecases = totalnotifications * propunique)
+  
+}
+
 ```
 
 # National estimates
@@ -368,35 +445,47 @@ if (pubPlots) {
   # Generate the death data we want calculating the cumulative number of 
   # deaths after 2003 
   
-  deathData <- hivResults %>%
-    rename(year = yeardiagnosis) %>%  
-    select(year, deathrate, drlower, drupper) %>%
-    inner_join(pldhiv, ., by = "year") %>%        # add pldhiv data frame
-    mutate(estdeaths = cumsum(value * deathrate),  # do the calculations
-           estdeaths_min = cumsum(lower * drlower),
-           estdeaths_max = cumsum(upper * drupper)) %>%
-    filter(year >= startYear, year <= resultsYear) %>%
-    select(-value, -lower, -upper)
+  # deathData <- hivResults %>%
+  #   rename(year = yeardiagnosis) %>%  
+  #   select(year, deathrate, drlower, drupper) %>%
+  #   inner_join(pldhiv, ., by = "year") %>%        # add pldhiv data frame
+  #   mutate(estdeaths = cumsum(value * deathrate),  # do the calculations
+  #          estdeaths_min = cumsum(lower * drlower),
+  #          estdeaths_max = cumsum(upper * drupper)) %>%
+  #   filter(year >= startYear, year <= resultsYear) %>%
+  #   select(-value, -lower, -upper)
   
   # Now generate our plots
-  plotDeaths <- ggplot(data = deathData, aes(x = year, y = estdeaths)) +
-    geom_ribbon(aes(ymin = estdeaths_min, ymax = estdeaths_max), 
+  # plotDeaths <- ggplot(data = deathData, aes(x = year, y = estdeaths)) +
+  #   geom_ribbon(aes(ymin = estdeaths_min, ymax = estdeaths_max), 
+  #             fill = asrcols[2], alpha = 0.4) + 
+  #   geom_line(color = asrcols[2])  +
+  #   scale_x_continuous(breaks = seq((resultsYear - minYear + 1), 
+  #                                   resultsYear, by = 3)) +
+  #   expand_limits(y = 0) +
+  #   scale_y_continuous(labels = comma) + 
+  #   ylab("Number of deaths") + xlab("Year") +  
+  #   plotOpts
+  
+  plotDeaths <- ggplot(data = hivResults, aes(x = yeardiagnosis, 
+                                              y = deaths)) +
+    geom_ribbon(aes(ymin = deaths_min, ymax = deaths_max), 
               fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
-    scale_x_continuous(breaks = seq((resultsYear - minYear + 1), 
-                                    resultsYear, by = 3)) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3),
+                       limits = c(startYear, resultsYear)) +
     expand_limits(y = 0) +
     scale_y_continuous(labels = comma) + 
     ylab("Number of deaths") + xlab("Year") +  
     plotOpts
   
-  plotDeathRate <- ggplot(data = deathData, 
-                          aes(x = year, y = deathrate)) +
+  plotDeathRate <- ggplot(data = hivResults, 
+                          aes(x = yeardiagnosis, y = deathrate)) +
     geom_ribbon(aes(ymin = drlower, ymax = drupper), 
               fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
-    scale_x_continuous(breaks = seq((resultsYear - minYear + 1), 
-                                    resultsYear, by = 3)) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3),
+                       limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = percent, limits = c(0, 0.02)) + 
     ylab("Mortality rate (%)") + xlab("Year") +  
     plotOpts
@@ -438,7 +527,8 @@ if (pubPlots) {
               fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
     scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
-    scale_y_continuous(labels = percent, limits = c(0, 1)) + 
+    scale_y_continuous(labels = percent) + 
+    coord_cartesian(ylim = c(0,1)) +
     ylab("ART coverage of\nPLDHIV (%)") + xlab("Year") +  
     plotOpts
   
@@ -838,23 +928,24 @@ if (pubPlots) {
   uniqueDiags <- tail(uniqueDiags, 10)
   
   # Create an overall data frame
-  allLinked <- hivSet %>% 
-    group_by(yeardiagnosis) %>% 
-    filter(linked == "yes") %>%
-    summarise(linked = n()) %>% 
-    filter(yeardiagnosis <= resultsYear, yeardiagnosis >= startYear) %>%
-    mutate(proplinked  = linked / uniqueDiags) 
+  # allLinked <- hivSet %>% 
+  #   group_by(yeardiagnosis) %>% 
+  #   filter(linked == "yes") %>%
+  #   summarise(linked = n()) %>% 
+  #   filter(yeardiagnosis <= resultsYear, yeardiagnosis >= startYear) %>%
+  #   mutate(proplinked  = linked / uniqueDiags) 
   
   # Overall estimate of unique diagnoses
   propUnique <- hivResults$propunique
-  propUnique <- tail(propUnique, 11) # 11 because of use of diff()
+  propUnique <- tail(propUnique, 14) # 14 because of use of diff()
+                                     # 2004-2016
   
   # Create data frame for unique cases for each group
   expDiags <- hivSet %>% 
     group_by(expgroup, yeardiagnosis) %>% 
     summarise(notifications = n()) %>%
     mutate(totalnotifications = cumsum(notifications)) %>%
-    filter(yeardiagnosis <= resultsYear, 
+    filter(yeardiagnosis <= resultsYear,
            yeardiagnosis >= startYear - 1) %>%
     mutate(cumcases = totalnotifications * propUnique) %>%
     mutate(uniquecases = c(NA, diff(cumcases))) %>%
@@ -896,7 +987,7 @@ if (pubPlots) {
   
   # Turns out there is not much difference in % linked between MSM and
   # non-MSM so exclude from plot
-  linkPlotRecent <- ggplot(data = allLinked,
+  linkPlotRecent <- ggplot(data = hivResults,
                            aes(x = yeardiagnosis, y = proplinked)) + 
     geom_line(color = asrcols[2], size = 1.1)  +
     # geom_line(data = filter(expLinked, expgroup == "msm"),
@@ -904,7 +995,8 @@ if (pubPlots) {
     #           colour = "black", size = 1.1) + 
     # geom_line(data = nonMsmLinked, aes(x = year, y = 100 * proplinked), 
     #           colour = "blue", size = 1.1) + 
-    scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3)) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear, by = 3),
+                       limits = c(startYear, resultsYear)) +
     scale_y_continuous(label = percent, limits = c(0, 1)) + 
     ylab("Annual diagnoses \n linked to care") + xlab("Year") +
     plotOpts
@@ -919,7 +1011,7 @@ if (pubPlots) {
     saveFormat, sep = "")), plot = linkPlotRecent, 
     width = 7.5, height = 6, units = "cm")
   
-  # 2014 distribution -----------------------------------------------------
+  # 2016 distribution ----------------------------------------------------
   
   # Organize our date and calculate days between diagnosis and CD4
   linkDays <- hivSet %>%
@@ -970,7 +1062,7 @@ if (pubPlots) {
     plot = linkDist, 
     width = 9, height = 7.5, units = "cm")
   
-  # Average CD4 count -----------------------------------------------------
+  # Average CD4 count ----------------------------------------------------
   
   # Create data frames and do the calculations for each population group
   # Need to remove those previoulsy diagnosed overseas first as they maybe
