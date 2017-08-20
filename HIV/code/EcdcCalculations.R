@@ -166,14 +166,23 @@ typeDiag <- function(hivData, type, minYear = 1980,
       warning("Notifications not adjusted for duplicates")
     }
     
-    if (!is.null(normalize)) {
+    # Replace any negatives with zero
+    diagType[diagType < 0] <- 0
+    
+    # Adjust HIV notifications to account for unknowns
+    # Assume AIDS cases are complete
+    
+    if (!is.null(normalize) && (type == "hiv")) {
       diagType$hetero <- diagType$hetero/normalize
       diagType$msm <- diagType$msm/normalize
       diagType$pwid <- diagType$pwid/normalize
       diagType$otherexp <- diagType$otherexp/normalize
-    } else {
-      warning("Notifications not adjusted for unknowns")
+    } 
+    
+    if (is.null(normalize)) {
+      warning("HIV notifications not adjusted for unknowns")
     }  
+    
     
   } else {
     # Don't split by exposure group 
@@ -215,16 +224,19 @@ typeDiag <- function(hivData, type, minYear = 1980,
       warning("Notifications not adjusted for duplicates")
     }
     
-    if (!is.null(normalize)) {
-      diagType$all <- diagType$all/normalize
-    } else {
-      warning("Notifications not adjusted for unknowns")
-    }  
+    # Replace any negatives with zero
+    diagType[diagType < 0] <- 0
     
+    # Adjust HIV notifications to account for unknowns
+    # Assume AIDS cases are complete
+    if (!is.null(normalize) && (type == "hiv")) {
+      diagType$all <- diagType$all/normalize
+    }
+    
+    if (is.null(normalize)) {
+      warning("HIV notifications not adjusted for unknowns")
+    }  
   }
-  
-  # Replace any negatives with zero
-  diagType[diagType < 0] <- 0
   
   return(diagType)
 }

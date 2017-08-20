@@ -42,10 +42,10 @@ analysisYear <- 2016
 saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
-cascadeName <- paste0("AusNonAtsi-", toString(analysisYear)) 
+cascadeName <- paste0("All-", toString(analysisYear)) 
 targetGender <- 'all' # all, male, female
 targetAge <- 'all' #groups 0, 1, 2, 3, 4...
-targetCob <- 'Australia' # all=including n/a, Thailand, etc.
+targetCob <- 'all' # all=including n/a, Thailand, etc.
 targetExposure <- 'all' #msm, hetero, pwid, otherexp
 targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
 targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
@@ -287,7 +287,6 @@ hivInterstate <- read.csv(file.path(dataFolder,
                               paste0("HIVinterstateEstimates-",
                     toString(analysisYear), ".csv")))
 
-# WHERE I AM UP TO
 # Now get the death rates, migration rates, and proportion stay rates
 subsetRates <- GetAdjustments(hivBase, hivAdjustments, hivInterstate, 
                               targetAge, targetGender,
