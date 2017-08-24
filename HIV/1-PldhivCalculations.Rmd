@@ -54,7 +54,7 @@ targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South
 
 # Script options for calculations
 interState <- ifelse(targetState != "all", TRUE, FALSE)
-excludeAborig <- TRUE
+excludeAborig <- FALSE
 doAge <- FALSE # TRUE for aging calculations
 doRetained <- TRUE # TRUE for appending retained in care
 if (doRetained) {
