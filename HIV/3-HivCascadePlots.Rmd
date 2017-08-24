@@ -74,6 +74,7 @@ if (excludeCare) {
 
 savePlots <- FALSE # save plots as separate files
 pubPlots <- TRUE     # create additional plots for publications
+newInfectsPlots <- FALSE
 saveFormat <- ".png" # file extension for saved plots 
 
 if (pubPlots) {
@@ -91,10 +92,6 @@ if (savePlots) {
 ```{r loadresults}
 
 # Load hiv cascade dataframe
-# inputFile <- file.path(resultsFolder,paste("HIVcascadeEstimates-", 
-#   toString(resultsYear), ".rda", sep = ""))
-# load(inputFile)
-
 inputFile <- file.path(resultsFolder, paste("HIVcascadeEstimates-", 
   toString(resultsYear), ".csv", sep = ""))
 hivCascade <- read.csv(inputFile)
@@ -108,16 +105,10 @@ if (excludeCare) {
   hivCascade <- filter(hivCascade, stage != "retained")
 }
 
-if (pubPlots) {
+if (newInfectsPlots) {
   newInfections <- read_excel(file.path(dirname(resultsFolder), "data",
                             "ecdc_new_infections-2015.xlsx"))
 }
-
-# Load the previously saved hiv notifications data frame
-# load(file.path(resultsFolder, paste("HIVset-",
-#                     toString(resultsYear), ".rda", sep = "")))
-# hivSet <- read.csv(file.path(resultsFolder, paste("HIVset-",
-#                     toString(resultsYear), ".csv", sep = "")))
 
 if (pubPlots) {
 
@@ -143,14 +134,6 @@ if (pubPlots) {
   hivResults$deaths <- cumsum(pldhivAll$deaths)
   hivResults$deaths_min <- cumsum(pldhivMin$deaths)
   hivResults$deaths_max <- cumsum(pldhivMax$deaths)
-  
-  # Load the previously saved hivresults data frame
-  # load(file.path(resultsFolder, paste("HIVresults-",
-  #                     toString(resultsYear), ".rda", sep = "")))
-  # hivResults <- read.csv(file.path(resultsFolder, paste("HIVresults-",
-  #                     toString(resultsYear), ".csv", sep = "")))
-  
-  # Load and extract specific results for all for publications plots
   
   hivBase <- read.csv(file.path(dataFolder, paste0("HIVbaseEstimates-",
     toString(resultsYear), ".csv")))
@@ -603,7 +586,7 @@ diagsPlot <- ggplot(data = diagsData, aes(x = year, y = diags)) +
   plotOpts
 
 # Diagnostics-------------------------------------------------------------
-# Aimed to produce a number of diagnostic of the poisson fit. Ended up 
+# Aimed to produce a number of diagnostics of the poisson fit. Ended up 
 # sticking with a plot and pseudo R^2 calculation. The pseudo-R^2 using 
 # the rsq package https://cran.r-project.org/web/packages/rsq/index.html
 # based on the calculation in the paper: Cameron & Windmeijer, An 
@@ -802,87 +785,87 @@ if (pubPlots) {
 # This chunk produces some plots related to new infections for the overall
 #  cascade. It is only used for publication purposes
 
-if (pubPlots) {
+if (newInfectsPlots) {
   # Sort out new infections
   infectsData <- data_frame(year = startYear:resultsYear)
-  
+
   infectsData$estimate <- (filter(newInfections, year >= startYear,
     overseas_included == "yes")$estimate + filter(newInfections,
     year >= startYear, overseas_included == "no")$estimate) / 2
-  
+
   infectsData$lower <- filter(newInfections, year >= startYear,
                               overseas_included == "no")$lower
-  
+
   infectsData$upper<- filter(newInfections, year >= startYear,
                              overseas_included == "yes")$upper
-  
+
   plhivEstimate <- filter(resultsAll, stage == "infected")$value
   plhivLower <- filter(resultsAll, stage == "infected")$lower
   plhivUpper <- filter(resultsAll, stage == "infected")$upper
-  
+
   # Plot new infections estimate
   plotInfects <- ggplot(data = infectsData, aes(x = year)) +
-    geom_ribbon(aes(ymin = lower, ymax = upper), 
-                alpha = 0.3, fill = "red") + 
+    geom_ribbon(aes(ymin = lower, ymax = upper),
+                alpha = 0.3, fill = "red") +
     geom_line(aes(y = estimate), colour = "red") +
-    scale_x_continuous(breaks = seq(startYear,                        
+    scale_x_continuous(breaks = seq(startYear,
                                     resultsYear, by = 3)) +
     scale_y_continuous(label = comma, limits = c(0, 1500))+
-    ylab("New infections") + xlab("Year") + 
+    ylab("New infections") + xlab("Year") +
     plotOpts
-  
+
   # Plot infections per plhiv
   plotInfectsRate <- ggplot(data = infectsData, aes(x = year)) +
-    geom_ribbon(aes(ymin = 100 * lower / plhivUpper, 
-                    ymax = 100 * upper / plhivLower), 
+    geom_ribbon(aes(ymin = 100 * lower / plhivUpper,
+                    ymax = 100 * upper / plhivLower),
                 alpha = 0.3, fill = "black") +
     geom_line(aes(y = 100 * estimate / plhivEstimate), colour = "black") +
-    scale_x_continuous(breaks = seq(startYear,                        
+    scale_x_continuous(breaks = seq(startYear,
                                     resultsYear, by = 3)) +
     expand_limits(y = 0) +
-    ylab("New infections\nper 100 PLHIV") + xlab("Year") + 
+    ylab("New infections\nper 100 PLHIV") + xlab("Year") +
     plotOpts
-  
+
   # Plot relative change in new infections, the rate, and notifications
   plotRelative <- ggplot(data = infectsData, aes(x = year)) +
-    geom_ribbon(aes(ymin = (lower / plhivUpper) / 
-                      (lower[1] / plhivUpper[1]), 
+    geom_ribbon(aes(ymin = (lower / plhivUpper) /
+                      (lower[1] / plhivUpper[1]),
                     ymax = (upper / plhivLower) / (upper[1] /
-                                                     plhivLower[1])), 
+                                                     plhivLower[1])),
                 alpha = 0.3, fill = "black") +
     geom_line(aes(y = (estimate / plhivEstimate) / (estimate[1] /
-      plhivEstimate[1]), colour = "rate")) + 
-    geom_ribbon(aes(ymin = lower / lower[1], ymax = upper / upper[1]), 
-                alpha = 0.3, fill = "red") + 
+      plhivEstimate[1]), colour = "rate")) +
+    geom_ribbon(aes(ymin = lower / lower[1], ymax = upper / upper[1]),
+                alpha = 0.3, fill = "red") +
     geom_line(aes(y = estimate / estimate[1], colour = "infections")) +
-    geom_line(aes(y = diagsData$diags / diagsData$diags[1], 
-                  colour = "diags")) + 
-    scale_x_continuous(breaks = seq(startYear,                        
+    geom_line(aes(y = diagsData$diags / diagsData$diags[1],
+                  colour = "diags")) +
+    scale_x_continuous(breaks = seq(startYear,
                                     resultsYear, by = 3)) +
     scale_y_continuous(label = percent, limits = c(0, 1.5)) +
-    scale_colour_manual(name = NULL, 
+    scale_colour_manual(name = NULL,
                         values = c("red", "black", "blue"),
                         limits = c("infections", "rate", "diags"),
-                        labels = c("Estimated new infections", 
-                                   "New infections per PLHIV", 
+                        labels = c("Estimated new infections",
+                                   "New infections per PLHIV",
                                    "Notifications"),
                         guide = guide_legend(ncol = 1)) +
-    ylab("Relative to 2006") + xlab("Year") + 
+    ylab("Relative to 2006") + xlab("Year") +
     plotOpts + theme(legend.position = "right")
-  
+
   # Produce a nice combined plot
-  plotCombined <- ggdraw() + 
+  plotCombined <- ggdraw() +
     draw_plot(plotInfects, 0, 0.5, 0.5, 0.5) +
     draw_plot(plotInfectsRate, 0.5, 0.5, 0.5, 0.5) +
     draw_plot(plotRelative, 0, 0, 1, 0.5) +
-    draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0), c(1, 1, 0.5), 
+    draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0), c(1, 1, 0.5),
                     size = 12)
   # Save the plot
-  ggsave(file.path(figFolder, paste("HIV_new_infections_", 
-    toString(startYear), "-", toString(resultsYear), 
+  ggsave(file.path(figFolder, paste("HIV_new_infections_",
+    toString(startYear), "-", toString(resultsYear),
                                     saveFormat, sep = "")),
          plot = plotCombined, width = 15, height = 15, units = "cm")
-  
+
   # Trends
   trendInfections <- lm(estimate ~ year, data = infectsData)
   coeffInfections <- summary(trendInfections)$coefficients["year",
@@ -890,7 +873,7 @@ if (pubPlots) {
   p_valueInfections <- summary(trendInfections)$coefficients["year",
                                                              "Pr(>|t|)"]
   intervalInfections <- confint(trendInfections, "year")
-  
+
   trendRate <- lm(100 * infectsData$estimate / plhivEstimate  ~
                     infectsData$year)
   coeffRate <- summary(trendRate)$coefficients["infectsData$year",
@@ -898,9 +881,9 @@ if (pubPlots) {
   p_valueRate <- summary(trendRate)$coefficients["infectsData$year",
                                                  "Pr(>|t|)"]
   intervalRate <- confint(trendRate, "infectsData$year")
-  
+
   # Save new infections trends
-  trendsInfections <- data_frame(stage = c("infections", "rate"), 
+  trendsInfections <- data_frame(stage = c("infections", "rate"),
                            coeff = c(coeffInfections, coeffRate),
                            pvalue = c(p_valueInfections,p_valueRate),
                            lower = c(intervalInfections[1],
@@ -908,7 +891,7 @@ if (pubPlots) {
                            upper = c(intervalInfections[2],
                                      intervalRate[2]))
 
-  write_csv(trendsInfections, file.path(figFolder, 
+  write_csv(trendsInfections, file.path(figFolder,
       paste0("Trends_infections_",
       toString(startYear), "-", toString(resultsYear), ".csv")))
 }
