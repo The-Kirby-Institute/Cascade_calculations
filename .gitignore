@@ -40,7 +40,11 @@ HIV/subprojects/
 
 # Chlamydia directory
 Chlamydia/data/raw/*
-!Chlamydia/data/raw/CT notifications_2015_National_Estimate-2016-09-27.xlsx
-Chlamydia/output/figures/
+Chlamydia/data/chlamRetestVariation2016.csv
+# Chlamydia/output/figures/
+Chlamydia/output/
 Chlamydia/ChlamydiaCascade.nb.html
 
+HCV cascade/
+HIV/misc/
+HIV/2017_HIV_cascade_tracker.xlsx
