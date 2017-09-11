@@ -1,0 +1,242 @@
+COUNTRY_NAME,REGION,COUNTRY_CODE,REGION_CODE
+Afghanistan,Southern And Central Asia,7201,10
+Albania,Southern And Eastern Europe,3201,11
+Algeria,North Africa And The Middle East,4101,3
+American Samoa,Oceania And Antarctica,1506,7
+Andorra,Southern And Eastern Europe,3101,11
+Angola,Sub-Saharan Africa,9201,12
+Anguilla,Caribbean,8401,1
+Antarctica,Oceania And Antarctica,1000,7
+Antigua And Barbuda,Caribbean,8402,1
+Argentina,South America,8201,8
+Armenia,Southern And Central Asia,7202,10
+Aruba,Caribbean,8403,1
+Australia,Oceania And Antarctica,1100,7
+Austria,North West Europe,2301,4
+Azerbaijan,Southern And Central Asia,7203,10
+Bahamas,Caribbean,8404,1
+Bahrain,North Africa And The Middle East,4201,3
+Bangladesh,Southern And Central Asia,7101,10
+Barbados,Caribbean,8405,1
+Belarus,Southern And Eastern Europe,3301,11
+Belgium,North West Europe,2302,4
+Belize,Central America,8301,2
+Benin,Sub-Saharan Africa,9101,12
+Bermuda,Northern America,8101,6
+Bhutan,Southern And Central Asia,7102,10
+Bolivia,South America,8202,8
+Bosnia And Herzegovina,Southern And Eastern Europe,3202,11
+Botswana,Sub-Saharan Africa,9202,12
+Bouvet Island,Oceania And Antarctica,29,7
+Brazil,South America,8203,8
+British Indian Ocean Territory,Southern And Central Asia,9299,10
+Brunei Darussalam,South-East Asia,5201,9
+Bulgaria,North West Europe,3203,4
+Burkina Faso,Sub-Saharan Africa,9102,12
+Burundi,Sub-Saharan Africa,9203,12
+Cambodia,South-East Asia,5102,9
+Cameroon,Sub-Saharan Africa,9103,12
+Canada,Northern America,8102,6
+Cape Verde,Sub-Saharan Africa,9104,12
+Cayman Islands,Caribbean,8406,1
+Central African Republic,Sub-Saharan Africa,9105,12
+Chad,Sub-Saharan Africa,9106,12
+Chile,South America,8204,8
+China,North-East Asia,6101,5
+Christmas Island,Oceania And Antarctica,1101,7
+Cocos (Keeling) Islands,Oceania And Antarctica,1101,7
+Colombia,South America,8205,8
+Comoros,Sub-Saharan Africa,9204,12
+Congo (Rc),Sub-Saharan Africa,9107,12
+"Congo, (Zaire) The Democratic Republic Of The",Sub-Saharan Africa,9108,12
+Cook Islands,Oceania And Antarctica,1501,7
+Costa Rica,Central America,8302,2
+"Cote D""+B104ivoire",Sub-Saharan Africa,9111,12
+Croatia,Southern And Eastern Europe,3204,11
+Cuba,Caribbean,8407,1
+Cyprus,Southern And Eastern Europe,3205,11
+Czech Republic,Southern And Eastern Europe,3302,11
+Denmark,North West Europe,2401,4
+Djibouti,Sub-Saharan Africa,9205,12
+Dominica,Caribbean,8408,1
+Dominican Republic,Caribbean,8411,1
+East Timor,South-East Asia,5206,9
+Ecuador,South America,8206,8
+Egypt,North Africa And The Middle East,4102,3
+El Salvador,Central America,8303,2
+Equatorial Guinea,Sub-Saharan Africa,9112,12
+Eritrea,Sub-Saharan Africa,9206,12
+Estonia,Southern And Eastern Europe,3303,11
+Ethiopia,Sub-Saharan Africa,9207,12
+Falkland Islands (Malvinas),South America,8207,8
+Faroe Islands,North West Europe,2402,4
+Fiji,Oceania And Antarctica,1502,7
+Finland,North West Europe,2403,4
+France,North West Europe,2303,4
+French Guiana,South America,8208,8
+French Polynesia,Oceania And Antarctica,1503,7
+French Southern Territories,Oceania And Antarctica,9299,7
+Gabon,Sub-Saharan Africa,9113,12
+Gambia,Sub-Saharan Africa,9114,12
+Georgia,Southern And Central Asia,7204,10
+Germany,North West Europe,2304,4
+Ghana,Sub-Saharan Africa,9115,12
+Gibraltar,Southern And Eastern Europe,3102,11
+Greece,Southern And Eastern Europe,3207,11
+Greenland,North West Europe,2404,4
+Grenada,Caribbean,8412,1
+Guadeloupe,Caribbean,8413,1
+Guam,Oceania And Antarctica,1401,7
+Guatemala,Central America,8304,2
+Guinea,Sub-Saharan Africa,9116,12
+Guinea-Bissau,Sub-Saharan Africa,9117,12
+Guyana,South America,8211,8
+Haiti,Caribbean,8414,1
+Heard Island And Mcdonald Islands,Oceania And Antarctica,1199,7
+Holy See (Vatican City State),Southern And Eastern Europe,3103,11
+Honduras,Central America,8305,2
+Hong Kong,North-East Asia,6102,5
+Hungary,Southern And Eastern Europe,3304,11
+Iceland,North West Europe,2405,4
+India,Southern And Central Asia,7103,10
+Indonesia,South-East Asia,5202,9
+"Iran, Islamic Republic Of",North Africa And The Middle East,4203,3
+Iraq,North Africa And The Middle East,4204,3
+Ireland,North West Europe,2201,4
+Israel,North Africa And The Middle East,4205,3
+Italy,North West Europe,3104,4
+Jamaica,Caribbean,8415,1
+Japan,North-East Asia,6201,5
+Jordan,North Africa And The Middle East,4206,3
+Kazakstan,Southern And Central Asia,7205,10
+Kenya,Sub-Saharan Africa,9208,12
+Kiribati,Oceania And Antarctica,1402,7
+"Korea, Democratic People""S Republic Of",North-East Asia,6202,5
+"Korea, Republic Of",North-East Asia,6203,5
+Kuwait,North Africa And The Middle East,4207,3
+Kyrgyzstan,Southern And Central Asia,7206,10
+"Lao People""S Democratic Republic",South-East Asia,5103,9
+Latvia,Southern And Eastern Europe,3305,11
+Lebanon,North Africa And The Middle East,4208,3
+Lesotho,Sub-Saharan Africa,9211,12
+Liberia,Sub-Saharan Africa,9118,12
+Libyan Arab Jamahiriya,North Africa And The Middle East,4103,3
+Liechtenstein,North West Europe,2305,4
+Lithuania,Southern And Eastern Europe,3306,11
+Luxembourg,North West Europe,2306,4
+Macau,North-East Asia,6103,5
+"Macedonia, The Former Yugoslav Republic Of",Southern And Eastern Europe,3206,11
+Madagascar,Sub-Saharan Africa,9212,12
+Malawi,Sub-Saharan Africa,9213,12
+Malaysia,South-East Asia,5203,9
+Maldives,Southern And Central Asia,7104,10
+Mali,Sub-Saharan Africa,9121,12
+Malta,Southern And Eastern Europe,3105,11
+Marshall Islands,Oceania And Antarctica,1403,7
+Martinique,Caribbean,8416,1
+Mauritania,Sub-Saharan Africa,9122,12
+Mauritius,Sub-Saharan Africa,9214,12
+Mayotte,Sub-Saharan Africa,9215,12
+Mexico,Central America,8306,2
+"Micronesia, Federated States Of",Oceania And Antarctica,1404,7
+"Moldova, Republic Of",Southern And Eastern Europe,3208,11
+Monaco,North West Europe,2307,4
+Mongolia,North-East Asia,6104,5
+Montserrat,Caribbean,8417,1
+Morocco,North Africa And The Middle East,4104,3
+Mozambique,Sub-Saharan Africa,9216,12
+Myanmar (Burma),South-East Asia,5101,9
+Namibia,Sub-Saharan Africa,9217,12
+Nauru,Oceania And Antarctica,1405,7
+Nepal,Southern And Central Asia,7105,10
+Netherlands,North West Europe,2308,4
+Netherlands Antilles,Caribbean,8418,1
+New Caledonia,Oceania And Antarctica,1301,7
+New Zealand,Oceania And Antarctica,1201,7
+Nicaragua,Central America,8307,2
+Niger,Sub-Saharan Africa,9123,12
+Nigeria,Sub-Saharan Africa,9124,12
+Niue,Oceania And Antarctica,1504,7
+Norfolk Island,Oceania And Antarctica,1102,7
+Northern Mariana Islands,Oceania And Antarctica,1406,7
+Norway,North West Europe,2406,4
+Not Reported,Not Known,0,0
+Oman,North Africa And The Middle East,4211,3
+Pakistan,Southern And Central Asia,7106,10
+Palau,Oceania And Antarctica,1407,7
+"Palestinian Territory, Occupied",North Africa And The Middle East,4202,3
+Panama,Central America,8308,2
+Papua New Guinea,Oceania And Antarctica,1302,7
+Paraguay,South America,8212,8
+Peru,South America,8213,8
+Philippines,South-East Asia,5204,9
+Pitcairn,Oceania And Antarctica,1599,7
+Poland,Southern And Eastern Europe,3307,11
+Portugal,Southern And Eastern Europe,3106,11
+Puerto Rico,Caribbean,8421,1
+Qatar,North Africa And The Middle East,4212,3
+Reunion,Sub-Saharan Africa,9218,12
+Romania,Southern And Eastern Europe,3211,11
+Russian Federation,Southern And Eastern Europe,3308,11
+Rwanda,Sub-Saharan Africa,9221,12
+Saint Helena,Sub-Saharan Africa,9222,12
+Saint Kitts And Nevis,Caribbean,8422,1
+Saint Lucia,Caribbean,8423,1
+Saint Pierre And Miquelon,Northern America,8103,6
+Saint Vincent And The Grenadines,Caribbean,8424,1
+Samoa,Oceania And Antarctica,1505,7
+San Marino,Southern And Eastern Europe,3107,11
+Sao Tome And Principe,Sub-Saharan Africa,9125,12
+Saudi Arabia,North Africa And The Middle East,4213,3
+Senegal,Sub-Saharan Africa,9126,12
+Serbia,Southern And Eastern Europe,3214,11
+Seychelles,Sub-Saharan Africa,9223,12
+Sierra Leone,Sub-Saharan Africa,9127,12
+Singapore,South-East Asia,5205,9
+Slovakia,Southern And Eastern Europe,3311,11
+Slovenia,Southern And Eastern Europe,3212,11
+Solomon Islands,Oceania And Antarctica,1303,7
+Somalia,Sub-Saharan Africa,9224,12
+South Africa,Sub-Saharan Africa,9225,12
+South Georgia And The South Sandwich Islands,South America,8299,8
+Spain,Southern And Eastern Europe,3108,11
+Sri Lanka,Southern And Central Asia,7107,10
+Sudan,North Africa And The Middle East,4105,3
+Suriname,South America,8214,8
+Svalbard And Jan Mayen,Oceania And Antarctica,2408,7
+Swaziland,Sub-Saharan Africa,9226,12
+Sweden,North West Europe,2407,4
+Switzerland,North West Europe,2311,4
+Syrian Arab Republic,North Africa And The Middle East,4214,3
+"Taiwan, Province Of China",North-East Asia,6105,5
+Tajikistan,Southern And Central Asia,7207,10
+"Tanzania, United Republic Of",Sub-Saharan Africa,9227,12
+Thailand,South-East Asia,5104,9
+Togo,Sub-Saharan Africa,9128,12
+Tokelau,Oceania And Antarctica,1507,7
+Tonga,Oceania And Antarctica,1508,7
+Trinidad And Tobago,Caribbean,8425,1
+Tunisia,North Africa And The Middle East,4106,3
+Turkey,North Africa And The Middle East,4215,3
+Turkmenistan,Southern And Central Asia,7208,10
+Turks And Caicos Islands,Caribbean,8426,1
+Tuvalu,Oceania And Antarctica,1511,7
+Uganda,Sub-Saharan Africa,9228,12
+Ukraine,Southern And Eastern Europe,3312,11
+United Arab Emirates,North Africa And The Middle East,4216,3
+United Kingdom,North West Europe,2100,4
+United States,Northern America,8104,6
+United States Minor Outlying Islands,Northern America,1599,6
+Uruguay,South America,8215,8
+Uzbekistan,Southern And Central Asia,7211,10
+Vanuatu,Oceania And Antarctica,1304,7
+Venezuela,South America,8216,8
+Viet Nam,South-East Asia,5105,9
+"Virgin Islands, British",Caribbean,8427,1
+"Virgin Islands, U.S.",Caribbean,8428,1
+Wallis And Futuna,Oceania And Antarctica,1512,7
+Western Sahara,North Africa And The Middle East,4107,3
+Yemen,North Africa And The Middle East,4217,3
+Yugoslavia,Southern And Eastern Europe,3213,11
+Zambia,Sub-Saharan Africa,9231,12
+Zimbabwe,Sub-Saharan Africa,9232,12

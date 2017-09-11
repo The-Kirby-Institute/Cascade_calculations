@@ -28,7 +28,13 @@ PHC CT request_NSW data only_updated_26July2016.xlsx
 
 # HIV directory
 HIV/*.nb.html
-HIV/data/
+HIV/data/*
+!HIV/data/countryRegionCodes.csv
+!HIV/data/Hard_coded_estimates.csv
+!HIV/data/HIVadjustments-*.csv
+!HIV/data/HIVbaseEstimates-*.csv
+!HIV/data/individualHIVparameters.csv
+!HIV/data/README.md
 HIV/output/*
 !HIV/output/All-2016/
 !HIV/output/NSW-2016/
