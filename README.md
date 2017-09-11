@@ -1,10 +1,10 @@
 ## Australian Diagnosis and Care Cascade Calculations
 
-This project repository contains all the code and input data used to estimate the steps of various diagnosis and care cascades for Australia and for associated calculations. The outputs of these calculations are reported annually in the HIV, viral hepatitis and sexually transmissible infections in [Australia Annual Surveillance Report](https://kirby.unsw.edu.au/report-type/annual-surveillance-reports) (ASR). Additional materials are stored in this repository for associated publications related to the cascades for transparency and reproduciblity purposes.  
+This project repository contains all the code and cleaned input data (publicly available) used to estimate the steps of various diagnosis and care cascades for Australia and for associated calculations. The outputs of these calculations are reported annually in the HIV, viral hepatitis and sexually transmissible infections in [Australia Annual Surveillance Report](https://kirby.unsw.edu.au/report-type/annual-surveillance-reports) (ASR). Additional materials are stored in this repository for associated publications related to the cascades for transparency and reproduciblity purposes.  
 
-This repository currently contains materials for two separate cascades: the Australian HIV cascade and the Australian Chlamydia cascade. This project also provides estimates for a viral hepatitis C (HCV) cascade but materials for this cascade are stored locally and not available in the online repository. Cascade estimates obtained from this project have been reported in the ASR since 2015. Additional calculations related to these cascades have also been used to produce a number of publications listed below. 
+This repository currently contains materials for two separate cascades: the Australian HIV cascade and the Australian Chlamydia cascade. This project also provides estimates for a viral hepatitis C (HCV) cascade but materials for this cascade are stored locally and not available in this online repository. Cascade estimates obtained from this project have been reported in the ASR since 2015. Additional calculations related to these cascades have also been used to produce a number of publications listed below. 
 
-All calculations are primarily conducted using R (currently version 3.3.2) with associated packages (main packages: readr 1.0.0; dplyr 0.5.0; tidyr 0.6.1; ggplot2 2.2.1). Some simple calculations are conducted using Microsoft Excel. Many of the data files required to run the scripts are not publicly available and have been excluded from the repository. Please report an issue if you want to run the code or contact Rgray@kirby.unsw.edu.au. 
+All calculations are primarily conducted using R (currently version 3.3.2) with associated packages (stringr 1.1.0; captioner 2.2.3; cowplot 0.7.0; gridExtra 2.2.1; knitr 1.15.1; Hmisc 4.0.2; Formula 1.2.1; survival 2.40.1; lattice 0.20.34; RColorBrewer 1.1.2; scales 0.4.1; ggplot2 2.2.1; readxl 1.0.0; tidyr 0.6.1; dplyr 0.5.0; readr 1.1.1). Some simple calculations are conducted using Microsoft Excel. Many of the data files required to run the scripts are not publicly available and have been excluded from the repository. Please report an issue if you want to run the code or contact Rgray@kirby.unsw.edu.au. 
 
 **Repository owner:** Richard T. Gray
 
@@ -14,7 +14,7 @@ All calculations are primarily conducted using R (currently version 3.3.2) with 
 
 ### Aims ###
 
-The aim of the cascade calculations is to estimate the total number of people living with an infection, have been diagnosed, are receiving appropriate care, receiving treatment, and have achieved the desired clinical outcome/endpoint. The purpose of these steps is highlight any potential gaps in care and treatment at a cross-sectional population level. Each infection can have different steps in its cascade depending on its key characteristics and clinical pathway  and may focus on specific populations by region, demographics, or exposure risk. 
+The aim of the cascade calculations is to estimate the total number of people living with an infection, have been diagnosed, are receiving appropriate care, are receiving treatment, and have achieved the desired clinical outcome/endpoint. The purpose of these steps are to highlight any potential gaps in care and treatment at a cross-sectional population level. Each infection can have different steps in its cascade depending on its key characteristics and clinical pathway and may focus on specific populations by region, demographics, or exposure risk. 
 
 ### Contributors ###
 
@@ -30,7 +30,7 @@ The development of the diagnosis and care cascades and the project overall is ov
 
 ### Project organization ###
 
-The code and materials for the HIV, Chlamydia, and HCV cascade are stored in three separate folders and treated as separate projects. They are described separately via README files contained in the corresponding folders. The folders and files contained in the main directory contain material that is relevant to all cascade calculations. Some of these materials are stored locally and are not available from the online repository. 
+The code and materials for the HIV, Chlamydia, and HCV cascade are stored in three separate folders and treated as separate projects. They are described separately via README files contained in the corresponding folders. The folders and files contained in the main directory contain material that is relevant to all cascade calculations. Some of these materials are stored locally (for use by collaborators) and are not available from the online repository. 
 
 _Main directory sub-directories_ 
 
@@ -40,23 +40,23 @@ Contains specific R functions and scripts used for all cascade calculations.
 
 #### dashboards ####
 
-Contains R markdown scripts for generating shiny dashboards for specific cascades. It currently only has a dashboard script for the HIV cascade.
+Contains R markdown scripts for generating shiny dashboards for specific cascades. It currently only has a draft/preliminary dashboard script for the HIV cascade.
 
 #### data (local) ####
 
-Contains raw and cleaned data files of relevance to all cascade calculations. These files are stored locally and are not available in the online repository. 
+Contains raw and cleaned data files of relevance to all cascade calculations. Most of these files are stored locally and are not available in this online repository as they contain data that can not be shared publicly. Currently this folder only contains cleaned Australian Bureau of Statistics (ABS) population movement data. 
 
 #### docs (local) ####
 
-Contains manuscript, report, and presentation files based on cascade results and related documents. These files are stored locally and are not available in the online repository. 
+Contains manuscript, report, and presentation files based on cascade results and related documents. These files are stored locally and are not available in this online repository. 
 
 #### HCV cascade (local) ####
 
-Contains all the materials relevant to the HCV cascade calculations. The estimates are produced in collaboration with the [Center for Disease Analysis](http://centerforda.com/) using their CDA Bright model (which uses Microsoft Excel) of HCV transmission with updated HCV epidemiological, demographic, and clinical data for Australia. Along with the cascade estimates additional epidemiological and morbidity estimates are produced by the model for reporting in the ASR. Currently these files are stored locally and are not available in the online repository.
+Contains all the materials relevant to the HCV cascade calculations. The estimates are produced in collaboration with the [Center for Disease Analysis](http://centerforda.com/) using their CDA Bright model (which uses Microsoft Excel) of HCV transmission with updated HCV epidemiological, demographic, and clinical data for Australia. Along with the cascade estimates additional epidemiological and morbidity estimates are produced by the model for reporting in the ASR. Currently these files are stored locally and are not available in this online repository.
 
 #### misc (local) ####
 
-Contains miscellaneous files such references, correspondence, general information, examples, working documents, and general kibble  of relevance to the project. These files are stored locally and are not available in the online repository. 
+Contains miscellaneous files such references, correspondence, general information, examples, working documents, and general kibble  of relevance to the project. These files are stored locally and are not available in this online repository. 
 
 #### Chlamydia ####
 
@@ -79,6 +79,8 @@ The following publications are associated with this project and used code in thi
 - RT Gray, D Callander, S McGregor, J Hocking, H McManus, A Dyda, C Moreira, DP Wilson, B Donovan, J Kaldor, RJ Guy on behalf of the Australian STI Diagnosis and Care Cascade Reference Group. A population-level diagnosis and care cascade for curable STIs: The Australian Chlamydia Cascade. _In preparation_
 <br></br>
 - RT Gray et al. The Australia HIV cascade. _In preparation_ 
+<br></br>
+- P keen et al. The 2016 HIV diagnosis and care cascade in New South Wales, Australia: meeting the UNAIDS 90-90-90 targets. _In preparation_ 
 
 
 
