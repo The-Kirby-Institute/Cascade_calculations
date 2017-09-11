@@ -4,9 +4,9 @@
 Archive/
 data/*
 OtherSTIs/
-!data/ABS_departures_clean-2015.csv
-!data/ABS_interstate_clean-2015.csv
-!data/ABS_migration_clean-2015.csv
+!data/ABS_departures_clean-*.csv
+!data/ABS_interstate_clean-*.csv
+!data/ABS_migration_clean-*.csv
 /dashboards/*.csv
 /dashboards/rsconnect/
 /*.xlsm
