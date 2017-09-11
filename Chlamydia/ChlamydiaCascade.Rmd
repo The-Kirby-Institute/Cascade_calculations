@@ -34,16 +34,16 @@ dataFolder <- file.path(basePath, "data")
 # Source useful functions
 source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 source(file.path(Rcode, "LoadLibrary.R"), echo = TRUE)
-source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+source(file.path(Rcode, "DataLibraries.R"), echo = TRUE)
 
 # Current time for appending to outputs
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2015 # year of cascade we will calculate and plot     
+resultsYear <- 2014 # year of cascade we will calculate and plot     
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
-retestRange <- TRUE # Caclulate variations in retested
+retestRange <- FALSE # Caclulate variations in retested
 
 ```
 
@@ -52,7 +52,7 @@ retestRange <- TRUE # Caclulate variations in retested
 # results
 mainPackages <- c("readr","dplyr", "tidyr", "ggplot2")
 source(file.path(Rcode, "FrontMatter.R"))
-fmStr <- FrontMatter(mainPackages, rstudio = "1.0.136")
+fmStr <- FrontMatter(mainPackages, rstudio = "1.0.153")
 cat(fmStr)
 ```
 
@@ -210,30 +210,31 @@ chlamcascade <- rbind(chlamcascade,
 maleDiags <- rowSums(currentDiags[, 2:4])
 femaleDiags <- rowSums(currentDiags[, 5:7])
 
-if (resultsYear == 2015) {
-  # Estimate uncertainty using hard coded estimates for the Victorian 
-  # 15-29 year old population due to missing data in 2015 (from 
-  # CT notifications_2015_National_Estimate.xlsx)
-  maleVicProp <- c(0.311785906, 0.282127323, 0.270113596, 0.293094275, 
-                   0.278440872, 0.292558121, 0.313928571, 0.312064919, 
-                   0.317357613)
-  femaleVicProp <- c(0.23732887, 0.236128214, 0.228577183, 0.242843632,
-                     0.235762945,	0.248466407,	0.257113747,	0.251561962,
-                     0.250829686)
-  allVicProp <- c(0.264047108, 0.252757725, 0.243711463, 0.261540898,
-                  0.251955083, 0.265072308,	0.278668533,	0.274679677,
-                  0.276308761)
+if (resultsYear >= 2015) {
+  # Estimate uncertainty using estimates for the Victorian 
+  # 15-29 year old population due to missing data in 2015-2016 (from 
+  # CT notifications_YEAR_National_Estimate.xlsx)
+  
+  notificationsYear <- ifelse(resultsYear == 2015, 2016, resultsYear)
+  
+  proportionsFile <- file.path(dataFolder, paste0("CT notifications_",
+    toString(notificationsYear), "_National_Estimate.xlsx"))
+  
+  vicProportion <- read_excel(proportionsFile, sheet = 2, skip = 23)
 
-  years <- c(2006:2014)
+  years <- vicProportion$year
+  
+  maleVicProp <- vicProportion$male
+  femaleVicProp <- vicProportion$female
+  allVicProp <- vicProportion$all
   
   propData <- data.frame(year = years, males = maleVicProp, females =
                            femaleVicProp, all = allVicProp)
 
-  
   # Male estimates - produce range by using relative error for 
   # 2015 from linear regression
   malePropEst <-predict(lm(males ~ year, data = propData), 
-                        newdata = data.frame(year = 2015), 
+                        newdata = data.frame(year = resultsYear), 
                         interval = "predict")
   
   lowerMaleDiags <- maleDiags * (1 - malePropEst[1]) / 
@@ -566,9 +567,9 @@ if (resultsYear <= 2014) {
 if (saveCascade) {
   
   # Create output figures folder
-  dir.create(file.path(basePath, "output"), 
+  dir.create(file.path(basePath, "output", toString(resultsYear)), 
              showWarnings = FALSE)
-  resultsFolder <- file.path(basePath, "output")
+  resultsFolder <- file.path(basePath, "output", toString(resultsYear))
   
   # Cascade
   saveString <- paste0("chlamydia_cascade-", 
@@ -614,7 +615,7 @@ asrcols <- c("males" = "#2C4452",
 ```
 
 ```{r barchart}
-saveplots <- TRUE
+# saveplots <- TRUE
 
 # Create bar chart plot for Chlamydia cascade
 stages <- c("infections" = "New infections", 
@@ -626,6 +627,12 @@ stagesNeat <- c("infections" = "New \n infections",
             "notifications" = "Notifications", 
             "treated" = "Received \n treatment \n following \n diagnosis",
             "retested" = "Completed \n follow-up")
+
+if (resultsYear == 2014) {
+  stages <- c(stages, "negative" = "Negative at re-test")
+  stagesNeat <- c(stagesNeat, "negative" = "Negative \n at re-test")
+}
+
 
 # Plot the bar chart -----------------------------------------------------
 
@@ -740,7 +747,12 @@ if (saveplots) {
 finalTable <- select(chlamcascade, year, stage, sex)
 finalTable$estimate <- NA
 
-skip <- c(7:12)
+if (resultsYear == 2014) {
+  skip <- 3:4 
+} else {
+  slip <- 100  
+}
+
 for (ii in 1:nrow(finalTable)){
   if (ii %in% skip) {
     finalTable$estimate[ii] <- FormatData(chlamcascade$estimate[ii], 

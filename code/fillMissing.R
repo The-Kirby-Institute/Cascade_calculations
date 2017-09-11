@@ -23,7 +23,7 @@ FillMissing <- function(years, yearsValues, avalValues) {
     
     if (years[ii] %in% yearsValues) {
       # Have the data so add to output
-      index <- match(years[ii],yearsValues)
+      index <- match(years[ii], yearsValues)
       fillmissing$value[ii] <- avalValues[index]
     } else {
       # Missing so assume so make the current value equal last years value

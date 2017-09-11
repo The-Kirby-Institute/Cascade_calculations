@@ -1,6 +1,6 @@
 ## R function to calculate error range in Prospection PharmDash data
 
-# R.T. Gray (formula derived by Hamsih McManus)
+# R.T. Gray (formula derived by Hamish McManus)
 
 PharmDashError <- function(overallPop, treatEstimate, pharmDashProp = 0.1) {
   # Calculate the upper and lower bound for the estimated number of people

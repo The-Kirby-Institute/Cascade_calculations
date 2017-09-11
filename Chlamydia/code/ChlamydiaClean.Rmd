@@ -54,7 +54,7 @@ LoadLibrary(tidyr)
 LoadLibrary(utils)
 
 # Primary script parameters - data year 
-dataYear <- 2014
+dataYear <- 2016
 
 ```
 
@@ -462,12 +462,11 @@ write.csv(chlamRetest, file = file.path(cleanDataFolder,
 
 ```{r retesting ACCEPt}
 # Read in available ACCEPt data. We use the control group data on the 
-# # second sheet
+# second sheet. Only available up to 2014
 dataStartYear <- 2010
 
 # Raw testing file
-rawDataTreatment <- file.path(dataPath, paste0("accept_cascade_data-", 
-                                    toString(dataYear), ".xlsx"))
+rawDataTreatment <- file.path(dataPath, paste0("accept_cascade_data-2015.xlsx"))
 
 # Load raw re-testing data for control group
 retestAccept <- read_excel(rawDataTreatment, sheet = 2, skip = 3,
@@ -579,8 +578,6 @@ write.csv(retestAccept, file = file.path(cleanDataFolder,
           row.names = FALSE)
 
 ```
-
-
 
 ```{r restesting NSW GP}
 # Read in NSW GP data from ACCESS and clean it up 

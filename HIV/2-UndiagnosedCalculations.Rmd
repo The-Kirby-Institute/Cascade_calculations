@@ -1,0 +1,177 @@
+PLHIV and Unidagnosed
+=====================
+
+Neil Bretana and Richard T. Gray
+
+This script calculates the number of people living with HIV in
+Australia from the estimates of people living with diagnosed HIV and
+the number undiganosed produced by the ECDC HIV Modelling tool. 
+
+This notebook is currently in draft form for updating the HIV cascade 
+calculation scripts to version 3.0.
+
+```{r Initialization}
+# Chunk to setup everything
+# Clear workspace
+rm(list=ls()) 
+
+# Setup directories
+basePath <- file.path(dirname(getwd()), "HIV")
+
+Rcode <- file.path(dirname(getwd()), "code") 
+HIVcode <- file.path(basePath, "code") 
+dataFolder <- file.path(basePath, "data")
+outputFolder <- file.path(basePath, "output")
+
+# Set working directory to source file loaction
+
+# Load standard libraries and options ----------------------------------
+source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
+source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+
+```
+
+```{r Script parameters}
+# Chunk to enter all the script parameters we will use
+analysisYear <- 2016
+saveResults <- TRUE 
+cascadeFlag <- "All"
+# ecdcChart <- "Female" # ECDC group used for calculations
+ecdcResults <- "exposure"
+updateECDC <- FALSE
+
+# Produce cascadeName from the flag and analysis year. 
+cascadeName <- paste0(cascadeFlag, "-", toString(analysisYear))
+ecdcChart <- paste0(cascadeFlag, "_Charts.xlsx")
+
+```
+
+```{r Copy ECDC output}
+# This chunk copies the appropriate ECDC file to the appropriate output 
+# file and renames the file.
+# Unfortunately have to manually open file and unhide rows. 
+
+if (cascadeFlag == "Otherexp") {
+  # Use overall undiagnosed
+  ecdcFile <- file.path(outputFolder, "ECDC_models", paste0("All-",
+    toString(analysisYear)), ecdcResults, "results/All_Charts.xlsx")
+} else {
+  ecdcFile <- file.path(outputFolder, "ECDC_models", cascadeName, 
+                      ecdcResults, "results/All_Charts.xlsx")
+}
+
+finalFile <- file.path(outputFolder, cascadeName, ecdcChart)
+
+fileFlag <- FALSE
+
+if (!file.exists(finalFile) || updateECDC) {
+  file.copy(ecdcFile, finalFile, overwrite = TRUE)
+  fileFlag <- TRUE
+  stop("You need to unhide hidden rows otherwise results are incorrect")
+} # else it exists so you can carry on
+  
+```
+
+
+```{r Load data}
+# Chunk to load the PLDHIV estimates and ECDC undiagnosed estimates. 
+# For file to be read in properly make sure hidden rows are unhidden and
+# the file name changed into the correct format. 
+pldhiv <- read.csv(file.path(outputFolder, cascadeName, 
+                             paste0("HIVpldhivEstimates-",
+                             toString(analysisYear), ".csv"))) %>%
+  filter(stage == "pldhiv")
+
+numberUndiagnosed <- read_excel(file.path(outputFolder, cascadeName,
+                                    ecdcChart),
+           sheet = 2, col_names = FALSE, skip = 131) %>%
+  select(X__2, X__11, X__12, X__13) %>%
+  rename(year = X__2, undiagnosed = X__11, undiagnosed_lower = X__12,
+         undiagnosed_upper = X__13) %>%
+  slice(1:length(1980:analysisYear)) %>%
+  mutate(year = as.numeric(year))
+
+percentUndiagnosed <- read_excel(file.path(outputFolder, cascadeName,
+                                    ecdcChart),
+           sheet = 2, col_names = FALSE, skip = 195) %>%
+  select(X__2, X__3, X__4, X__5) %>%
+  rename(year = X__2, percent = X__3, percent_lower = X__4,
+         percent_upper = X__5) %>%
+  slice(1:length(1980:analysisYear))
+  
+undiagnosed <- left_join(numberUndiagnosed, percentUndiagnosed, 
+                         by = "year")
+
+# Merge data into one data frame
+mergedData <- pldhiv %>%
+  select(-population, - stage) %>%
+  rename(pldhiv = value,
+         pldhiv_lower = lower,
+         pldhiv_upper = upper) %>%
+  left_join(., undiagnosed, by = "year")
+
+population <- as.character(pldhiv$population[1])
+
+```
+
+
+```{r Undiagnosed calculations}
+# This chunk produces the final calculations
+if (cascadeFlag == "Otherexp") {
+  plhiv <- mergedData %>%
+    mutate(plhiv = pldhiv/(1 - percent / 100),
+           plhiv_lower = pldhiv_lower/(1 - percent_lower / 100),
+           plhiv_upper = pldhiv_upper/(1 - percent_upper / 100)) %>%
+    select(-undiagnosed, -undiagnosed_lower, -undiagnosed_upper)
+} else {
+  plhiv <- mergedData %>%
+    mutate(pnumber = pldhiv/(1 - percent / 100) - pldhiv,
+           pnumber_lower = pldhiv_lower/(1 - percent_lower / 100) -
+             pldhiv_lower,
+           pnumber_upper = pldhiv_upper/(1 - percent_upper / 100) -
+             pldhiv_upper) %>%
+    group_by(year) %>%
+    mutate(undiag = (pnumber + undiagnosed)/2,
+           undiag_lower = min(pnumber_lower, undiagnosed_lower),
+           undiag_upper = max(pnumber_upper, undiagnosed_upper)) %>%
+    mutate(plhiv = undiag + pldhiv,
+           plhiv_lower = undiag_lower + pldhiv_lower,
+           plhiv_upper = undiag_upper + pldhiv_upper) %>%
+    mutate(undiag_percent = 100 * undiag/plhiv,
+           uplower = 100 * undiag_lower/plhiv_lower,
+           upupper = 100 * undiag_upper/plhiv_upper) 
+}
+
+# Extract cascade results
+plhivResults <- plhiv %>% 
+  mutate(stage = "infected",
+         population = population) %>%
+  select(stage, year, population, plhiv, plhiv_lower, plhiv_upper) %>%
+  rename(value = plhiv,
+         lower = plhiv_lower,
+         upper = plhiv_upper)
+
+
+# Save results
+if (saveResults) {
+ # Save cascade estimates
+  saveStringPlhiv <- file.path(outputFolder, cascadeName, 
+    paste0("HIVpositiveEstimates-", toString(analysisYear)))
+  
+  # Write to csv
+  write_csv(plhivResults, paste0(saveStringPlhiv, ".csv")) 
+  
+  # Save plhiv
+  saveStringUndiagnosed <- file.path(outputFolder, cascadeName, 
+    paste0("plhivEstimates-", toString(analysisYear)))
+  
+  # Write to csv
+  write_csv(plhiv, paste0(saveStringUndiagnosed, ".csv"))
+  
+}
+
+if (fileFlag) {
+  stop("You need to unhide hidden rows otherwise results are incorrect")
+} 
+```
