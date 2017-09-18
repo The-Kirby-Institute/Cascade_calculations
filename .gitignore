@@ -36,10 +36,6 @@ HIV/data/*
 !HIV/data/individualHIVparameters.csv
 !HIV/data/README.md
 HIV/output/*
-!HIV/output/All-2016/
-!HIV/output/NSW-2016/
-HIV/output/NSW-2016/Archive/
-!HIV/output/HIVcascadeEstimates-2016.csv
 # Temporarily ignore stat analysis files
 HIV/trend_analysis/
 HIV/output.dta
