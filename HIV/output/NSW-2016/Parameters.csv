@@ -1,2 +1,0 @@
-cascadeName,targetGender,targetAge,targetCob,targetExposure,targetAtsi,targetState,targetLocalRegion,targetGlobalRegion,excludeAborig,ecdcData,ecdcVersion,excludeOS,interState
-NSW-2016,all,all,all,all,all,nsw,all,all,FALSE,TRUE,1.2.2,FALSE,TRUE
