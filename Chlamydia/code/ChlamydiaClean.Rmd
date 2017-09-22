@@ -54,7 +54,7 @@ LoadLibrary(tidyr)
 LoadLibrary(utils)
 
 # Primary script parameters - data year 
-dataYear <- 2016
+dataYear <- 2014
 
 ```
 
@@ -337,7 +337,7 @@ rawDataTreatment <- file.path(dataPath, paste0("access_cascade_data-",
                                     toString(dataYear), ".xlsx"))
 
 # Load raw re-testing data
-chlamRetest <- read_excel(rawDataTreatment, sheet = 5, skip = 3,
+chlamRetest <- read_excel(rawDataTreatment, sheet = 1, skip = 3,
                           col_names = FALSE)
 
 # Clean up data ----------------------------------------------------------
@@ -352,10 +352,10 @@ numDataYears <- length(dataYears)
 
 colnames(chlamRetest)[3:(3 + numDataYears - 1)] <- 
   paste0(dataYears, "all")
-colnames(chlamRetest)[(3 + numDataYears):(3 + 2 * numDataYears - 1)] <- 
+colnames(chlamRetest)[(3 + numDataYears + 1):(3 + 2 * numDataYears)] <- 
   paste0(dataYears, "male")
-colnames(chlamRetest)[(3 + 2 * numDataYears):
-                        (3 + 3 * numDataYears - 1)] <- paste0(dataYears,
+colnames(chlamRetest)[(3 + 2 * numDataYears + 2):
+                        (3 + 3 * numDataYears + 1)] <- paste0(dataYears,
                                                               "female")
 
 # Just keep the data and calculate proportions separately
@@ -580,12 +580,13 @@ write.csv(retestAccept, file = file.path(cleanDataFolder,
 ```
 
 ```{r restesting NSW GP}
-# Read in NSW GP data from ACCESS and clean it up 
+# Read in NSW GP data from ACCESS in 2015 and clean it up. This data was 
+# used for the 2015 CT cascade in the 2016 ASR.
 dataStartYear <- 2007
 
 # Raw testing file
-rawDataTreatment <- file.path(dataPath, paste0("access_nsw_gp_data-", 
-                                    toString(dataYear), ".xlsx"))
+rawDataTreatment <- file.path(dataPath,
+                              paste0("access_nsw_gp_data-2015.xlsx"))
 
 # Load raw re-testing data for 15-29 year olds in NSW GPs
 retestNSWgp <- read_excel(rawDataTreatment, sheet = 2, skip = 3,
@@ -687,7 +688,7 @@ retestNSWgp <- retestNSWgp %>%
 
 # Write to file
 write.csv(retestNSWgp, file = file.path(cleanDataFolder,
-  paste0("retestsNSWgp", toString(dataYear), ".csv")),
+  paste0("retestsNSWgp2015.csv")),
           row.names = FALSE)
 
 ```

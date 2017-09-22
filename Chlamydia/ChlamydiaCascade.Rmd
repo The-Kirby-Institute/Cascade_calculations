@@ -40,10 +40,10 @@ source(file.path(Rcode, "DataLibraries.R"), echo = TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2014 # year of cascade we will calculate and plot     
+resultsYear <- 2016 # year of cascade we will calculate and plot     
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
-retestRange <- FALSE # Caclulate variations in retested
+retestRange <- TRUE # Caclulate variations in retested
 
 ```
 
@@ -235,7 +235,7 @@ if (resultsYear >= 2015) {
   # 2015 from linear regression
   malePropEst <-predict(lm(males ~ year, data = propData), 
                         newdata = data.frame(year = resultsYear), 
-                        interval = "predict")
+                        interval = "conf")
   
   lowerMaleDiags <- maleDiags * (1 - malePropEst[1]) / 
     (1 - malePropEst[2])
@@ -246,7 +246,7 @@ if (resultsYear >= 2015) {
   # 2015 from linear regression
   femalePropEst <-predict(lm(females ~ year, data = propData), 
                           newdata = data.frame(year = 2015), 
-                          interval = "predict")
+                          interval = "conf")
   
   lowerFemaleDiags <- femaleDiags * (1 - femalePropEst[1]) / 
     (1 - femalePropEst[2])
@@ -256,7 +256,7 @@ if (resultsYear >= 2015) {
   # All estimates for reporting
   allPropEst <-predict(lm(all ~ year, data = propData), 
                           newdata = data.frame(year = 2015), 
-                          interval = "predict")
+                          interval = "conf")
   
   
 } else {
@@ -409,7 +409,7 @@ propReTestFemaleUpper <- propRetested("females", "prop_upper")
 if (retestRange) {
   # Period: 42-120 
   retestDFshort <- retests %>%
-    filter(period == "42-120") %>%
+    filter(period == "42-120", context == "shc") %>%
     select(-period)
 
   retestDF <- retestDFshort
@@ -424,7 +424,7 @@ if (retestRange) {
   
   # Period: 7-180
   retestDFlong <- retests %>%
-    filter(period == "7-180") %>%
+    filter(period == "7-180", context == "shc") %>%
     select(-period)
   
   retestDF <- retestDFlong
@@ -562,6 +562,8 @@ if (resultsYear <= 2014) {
                                        maleRetested[, 1],
                                      femaleNegative[1] /
                                        femaleRetested[, 1])))
+  
+  
 }
 
 if (saveCascade) {
@@ -641,12 +643,12 @@ plotcascade <- chlamcascade
 plotcascade$sex <- factor(plotcascade$sex, 
                           levels = c("male", "female"))
 
-# Overall 2015 cascade
-cascade2015 <- filter(plotcascade, year == resultsYear)
-texty <- cascade2015$upper
-texty[3:4] <- cascade2015$estimate[3:4]
+# Overall cascade
+cascadeAll <- filter(plotcascade, year == resultsYear)
+texty <- cascadeAll$upper
+texty[3:4] <- cascadeAll$estimate[3:4]
 
-allCascade <- ggplot(data = cascade2015,
+allCascade <- ggplot(data = cascadeAll,
                       aes(x = stage, y = estimate, fill = sex)) + 
   geom_bar(position = "dodge", stat = "identity", colour = "black") + 
   geom_errorbar(aes(ymin = lower, ymax = upper), 
@@ -693,18 +695,24 @@ femaleCascade <- ggplot(data = filter(plotcascade, sex == "female"),
   plotOpts
 
 # Overall for 2015
-cascade2015All <- cascade2015 %>%
+cascadeAllbar <- cascadeAll %>%
   group_by(stage) %>%
   summarise(estimate = sum(estimate),
             lower = sum(lower),
-            upper = sum(upper))
+            upper = sum(upper)) 
+  
 
-allCascadeAll <- ggplot(data = cascade2015All,
+allCascadeAll <- ggplot(data = cascadeAllbar,
                       aes(x = stage, y = estimate)) + 
   geom_bar(stat = "identity", 
            fill = "#999999", colour = "black") + 
   geom_errorbar(aes(ymin = lower, ymax = upper),
                 width = 0.2, color = "black", size = 1.2) +
+  # geom_text(aes(label = ifelse(is.na(percentprevious), "",
+  #                 paste0(format(percentprevious, digits = 3), "%")),
+  #               y = texty + 10000),
+  #           position = position_dodge(width = 0.9),
+  #           fontface = "bold") +
   scale_x_discrete(labels = stagesNeat) +
   ylab("Number of people") + xlab("") +  
   plotOpts 
@@ -750,7 +758,7 @@ finalTable$estimate <- NA
 if (resultsYear == 2014) {
   skip <- 3:4 
 } else {
-  slip <- 100  
+  skip <- 100  
 }
 
 for (ii in 1:nrow(finalTable)){
