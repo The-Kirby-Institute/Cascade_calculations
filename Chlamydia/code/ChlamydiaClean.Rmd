@@ -54,7 +54,7 @@ LoadLibrary(tidyr)
 LoadLibrary(utils)
 
 # Primary script parameters - data year 
-dataYear <- 2014
+dataYear <- 2016
 
 ```
 
@@ -720,10 +720,10 @@ numDataYears <- length(dataYears)
 
 colnames(retestVariation)[3:(3 + numDataYears - 1)] <- 
   paste0(dataYears, "all")
-colnames(retestVariation)[(3 + numDataYears):(3 + 2 * numDataYears - 1)] <- paste0(dataYears, "male")
+colnames(retestVariation)[(3 + numDataYears):(3 + 2 * numDataYears - 1)] <- paste0(dataYears, "males")
 colnames(retestVariation)[(3 + 2 * numDataYears):
                         (3 + 3 * numDataYears - 1)] <- paste0(dataYears,
-                                                              "female")
+                                                              "females")
 
 # Get rid of excess rows and columns
 retestVariation <- retestVariation %>% 
