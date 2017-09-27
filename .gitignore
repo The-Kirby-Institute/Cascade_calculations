@@ -51,7 +51,8 @@ Chlamydia/data/retestsAccept2014.csv
 Chlamydia/data/retestsAccess*.csv
 Chlamydia/data/retestsNSWgp2015.csv
 # Chlamydia/output/figures/
-Chlamydia/output/
+Chlamydia/output/*
+!Chlamydia/output/2016
 Chlamydia/ChlamydiaCascade.nb.html
 
 HCV cascade/
