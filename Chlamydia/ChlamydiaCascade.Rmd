@@ -842,15 +842,15 @@ if (saveplots) {
          plot = allCascade, 
          width = 5, height = 5, dpi = 300)
   
-  ggsave(file.path(figFolder, paste0("chlamcascade-males-", 
-                toString(resultsYear), ".png")), 
-         plot = maleCascade, 
-         width = 7, height = 5, dpi = 300)
-  
-  ggsave(file.path(figFolder, paste0("chlamcascade-females-", 
-                toString(resultsYear), ".png")), 
-         plot = femaleCascade, 
-         width = 7, height = 5, dpi = 300)
+  # ggsave(file.path(figFolder, paste0("chlamcascade-males-", 
+  #               toString(resultsYear), ".png")), 
+  #        plot = maleCascade, 
+  #        width = 7, height = 5, dpi = 300)
+  # 
+  # ggsave(file.path(figFolder, paste0("chlamcascade-females-", 
+  #               toString(resultsYear), ".png")), 
+  #        plot = femaleCascade, 
+  #        width = 7, height = 5, dpi = 300)
   
   ggsave(file.path(figFolder, paste0("chlamcascade-overall-", 
                 toString(resultsYear), ".png")), 
