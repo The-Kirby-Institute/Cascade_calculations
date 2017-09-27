@@ -212,6 +212,7 @@ write.csv(finalNotifications, file = file.path(cleanDataFolder,
 
 ```
 
+
 ## Chlamydia tests
 
 ```{r tests}
@@ -318,6 +319,7 @@ write.csv(finalTests, file = file.path(cleanDataFolder,
           row.names = FALSE)
 
 ```
+
 
 ## Chlamydia re-testing data (ACCESS data)
 
