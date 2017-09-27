@@ -45,7 +45,11 @@ HIV/subprojects/
 
 # Chlamydia directory
 Chlamydia/data/raw/*
-Chlamydia/data/chlamRetestVariation2016.csv
+Chlamydia/data/chlamRetestVariation*.csv
+Chlamydia/data/chlamtests*.csv
+Chlamydia/data/retestsAccept2014.csv
+Chlamydia/data/retestsAccess*.csv
+Chlamydia/data/retestsNSWgp2015.csv
 # Chlamydia/output/figures/
 Chlamydia/output/
 Chlamydia/ChlamydiaCascade.nb.html
