@@ -12,7 +12,7 @@ The files `Chlamydia_Cascade_Methods.Rmd` and `ChlamydiaCascade.bib` are minor f
 
 **ChlamydiaCascade.Rmd** is a R markdown script and is the main file for the chlamydia calculations. The user needs to specify a specific year for the cascade estimates. The script then reads in the associated cleaned data files stored in the data/ directory, performs the cascade calculations and stores the resulting estimates and figures in the `output/` directory.
 
-Note as this is a are script, not a function, care should be taken to ensure the project specifications are correct before running especially after updates have been pulled from the repository.  
+Note as this is a script, not a function, care should be taken to ensure the project specifications are correct before running, especially after updates have been pulled from the repository.  
 
 #### code ####
 
@@ -20,11 +20,11 @@ Contains a R markdown script used to load and clean the raw chlamydia related da
 
 #### data ####
 
-Contains the raw and cleaned data sets for the years 2014 and 2015 used in the cascade calculations. A detailed README file within the directory describes each of the data files in detail. Some of the data files are stored locally and are not available in the online repository. 
+Contains the raw and cleaned data sets for each year used in the cascade calculations. A detailed README file within the directory describes each of the data files in detail. Some of the data files are stored locally and are not available in the online repository. 
 
 #### output ####
 
-Contains output files storing the results produced by the `ChlamydiaCascade.Rmd` script. The results are stored in three `.csv` files for each specified year and as figures within a figure/ folder (created by `ChlamydiaCascade.Rmd`). The repository currently only holds the 2015 cascade results which were published in the Australian Chlamydia Cascade manuscript. 
+Contains output files storing the results produced by the `ChlamydiaCascade.Rmd` script. The results are stored in three `.csv` files for each specified year and as figures within a figure/ folder (created by `ChlamydiaCascade.Rmd`). The repository currently only holds the 2016 cascade results which are published in the Australian Chlamydia Cascade manuscript. Result files for other years are available on request (Rgray@kirby.unsw.edu.au)
 
 
 
