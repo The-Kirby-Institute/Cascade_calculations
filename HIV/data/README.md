@@ -18,5 +18,9 @@ These files are available in the online repository.
 
 These data files are only available locally as they are not publicly available but can be provided in an appropriate format on request (Rgray@kirby.unsw.edu.au). 
 
-- ``: 
+- `ahodYEAR.csv`: Contains data from the Australian HIV Observational Database (AHOD) for the number of deaths, number of patients on treatment, and the viral load at last test. 
+- `ART_medicare_ineligible-YEAR.csv`: Contains estimates for the number of temporary residents in Australia who are ineligible for subsidized ART and hence are not recorded through the Pharmaceutical Benefits Scheme (PBS).
+- `HIVinterstateEstimates-YEAR.csv`: Contains general population data for population movement between each Australian state and territory. This data is used to produce jurisdiction level HIV cascades. 
+- `hivnotificationsYEAR.csv`: Contains cleaned HIV notifications data used to estimate the number of PLDHIV. This data is restricted and is only available through a formal data request process. However, a public data set providing summary data for each notification is available from: [Australian HIV Public Access Dataset](https://kirby.unsw.edu.au/report/australian-hiv-public-access-dataset-2015).
+- `pharmdash_HIVpatientsYEAR.csv`: Contains estimates for the number of people who filled a script for ART during the previous calendar year (YEAR) for each state and territory by sex and overall. These estimates are calculated from a 10% longitudinal sample of PBS data provided to The Kirby Institute by the company [Prospection](https://www.prospection.com.au/) through their PharmDash platform. 
 

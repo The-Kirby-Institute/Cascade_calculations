@@ -36,7 +36,6 @@ HIV/data/*
 !HIV/data/individualHIVparameters.csv
 !HIV/data/README.md
 HIV/output/
-# Temporarily ignore stat analysis files
 HIV/trend_analysis/
 HIV/output.dta
 
