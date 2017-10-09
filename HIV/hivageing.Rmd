@@ -707,11 +707,11 @@ pldhivTidy$age <- rep(sub("a", "", ageBins), nyears)
 
 # TEMP: merge bins into <30, 30-49, 50+
 pldhivTidyASR <- pldhivTidy %>% spread(age, value) %>%
-  mutate(`<30` = `<15` + `15-19` + `20-24` + `25-29`,
-         `30-49` = `30-34` + `35-39` + `40-44` + `45-49`,
+  mutate(`<50` = `<15` + `15-19` + `20-24` + `25-29` + 
+           `30-34` + `35-39` + `40-44` + `45-49`,
          `50+` = `50-54` + `55-59` + `60-64` + `65-69` + `70+`) %>%
-  select(year, `<30`, `30-49`, `50+`) %>%
-  gather("age", "value", 2:4)
+  select(year, `<50`, `50+`) %>%
+  gather("age", "value", 2:3)
 
 if (calculateGender) {
   pldhivTidyMale <- TidyLongitudinal(binPldhivMale, 1980, 
@@ -719,22 +719,22 @@ if (calculateGender) {
   pldhivTidyMale$age <- rep(sub("a", "", ageBins), nyears)
   
   pldhivTidyMaleASR <- pldhivTidyMale %>% spread(age, value) %>%
-    mutate(`<30` = `<15` + `15-19` + `20-24` + `25-29`,
-           `30-49` = `30-34` + `35-39` + `40-44` + `45-49`,
+    mutate(`<50` = `<15` + `15-19` + `20-24` + `25-29` + 
+             `30-34` + `35-39` + `40-44` + `45-49`,
            `50+` = `50-54` + `55-59` + `60-64` + `65-69` + `70+`) %>%
-    select(year, `<30`, `30-49`, `50+`) %>%
-    gather("age", "value", 2:4)
+    select(year, `<50`, `50+`) %>%
+    gather("age", "value", 2:3)
   
   pldhivTidyFemale <- TidyLongitudinal(binPldhivFemale, 1980, 
                                        firstCol = "age")
   pldhivTidyFemale$age <- rep(sub("a", "", ageBins), nyears)
   
   pldhivTidyFemaleASR <- pldhivTidyFemale %>% spread(age, value) %>%
-    mutate(`<30` = `<15` + `15-19` + `20-24` + `25-29`,
-           `30-49` = `30-34` + `35-39` + `40-44` + `45-49`,
+    mutate(`<50` = `<15` + `15-19` + `20-24` + `25-29` + 
+             `30-34` + `35-39` + `40-44` + `45-49`,
            `50+` = `50-54` + `55-59` + `60-64` + `65-69` + `70+`) %>%
-    select(year, `<30`, `30-49`, `50+`) %>%
-    gather("age", "value", 2:4)
+    select(year, `<50`, `50+`) %>%
+    gather("age", "value", 2:3)
 }
 
 # Setup some ploting variables
