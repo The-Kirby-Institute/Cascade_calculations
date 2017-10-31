@@ -65,6 +65,7 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 resultsYear <- 2016  # year of cascade we will plot
 minYear <- 13        # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
+fileFlag <- "_Paper" #"_ASR" or "_Paper" or ""
 
 # Include linked and retained in care?
 excludeCare <- FALSE
@@ -83,7 +84,7 @@ if (pubPlots) {
 if (savePlots) {
   # Create output directory
   figFolder <- file.path(basePath, "output", "figures",
-                         toString(resultsYear))
+                         paste0(toString(resultsYear), fileFlag))
   dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
 }
 
@@ -93,7 +94,7 @@ if (savePlots) {
 
 # Load hiv cascade dataframe
 inputFile <- file.path(resultsFolder, paste("HIVcascadeEstimates-", 
-  toString(resultsYear), ".csv", sep = ""))
+  toString(resultsYear), fileFlag, ".csv", sep = ""))
 hivCascade <- read.csv(inputFile)
 
 # Exclude linked to care if it exists

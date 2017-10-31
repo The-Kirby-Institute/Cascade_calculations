@@ -62,6 +62,7 @@ if (addTempResidents) {
     # International AIDS Society 18, no. 1 (2015).
 
     tempResData <- c(340, 300, 400)
+    
   } else {
     # NAPWHA estimate from Aaron Cogle (used in 2017 ASR)
     # Citation: Personal communication, Aaron Cogle, National Association 

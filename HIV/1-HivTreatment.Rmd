@@ -30,7 +30,7 @@ analysisYear <- 2016
 replaceValues <- TRUE
 saveResults <- TRUE
 addTempRes <- TRUE # Add estimates for temporary residents on ART
-atrasTRest <- FALSE # Use ATRAS estimates, FALSE = NAPWHA estimates
+atrasTRest <- TRUE # Use ATRAS estimates, FALSE = NAPWHA estimates
                    # See 0-ArtAnalysis.Rmd for details
                    # FALSE for ASR and TRUE for paper
                    
@@ -199,6 +199,7 @@ if (addTempRes) {
   
   tempResArt <- filter(tempResArt, year <= analysisYear)
   
+  
   if (usePercent) {
     # Use percentage Medicare ineligible to inflate past treatment
     # estimates for > 2013 (AHOD estimates already include temporary 
@@ -223,7 +224,7 @@ if (addTempRes) {
     # States
   
     # Do adjustments for all subpopulations
-    pops <- c("act", "female", "male", "nsw", "nt", "qld", "sa", "tas",
+    pops <- c("act", "all", "female", "male", "nsw", "nt", "qld", "sa", "tas",
               "vic", "wa")
     # treatFactor <- c(1, 1, atrasFemale, atrasMale, 1, 1, 1, 1, 1, 1, 1)
     
@@ -263,7 +264,6 @@ if (addTempRes) {
     }
     
   } else {
-    
     
     # Replace with updated values
     

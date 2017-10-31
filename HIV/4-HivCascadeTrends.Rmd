@@ -3,6 +3,8 @@ title: "HIV Cascade Trends Exploration"
 author: "Richard T. Gray and Neil Bretana"
 date: Latest version - `r format(Sys.Date(), format="%B %d %Y")`
 output: html_notebook
+editor_options: 
+  chunk_output_type: console
 ---
 
 This document is used to explore trends in the Australian HIV Diagnosis 
@@ -46,6 +48,7 @@ resultsYear <- 2016  # year of cascade we will plot
 minYear <- 13        # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE
+fileFlag <- "_Paper" #"_ASR" or "_Paper" or ""
 
 # Plot specs
 stages <- c("infected", "pldhiv",  
@@ -60,18 +63,17 @@ if (savePlots) {
   saveFormat <- ".png"
   # Create output directory
   figFolder <- file.path(basePath, "output", "figures",
-                         toString(resultsYear))
+                         paste0(toString(resultsYear), fileFlag))
   dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
 }
 
 ```
 
-
 ```{r loadresults}
 
 # Load hiv cascade dataframe
 inputFile <- file.path(resultsFolder, paste("HIVcascadeEstimates-", 
-  toString(resultsYear), ".csv", sep = ""))
+  toString(resultsYear), fileFlag, ".csv", sep = ""))
 hivCascade <- read.csv(inputFile)
 
 # Exclude linked and retained in care
@@ -91,7 +93,6 @@ hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes)
 
 ```
 
-
 ```{r simple trends}
 # This chunk is used to do some simple trend analysis of the cascade
 # estimates over 2006-2015. More advanced trend analyses were completed by
@@ -100,6 +101,8 @@ hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes)
 # trend_analysis folder.
 
 # Notifications ----------------------------------------------------------
+
+LoadLibrary(rsq) # load the rsq package for pseudo-R^2 calculation
 
 # Notifications excluding people previouly diagnosed overseas
 diagsData <- hivSet %>%
@@ -155,7 +158,6 @@ if (savePlots) {
 #   based on this blog post: http://thestatsgeek.com/2014/04/26/deviance-goodness-of-fit-test-for-poisson-regression/
 #   Some dropped these tests and just stuck with the pseudo-R^2. 
 
-LoadLibrary(rsq) # load the rsq package for pseudo-R^2 calculation
 pseudoR2 <- rsq(trendDiags, type = "kl")
 
 # Trends in between steps ------------------------------------------------
@@ -337,76 +339,227 @@ if (savePlots) {
 # seems to have a change point. We use the library segmented and with 
 # Poisson models 
 
-library(segmented)
+LoadLibrary(segmented)
 
-# Estimates for diagnoses not on ART
-noartData <- filter(trendData, stage == "noART")
+segmentStages <- c("undiagnosed", "noART", "unsuppressed")
 
-# Regenerate original model in case of scope issues
-pmodel <- glm(round(value) ~ year, data = noartData, family = "poisson")
+segCI <- function(est, stdErr) {
+  return(c(est - 1.96 * stdErr, est + 1.96 * stdErr))
+}
 
-# Now run segmented to produce a segmented Poisson model. Varying the
-# initial guess of teh breakpoint from 2007 to 2013 seems to produce no
-# change in the fitted curev. 
-segModel <- segmented(pmodel, seg.Z = ~year, 
-                      psi = list(year = 2013))
+# Initial break point estimates
+breakPoints <- 2010
+
+# Estimates for plots for each stage
+segPlots <- list()
+segModels <- list()
+for (ii in segmentStages) { 
+  # Need to use local to prevent scope issues with predicted values
+  local({
+    ii <- ii
+    tempData <- filter(trendData, stage == ii)
+    
+    # Regenerate original model in case of scope issues
+    pmodel <- glm(round(value) ~ year, data = tempData, 
+                  family = "poisson")
+    
+    # Now run segmented to produce a segmented Poisson model. Varying the
+    # initial guess of teh breakpoint from 2007 to 2013 seems to produce 
+    # no change in the fitted curve. 
+    segModel <- segmented(pmodel, seg.Z = ~year, 
+                          psi = list(year = breakPoints))
+    segModels[[ii]] <<- segModel
+    
+    # Plot on top of trend plot
+    segModelData <- data.frame(year = tempData$year, 
+                               segvalue = fitted(segModel))
+    
+    segPlots[[ii]] <<- ggplot(data = tempData, 
+                             aes(x = year, y = value)) + 
+      geom_line(color = asrcols[2]) + 
+      geom_point(color = asrcols[2]) +
+      geom_line(aes(y = fitted(trendModels[[ii]])),
+                colour = "black") +
+      geom_line(data = segModelData, aes(y = segvalue), 
+                colour = "blue") + 
+      scale_x_continuous(breaks = seq(startYear,                        
+                                      resultsYear, by = 3)) +
+      expand_limits(y = 0) +
+      scale_y_continuous(labels = comma) + 
+      ylab(yLabels[ii]) + xlab("Year") +  
+      plotOpts +
+      geom_vline(xintercept = segModel$psi[2], linetype = "dashed",
+                 colour = "blue") + 
+      geom_text(x = 2010, y = 600, label = paste("Overall pseudo-R^2:",
+        toString(round(filter(trendCascade, stage == ii)$pseudoR2, 
+        digits = 4))), size = 3) + 
+      geom_text(x = 2010, y = 200, label = paste("Segmented pseudo-R^2:",
+        toString(round(rsq(segModel, type = "kl"), digits = 4))), 
+        size = 3)
+    
+    if (savePlots) {
+      # Save the current plot
+      ggsave(file.path(figFolder, paste0("HIVcascade-Trends-", ii,
+                                         "-Segment_",
+                                         toString(startYear), "-",
+                                         toString(resultsYear),
+                                         saveFormat)),
+             plot = segPlots[[ii]], width = 7.5, height = 6, units = "cm")
+      
+    }
+  })
+}
 
 # Summary: break points and slopes
-# summary(segModel)
+# segModel <- segModels$noART
+# # summary(segModel)
 # segModel$psi
-# segModelCI <- c(segModel$psi[2] - 1.96 * segModel$psi[3], 
-#   segModel$psi[2] + 1.96 * segModel$psi[3])
+# segCI(segModel$psi[2], segModel$psi[3])
 # slope(segModel)
-
-# Plot on top of trend plot
-segModelData <- data.frame(year = noartData$year, 
-                           segvalue = fitted(segModel))
-
-noARTplot <- ggplot(data = noartData, aes(x = year, y = value)) + 
-  geom_line(color = asrcols[2]) + 
-  geom_point(color = asrcols[2]) +
-  geom_line(aes(y = fitted(trendModels$noART)), 
-            colour = "black") +
-  geom_line(data = segModelData, aes(y = segvalue), 
-            colour = "blue") + 
-  scale_x_continuous(breaks = seq(startYear,                        
-                                  resultsYear, by = 3)) +
-  expand_limits(y = 0) +
-  scale_y_continuous(labels = comma) + 
-  ylab(yLabels["noART"]) + xlab("Year") +  
-  plotOpts +
-  geom_vline(xintercept = segModel$psi[2], linetype = "dashed",
-             colour = "blue") + 
-  geom_text(x = 2010, y = 600, label = paste("Overall pseudo-R^2:",
-    toString(round(filter(trendCascade, stage == "noART")$pseudoR2, 
-                   digits = 4))), size = 3) + 
-  geom_text(x = 2010, y = 200, label = paste("Segmented pseudo-R^2:",
-    toString(round(rsq(segModel, type = "kl"), 
-                   digits = 4))), size = 3)
+# BIC(segModel)
 
 if (savePlots) {
-  # Save the current plot
-  ggsave(file.path(figFolder, paste0("HIVcascade-Trends-noART_Segment_",
-                                     toString(startYear), "-",
-                                     toString(resultsYear),
-                                     saveFormat)),
-         plot = noARTplot, width = 7.5, height = 6, units = "cm")
-  
   # Update group plot
-  stagesDiffsPlot2 <- plot_grid(diagsPlot, plotsTrend[[5]], noARTplot,
-                             plotsTrend[[7]],
-                             labels = c("A", "B", "C", "D"), ncol = 2, 
+  stagesDiffsPlot2 <- plot_grid(segPlots[[1]], segPlots[[2]],
+                             segPlots[[3]],
+                             labels = c("A", "B", "C"), ncol = 2,
                              nrow = 2, align = "v")
-  
+
   ggsave(file.path(figFolder,
                    paste("HIVcascade-Differences-Trends_Segment",
                                     toString(startYear), "-",
                                     toString(resultsYear),
                                     saveFormat, sep = "")),
          plot = stagesDiffsPlot2, width = 18, height = 15, units = "cm")
-  
+
 }
 
 ```
 
+```{r Chow and interaction tests}
+
+LoadLibrary(aod)
+step <- "unsuppressed" #undiagnosed, noART, unsuppressed
+
+# Computing the Chow test statistic (F-test):
+# https://thetarzan.wordpress.com/2011/06/16/the-chow-test-in-r-a-case-study-of-yellowstones-old-faithful-geyser/
+# # https://en.wikipedia.org/wiki/Chow_test
+
+overallModel <- trendModels[[step]]
+segModel <- segModels[[step]]
+OverallData <- filter(trendData, stage == step)
+cutPoint <- round(segModel$psi[2])
+
+# Set up pre and post models
+preData <- filter(trendData, stage == step, year <= cutPoint)
+segModelPre <- glm(round(value) ~ year, data = preData, 
+                  family = "poisson")
+postData <- filter(trendData, stage == step, year > cutPoint)
+segModelPost <- glm(round(value) ~ year, data = postData, 
+                  family = "poisson")
+
+# Calculate sum of squared residuals for each regression
+SSR <- NULL
+SSR$all <- overallModel$residuals^2
+SSR$pre <- segModelPre$residuals^2
+SSR$post <- segModelPost$residuals^2
+ 
+# K is the number of regressors in our model
+k <-  overallModel$rank
+ 
+# Computing the Chow test statistic (F-test):
+numerator = (sum(SSR$all) - (sum(SSR$pre) + sum(SSR$post))) / k
+denominator = (sum(SSR$pre) + sum(SSR$post)) / (nrow(OverallData) - 2 * k)
+chow = numerator / denominator
+chow
+
+# Calculate P-value using F test
+pchow <- 1 - pf(chow, k, (nrow(OverallData) - 2 * k))
+
+
+# Interaction model + Wald test ------------------------------------------
+interactData <- OverallData %>%
+  select(-lower, -upper) %>%
+  mutate(ypre = ifelse(year <= cutPoint, year, 0),
+         ypost = ifelse(year > cutPoint, year, 0),
+         ipre = ifelse(year <= cutPoint, 1, 0),
+         ipost = ifelse(year > cutPoint, 1, 0))
+
+# Model 
+intModel <- glm(round(value) ~ ypre + ypost + ipre, #+ ipost gives NA
+                data = interactData, 
+                  family = "poisson")
+
+# coef(segModelPre)
+# confint(segModelPre)
+# coef(segModelPost)
+# confint(segModelPost)
+
+# summary(intModel)
+# coef(intModel)
+
+# This test only tests if each parameter is different to zero using a Wald 
+# test: https://andrewpwheeler.wordpress.com/2016/10/19/testing-the-equality-of-two-regression-coefficients/
+
+theta <- coef(intModel)[2:3]
+v <- vcov(intModel)[2:3, 2:3]
+diff <- theta[1] - theta[2] # Difference in parameters
+varAB <- sqrt(v[1,1] + v[2,2] - 2 * v[2,1])
+wstat <- diff/varAB # Stat sig if abs > 2 
+
+# Output stuff for review
+pchow
+confint(intModel)
+wstat
+
+```
+
+```{r segmented diagnoses}
+# Do an independent segment analysis for diagnoses as it is a bit 
+# trickier. 
+
+# breakPoints <- 2007
+breakPoints <- c(2006, 2011)
+
+trendDiags <- glm(diags ~ year, data = diagsData, 
+                  family = "poisson")
+
+# Now run segmented to produce a segmented Poisson model. 
+segDiags <- segmented(trendDiags, seg.Z = ~year, 
+                      psi = list(year = breakPoints))
+
+segDiagsData <- data.frame(year = diagsData$year, 
+                               segvalue = fitted(segDiags))
+    
+segDiagsPlot <- ggplot(data = diagsData, 
+                             aes(x = year, y = diags)) + 
+      geom_line(color = asrcols[2]) + 
+      geom_point(color = asrcols[2]) +
+      geom_line(aes(y = fitted(trendDiags)),
+                colour = "black") +
+      geom_line(data = segDiagsData, aes(y = segvalue), 
+                colour = "blue") + 
+      scale_x_continuous(breaks = seq(startYear,                        
+                                      resultsYear, by = 3)) +
+      expand_limits(y = 0) +
+      scale_y_continuous(labels = comma) + 
+      ylab(yLabels[ii]) + xlab("Year") +  
+      plotOpts  
+      # geom_text(x = 2010, y = 600, label = paste("Overall pseudo-R^2:",
+      #   toString(round(filter(trendCascade, stage == ii)$pseudoR2, 
+      #   digits = 4))), size = 3) + 
+      # geom_text(x = 2010, y = 200, label = paste("Segmented 
+      # pseudo-R^2:",
+      #   toString(round(rsq(segModel, type = "kl"), digits = 4))), 
+      #   size = 3)
+
+# Summary: break points and slopes
+summary(segDiags)
+segDiags$psi
+# segCI(segDiags$psi[2], segDiags$psi[3])
+slope(segDiags)
+BIC(trendDiags)
+BIC(segDiags)
+
+```
 
