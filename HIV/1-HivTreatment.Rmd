@@ -30,8 +30,11 @@ analysisYear <- 2016
 replaceValues <- TRUE
 saveResults <- TRUE
 addTempRes <- TRUE # Add estimates for temporary residents on ART
-usePercent <- TRUE
-
+atrasTRest <- FALSE # Use ATRAS estimates, FALSE = NAPWHA estimates
+                   # See 0-ArtAnalysis.Rmd for details
+                   # FALSE for ASR and TRUE for paper
+                   
+usePercent <- TRUE # To add temporary residents for subpopulations
 
 ```
 
@@ -53,7 +56,15 @@ source(file.path(HIVcode, "ReplaceEstimates.R"), echo=TRUE)
 
 # Load up to 2000-2014 ART estimates -- we will use other data for
 # >= 2013
-artEstimates <- read.csv(file.path(dataFolder, "ART_Estimates-2014.csv"))
+# String tag
+if (addTempRes) {
+  trString <- ifelse(atrasTRest,"ATRAS", "NAPWHA")
+} else {
+  trString <- "PBS"
+}
+
+artEstimates <- read.csv(file.path(outputFolder, paste0("ART_Estimates-2014-",
+  trString, ".csv")))
 
 # Reload Prospection PBS data to get gender and state estimates
 prospectionData <- read.csv(file.path(dataFolder,
@@ -178,17 +189,20 @@ for (nyear in prospectionYears) {
 if (addTempRes) {
   
   # Load the temporary resident estimates
-  if (analysisYear <= 2015) {
+  if (atrasTRest) {
     tempResArt <- read.csv(file.path(dataFolder,
-                                     "ART_medicare_ineligible-2015.csv"))
+                                     "ART_medicare_ineligible-ATRAS.csv"))
   } else {
     tempResArt <- read.csv(file.path(dataFolder,
-      paste0("ART_medicare_ineligible-", toString(analysisYear), ".csv")))
+      paste0("ART_medicare_ineligible-NAPWHA.csv")))
   }
+  
+  tempResArt <- filter(tempResArt, year <= analysisYear)
   
   if (usePercent) {
     # Use percentage Medicare ineligible to inflate past treatment
-    # estimates
+    # estimates for > 2013 (AHOD estimates already include temporary 
+    # residents)
     
     endTempRes <- tail(tempResArt$value, 1)  
     endTempResMin <- tail(tempResArt$lower, 1)
@@ -208,11 +222,12 @@ if (addTempRes) {
     
     # States
   
-    # Do adjustments
-    pops <- c("act", "all", "female", "male", "nsw", "nt", "qld", "sa", "tas",
+    # Do adjustments for all subpopulations
+    pops <- c("act", "female", "male", "nsw", "nt", "qld", "sa", "tas",
               "vic", "wa")
     # treatFactor <- c(1, 1, atrasFemale, atrasMale, 1, 1, 1, 1, 1, 1, 1)
     
+    pbsIndices <- c(14, analysisYear - 2000 + 1) #2013:analysisYear
     for (ii in 1:length(pops)) {
       tempTreated <- filter(hivTreated, population == pops[ii])
       
@@ -402,10 +417,10 @@ if (saveResults) {
   
   # Directory and file name
   saveString <- file.path(outputFolder, 
-    paste("HIVtreatment-", toString(analysisYear), sep = ""))
+    paste0("HIVtreatment-", toString(analysisYear), "-", trString))
   
   # Write to csv
-  write.csv(finalResults, file = paste(saveString, ".csv", sep =""), 
+  write.csv(finalResults, file = paste0(saveString, ".csv"), 
             row.names = FALSE)
 }
 
