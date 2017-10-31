@@ -24,7 +24,8 @@ dataFolder <- file.path(basePath, "data")
 #outputFolder <- file.path(basePath, "data")
 figFolder <- file.path(basePath, "output","figures")
 resultsFolder <- file.path(basePath, "output")
-Rcode <- file.path(dirname(getwd()), "code") 
+Rcode <- file.path(dirname(basePath), "code") 
+HIVcode <- file.path(basePath, "code")
 
 # Load standard libraries, key functions and options
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
@@ -37,6 +38,43 @@ source(file.path(Rcode, "AgeCat.R"), echo=TRUE)
 analysisYear <- 2014
 saveResults <- TRUE
 
+# Add temporary residents - we have two estimates one from the ATRAS study 
+# which has been published and one based on personal communication with 
+# Aaron Cogle who did a survey for NAPWHA. 
+addTempResidents <- FALSE
+atrasTRest <- FALSE # TRUE if using the ATRAS estimate, False if using the 
+                   # NAPWHA estimate. Use NAPWHA estimate for ASR and 
+                   # ATRAS estimate for the paper as it is citable
+if (addTempResidents) {
+  if (atrasTRest) {
+    # ATRAS estimate using a weighted calculation
+    # Estimated 450 Medicare ineligible HIV+ temporary residents in 
+    # Australia of which ~76% are on treatment (~340 people, calculated 
+    # using a weighted proportion: 0.94*180 + 0.63*270 = 339.3. Assuming 63% of
+    # people not in ATRAS are on ART (percentage on ART at start of ATRAS) and 
+    # 94% of people in ATRAS are on ART (percentage on ART at end of ATRAS). 
+    # Range isassumed to be 300 to 400.
+    # Citation: Petoumenos, Kathy, Jo Watson, Bill Whittaker, Jennifer Hoy, 
+    # Don Smith, Lisa Bastian, Robert Finlayson, et al. "Subsidized Optimal 
+    # ART for HIV-Positive Temporary Residents of Australia Improves
+    # Virological Outcomes: Results from the Australian HIV Observational
+    # Database Temporary Residents Access Study." Journal of the 
+    # International AIDS Society 18, no. 1 (2015).
+
+    tempResData <- c(340, 300, 400)
+  } else {
+    # NAPWHA estimate from Aaron Cogle (used in 2017 ASR)
+    # Citation: Personal communication, Aaron Cogle, National Association 
+    # of People with HIV Australia, 7th July 2017. Survey of Medicare
+    # ineligible people living with HIV and ART access, 2016. National
+    # Association of People with HIV Australia (NAPWHA), Sydney. 
+    tempResData <- c(450, 500, 550)
+  }
+} else {
+  tempResData <- c(0, 0, 0)
+}
+
+
 ```
 
 ```{r loaddata}
@@ -45,7 +83,6 @@ artEstimates <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
 prospectionData <- read.csv(file.path(dataFolder,
   paste("pharmdash_HIVpatients", toString(analysisYear),
     ".csv", sep = "")), as.is = c(1, 2))
-tempResData <- c(341, 300, 400) # estimates for HIV+ temporary residents
 
 # Clean ART data ---------------------------------------------------------
 
@@ -53,8 +90,6 @@ tempResData <- c(341, 300, 400) # estimates for HIV+ temporary residents
 colnames(artEstimates) <- c("year", "ahod")
 
 # Add national pbs data
-# artEstimates$pbs <- NA
-
 tempPbs <- prospectionData %>% 
   filter(gender == "all", state == "all") %>%
   gather("year", "pbs", 3:ncol(prospectionData)) %>%
@@ -68,14 +103,10 @@ tempPbs$year <- unlist(lapply(tempPbs$year, function(x)
 artEstimates <- left_join(artEstimates, tempPbs, by = "year")
 
 # Add upper and lower bounds for the PBS data
-
-artEstimates$pbslower <- 0.9 * artEstimates$pbs
-artEstimates$pbsupper <- 1.1 * artEstimates$pbs
-
 popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
                                 "ABS_population_sizes.xlsx"),
                       sheet = 2)
-source(file.path(Rcode, "pharmDashError.R"), echo=TRUE)
+source(file.path(HIVcode, "pharmDashError.R"), echo=TRUE)
 
 # Loop through years appending lower and upper pbs estimates
 prospectionYears <- c(2013, 2014)
@@ -365,26 +396,36 @@ plotWidth <- 12
 plotHeight <- 7
 plotUnits <- "cm"
 
-ggsave(file.path(figFolder, "Regression_Comparision.png"), 
-       plot = regressionPlot,
-       width = plotWidth, height = plotHeight, units = plotUnits)
-ggsave(file.path(figFolder, "Fit_Comparison.png"), 
-       plot = fitPlot, 
-       width = plotWidth, height = plotHeight, units = plotUnits)
-ggsave(file.path(figFolder, "Logistic_Fit.png"), 
-       plot = logPlot,
-       width = plotWidth, height = plotHeight, units = plotUnits)
-
 ```
 
 ```{r saveresults}
 if (saveResults) {
-  # Directory and file name
-  saveString <- file.path(resultsFolder, paste("ART_Estimates-", 
-    toString(analysisYear), sep = ""))
+ 
+  # String tag
+  if (addTempResidents) {
+    trString <- ifelse(atrasTRest,"ATRAS", "NAPWHA")
+  } else {
+    trString <- "PBS"
+  }
+  
+  # Save plots
+  ggsave(file.path(figFolder, paste0("Regression_Comparision-", 
+                                     trString, ".png")), 
+         plot = regressionPlot,
+         width = plotWidth, height = plotHeight, units = plotUnits)
+  ggsave(file.path(figFolder, paste0("Fit_Comparison-", trString, ".png")), 
+         plot = fitPlot, 
+         width = plotWidth, height = plotHeight, units = plotUnits)
+  ggsave(file.path(figFolder, paste0("Logistic_Fit-", trString, ".png")), 
+         plot = logPlot,
+         width = plotWidth, height = plotHeight, units = plotUnits)
+  
+  # File directory and file name
+  saveString <- file.path(resultsFolder, paste0("ART_Estimates-", 
+    toString(analysisYear), "-", trString))
   
   # Write to csv
-   write.csv(artEstimates, file = paste(saveString, ".csv", sep =""), 
+   write.csv(artEstimates, file = paste0(saveString, ".csv"), 
             row.names = FALSE)
 }
 
