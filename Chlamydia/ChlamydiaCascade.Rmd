@@ -43,7 +43,7 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 resultsYear <- 2016 # year of cascade we will calculate and plot     
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
-retestRange <- TRUE # Caclulate variations in retested
+retestRange <- TRUE # Calculate variations in retested
 
 ```
 
@@ -767,7 +767,8 @@ allCascade <- ggplot(data = filter(cascadeAll, sex %in% c("male", "female")),
                   paste0(format(percentprevious, digits = 3), "%")),
                 y = texty + 10000),
             position = position_dodge(width = 0.9),
-            fontface = "bold") +
+            fontface = "bold",
+            size = 2.5) +
   scale_fill_grey(name = "", start = 0.4, end = 0.9,
                     # values = unname(asrcols[c("males", "females")]), 
                     labels = c("Males", "Females"),
@@ -824,7 +825,8 @@ allCascadeAll <- ggplot(data = filter(plotcascade, sex == "all"),
                   paste0(format(percentprevious, digits = 3), "%")),
                 y = textyAll + 20000),
             position = position_dodge(width = 0.9),
-            fontface = "bold") +
+            fontface = "bold",
+            size = 3.5) +
   scale_x_discrete(labels = stagesNeat) +
   ylab("Number of people") + xlab("") +  
   plotOpts 
@@ -840,7 +842,7 @@ if (saveplots) {
   ggsave(file.path(figFolder, paste0("chlamcascade-all-", 
                 toString(resultsYear), ".png")), 
          plot = allCascade, 
-         width = 5, height = 5, dpi = 300)
+         width = 4, height = 4, dpi = 300)
   
   # ggsave(file.path(figFolder, paste0("chlamcascade-males-", 
   #               toString(resultsYear), ".png")), 
@@ -855,7 +857,7 @@ if (saveplots) {
   ggsave(file.path(figFolder, paste0("chlamcascade-overall-", 
                 toString(resultsYear), ".png")), 
          plot = allCascadeAll, 
-         width = 5, height = 5, dpi = 300)
+         width = 4, height = 4, dpi = 300)
 }
 
 ```
