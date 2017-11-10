@@ -28,7 +28,7 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # Primary script parameters
 analysisYear <- 2016
 replaceValues <- TRUE
-saveResults <- TRUE
+saveResults <- FALSE
 addTempRes <- TRUE # Add estimates for temporary residents on ART
 atrasTRest <- TRUE # Use ATRAS estimates, FALSE = NAPWHA estimates
                    # See 0-ArtAnalysis.Rmd for details
@@ -228,7 +228,7 @@ if (addTempRes) {
               "vic", "wa")
     # treatFactor <- c(1, 1, atrasFemale, atrasMale, 1, 1, 1, 1, 1, 1, 1)
     
-    pbsIndices <- c(14, analysisYear - 2000 + 1) #2013:analysisYear
+    pbsIndices <- 14:(analysisYear - 2000 + 1) #2013:analysisYear
     for (ii in 1:length(pops)) {
       tempTreated <- filter(hivTreated, population == pops[ii])
       
@@ -255,12 +255,12 @@ if (addTempRes) {
       tempPropMax <- tempResMax/(tempResMax + tempEnd)
       
     
-      hivTreated[hivTreated$population == pops[ii], ]$value <- 
-        tempTreated$value /(1-tempProp)
-      hivTreated[hivTreated$population == pops[ii], ]$lower <- 
-        tempTreated$lower /(1-tempPropMin)
-      hivTreated[hivTreated$population == pops[ii], ]$upper <- 
-        tempTreated$upper /(1-tempPropMax)
+      hivTreated$value[hivTreated$population == pops[ii]][pbsIndices] <- 
+        tempTreated$value[pbsIndices] /(1-tempProp)
+      hivTreated$lower[hivTreated$population == pops[ii]][pbsIndices] <- 
+        tempTreated$lower[pbsIndices] /(1-tempPropMin)
+      hivTreated$upper[hivTreated$population == pops[ii]][pbsIndices] <- 
+        tempTreated$upper[pbsIndices] /(1-tempPropMax)
     }
     
   } else {
