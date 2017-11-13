@@ -28,7 +28,7 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # Primary script parameters
 analysisYear <- 2016
 replaceValues <- TRUE
-saveResults <- FALSE
+saveResults <- TRUE
 addTempRes <- TRUE # Add estimates for temporary residents on ART
 atrasTRest <- TRUE # Use ATRAS estimates, FALSE = NAPWHA estimates
                    # See 0-ArtAnalysis.Rmd for details

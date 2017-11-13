@@ -47,7 +47,7 @@ source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
 resultsYear <- 2016  # year of cascade we will plot
 minYear <- 13        # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
-savePlots <- TRUE
+savePlots <- FALSE
 fileFlag <- "_Paper" #"_ASR" or "_Paper" or ""
 
 # Plot specs
@@ -72,8 +72,9 @@ if (savePlots) {
 ```{r loadresults}
 
 # Load hiv cascade dataframe
-inputFile <- file.path(resultsFolder, paste("HIVcascadeEstimates-", 
-  toString(resultsYear), fileFlag, ".csv", sep = ""))
+inputFile <- file.path(resultsFolder, paste0("All-", 
+  toString(resultsYear), fileFlag), paste0("HIVcascadeEstimates-", 
+  toString(resultsYear), ".csv"))
 hivCascade <- read.csv(inputFile)
 
 # Exclude linked and retained in care
@@ -156,7 +157,7 @@ if (savePlots) {
 #  (don't think  it is valid for Poisson models).
 #  Also the standard in built Chi-squared test isn't valid for Poisson
 #   based on this blog post: http://thestatsgeek.com/2014/04/26/deviance-goodness-of-fit-test-for-poisson-regression/
-#   Some dropped these tests and just stuck with the pseudo-R^2. 
+#   So dropped these tests and just stuck with the pseudo-R^2. 
 
 pseudoR2 <- rsq(trendDiags, type = "kl")
 
@@ -246,7 +247,7 @@ PredictTrend <- function(models, indicator){
 }
 
 # write_csv(trendCascade, file.path(figFolder, paste0("Trends_cascade_", 
-#         toString(startYear), "-", toString(resultsYear), ".csv")))
+#          toString(startYear), "-", toString(resultsYear), ".csv")))
 
 # Trend plots ------------------------------------------------------------
 # Create a second set of time trend plots with the 
@@ -331,6 +332,172 @@ if (savePlots) {
     toString(resultsYear),
     saveFormat, sep = "")),
     plot = stagesDiffsPlot, width = 18, height = 15, units = "cm")
+}
+```
+
+```{r Trends 90-90-90}
+# This chunk looks at the trends in the UNAIDS 90-90-90 targets.
+# Just doing a simple analysis to check for statistical significance of 
+# increase of decrease mainly.
+
+# Produce the proportions
+diagnosedProp <- filter(trendData, stage == "pldhiv")$value / 
+  filter(trendData, stage == "infected")$value
+artProp <- filter(trendData, stage == "numART")$value / 
+  filter(trendData, stage == "pldhiv")$value
+supProp <- filter(trendData, stage == "suppressed")$value / 
+  filter(trendData, stage == "numART")$value
+
+year <- 2004:2016
+
+# Linear models -----------------------------------------------------------
+# First simple linear models which allow us to estimate the percentage 
+# point increase each year
+diagslmModel <- lm(diagnosedProp ~ year)
+treatedlmModel <- lm(artProp ~ year)
+suppressedlmModel <- lm(supProp ~ year)
+
+# Coeffients for annual change
+coefflmdiags <- coef(diagslmModel)["year"]
+coefflmart <- coef(treatedlmModel)["year"]
+coefflmsuppressed <- coef(suppressedlmModel)["year"]
+
+# P-values for annual chnage
+p_valuelmdiags <- summary(diagslmModel)$coefficients["year", "Pr(>|t|)"]
+p_valuelmart <- summary(treatedlmModel)$coefficients["year", "Pr(>|t|)"]
+p_valuelmsuppressed <- summary(suppressedlmModel)$coefficients["year",
+  "Pr(>|t|)"]
+
+# Confidence interval for annual change
+intervallmdiags <- confint(diagslmModel, "year", type = "Wald")
+intervallmart <- confint(treatedlmModel, "year", type = "Wald")
+intervallmsuppressed <- confint(suppressedlmModel, "year", type = "Wald")
+
+# R2-values (unadjusted)
+pseudoR2lmdiags <- rsq(diagslmModel)
+pseudoR2lmart <- rsq(treatedlmModel)
+pseudoR2lmsuppressed <- rsq(suppressedlmModel)
+
+# Logistic models ---------------------------------------------------------
+# Fit logistic curve to each trend - we use a logistic regression treating 
+# the numerator and denominator as "success" or "failures", where the 
+# "successes" are divided by the total counts as described in this blog 
+# post: http://rcompanion.org/handbook/J_02.html
+
+diagnosedTrials <- cbind(round(filter(trendData, 
+  stage == "pldhiv")$value), round(filter(trendData, 
+  stage == "undiagnosed")$value))
+artTrials <- cbind(round(filter(trendData, 
+  stage == "numART")$value), round(filter(trendData, 
+  stage == "noART")$value))
+suppressedTrials <- cbind(round(filter(trendData, 
+  stage == "suppressed")$value), round(filter(trendData, 
+  stage == "unsuppressed")$value))
+
+diagsModel <- glm(diagnosedTrials ~ year, 
+  family = binomial(link = "logit"))
+treatedModel <- glm(artTrials ~ year, 
+  family = binomial(link = "logit"))
+suppressedModel <- glm(suppressedTrials ~ year, 
+  family = binomial(link = "logit"))
+
+# Calculate p-values
+p_diags <- summary(diagsModel)$coefficients["year", "Pr(>|z|)"]
+p_art <- summary(treatedModel)$coefficients["year", "Pr(>|z|)"]
+p_suppressed <- summary(suppressedModel)$coefficients["year", "Pr(>|z|)"]
+
+# As for logistic models we calculate the pseudo-R^2 using 
+# the rsq package based on the calculation in the paper: Cameron & 
+# Windmeijer, An R-squared measure of goodness of fit for some common 
+# nonlinear regression model, Journal of Econometrics, 77 (1997) 329-342.
+pseudoR2diags <- rsq(diagsModel, type = "kl")
+pseudoR2art <- rsq(treatedModel, type = "kl")
+pseudoR2suppressed <- rsq(suppressedModel, type = "kl")
+
+# Plots of estimates and trends ------------------------------------------
+# Plot the proportion, linear model and logistic model
+# Function for plotting
+plotProp <- function(proportion, lmmodel, logmodel, label) {
+  propPlot <- ggplot(data = data.frame(year = year), aes(x = year)) + 
+    geom_line(aes(y = proportion, color = "prop")) + 
+    geom_point(aes(y = proportion), color = asrcols[2]) +
+    geom_line(aes(y = fitted(lmmodel), colour = "linear")) +
+    geom_line(aes(y = fitted(logmodel), colour = "logistic")) +
+    scale_colour_manual(name = "",
+      limits = c("prop", "linear", "logistic"), 
+      values = c(asrcols[2], "black", "blue"),
+      labels = c("Estimated proportion", "Linear model", 
+        "Logistic model")) + 
+    scale_x_continuous(breaks = seq(startYear,                        
+      resultsYear, by = 3)) +
+    scale_y_continuous(labels = percent) + 
+    coord_cartesian(ylim = c(0,1)) +
+    ylab(label) + xlab("Year") +  
+    plotOpts + 
+    geom_text(x = 2010, y = 0.2, label = paste("Unadjusted R^2 (linear):",
+      toString(round(rsq(lmmodel, type = "kl"), digits = 4))), size = 3) +
+    geom_text(x = 2010, y = 0.1, label = paste("Pseudo-R^2 (logistic):",
+      toString(round(rsq(logmodel, type = "kl"), digits = 4))), size = 3)
+  return(propPlot)
+}
+
+# Produce plots
+diagsPropPlot <- plotProp(diagnosedProp, diagslmModel, diagsModel,
+  "Percentage of\nPLHIV diagnosed")
+treatedPropPlot <- plotProp(artProp, treatedlmModel, treatedModel,  
+  "Percentage diagnosed\non ART")
+suppressedPropPlot <- plotProp(supProp, suppressedlmModel, 
+  suppressedModel, "Percentage on\nART suppressed")
+
+# Add results to trendCascade
+propTrends <- data_frame(stage = c("propdiagnosed", "proptreated",
+  "propsuppressed"),
+  coeff = c(coefflmdiags, coefflmart, coefflmsuppressed),
+  pvalue = c(p_valuelmdiags, p_valuelmart, p_valuelmsuppressed),
+  lower = c(intervallmdiags[1], intervallmart[1], intervallmsuppressed[1]),
+  upper = c(intervallmdiags[2], intervallmart[2], intervallmsuppressed[2]),
+  pseudoR2 = c(pseudoR2lmdiags, pseudoR2lmart, pseudoR2lmsuppressed),
+  model = "linear")
+
+# Save plots --------------------------------------------------------------
+# Create a group 90-90-90 plot with trend lines
+
+legend <- get_legend(diagsPropPlot)
+
+# Update group plot
+combinedPropPlot <- grid.arrange(legend, 
+  diagsPropPlot + theme(legend.position="none"), 
+  treatedPropPlot + theme(legend.position="none"),
+  suppressedPropPlot + theme(legend.position="none"), 
+  ncol = 2, nrow = 3, 
+  layout_matrix = rbind(c(1, 1), c(2, 3), c(4, 5)),
+  widths = c(4, 4), heights = c(0.8, 3.1, 3.1))
+
+stagesPropPlot <- ggdraw() +
+  draw_plot(combinedPropPlot, 0, 0, 1, 1) +
+  draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0),
+    c(0.9, 0.9, 0.45), size = 12)
+
+if (savePlots) {
+  ggsave(file.path(figFolder,
+    paste("HIVcascade_Proportion_Trends_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = stagesPropPlot, width = 18, height = 15, units = "cm")
+}
+
+```
+
+```{r Trends table}
+# Write the trends diagnostics to file
+if (savePlots) {
+  trendCascade$model <- "poisson"
+  trendCascade <- bind_rows(trendCascade, propTrends)
+  
+  write_csv(trendCascade, file.path(figFolder, 
+    paste0("HIVcascade_trends_", 
+    toString(startYear), "-", toString(resultsYear), ".csv")))
 }
 ```
 
@@ -443,7 +610,6 @@ lines(fitted(bpVl, breaks = 3), col = 3)
 ```
 
 ```{r Breakpoints table}
-
 # Create table of summary results ----------------------------------------
 breakTable <- NULL
 
@@ -532,6 +698,12 @@ for (ii in 1:length(modelNames)) {
   
 }
 
+if (savePlots) {
+  write_csv(breakTable, file.path(figFolder, 
+    paste0("HIVcascade_", "breakpoints_", 
+    toString(startYear), "-", toString(resultsYear), ".csv")))
+}
+
 ```
 
 ```{r Segmented trends}
@@ -551,14 +723,13 @@ segCI <- function(est, stdErr) {
 # breakpoints() results and to test for sensitivity. 
 breakPoints <- 2010
 
-# Estimates for plots for each stage
+# Estimates for plots for each stage---------------------------------------
 segPlots <- list()
 segModels <- list()
 
 ymax <- c("undiagnosed" = 3500, 
   "noART" = 6500, 
   "unsuppressed" = 4500)
-
 
 for (ii in segmentStages) { 
   # Need to use local to prevent scope issues with predicted values
@@ -630,6 +801,7 @@ for (ii in segmentStages) {
   })
 }
 
+# Save combined plot-------------------------------------------------------
 if (savePlots) {
   legend <- get_legend(segPlots[[1]])
   
@@ -666,7 +838,8 @@ if (savePlots) {
 
 ```{r Summary of model results}
 # This chunck is used to explore the summary statistics of a
-# segmented model
+# segmented model (already have Poisson model stats in trendsCascade)
+# All outputs stored below
 
 step <- "unsuppressed"
 
@@ -728,7 +901,6 @@ segDiagsPlot <- ggplot(data = diagsData,
       segDiags$psi[3])[2]),
     colour = "blue",
     height = 0.025 * diagsmax) +
-  
   geom_text(x = 2010, y = 0.2 * diagsmax, 
     label = paste("Overall pseudo-R^2:",
       toString(round(filter(trendCascade, 
@@ -783,134 +955,333 @@ if (savePlots) {
 ```
 
 ```{r Chow and interaction tests}
-
+# This chunck runs chow and interecation tests for each intermediate
+# cascade step. 
 LoadLibrary(aod)
-step <- "noART" #diagnoses, undiagnosed, noART, unsuppressed
 
-# Computing the Chow test statistic (F-test):
-# https://thetarzan.wordpress.com/2011/06/16/the-chow-test-in-r-a-case-study-of-yellowstones-old-faithful-geyser/
-# https://en.wikipedia.org/wiki/Chow_test
+# Functions for testing segemented models ---------------------------------
+pchow <- function(overalldata, model, premodel, postmodel) {
+  # Computes the Chow test statistic (F-test) and pvalue:
+  # https://thetarzan.wordpress.com/2011/06/16/the-chow-test-in-r-a-case-study-of-yellowstones-old-faithful-geyser/
+  # https://en.wikipedia.org/wiki/Chow_test
+  
+  # Calculate sum of squared residuals for each regression
+  SSR <- NULL
+  SSR$all <- model$residuals^2
+  SSR$pre <- premodel$residuals^2
+  SSR$post <- postmodel$residuals^2
+  
+  # K is the number of regressors in our model
+  k <-  model$rank
+  
+  # Computing the Chow test statistic (F-test):
+  numerator = (sum(SSR$all) - (sum(SSR$pre) + sum(SSR$post))) / k
+  denominator = (sum(SSR$pre) + sum(SSR$post)) / 
+    (nrow(overalldata) - 2 * k)
+  chow = numerator / denominator
+  chow
+  
+  # Calculate P-value using F test
+  pchow <- 1 - pf(chow, k, (nrow(overalldata) - 2 * k))
+  return(pchow)
+} 
 
-if (step == "diagnoses") {
-  overallModel <- trendDiags
-  segModel <- segDiags
-  overallData <- diagsData %>% rename(value = diags) %>%
-    select(-overseas)
-  cutPoint <- round(segModel$psi[2])
-} else {
-  overallModel <- trendModels[[step]]
-  segModel <- segModels[[step]]
-  overallData <- filter(trendData, stage == step) %>%
-    select(-lower, -upper)
-  cutPoint <- round(segModel$psi[2])
+pslopes <- function(overalldata, cutpoint) {
+  # This function produces an interaction model performs a Wald test 
+  # on the slopes returning the p-value
+  # This test only tests if each parameter is different to zero using a
+  # Wald test: https://andrewpwheeler.wordpress.com/2016/10/19/testing-the-equality-of-two-regression-coefficients/
+  interactData <- overalldata %>%
+    # select(-lower, -upper) %>%
+    mutate(ypre = ifelse(year <= cutpoint, year, 0),
+      ypost = ifelse(year > cutpoint, year, 0),
+      ipre = ifelse(year <= cutpoint, 1, 0),
+      ipost = ifelse(year > cutpoint, 1, 0))
+  
+  # Model 
+  intModel <- glm(round(value) ~ ypre + ypost + ipre, #+ ipost gives NA
+    data = interactData, 
+    family = "poisson")
+  
+
+  # Calculate the Wald ststatistic and p-value
+  theta <- coef(intModel)[2:3]
+  v <- vcov(intModel)[2:3, 2:3]
+  diff <- theta[1] - theta[2] # Difference in parameters
+  varAB <- sqrt(v[1,1] + v[2,2] - 2 * v[2,1])
+  wstat <- diff/varAB # Stat sig if abs > 2 (2 sided p-value treating 
+  # wstat as z-score in normal distribution
+  pwstat <- 2*pnorm(-abs(wstat)) # test stat from nomal
+  return(list(model = intModel, wstat = wstat, pwstat = pwstat))
 }
 
-# Set up pre and post models
-preData <- filter(overallData, year <= cutPoint)
-segModelPre <- glm(round(value) ~ year, data = preData, 
-  family = "poisson")
-postData <- filter(overallData, year > cutPoint)
-segModelPost <- glm(round(value) ~ year, data = postData, 
-  family = "poisson")
+selectModel <- function(step) {
+  # This function simpley retrieves the correct information for each step
+  if (step == "diagnoses") {
+    overallModel <- trendDiags
+    segModel <- segDiags
+    overallData <- diagsData %>% rename(value = diags) %>%
+      select(-overseas)
+    cutPoint <- round(segModel$psi[2])
+  } else {
+    overallModel <- trendModels[[step]]
+    segModel <- segModels[[step]]
+    overallData <- filter(trendData, stage == step) %>%
+      select(-lower, -upper)
+    cutPoint <- round(segModel$psi[2])
+  }
+  output <- list(overallModel = overallModel, segModel = segModel,
+    overallData = overallData, cutPoint = cutPoint)
+  return(output)
+}
 
-# Calculate sum of squared residuals for each regression
-SSR <- NULL
-SSR$all <- overallModel$residuals^2
-SSR$pre <- segModelPre$residuals^2
-SSR$post <- segModelPost$residuals^2
+prepostModels <- function(overalldata, cutpoint) {
+  # This function produces the independent pre and post models
+  # for the chow test and other testing 
+  preData <- filter(overalldata, year <= cutpoint)
+  segModelPre <- glm(round(value) ~ year, data = preData, 
+    family = "poisson")
+  postData <- filter(overalldata, year > cutpoint)
+  segModelPost <- glm(round(value) ~ year, data = postData, 
+    family = "poisson")
+  
+  return(list(premodel = segModelPre, postmodel = segModelPost))
+}
 
-# K is the number of regressors in our model
-k <-  overallModel$rank
-
-# Computing the Chow test statistic (F-test):
-numerator = (sum(SSR$all) - (sum(SSR$pre) + sum(SSR$post))) / k
-denominator = (sum(SSR$pre) + sum(SSR$post)) / (nrow(overallData) - 2 * k)
-chow = numerator / denominator
-chow
-
-# Calculate P-value using F test
-pchow <- 1 - pf(chow, k, (nrow(overallData) - 2 * k))
-
-
-# Interaction model + Wald test ------------------------------------------
-interactData <- overallData %>%
-  # select(-lower, -upper) %>%
-  mutate(ypre = ifelse(year <= cutPoint, year, 0),
-    ypost = ifelse(year > cutPoint, year, 0),
-    ipre = ifelse(year <= cutPoint, 1, 0),
-    ipost = ifelse(year > cutPoint, 1, 0))
-
-# Model 
-intModel <- glm(round(value) ~ ypre + ypost + ipre, #+ ipost gives NA
-  data = interactData, 
-  family = "poisson")
-
-# coef(segModelPre)
-# confint(segModelPre)
-# coef(segModelPost)
-# confint(segModelPost)
-
-# summary(intModel)
-# coef(intModel)
-
-# This test only tests if each parameter is different to zero using a Wald 
-# test: https://andrewpwheeler.wordpress.com/2016/10/19/testing-the-equality-of-two-regression-coefficients/
-
-theta <- coef(intModel)[2:3]
-v <- vcov(intModel)[2:3, 2:3]
-diff <- theta[1] - theta[2] # Difference in parameters
-varAB <- sqrt(v[1,1] + v[2,2] - 2 * v[2,1])
-wstat <- diff/varAB # Stat sig if abs > 2 (2 sided p-value treating 
-                    # wstat as z-score in normal distribution
-
-# Output stuff for review
-pchow
-confint(intModel)
-wstat
-
-# Create table of summary results -----------------------------------------
-
+# Loop over intermediate steps, perform steps and store overall results ---
 modelString <- c("diagnoses" = "Annual notifications",
   "undiagnosed" = "Number undiagnosed",
   "noART" = "Diagnosed but untreated",
   "unsuppressed" = "On ART but unsuppressed")
 
-modelTable <- data.frame(indicator = unname(modelString[step]))
-modelTable$parameter <- coef(overallModel)["year"]
-modelTable$param_ci_lower <-confint(overallModel, "year", type = "Wald")[1]
-modelTable$param_ci_upper <-confint(overallModel, "year", type = "Wald")[2]
-modelTable$pvalue <- summary(overallModel)$coefficients["year",
+steps <- c("diagnoses", "undiagnosed", "noART", "unsuppressed")
+modelTable <- data_frame()
+
+for (step in steps) {
+  outputs <- selectModel(step)
+  
+  # Extract outputs for each step
+  overallModel <- outputs$overallModel
+  segModel <- outputs$segModel
+  overallData <- outputs$overallData
+  cutPoint <- outputs$cutPoint
+    
+  # Set up pre and post models
+  splitModels <- prepostModels(overallData, cutPoint)
+  segModelPre <- splitModels$premodel
+  segModelPost <- splitModels$postmodel
+  
+  # Create table of summary results 
+  tempTable <- data.frame(indicator = unname(modelString[step]))
+  tempTable$parameter <- coef(overallModel)["year"]
+  tempTable$param_ci_lower <-confint(overallModel, "year", 
+    type = "Wald")[1]
+  tempTable$param_ci_upper <-confint(overallModel, "year", 
+    type = "Wald")[2]
+  tempTable$pvalue <- summary(overallModel)$coefficients["year",
     "Pr(>|z|)"]
-modelTable$pseudoR2 <- rsq(overallModel, type = "kl")
-modelTable$bic <- BIC(overallModel)
+  tempTable$pseudoR2 <- rsq(overallModel, type = "kl")
+  tempTable$bic <- BIC(overallModel)
+  
+  tempTable$cpt <-  segModel$psi[, "Est."]
+  tempTable$cpt_ci_lower <- segCI(segModel$psi[, "Est."],
+    segModel$psi[, "St.Err"])[1]
+  tempTable$cpt_ci_upper <- segCI(segModel$psi[, "Est."],
+    segModel$psi[, "St.Err"])[2]
+  tempTable$slope1 <- slope(segModel)$year["slope1", "Est."]
+  tempTable$slope1_ci_l <- slope(segModel)$year["slope1", "CI(95%).l"]
+  tempTable$slope1_ci_u <- slope(segModel)$year["slope1", "CI(95%).u"]
+  tempTable$slope2 <- slope(segModel)$year["slope2", "Est."]
+  tempTable$slope2_ci_l <- slope(segModel)$year["slope2", "CI(95%).l"]
+  tempTable$slope2_ci_u <- slope(segModel)$year["slope2", "CI(95%).u"]
+  tempTable$slopes_p <- unname(pslopes(overallData, cutPoint)[["pwstat"]])
+  tempTable$seg_pseudoR2 <- rsq(segModel, type = "kl")
+  tempTable$seg_bic <- BIC(segModel)
+  tempTable$pchow <- pchow(overallData, overallModel, segModelPre,
+    segModelPost)
+  
+  modelTable <- bind_rows(modelTable, tempTable)
+}
 
-modelTable$cpt <-  segModel$psi[, "Est."]
-modelTable$cpt_ci_lower <- segCI(segModel$psi[, "Est."],
-  segModel$psi[, "St.Err"])[1]
-modelTable$cpt_ci_upper <- segCI(segModel$psi[, "Est."],
-  segModel$psi[, "St.Err"])[2]
-modelTable$slope1 <- slope(segModel)$year["slope1", "Est."]
-modelTable$slope1_ci_l <- slope(segModel)$year["slope1", "CI(95%).l"]
-modelTable$slope1_ci_u <- slope(segModel)$year["slope1", "CI(95%).u"]
-modelTable$slope2 <- slope(segModel)$year["slope2", "Est."]
-modelTable$slope2_ci_l <- slope(segModel)$year["slope2", "CI(95%).l"]
-modelTable$slope2_ci_u <- slope(segModel)$year["slope2", "CI(95%).u"]
-modelTable$slopes_p <- 2*pnorm(-abs(wstat)) # test stat from nomal
-modelTable$seg_pseudoR2 <- rsq(segModel, type = "kl")
-modelTable$seg_bic <- BIC(segModel)
-modelTable$pchow <- pchow
+# Output stuff for specific models to review ------------------------------
+# step <- "unsuppressed"
+# inputs <- selectModel(step)
+# preppost <- prepostModels(inputs$overallData, inputs$cutPoint)
+# intModel <- pslopes(inputs$overallData, inputs$cutPoint)
+# 
+# coef(preppost$premodel)
+# confint(preppost$premodel)
+# coef(preppost$postmodel)
+# confint(preppost$postmodel)
+# summary(intModel$model)
+# coef(intModel$model)
+# pchow(inputs$overallData, inputs$overallModel, preppost$premodel,
+#  preppost$postmodel)
+# confint(intModel$model)
+# intModel$wstat
 
-# display
-gather(modelTable)
+# Save as table -----------------------------------------------------------
+if (savePlots) {
 
-# Save as table
-
+  write_csv(modelTable, file.path(figFolder,
+    paste0("HIVcascade_trends_models_", 
+    toString(startYear), "-", toString(resultsYear), ".csv")))
+}
 
 ```
 
 ```{r Test noART breakpoint}
+# This chunk is used to look at the sensitivity of the noART changepoint
+# by using different estimates for the number on ART. 
+
+# Original estimates for noART
+noARTorig <- filter(resultsAll, stage == "pldhiv")$value - 
+  filter(resultsAll, stage == "numART")$value
+
+# Load the ART_Estimates_2014 file with the various fit options for merging
+# the AHOD and PBS + temporary residents data. Need to specifiy which ART
+# estimates (specifically temporary estimates number) we are using in 
+# the treatment data merging.
+addTempRes <- TRUE # Add estimates for temporary residents on ART
+atrasTRest <- TRUE # Use ATRAS estimates, FALSE = NAPWHA estimates
+                   # See 0-ArtAnalysis.Rmd for details
+                   # FALSE for ASR and TRUE for paper
+
+if (addTempRes) {
+  trString <- ifelse(atrasTRest,"ATRAS", "NAPWHA")
+} else {
+  trString <- "PBS"
+}
+
+artEstimates <- read.csv(file.path(resultsFolder,
+  paste0("ART_Estimates-2014-",
+  trString, ".csv")))
+
+# First test - replace 2011 ART value with fitted 2011 value
+artTest <- filter(resultsAll, stage == "numART")$value
+artTest[8] <- artEstimates$fitlog[12]
+
+artDiffs <- list()
+artDiffs[[1]] <- filter(resultsAll, stage == "pldhiv")$value -
+  artTest
+
+# Second test - replace all AHOD values with fitted values
+artTest <- filter(resultsAll, stage == "numART")$value
+artTest[1:8] <- artEstimates$fitlog[5:12]
+
+artDiffs[[2]] <- filter(resultsAll, stage == "pldhiv")$value -
+  artTest
+
+# Third test - Use both fitted pldhiv and numART over 2004-2016
+artDiffs[[3]] <- fitted(trendModels[["pldhiv"]]) -
+  fitted(trendModels[["numART"]])
 
 
+# Loop across stages and save plots 
+segTestPlot <- list()
+testCaption <- c("Replace 2011 on ART value 
+  from AHOD with fitted estimate",
+  "Replace AHOD estimates with 
+  fitted estimates 2004-2012",
+  "Use difference between fitted 
+  PLDHIV and fitted on ART")
 
+for (ii in 1:3) {
+  # Need to use local to prevent scope issues with predicted values
+  local({
+    ii <- ii
+    artTrial <- data.frame(value = artDiffs[[ii]], year = 2004:2016)
+    
+    # Regenerate original model in case of scope issues
+    artmodel <- glm(round(value) ~ year, data = artTrial, 
+      family = "poisson")
+    
+    # Now run segmented to produce a segmented Poisson model. Varying the
+    # initial guess of teh breakpoint from 2007 to 2013 seems to produce 
+    # no change in the fitted curve. 
+    segModeltest <- segmented(artmodel, seg.Z = ~year, 
+      psi = list(year = 2008))
+    
+    segTestData <- data.frame(year = artTrial$year, 
+      segvalue = fitted(segModeltest))
+    
+    plotMax <- 6500
+    segTestPlot[[ii]] <<- ggplot(data = artTrial, 
+      aes(x = year, y = value)) + 
+      geom_line(aes(color = "estimates")) + 
+      geom_point(color = asrcols[2]) +
+      geom_line(aes(y = fitted(artmodel),
+        colour = "overall")) +
+      geom_line(data = segTestData, aes(y = segvalue, 
+        colour = "segment")) + 
+      scale_x_continuous(breaks = seq(startYear,                        
+        resultsYear, by = 3)) +
+      scale_y_continuous(labels = comma) + 
+      scale_colour_manual("", values = c(asrcols[2], "black", "blue"),
+        limits = c("estimates", "overall", "segment"),
+        labels = c("Estimates", "Overall model",
+          "Segmented model")) +
+      coord_cartesian(xlim = c(2004, 2016), ylim = c(0, plotMax)) + 
+      ylab("Number diagnosed\nnot on ART") + xlab("Year") +  
+      plotOpts + theme(legend.position = "bottom") + 
+      geom_vline(xintercept = segModeltest$psi[2], linetype = "dashed",
+        colour = "blue") + 
+      geom_errorbarh(aes(y = 0.975 * plotMax,
+        xmin = segCI(segModeltest$psi[2],
+          segModeltest$psi[3])[1],
+        xmax = segCI(segModeltest$psi[2],
+          segModeltest$psi[3])[2]),
+        colour = "blue",
+        height = 0.025 * plotMax) +
+      geom_text(x = 2010, y = 0.2 * plotMax, 
+        label = paste("Overall pseudo-R^2:",
+          toString(round(rsq(artmodel, type = "kl"), digits = 4))), 
+        size = 3) + 
+      geom_text(x = 2010, y = 0.1 * plotMax, 
+        label = paste("Segmented pseudo-R^2:",
+          toString(round(rsq(segModeltest, type = "kl"), digits = 4))), 
+        size = 3) +
+      ggtitle(testCaption[ii]) +
+      theme(plot.title = element_text(hjust = 0.5, size = 10))
+    
+    if (savePlots) {
+      # Save the current plot
+      ggsave(file.path(figFolder, paste0("HIVcascade_noART_Test", 
+        toString(ii), "_", 
+        toString(startYear), "-",
+        toString(resultsYear),
+        saveFormat)),
+        plot = segTestPlot[[ii]], width = 12, height = 9, units = "cm")
+    }
+  })
+}
+
+# Save a combined plot comparison -----------------------------------------
+if (savePlots) {
+  legend <- get_legend(segPlots[[1]])
+  # Add the original plot to the combination plot
+  combinedTest <- grid.arrange(legend, 
+    segPlots$noART + theme(legend.position="none",
+      plot.title = element_text(hjust = 0.5, size = 10)) +
+      ggtitle("Original\nestimates"),
+    segTestPlot[[1]] + theme(legend.position="none"), 
+    segTestPlot[[2]] + theme(legend.position="none"),
+    segTestPlot[[3]] + theme(legend.position="none"), 
+    ncol = 2, nrow = 3, 
+    layout_matrix = rbind(c(1, 1), c(2, 3), c(4, 5)),
+    widths = c(4, 4), heights = c(0.8, 3.1, 3.1))
+  
+  stagesDiffsPlot3 <- ggdraw() +
+    draw_plot(combinedTest, 0, 0, 1, 1) +
+    draw_plot_label(c("A", "B", "C", "D"), c(0, 0.5, 0, 0.5),
+      c(0.9, 0.9, 0.45, 0.45), size = 12)
+  
+  ggsave(file.path(figFolder,
+    paste("HIVcascade_noART_Segment_Test_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = stagesDiffsPlot3, width = 18, height = 15, units = "cm")
+}
 
 ```
