@@ -2,6 +2,8 @@
 title: "Australian Chlamydia Cascade"
 author: Richard T. Gray
 output: html_notebook
+editor_options: 
+  chunk_output_type: console
 ---
 
 This document presents estimates for the diagnosis and care cascade for 
@@ -43,6 +45,7 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 resultsYear <- 2016 # year of cascade we will calculate and plot     
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
+fileType <- ".tiff" # ".png" for documents 
 retestRange <- TRUE # Calculate variations in retested
 
 ```
@@ -840,7 +843,7 @@ if (saveplots) {
   figFolder <- file.path(resultsFolder, "figures")
   
   ggsave(file.path(figFolder, paste0("chlamcascade-all-", 
-                toString(resultsYear), ".png")), 
+                toString(resultsYear), fileType)), 
          plot = allCascade, 
          width = 4, height = 4, dpi = 300)
   
@@ -855,7 +858,7 @@ if (saveplots) {
   #        width = 7, height = 5, dpi = 300)
   
   ggsave(file.path(figFolder, paste0("chlamcascade-overall-", 
-                toString(resultsYear), ".png")), 
+                toString(resultsYear), fileType)), 
          plot = allCascadeAll, 
          width = 4, height = 4, dpi = 300)
 }
@@ -888,7 +891,7 @@ for (ii in 1:nrow(finalTable)){
 }
 
 # Rename first column
-finalTable$stage <- rep(stages, each = 2)
+finalTable$stage <- rep(stages, each = 3)
 
 # Rename columns
 finalTable <- rename(finalTable, "Cascade stage" = stage, "Sex" = sex, 
