@@ -45,7 +45,7 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 resultsYear <- 2016 # year of cascade we will calculate and plot     
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
-fileType <- ".tiff" # ".png" for documents 
+fileType <- ".png" # ".png" for documents 
 retestRange <- TRUE # Calculate variations in retested
 
 ```
@@ -732,12 +732,12 @@ asrcols <- c("males" = "#2C4452",
 
 # Create bar chart plot for Chlamydia cascade
 stages <- c("infections" = "New infections", 
-            "notifications" = "Notifications", 
+            "notifications" = "Diagnoses", 
             "treated" = "Received treatment following diagnosis", 
             "retested" = "Completed follow-up")
 
 stagesNeat <- c("infections" = "New \n infections", 
-            "notifications" = "Notifications", 
+            "notifications" = "Diagnoses", 
             "treated" = "Received \n treatment \n following \n diagnosis",
             "retested" = "Completed \n follow-up")
 
