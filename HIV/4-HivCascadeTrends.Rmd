@@ -246,9 +246,6 @@ PredictTrend <- function(models, indicator){
   return(predict(model, type = "response"))
 }
 
-# write_csv(trendCascade, file.path(figFolder, paste0("Trends_cascade_", 
-#          toString(startYear), "-", toString(resultsYear), ".csv")))
-
 # Trend plots ------------------------------------------------------------
 # Create a second set of time trend plots with the 
 # predicted fit and pseudo-R^2. 
@@ -347,8 +344,26 @@ artProp <- filter(trendData, stage == "numART")$value /
   filter(trendData, stage == "pldhiv")$value
 supProp <- filter(trendData, stage == "suppressed")$value / 
   filter(trendData, stage == "numART")$value
+overallProp <- filter(trendData, stage == "suppressed")$value / 
+  filter(trendData, stage == "infected")$value
 
 year <- 2004:2016
+
+
+# Add to trend data and save
+trendData <- bind_rows(trendData, data_frame(year = year,
+  stage = "propdiagnosed", value = diagnosedProp, lower = NA, upper = NA))
+trendData <- bind_rows(trendData, data_frame(year = year,
+  stage = "proptreated", value = artProp, lower = NA, upper = NA))
+trendData <- bind_rows(trendData, data_frame(year = year,
+  stage = "propsuppressed", value = supProp, lower = NA, upper = NA))
+trendData <- bind_rows(trendData, data_frame(year = year,
+  stage = "propoverall", value = overallProp, lower = NA, upper = NA))
+
+if (savePlots) {
+write_csv(trendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
+         toString(startYear), "-", toString(resultsYear), ".csv")))
+}
 
 # Linear models -----------------------------------------------------------
 # First simple linear models which allow us to estimate the percentage 
@@ -356,27 +371,34 @@ year <- 2004:2016
 diagslmModel <- lm(diagnosedProp ~ year)
 treatedlmModel <- lm(artProp ~ year)
 suppressedlmModel <- lm(supProp ~ year)
+overalllmModel <- lm(overallProp ~ year)
 
 # Coeffients for annual change
 coefflmdiags <- coef(diagslmModel)["year"]
 coefflmart <- coef(treatedlmModel)["year"]
 coefflmsuppressed <- coef(suppressedlmModel)["year"]
+coefflmoverall <- coef(overalllmModel)["year"]
 
 # P-values for annual chnage
 p_valuelmdiags <- summary(diagslmModel)$coefficients["year", "Pr(>|t|)"]
 p_valuelmart <- summary(treatedlmModel)$coefficients["year", "Pr(>|t|)"]
 p_valuelmsuppressed <- summary(suppressedlmModel)$coefficients["year",
   "Pr(>|t|)"]
+p_valuelmoverall <- summary(overalllmModel)$coefficients["year",
+  "Pr(>|t|)"]
 
 # Confidence interval for annual change
 intervallmdiags <- confint(diagslmModel, "year", type = "Wald")
 intervallmart <- confint(treatedlmModel, "year", type = "Wald")
 intervallmsuppressed <- confint(suppressedlmModel, "year", type = "Wald")
+intervallmoverall <- confint(overalllmModel, "year", type = "Wald")
+
 
 # R2-values (unadjusted)
 pseudoR2lmdiags <- rsq(diagslmModel)
 pseudoR2lmart <- rsq(treatedlmModel)
 pseudoR2lmsuppressed <- rsq(suppressedlmModel)
+pseudoR2lmoverall <- rsq(overalllmModel)
 
 # Logistic models ---------------------------------------------------------
 # Fit logistic curve to each trend - we use a logistic regression treating 
@@ -393,6 +415,10 @@ artTrials <- cbind(round(filter(trendData,
 suppressedTrials <- cbind(round(filter(trendData, 
   stage == "suppressed")$value), round(filter(trendData, 
   stage == "unsuppressed")$value))
+overallTrials <- cbind(round(filter(trendData, 
+  stage == "suppressed")$value), round(filter(trendData, 
+  stage == "infected")$value - filter(trendData, 
+  stage == "suppressed")$value))
 
 diagsModel <- glm(diagnosedTrials ~ year, 
   family = binomial(link = "logit"))
@@ -400,11 +426,14 @@ treatedModel <- glm(artTrials ~ year,
   family = binomial(link = "logit"))
 suppressedModel <- glm(suppressedTrials ~ year, 
   family = binomial(link = "logit"))
+overallModel <- glm(overallTrials ~ year, 
+  family = binomial(link = "logit"))
 
 # Calculate p-values
 p_diags <- summary(diagsModel)$coefficients["year", "Pr(>|z|)"]
 p_art <- summary(treatedModel)$coefficients["year", "Pr(>|z|)"]
 p_suppressed <- summary(suppressedModel)$coefficients["year", "Pr(>|z|)"]
+p_overall <- summary(overallModel)$coefficients["year", "Pr(>|z|)"]
 
 # As for logistic models we calculate the pseudo-R^2 using 
 # the rsq package based on the calculation in the paper: Cameron & 
@@ -413,6 +442,7 @@ p_suppressed <- summary(suppressedModel)$coefficients["year", "Pr(>|z|)"]
 pseudoR2diags <- rsq(diagsModel, type = "kl")
 pseudoR2art <- rsq(treatedModel, type = "kl")
 pseudoR2suppressed <- rsq(suppressedModel, type = "kl")
+pseudoR2overall <- rsq(overallModel, type = "kl")
 
 # Plots of estimates and trends ------------------------------------------
 # Plot the proportion, linear model and logistic model
@@ -448,15 +478,21 @@ treatedPropPlot <- plotProp(artProp, treatedlmModel, treatedModel,
   "Percentage diagnosed\non ART")
 suppressedPropPlot <- plotProp(supProp, suppressedlmModel, 
   suppressedModel, "Percentage on\nART suppressed")
+overallPropPlot <- plotProp(overallProp, overalllmModel, 
+  overallModel, "Percentage on\nART suppressed")
 
-# Add results to trendCascade
+# Add linear model results to trendCascade
 propTrends <- data_frame(stage = c("propdiagnosed", "proptreated",
-  "propsuppressed"),
-  coeff = c(coefflmdiags, coefflmart, coefflmsuppressed),
-  pvalue = c(p_valuelmdiags, p_valuelmart, p_valuelmsuppressed),
-  lower = c(intervallmdiags[1], intervallmart[1], intervallmsuppressed[1]),
-  upper = c(intervallmdiags[2], intervallmart[2], intervallmsuppressed[2]),
-  pseudoR2 = c(pseudoR2lmdiags, pseudoR2lmart, pseudoR2lmsuppressed),
+  "propsuppressed", "propoverall"),
+  coeff = c(coefflmdiags, coefflmart, coefflmsuppressed, coefflmoverall),
+  pvalue = c(p_valuelmdiags, p_valuelmart, p_valuelmsuppressed,
+    p_valuelmoverall),
+  lower = c(intervallmdiags[1], intervallmart[1], intervallmsuppressed[1],
+    intervallmoverall[1]),
+  upper = c(intervallmdiags[2], intervallmart[2], intervallmsuppressed[2],
+    intervallmoverall[2]),
+  pseudoR2 = c(pseudoR2lmdiags, pseudoR2lmart, pseudoR2lmsuppressed, 
+    pseudoR2lmoverall),
   model = "linear")
 
 # Save plots --------------------------------------------------------------
@@ -469,14 +505,15 @@ combinedPropPlot <- grid.arrange(legend,
   diagsPropPlot + theme(legend.position="none"), 
   treatedPropPlot + theme(legend.position="none"),
   suppressedPropPlot + theme(legend.position="none"), 
+  overallPropPlot + theme(legend.position="none"),
   ncol = 2, nrow = 3, 
   layout_matrix = rbind(c(1, 1), c(2, 3), c(4, 5)),
   widths = c(4, 4), heights = c(0.8, 3.1, 3.1))
 
 stagesPropPlot <- ggdraw() +
   draw_plot(combinedPropPlot, 0, 0, 1, 1) +
-  draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0),
-    c(0.9, 0.9, 0.45), size = 12)
+  draw_plot_label(c("A", "B", "C", "D"), c(0, 0.5, 0, 0.5),
+    c(0.9, 0.9, 0.45, 0.45), size = 12)
 
 if (savePlots) {
   ggsave(file.path(figFolder,
