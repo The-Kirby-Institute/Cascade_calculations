@@ -44,7 +44,7 @@ saveResults <- FALSE
 # Set HIV subsetting function parameters----------------------------------
 cascadeName <- paste0("All-", toString(analysisYear)) 
 targetGender <- 'all' # all, male, female
-targetAge <- 'all' #groups 0, 1, 2, 3, 4...
+targetAge <- 'all' #groups a0_4, a5_9, a10_14,...,a85+, not
 targetCob <- 'all' # all=including n/a, Thailand, etc.
 targetExposure <- 'all' #msm, hetero, pwid, otherexp
 targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
@@ -56,7 +56,7 @@ targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South
 interState <- ifelse(targetState != "all", TRUE, FALSE)
 excludeAborig <- FALSE
 doAge <- FALSE # TRUE for aging calculations
-doRetained <- TRUE # TRUE for appending retained in care
+doRetained <- FALSE # TRUE for appending retained in care
 if (doRetained) {
   # Need to specify years for reatined in care calculations
   # This is simply a proportion based on James McMahon's paper
@@ -167,7 +167,8 @@ if (excludeAborig) {
   hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
   hivSetAll <- filter(hivSetAll, aboriggroup == 'non_indigenous')
 }
-  
+
+# Extract subset of notifications we want
 hivSetReturn <- SubHivSet(hivSetAll, targetAge, targetGender,
                           targetExposure, targetCob, targetAtsi,
                           targetState, targetGlobalRegion)
