@@ -5,10 +5,8 @@
 # R function to extract subset of interest from notifications
 
 GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
-                           targetAge, targetGender,targetExposure,
-                           targetCob, targetAtsi,
-                           targetLocalRegion, targetState,
-                           targetGlobalRegion) {
+  targetAge, targetGender,targetExposure, targetCob, targetAtsi,
+  targetLocalRegion, targetState, targetGlobalRegion) {
   
   adjustments <- data.frame(year = hivBase$year)
   
@@ -18,24 +16,109 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
   
   # Now extract and calculate the variables we want
   
-  # Extract proportion notifications unique
-  if (targetGender == "male" | targetExposure == "msm") {
+  # Unique notifications------------------------------------------------
+  
+  # Adjusted only for sex (msm included) and indigenous status
+  # Any combination of exposure assumed to have base proportion 
+  
+  # Extract proportion notifications unique - if more than 
+  # one target population drop to the base estimates
+  if (targetGender == "male" || 
+      (length(targetExposure) == 1 && targetExposure[1] == "msm")) {
+    # Use male proportion 
     adjustments$cumunique <-  hivBase$cumunique_male
     adjustments$annunique <-  hivBase$annunique_male
   } else if (targetGender == "female") {
+    # Use female proportion
     adjustments$cumunique <-  hivBase$cumunique_female
     adjustments$annunique <-  hivBase$annunique_female
   } else if (targetAtsi == "indigenous") {
+    # Assume no duplicates for Australian born indigenous 
     adjustments$cumunique <-  1
     adjustments$annunique <-  1
   } else {
+    # Any other combination used base
     adjustments$cumunique <-  hivBase$cumunique_all
     adjustments$annunique <-  hivBase$annunique_all
   }
   
+  # Death rates -----------------------------------------------------------
+  
+  # Adjusted only for indigenous status, and country of birth. 
+  # Those born outside Australia assumed to be non-indigenous
+  
+  # Extract deathrate and propstay for indigenous and non-indigenous 
+  if (targetAtsi == "indigenous" && length(targetCob) == 1 && 
+      targetCob[1] == "Australia") {
+    # Australian born indigenous
+    adjustments$deathrate <- hivBase$deathrate * 
+      hivAdjustments$drate_indigenous
+    adjustments$deathrate_lower <- hivBase$deathrate_lower * 
+      hivAdjustments$drate_indigenous_lower
+    adjustments$deathrate_upper <- hivBase$deathrate_upper * 
+      hivAdjustments$drate_indigenous_upper
+    
+    adjustments$propstay <- hivAdjustments$pstay_indigenous
+    adjustments$propstay_lower <- hivAdjustments$pstay_indigenous
+    adjustments$propstay_upper <- hivAdjustments$pstay_indigenous
+  } else if ((targetAtsi == "non_indigenous" &&  
+      targetCob[1] == "Australia")|| targetGlobalRegion[1] != "all" || 
+      targetCob[1] != "Australia") {
+    # Australian born non-indiegnous or those born overseas
+    adjustments$deathrate <- hivBase$deathrate * 
+      hivAdjustments$drate_non_indigenous
+    adjustments$deathrate_lower <- hivBase$deathrate_lower * 
+      hivAdjustments$drate_non_indigenous_lower
+    adjustments$deathrate_upper <- hivBase$deathrate_upper * 
+      hivAdjustments$drate_non_indigenous_upper
+    
+    adjustments$propstay <- hivBase$propstay * 
+      hivAdjustments$pstay_non_indigenous
+    adjustments$propstay_lower <- hivBase$propstay_lower * 
+      hivAdjustments$pstay_non_indigenous
+    adjustments$propstay_upper <- hivBase$propstay_upper *
+      hivAdjustments$pstay_non_indigenous
+    
+  } else {
+    # Any other combination
+    adjustments$deathrate <- hivBase$deathrate
+    adjustments$deathrate_lower <- hivBase$deathrate_lower
+    adjustments$deathrate_upper <- hivBase$deathrate_upper
+    
+    adjustments$propstay <- hivBase$propstay
+    adjustments$propstay_lower <- hivBase$propstay_lower
+    adjustments$propstay_upper <- hivBase$propstay_upper
+  }
+  
+  # Adjust deathrates for males and females
+  if (targetGender == "male" || 
+      (length(targetExposure) == 1 && targetExposure[1] == "msm")) {
+    adjustments$deathrate <- hivBase$deathrate * 
+      hivAdjustments$drate_male
+    adjustments$deathrate_lower <- hivBase$deathrate_lower * 
+      hivAdjustments$drate_male
+    adjustments$deathrate_upper <- hivBase$deathrate_upper * 
+      hivAdjustments$drate_male
+  } 
+  
+  if (targetGender == "female") {
+    adjustments$deathrate <- hivBase$deathrate * 
+      hivAdjustments$drate_female
+    adjustments$deathrate_lower <- hivBase$deathrate_lower * 
+      hivAdjustments$drate_female
+    adjustments$deathrate_upper <- hivBase$deathrate_upper * 
+      hivAdjustments$drate_female
+  }
+  
+  # TODO: Fix below to handle combinations of states
+  # Treat as a separate function using the migration ABS data
+  
+  # Migration rates -------------------------------------------------------
+  
   # Extract migration rate
   # First set up base
-  if (targetGender == "male" | targetExposure == "msm") {
+  if (targetGender == "male" || 
+      (length(targetExposure) == 1 && targetExposure[1] == "msm")) {
     adjustments$mrate <- hivBase$migrationrate * 
       hivAdjustments$mrate_male_adults
     adjustments$mrate_lower <- hivBase$migrationrate_lower * 
@@ -60,30 +143,31 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
   }
   
   # Adjust  migration rate for location
-  if (targetState != "all") {
-    mrate <- switch(targetState,
-                    "nsw" = hivAdjustments$mrate_nsw,
-                    "vic" = hivAdjustments$mrate_nsw,
-                    "qld" = hivAdjustments$mrate_nsw,
-                    "nt" = hivAdjustments$mrate_nsw,
-                    "wa" = hivAdjustments$mrate_nsw,
-                    "sa" = hivAdjustments$mrate_nsw,
-                    "tas" = hivAdjustments$mrate_nsw,
-                    "act" = hivAdjustments$mrate_act)
+  if (targetState != "all" && length(targetState) == 1) {
+    mrate <- switch(targetState[1],
+      "nsw" = hivAdjustments$mrate_nsw,
+      "vic" = hivAdjustments$mrate_nsw,
+      "qld" = hivAdjustments$mrate_nsw,
+      "nt" = hivAdjustments$mrate_nsw,
+      "wa" = hivAdjustments$mrate_nsw,
+      "sa" = hivAdjustments$mrate_nsw,
+      "tas" = hivAdjustments$mrate_nsw,
+      "act" = hivAdjustments$mrate_act)
     
     adjustments$mrate <- adjustments$mrate * mrate
     adjustments$mrate_lower <- adjustments$mrate_lower * mrate
     adjustments$mrate_upper <- adjustments$mrate_upper * mrate
   }
-
+  
   # Adjust migration rate for Indigenous population
-  if (targetAtsi == "indigenous") {
+  if (targetAtsi == "indigenous" && length(targetCob) == 1 && 
+      targetCob[1] == "Australia") {
     adjustments$mrate <- 0
     adjustments$mrate_lower <- 0
     adjustments$mrate_upper <- 0
-  } else if (targetAtsi == "non_indigenous" ||
-                  targetGlobalRegion != "all" ||
-                  targetCob == "Australia") {
+  } else if ((targetAtsi == "non_indigenous" &&  
+      targetCob[1] == "Australia")|| targetGlobalRegion[1] != "all" || 
+      targetCob[1] != "Australia") {
     adjustments$mrate <- adjustments$mrate * 
       hivAdjustments$non_aborig_migration
     adjustments$mrate_lower <- adjustments$mrate_lower * 
@@ -92,45 +176,48 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
       hivAdjustments$non_aborig_migration
   }
   
+  # Interstate migration rate ---------------------------------------------
   # Adjust interstate migration rate for location
-  if (targetState != "all") {
-    arriverate <- switch(targetState,
-                    "nsw" = filter(hivInterstate, 
-                                   state == "nsw")$arriverate,
-                    "vic" = filter(hivInterstate, 
-                                   state == "vic")$arriverate,
-                    "qld" = filter(hivInterstate, 
-                                   state == "qld")$arriverate,
-                    "nt" = filter(hivInterstate, 
-                                  state == "nt")$arriverate,
-                    "wa" = filter(hivInterstate, 
-                                  state == "wa")$arriverate,
-                    "sa" = filter(hivInterstate, 
-                                  state == "sa")$arriverate,
-                    "tas" = filter(hivInterstate, 
-                                   state == "tas")$arriverate,
-                    "act" = filter(hivInterstate, 
-                                   state == "act")$arriverate)
+  # TODO: create a function to do this adjustment for 
+  # combinations of states
+  if (targetState != "all" && length(targetState) == 1) {
+    arriverate <- switch(targetState[1],
+      "nsw" = filter(hivInterstate, 
+        state == "nsw")$arriverate,
+      "vic" = filter(hivInterstate, 
+        state == "vic")$arriverate,
+      "qld" = filter(hivInterstate, 
+        state == "qld")$arriverate,
+      "nt" = filter(hivInterstate, 
+        state == "nt")$arriverate,
+      "wa" = filter(hivInterstate, 
+        state == "wa")$arriverate,
+      "sa" = filter(hivInterstate, 
+        state == "sa")$arriverate,
+      "tas" = filter(hivInterstate, 
+        state == "tas")$arriverate,
+      "act" = filter(hivInterstate, 
+        state == "act")$arriverate)
     
     adjustments$inter_arriverate <- arriverate
     
-    departrate <- switch(targetState,
-                         "nsw" = filter(hivInterstate, 
-                                        state == "nsw")$departrate,
-                         "vic" = filter(hivInterstate, 
-                                        state == "vic")$departrate,
-                         "qld" = filter(hivInterstate, 
-                                        state == "qld")$departrate,
-                         "nt" = filter(hivInterstate, 
-                                       state == "nt")$departrate,
-                         "wa" = filter(hivInterstate, 
-                                       state == "wa")$departrate,
-                         "sa" = filter(hivInterstate, 
-                                       state == "sa")$departrate,
-                         "tas" = filter(hivInterstate, 
-                                        state == "tas")$departrate,
-                         "act" = filter(hivInterstate, 
-                                        state == "act")$departrate)
+    departrate <- switch(targetState[1],
+      "nsw" = filter(hivInterstate, 
+        state == "nsw")$departrate,
+      "vic" = filter(hivInterstate, 
+        state == "vic")$departrate,
+      "qld" = filter(hivInterstate, 
+        state == "qld")$departrate,
+      "nt" = filter(hivInterstate, 
+        state == "nt")$departrate,
+      "wa" = filter(hivInterstate, 
+        state == "wa")$departrate,
+      "sa" = filter(hivInterstate, 
+        state == "sa")$departrate,
+      "tas" = filter(hivInterstate, 
+        state == "tas")$departrate,
+      "act" = filter(hivInterstate, 
+        state == "act")$departrate)
     
     adjustments$inter_departrate <- departrate
     
@@ -139,68 +226,10 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     adjustments$inter_departrate <- 0
   }
   
-  # Extract deathrate and propstay for indigenous and non-indigenous 
-  if (targetAtsi == "all") {
-    adjustments$deathrate <- hivBase$deathrate
-    adjustments$deathrate_lower <- hivBase$deathrate_lower
-    adjustments$deathrate_upper <- hivBase$deathrate_upper
-    
-    adjustments$propstay <- hivBase$propstay
-    adjustments$propstay_lower <- hivBase$propstay_lower
-    adjustments$propstay_upper <- hivBase$propstay_upper
-    
-  } else if (targetAtsi == "non_indigenous" ||
-             targetGlobalRegion != "all" ||
-             targetCob == "Australia") {
-    adjustments$deathrate <- hivBase$deathrate * 
-      hivAdjustments$drate_non_indigenous
-    adjustments$deathrate_lower <- hivBase$deathrate_lower * 
-      hivAdjustments$drate_non_indigenous_lower
-    adjustments$deathrate_upper <- hivBase$deathrate_upper * 
-      hivAdjustments$drate_non_indigenous_upper
-    
-    adjustments$propstay <- hivBase$propstay * 
-      hivAdjustments$pstay_non_indigenous
-    adjustments$propstay_lower <- hivBase$propstay_lower * 
-      hivAdjustments$pstay_non_indigenous
-    adjustments$propstay_upper <- hivBase$propstay_upper *
-      hivAdjustments$pstay_non_indigenous
-    
-  } else {
-    adjustments$deathrate <- hivBase$deathrate * 
-      hivAdjustments$drate_indigenous
-    adjustments$deathrate_lower <- hivBase$deathrate_lower * 
-      hivAdjustments$drate_indigenous_lower
-    adjustments$deathrate_upper <- hivBase$deathrate_upper * 
-      hivAdjustments$drate_indigenous_upper
-    
-    adjustments$propstay <- hivAdjustments$pstay_indigenous
-    adjustments$propstay_lower <- hivAdjustments$pstay_indigenous
-    adjustments$propstay_upper <- hivAdjustments$pstay_indigenous
-  }
-  
-  # Adjust deathrates for males and females
-  if (targetGender == "male" || targetExposure == "msm") {
-    adjustments$deathrate <- hivBase$deathrate * 
-      hivAdjustments$drate_male
-    adjustments$deathrate_lower <- hivBase$deathrate_lower * 
-      hivAdjustments$drate_male
-    adjustments$deathrate_upper <- hivBase$deathrate_upper * 
-      hivAdjustments$drate_male
-  } 
-
-  if (targetGender == "female") {
-    adjustments$deathrate <- hivBase$deathrate * 
-      hivAdjustments$drate_female
-    adjustments$deathrate_lower <- hivBase$deathrate_lower * 
-      hivAdjustments$drate_female
-    adjustments$deathrate_upper <- hivBase$deathrate_upper * 
-      hivAdjustments$drate_female
-  }
   
   # Further adjust propstay and deathrate by location
   # Now adjust for location only have this for nsw and vic
-  if (targetState == "nsw") {
+  if (targetState[1] == "nsw" && length(targetState) == 1) {
     adjustments$propstay <- adjustments$propstay * 
       hivAdjustments$pstay_nsw
     adjustments$propstay_lower <- adjustments$propstay_lower * 
@@ -217,7 +246,7 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     
   } 
   
-  if (targetState == "vic") {
+  if (targetState[1] == "vic" && length(targetState) == 1) {
     adjustments$propstay <- adjustments$propstay * 
       hivAdjustments$pstay_vic
     adjustments$propstay_lower <- adjustments$propstay_lower * 

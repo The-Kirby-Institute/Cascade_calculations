@@ -36,24 +36,52 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 ```
 
+The following chunck specifies all the parameters for producing the
+estimates of PLHIV previously diagnosed. Result files are saved to the
+specified project folder and have a cascade file handle. 
+
+*Current projects*
+- ASR_2017 (2017 ASR cascades for year 2016)
+- CALD_Cascades
+- All-2016_Paper (national cascade for paper) uses main output directory
+'.'
+
+
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- FALSE
+saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
-cascadeName <- paste0("All-", toString(analysisYear)) 
-targetGender <- 'all' # all, male, female
-targetAge <- 'all' #groups a0_4, a5_9, a10_14,...,a85+, not
-targetCob <- 'all' # all=including n/a, Thailand, etc.
-targetExposure <- 'all' #msm, hetero, pwid, otherexp
-targetAtsi <- 'all' # indigenous or non_indigenous # Only used if country is Australia
-targetState <- 'all' # nsw, sa, nt, qld, vic, wa, act, tas 
-targetLocalRegion <- 'all' #tbd
-targetGlobalRegion <- 'all' #South-East Asia, Sub-Saharan Africa, Oceania, South American, Other cob, etc
+projectOutput <- 'CALD_Cascades' #'.' for main output folder 
+
+cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
+targetGender <- 'all' # all, male, female (single)
+targetAge <- 'all' #groups a0_4, a5_9, a10_14,...,a85+, not (combination)
+targetCob <- 'all' # all=including n/a, Thailand, etc. (combination)
+targetExposure <- 'all' #msm, hetero, pwid, otherexp (combination)
+targetAtsi <- 'all' # all, indigenous or non_indigenous.
+                    # Only used if country is Australia (single)
+targetState <- c("nsw", "vic") # nsw, sa, nt, qld, vic, wa, act, tas
+                               # (combination)
+targetLocalRegion <- 'all' #tbd (combination)
+targetGlobalRegion <- 'all' # South-East Asia, Sub-Saharan Africa, 
+                            # Oceania, South American, Other cob, etc
+                            # (combination)
+
+# Some error checking 
+if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
+  stop("Error: targetGender or targetAtsi not a single value") 
+}
+
+if (targetAtsi != "all" && targetCob[1] != "Australia" &&
+    length(targetCob) > 1) {
+  stop("Error: indigenous status only valid for Australian born")   
+}
 
 # Script options for calculations
-interState <- ifelse(targetState != "all", TRUE, FALSE)
+interState <- ifelse((targetState[1] != "all" && 
+    length(targetState) != 1), TRUE, FALSE)
 excludeAborig <- FALSE
 doAge <- FALSE # TRUE for aging calculations
 doRetained <- FALSE # TRUE for appending retained in care
@@ -421,21 +449,24 @@ if (ecdcData) {
     adjustDiags$adjusted_included
   normalizeFactor[is.nan(normalizeFactor)] <- 1
   
+  # Folder for ECDC output
+  ecdcFolder <- file.path(outputFolder, projectOutput)
+  
   if (excludeOS) {
     # excluding OS diagnosis
-    dataAll <- EcdcFolders(outputFolder, ecdcModel, 
+    dataAll <- EcdcFolders(ecdcFolder, ecdcModel, 
                            includeOS = FALSE)
     EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique,
               propKnown = normalizeFactor)
   } else {
     # including OS diagnosis
-    dataAll <- EcdcFolders(outputFolder, ecdcModel)
+    dataAll <- EcdcFolders(ecdcFolder, ecdcModel)
     EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique,
               propKnown = normalizeFactor) 
   }
   
   # Create output directory
-  resultsEcdcPath <- file.path(outputFolder, "ECDC_models", cascadeName)
+  resultsEcdcPath <- file.path(ecdcFolder, "ECDC_models", cascadeName)
   
   #save parameters 
   saveStringParams <- file.path(resultsEcdcPath, "Parameters")
@@ -552,7 +583,7 @@ if (doRetained) {
 ```{r Save results}
 if (saveResults) {
   # Create output directory
-  resultsPath <- file.path(outputFolder, cascadeName)
+  resultsPath <- file.path(outputFolder, projectOutput, cascadeName)
   dir.create(resultsPath, showWarnings = FALSE, recursive = TRUE)
   
   # Save all estimates
