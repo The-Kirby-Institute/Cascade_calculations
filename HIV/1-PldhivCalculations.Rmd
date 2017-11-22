@@ -43,8 +43,7 @@ specified project folder and have a cascade file handle.
 *Current projects*
 - ASR_2017 (2017 ASR cascades for year 2016)
 - CALD_Cascades
-- All-2016_Paper (national cascade for paper) uses main output directory
-'.'
+- Paper_2016 (national cascade for paper) 
 
 
 ```{r Script parameters}

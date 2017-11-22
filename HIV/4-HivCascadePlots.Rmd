@@ -14,6 +14,9 @@ This document shows various plots related to the HIV diagnosis and care
 cascade for Australia. These results illustrate estimates for the key 
 stages and populations used in the Kirby Annual Surveillance Reports.
 
+Note: This script only works for the Paper_2016 and ASR_2017 cascade
+projects.
+
 ```{r knitr_options, include=FALSE} 
 knitr::opts_chunk$set(echo = FALSE, 
                       warning = FALSE, 
@@ -65,7 +68,7 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 resultsYear <- 2016  # year of cascade we will plot
 minYear <- 13        # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
-fileFlag <- "_Paper" #"_ASR" or "_Paper" or ""
+projectName <- "Paper_2016" # or "ASR_2017"
 
 # Include linked and retained in care?
 excludeCare <- FALSE
@@ -74,17 +77,17 @@ if (excludeCare) {
 }
 
 savePlots <- FALSE # save plots as separate files
-pubPlots <- TRUE     # create additional plots for publications
+pubPlots <- TRUE   # create additional plots for publications
 newInfectsPlots <- FALSE
 saveFormat <- ".png" # file extension for saved plots 
 
+resultsFolder <- file.path(resultsFolder, projectName)
 if (pubPlots) {
   savePlots <- TRUE
 }
 if (savePlots) {
   # Create output directory
-  figFolder <- file.path(basePath, "output", "figures",
-                         paste0(toString(resultsYear), fileFlag))
+  figFolder <- file.path(resultsFolder, "figures")
   dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
 }
 
@@ -93,8 +96,9 @@ if (savePlots) {
 ```{r loadresults}
 
 # Load hiv cascade dataframe
-inputFile <- file.path(resultsFolder, paste("HIVcascadeEstimates-", 
-  toString(resultsYear), fileFlag, ".csv", sep = ""))
+inputFile <- file.path(resultsFolder, 
+  paste0("HIVcascadeEstimates-", 
+  toString(resultsYear), ".csv"))
 hivCascade <- read.csv(inputFile)
 
 # Exclude linked to care if it exists
@@ -878,7 +882,7 @@ if (pubPlots) {
 ```
 
 ```{r statecascade}
-### Create separate figures of each state cascade
+## Create separate figures of each state cascade
 
 states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act")
 

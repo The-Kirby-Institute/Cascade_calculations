@@ -36,6 +36,7 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
 saveResults <- TRUE 
+projectFolder <- "ASR_2017"
 cascadeFlag <- "All"
 # ecdcChart <- "Female" # ECDC group used for calculations
 ecdcResults <- "exposure"
@@ -54,14 +55,16 @@ ecdcChart <- paste0(cascadeFlag, "_Charts.xlsx")
 
 if (cascadeFlag == "Otherexp") {
   # Use overall undiagnosed
-  ecdcFile <- file.path(outputFolder, "ECDC_models", paste0("All-",
-    toString(analysisYear)), ecdcResults, "results/All_Charts.xlsx")
+  ecdcFile <- file.path(outputFolder, projectFolder, "ECDC_models",
+    paste0("All-", toString(analysisYear)), ecdcResults,
+    "results/All_Charts.xlsx")
 } else {
-  ecdcFile <- file.path(outputFolder, "ECDC_models", cascadeName, 
-                      ecdcResults, "results/All_Charts.xlsx")
+  ecdcFile <- file.path(outputFolder, projectFolder, "ECDC_models",
+    cascadeName, ecdcResults, "results/All_Charts.xlsx")
 }
 
-finalFile <- file.path(outputFolder, cascadeName, ecdcChart)
+finalFile <- file.path(outputFolder, projectFolder, cascadeName,
+  ecdcChart)
 
 fileFlag <- FALSE
 
@@ -78,37 +81,34 @@ if (!file.exists(finalFile) || updateECDC) {
 # Chunk to load the PLDHIV estimates and ECDC undiagnosed estimates. 
 # For file to be read in properly make sure hidden rows are unhidden and
 # the file name changed into the correct format. 
-pldhiv <- read.csv(file.path(outputFolder, cascadeName, 
-                             paste0("HIVpldhivEstimates-",
-                             toString(analysisYear), ".csv"))) %>%
+pldhiv <- read.csv(file.path(outputFolder, projectFolder, cascadeName, 
+  paste0("HIVpldhivEstimates-", toString(analysisYear), ".csv"))) %>%
   filter(stage == "pldhiv")
 
-numberUndiagnosed <- read_excel(file.path(outputFolder, cascadeName,
-                                    ecdcChart),
-           sheet = 2, col_names = FALSE, skip = 131) %>%
+numberUndiagnosed <- read_excel(file.path(outputFolder, projectFolder, 
+  cascadeName, ecdcChart), sheet = 2, col_names = FALSE, skip = 131) %>%
   select(X__2, X__11, X__12, X__13) %>%
   rename(year = X__2, undiagnosed = X__11, undiagnosed_lower = X__12,
-         undiagnosed_upper = X__13) %>%
+    undiagnosed_upper = X__13) %>%
   slice(1:length(1980:analysisYear)) %>%
   mutate(year = as.numeric(year))
 
-percentUndiagnosed <- read_excel(file.path(outputFolder, cascadeName,
-                                    ecdcChart),
-           sheet = 2, col_names = FALSE, skip = 195) %>%
+percentUndiagnosed <- read_excel(file.path(outputFolder, projectFolder, 
+  cascadeName, ecdcChart), sheet = 2, col_names = FALSE, skip = 195) %>%
   select(X__2, X__3, X__4, X__5) %>%
   rename(year = X__2, percent = X__3, percent_lower = X__4,
-         percent_upper = X__5) %>%
+    percent_upper = X__5) %>%
   slice(1:length(1980:analysisYear))
-  
+
 undiagnosed <- left_join(numberUndiagnosed, percentUndiagnosed, 
-                         by = "year")
+  by = "year")
 
 # Merge data into one data frame
 mergedData <- pldhiv %>%
   select(-population, - stage) %>%
   rename(pldhiv = value,
-         pldhiv_lower = lower,
-         pldhiv_upper = upper) %>%
+    pldhiv_lower = lower,
+    pldhiv_upper = upper) %>%
   left_join(., undiagnosed, by = "year")
 
 population <- as.character(pldhiv$population[1])
@@ -156,15 +156,15 @@ plhivResults <- plhiv %>%
 # Save results
 if (saveResults) {
  # Save cascade estimates
-  saveStringPlhiv <- file.path(outputFolder, cascadeName, 
+  saveStringPlhiv <- file.path(outputFolder, projectFolder, cascadeName, 
     paste0("HIVpositiveEstimates-", toString(analysisYear)))
   
   # Write to csv
   write_csv(plhivResults, paste0(saveStringPlhiv, ".csv")) 
   
   # Save plhiv
-  saveStringUndiagnosed <- file.path(outputFolder, cascadeName, 
-    paste0("plhivEstimates-", toString(analysisYear)))
+  saveStringUndiagnosed <- file.path(outputFolder, projectFolder, 
+    cascadeName, paste0("plhivEstimates-", toString(analysisYear)))
   
   # Write to csv
   write_csv(plhiv, paste0(saveStringUndiagnosed, ".csv"))

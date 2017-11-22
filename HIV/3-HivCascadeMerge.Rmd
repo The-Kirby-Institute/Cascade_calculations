@@ -22,16 +22,16 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Primary script parameters ---------------------------------------------------
 analysisYear <- 2016
+projectName <- "Paper_2016"
 cascadeNames <- c("All", "Male", "Female", "Atsi", "AusNonAtsi", "SSA",
-                  "SEA",
-                  "Othercob", "CALD", "MSM", "Hetero", "PWID", "Otherexp",
-                  "ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA")
+  "SEA", "Othercob", "CALD", "MSM", "Hetero", "PWID", "Otherexp", "ACT", 
+  "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA")
 # cascadeNames <- "all"
 
 mergeAll <- TRUE
 saveResults <- TRUE
-artString <- "NAPWHA" # "ATRAS", "PBS" - use NAPWHA for ASR and ATRAS for
-                      # HIV casades paper
+artString <- "ATRAS" # "ATRAS", "PBS" - use NAPWHA for ASR_2017 and ATRAS
+                      # for Paper_2016
 
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
@@ -41,10 +41,9 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 yearStr <- toString(analysisYear)
 
-# The treatment file is the same for all cascades
+# The treatment file is the same for all cascades and projects
 artFile <- file.path(outputFolder, paste0("HIVtreatment-", 
-                                          yearStr, "-", artString,
-                                          ".csv"))
+  yearStr, "-", artString, ".csv"))
 
 artSuppression <- read_csv(artFile) %>%
   select(stage, everything())
@@ -54,12 +53,13 @@ hivCascadeAll <- NULL
 for (ii in 1:length(cascadeNames)) {
   
   # Specify cascade folders
-  cascadeFolder <- file.path(outputFolder, paste0(cascadeNames[ii], 
-                                                  "-", yearStr))
-  pldhivFile <- file.path(cascadeFolder, paste0("HIVpldhivEstimates-",
-                                                yearStr, ".csv"))
-  livingFile <- file.path(cascadeFolder, paste0("HIVpositiveEstimates-",
-                                                yearStr, ".csv"))
+  cascadeFolder <- file.path(outputFolder, projectName, 
+    paste0(cascadeNames[ii], "-", yearStr))
+  
+  pldhivFile <- file.path(cascadeFolder, 
+    paste0("HIVpldhivEstimates-", yearStr, ".csv"))
+  livingFile <- file.path(cascadeFolder, 
+    paste0("HIVpositiveEstimates-", yearStr, ".csv"))
   
   # Read in cascade results for this cascade
   living <- read_csv(livingFile)
@@ -74,8 +74,8 @@ for (ii in 1:length(cascadeNames)) {
   
   # Save if required
   if (saveResults) {
-    write_csv(hivCascade, paste0(cascadeFolder, "/HIVcascadeEstimates-",
-                                 yearStr, ".csv"))
+    write_csv(hivCascade, paste0(cascadeFolder, 
+      "/HIVcascadeEstimates-", yearStr, ".csv"))
   }
   
   # Merge with other cascades if required
@@ -87,8 +87,8 @@ for (ii in 1:length(cascadeNames)) {
 
 # Save final cascade if required
 if (saveResults && mergeAll) {
-  write_csv(hivCascadeAll, paste0(outputFolder, "/HIVcascadeEstimates-",
-                                  yearStr, "_", currTime, ".csv"))
+  write_csv(hivCascadeAll, file.path(outputFolder, projectName,
+    paste0("HIVcascadeEstimates-", yearStr, "_", currTime, ".csv")))
 }
 
 ```
