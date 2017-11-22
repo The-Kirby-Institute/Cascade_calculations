@@ -23,10 +23,14 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # Primary script parameters ---------------------------------------------------
 analysisYear <- 2016
 projectName <- "Paper_2016"
-cascadeNames <- c("All", "Male", "Female", "Atsi", "AusNonAtsi", "SSA",
-  "SEA", "Othercob", "CALD", "MSM", "Hetero", "PWID", "Otherexp", "ACT", 
-  "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA")
-# cascadeNames <- "all"
+cascadeNames <- "All" # specify cascades with project
+
+# If this is an ASR project already have specific populations
+if (projectName %in% c("ASR_2016", "ASR_2016")) {
+  cascadeNames <- c("All", "Male", "Female", "Atsi", "AusNonAtsi", "SSA",
+    "SEA", "Othercob", "CALD", "MSM", "Hetero", "PWID", "Otherexp",
+    "ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA")
+}
 
 mergeAll <- TRUE
 saveResults <- TRUE
