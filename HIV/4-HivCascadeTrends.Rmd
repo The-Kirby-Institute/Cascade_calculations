@@ -47,8 +47,13 @@ source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
 resultsYear <- 2016  # year of cascade we will plot
 minYear <- 13        # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
-savePlots <- FALSE
-fileFlag <- "_Paper" #"_ASR" or "_Paper" or ""
+savePlots <- TRUE
+
+# Set up project and cascade to analyse
+projectName <- "Paper_2016"  
+resultsFolder <- file.path(resultsFolder, projectName)
+cascadeName <- "All-2016"
+cascadePop <- "all"
 
 # Plot specs
 stages <- c("infected", "pldhiv",  
@@ -59,11 +64,10 @@ stageNamesNeat <- c("Living \n with HIV", "Diagnosed",
   "Retained \n in care", 
   "Receiving \n ART", "Suppressed \n virus")
 
+# Create output directory
 if (savePlots) {
   saveFormat <- ".png"
-  # Create output directory
-  figFolder <- file.path(basePath, "output", "figures",
-    paste0(toString(resultsYear), fileFlag))
+  figFolder <- file.path(resultsFolder, "figures")
   dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
 }
 
@@ -72,8 +76,8 @@ if (savePlots) {
 ```{r loadresults}
 
 # Load hiv cascade dataframe
-inputFile <- file.path(resultsFolder, paste0("All-", 
-  toString(resultsYear), fileFlag), paste0("HIVcascadeEstimates-", 
+inputFile <- file.path(resultsFolder, cascadeName,
+  paste0("HIVcascadeEstimates-", 
   toString(resultsYear), ".csv"))
 hivCascade <- read.csv(inputFile)
 
@@ -82,10 +86,11 @@ hivCascade <- filter(hivCascade, stage != "linked", stage != "retained")
 
 # Only look at the overall national cascade
 resultsAll <- filter(hivCascade,
-  population == "all",
+  population == cascadePop,
   year >= startYear)
 
-# Load cleaned notifications data and tidy up for trend calculations
+# Load cleaned notifications data and tidy up for diagnoses 
+# trend calculations
 origHivData <- read.csv(file.path(dataFolder,
   paste0("hivnotifications", toString(resultsYear), ".csv"))) 
 countryCodes <- read.csv(file.path(dataFolder, 
@@ -1190,7 +1195,7 @@ if (addTempRes) {
   trString <- "PBS"
 }
 
-artEstimates <- read.csv(file.path(resultsFolder,
+artEstimates <- read.csv(file.path(resultsFolder,"..",
   paste0("ART_Estimates-2014-",
   trString, ".csv")))
 
