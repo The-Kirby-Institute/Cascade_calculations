@@ -2,13 +2,14 @@
 title: "HIV Cascade Trends Exploration"
 author: "Richard T. Gray and Neil Bretana"
 date: Latest version - `r format(Sys.Date(), format="%B %d %Y")`
-output: html_notebook
-editor_options: 
-  chunk_output_type: console
+word_document:
+    pandoc_args: --output="docs/HIVcascade_Trends.docx"
+    reference_docx: docs/mystyles.docx
+csl: docs/plos.csl
 ---
 
-This document is used to explore trends in the Australian HIV Diagnosis 
-and Care Cascade. 
+This document is used to explore trends in the national Australian HIV 
+Cascade.  
 
 ```{r knitr_options, include=FALSE} 
 knitr::opts_chunk$set(echo = FALSE, 
