@@ -107,6 +107,10 @@ if (savePlots) {
   dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
 }
 
+# Captions
+figs <- captioner()
+tabs <- captioner(prefix = "Table")
+
 ```
 
 ```{r loadresults}
@@ -292,6 +296,10 @@ if (pubPlots) {
                                 layout_matrix = rbind(c(1,1), c(2,3)),
                                 widths = c(4, 4), heights = c(0.6, 3.4))
 }
+
+# Caption
+figs("plotBarAll", paste0("The HIV care and treatment cascade for 
+  Australia in ", toString(resultsYear), "."))
 
 # Save if required -------------------------------------------------------
 if (savePlots) {
@@ -691,7 +699,6 @@ if (newInfectsPlots) {
 }
 ```
 
-
 ```{r linkageplots}
 # Create  a series of plot related to linkag to care for publication
 if (asrCascades && pubPlots) {
@@ -984,7 +991,7 @@ if (asrCascades) {
 }
 ```
 
-**Figure 1** -- The HIV care and treatment cascade for Australia in `r resultsYear`.
+`r figs("plotBarAll")`.
 ```{r insertplot1, include = TRUE, results = "hide", fig.width= 5.5, fig.height=3}
 print(plotBarAll)
 ```
@@ -1037,9 +1044,12 @@ finalTable$stage <- stageNames[c(1, 2, 4, 5, 6)]
 finalTable <- rename(finalTable, "Cascade stage" = stage, 
                      "Estimate (range)" = estimate)
 
+# Caption
+tabs("finalTable", paste0("Estimates and range for each stage of the HIV care and treatment cascade for Australia in ", toString(resultsYear), "."))
+
 ```
 
-**Table 1** -- Estimates and range for each stage of the HIV care and treatment cascade for Australia in `r resultsYear`.
+`r tabs("finalTable")`
 ```{r inserttable1, include = TRUE, results = "asis"}
 kable(finalTable, align = c("l", "c", "c"), row.names = FALSE)
 ```
@@ -1111,10 +1121,13 @@ if (asrCascades) {
     dev.off()
   }
 }
+
+# Caption
+figs("plotbarAllStates", paste0("The HIV care and treatment cascade for each State and Territory in ", toString(resultsYear), ". From left to right the bars are for each stage of the care and treatment cascade: living with HIV, diagnosed, recieving ART, and suppressed virus."))
+
 ```
 
-**Figure 3** -- The HIV care and treatment cascade for each State and Territory in `r resultsYear`.
-From left to right the bars are for each stage of the care and treatment cascade: living with HIV, diagnosed, recieving ART, and suppressed virus.
+`r if (asrCascades) figs("plotbarAllStates")`
 ```{r insertplot3, include = TRUE, results = "hide", fig.width= 5.5, fig.height=4.5}
 if (asrCascades) {
   print(plotbarAllStates)
@@ -1180,11 +1193,13 @@ if (asrCascades) {
   finalTable$State <- toupper(finalTable$State)
   finalTable <- finalTable[c(3, 8, 5, 9, 6, 1, 7, 4, 2),]
   finalTable$State[9] <- "National"
+  
+  # Caption
+  tabs("finalTable", paste0("The HIV care and treatment cascade estimates for each State and Territory in", toString(resultsYear), ". The table shows the cascade estimates with ranges in brackets for each State and Territory."))
 }
 ```
 
-**Table 2** -- The HIV care and treatment cascade estimates for each State and Territory in `r resultsYear`. The table shows the cascade estimates with ranges in brackets for each State and Territory.
-
+`r if (asrCascades) tabs("finalTable")`
 ```{r inserttable2, include = TRUE, results = "asis"}
 if (asrCascades) {
   kable(finalTable, align = c("l", "c", "c", "c", "c", "c"), 
@@ -1262,10 +1277,15 @@ if (asrCascades) {
     print(plotPopBar)
     dev.off()
   }
+
+  # Caption
+  figs("plotModeBar", paste0("Number of people living with HIV by mode of exposure in ", toString(resultsYear), "."))
+  
+  figs("plotPopBar", paste0("Number of people living with HIV by country of birth in ", toString(resultsYear), "."))
 }
 ```
 
-**Figure 4** -- Number of people living with HIV by mode of exposure in `r resultsYear`.
+`r if (asrCascades) figs("plotModeBar")`
 ```{r insertplot4, include = TRUE, results = "hide", fig.width= 5.5, fig.height=3.5}
 if (asrCascades) {
   print(plotModeBar)
@@ -1310,16 +1330,20 @@ if (asrCascades) {
     "Population by exposure" = population, 
     Estimate = value)
 }
+
+# Caption
+tabs("finalTableExp", paste0("Number of people living with HIV by exposure population in ", toString(resultsYear), "."))
+
 ```
 
-**Table 3** -- Number of people living with HIV by exposure population in `r resultsYear`.
+`r if (asrCascades) tabs("finalTableExp")`
 ```{r inserttable3, include = TRUE, results = "asis"}
 if (asrCascades) {
   kable(finalTableExp, align = c("l", "l", "c", "c"), row.names = FALSE)
 }
 ```
 
-**Figure 5** -- Number of people living with HIV by country of birth in `r resultsYear`.
+`r if (asrCascades) figs("plotPopBar")`
 ```{r insertplot5, include = TRUE, results = "hide", fig.width= 5.5, fig.height=3.5}
 if (asrCascades){
   print(plotPopBar)
@@ -1366,10 +1390,13 @@ if (asrCascades) {
   # Rename columns
   finalTablePop <- rename(finalTable, "Cascade stage" = stage, 
     "Country of birth" = population, Estimate = value)
+  
+  # Caption
+  tabs("finalTablePop", paste0("Number of people living with HIV by country of birth in ", toString(resultsYear), "."))
 }
 ```
 
-**Table 4** -- Number of people living with HIV by country of birth in `r resultsYear`.
+`r if (asrCascades) figs("finalTablePop")`
 ```{r inserttable4, include = TRUE, results = "asis"}
 if (asrCascades) {
   kable(finalTablePop, align = c("l", "l", "c", "c"), row.names = FALSE)
@@ -1437,6 +1464,10 @@ if (asrCascades) {
       toString(resultsYear), saveFormat, sep = "")), 
       plot = plotBarFemale, width =  12, height = 10, units = "cm")
   } 
+  
+  # Caption
+  figs("plotBarGender", paste0("National HIV cascades for males and females in ", toString(resultsYear), "."))
+
 }
 ```
 
@@ -1487,17 +1518,20 @@ if (asrCascades) {
   genderTable <- rename(genderTable, "Cascade stage" = stage, 
     "Female estimate (range)" = female,
     "Male estimate (range)" = male)
+  
+  # Caption
+  tabs("genderTable", paste0("Estimates and range for each stage of the HIV care and treatment cascade for Australian males and feamles in ", toString(resultsYear), "."))
 }
 ```
 
-**Figure 6** -- National HIV cascades for males and females in `r resultsYear`.
+`r if (asrCascades) figs("plotBarGender")`
 ```{r insertplot6, include = TRUE, results = "hide", fig.width= 5.5, fig.height=7}
 if (asrCascades) {
   print(grid.arrange(plotBarFemale, plotBarMale))
 }
 ```
 
-**Table 5** -- Estimates and range for each stage of the HIV care and treatment cascade for Australian males and feamles in `r resultsYear`.
+`r if (asrCascades) tabs("genderTable")`
 ```{r inserttable5, include = TRUE, results = "asis"}
 if (asrCascades) {
   kable(genderTable, align = c("l", "c", "c"), row.names = FALSE)
