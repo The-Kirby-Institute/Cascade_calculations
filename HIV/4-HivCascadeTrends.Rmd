@@ -1,6 +1,6 @@
 ---
 title: "HIV Cascade Trends Exploration"
-author: "Richard T. Gray and Neil Bretana"
+author: "Richard T. Gray"
 date: Latest version - `r format(Sys.Date(), format="%B %d %Y")`
 output:
   word_document:
