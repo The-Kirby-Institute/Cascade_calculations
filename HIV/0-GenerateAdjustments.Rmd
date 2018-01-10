@@ -409,9 +409,9 @@ save(cleanNom, file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
 # sex. These harded coded estimates for 1981-2016 are determined in 
 # the file project_care_cascades/data/Migration_options-2016-10-12.xlsx
 
-# The code now does this automatically using the 2004 to 2014 NOM data from 
-# the ABS. WARNING ERP unavailablein 5 year bins for > 75 years old so 
-# "a70-7" contains all people older than > 75. Older bins contain the
+# The code now does this automatically using the 2004 to 2014 NOM data 
+# from the ABS. WARNING ERP unavailablein 5 year bins for > 75 years old 
+# so "a70-75" contains all people older than > 75. Older bins contain the
 # same > 75 ERP value. As there are not many departures in the > 75 we 
 # exclude them and assume the same rate as the 75+ age group
 

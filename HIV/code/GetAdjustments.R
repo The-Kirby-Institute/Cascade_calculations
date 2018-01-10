@@ -2,7 +2,7 @@
 
 # Richard T. Gray
 
-# R function to extract subset of interest from notifications
+# R function to extract subset of interest from adjustments
 
 GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
   targetAge, targetGender,targetExposure, targetCob, targetAtsi,
