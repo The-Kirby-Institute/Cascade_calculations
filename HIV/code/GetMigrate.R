@@ -1,0 +1,120 @@
+## R function to calculate appropriate migration rate adjustment 
+
+# Richard T. Gray
+
+GetMigrate <- function(nomData, ftargetAge, targetGender,targetExposure, 
+  targetCob, targetAtsi,targetLocalRegion, targetState, targetGlobalRegion,
+  assumeAdult = TRUE, propMale = NULL) {
+  
+  
+  # Setup defaults if not specified
+  if (is.null(propMale)) {
+    # Don't adjust for gender 
+  }
+  
+  # Sort out age categories - a bit complicated because we generally assume 
+  # HIV-positive are adults and ERP data unavailable in 5 year bins for 
+  # > 75 years old "a75-79" contains all people older than > 75. Older bins 
+  # contain the same > 75 ERP value. As there are not many departures in 
+  # the > 75 we exclude them and assume the same rate as the 75+ age group.
+  if (ftargetAge == "all") {
+    if (assumeAdult) {
+      adjustAges <- c("a15_19", "a20_24", "a25_29", "a30_34", "a35_39", 
+        "a40_44", "a45_49", "a60_64", "a65_69", "a70_74", "a75_79")
+    } else {
+      adjustAges <- "all"
+    }
+  } else {
+    # This seems too complicated but I think it works. 
+    if (any(c("a80_84", "a85+") %in% ftargetAge)) {
+      if(all(ftargetAge %in% c("a80_84", "a85+"))) {
+        # ftargetAge = "a80_84", "a85+", or c("a80_84", "a85+"). 
+        # Replace with rate for "a75_79"
+        adjustAges <- "a75_79"
+      } else {
+        # Contains other ages Remove "a80_84" and "a85+"
+        adjustAges <- ftargetAge[!(ftargetAge %in% c("a80_84", "a85+"))]
+      }
+    } else {
+      # Use the specified age
+      adjustAges <- ftargetAge
+    }
+  }
+  
+  # Define local functions ------------------------------------------------
+  extractData <- function(data, fcob, fage, fstate, fgender) {
+    subData <- data %>% 
+      filter(year %in% 2004:2014) %>%
+      filter(cob == fcob, age == fage, 
+        state == fstate, gender == fgender) %>% 
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp)) %>%
+      mutate(migrate = departures / erp)
+    return(subData)
+  }
+  
+  predictRates <- function(subrate, allrate, year) {
+    relRate <- data.frame(relrate = subrate/ allrate, 
+      year = 2004:2014)
+    lmRate <- lm(relrate ~ year, data = relRate)
+    adjust <- predict(lmMale, 
+      data.frame(year = 1980:year))
+    return(adjust)
+  }
+  
+  # Adjust for gender ----------------------------------------------------- 
+  
+  # All data 
+  allData <- extractData(cleanNom, "all", "all", "all", "all")
+  
+  # First setup base adjustment based on gender and exposure
+  if (targetGender == "male" || 
+      (length(targetExposure) == 1 && targetExposure[1] == "msm")) {
+    
+    # Male data and rates
+    maleData <- extractData(cleanNom, targetCob, adjustAges, targetState, 
+      "male")
+    adjustments$mrate <- predictRates(maleData$migrate, allData$migrate,
+      analysisYear)
+    
+  } else if (targetGender == "female") {
+    adjustments$mrate <- hivAdjustments$mrate_female_adults
+    
+    # Female data and rates
+    femaleData <- extractData(cleanNom, targetCob, adjustAges, targetState, 
+      "female")
+    adjustments$mrate <- predictRates(femaleData$migrate, allData$migrate,
+      analysisYear)
+    
+    
+  } else {
+    if (is.null(propMale)) {
+      # Don't adjust for gender  
+      subData <-  extractData(cleanNom, targetCob, adjustAges, targetState, 
+        "all") 
+      adjustments$mrate <- predictRates(subData$migrate, allData$migrate,
+        analysisYear)
+    }
+  } else {
+    # Adjust for gender using propMale 
+    
+    # Male and female calculations
+    maleData <- extractData(cleanNom, targetCob, adjustAges, targetState, 
+      "male")
+    adjustMales <- predictRates(maleData$migrate, allData$migrate,
+      analysisYear)
+    femaleData <- extractData(cleanNom, targetCob, adjustAges, targetState, 
+      "female")
+    adjustFemales <- predictRates(femaleData$migrate, allData$migrate,
+      analysisYear)  
+    
+    # Adjust for gender
+    adjustments$mrate <- propMale * adjustMales  + 
+      (1 - propMale) * adjustFemales   
+  }
+  
+  #
+  
+  
+}
