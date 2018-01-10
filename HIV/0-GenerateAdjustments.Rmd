@@ -15,10 +15,8 @@ population_rate = base * population_adjustment.
 
 ```{r Initialization}
 # Chunk to setup everything
-# Manually set working directory to source file location
 
-# Clear workspace
-rm(list=ls()) 
+# Open as a project (setting working directory to source and restarting R)
 
 # Setup directories
 basePath <- file.path(dirname(getwd()), "HIV")
@@ -38,7 +36,7 @@ source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
 source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
 
 ```
- 
+
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
@@ -81,7 +79,7 @@ if (min(hivData$yeardiagnosis) > startYear) {
 
 # Setup our working data frame
 hivSet <- filter(hivData, yeardiagnosis <= analysisYear)
-                
+
 # Start storing things
 hivBaseRates <- data.frame(year = allYears) 
 ```
@@ -109,11 +107,11 @@ hivExpAnn <- hivSet %>%
   select(-unknown) %>%
   gather("expgroup", "notifications", 2:5) %>%
   mutate(notifications = ifelse(is.na(notifications), 0, 
-                                notifications)) %>%
+    notifications)) %>%
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = notifications / sum(notifications)) %>%
   mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
-                                propnotifications)) %>%
+    propnotifications)) %>%
   select(-notifications) %>%
   ungroup() %>% 
   spread(expgroup, propnotifications) %>%
@@ -132,11 +130,11 @@ hivExpCum <- hivSet %>%
   select(-unknown) %>%
   gather("expgroup", "cumnotifications", 2:5) %>%
   mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
-                                cumnotifications)) %>%
+    cumnotifications)) %>%
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
   mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
-                                propnotifications)) %>%
+    propnotifications)) %>%
   select(-cumnotifications) %>%
   ungroup() %>% 
   spread(expgroup, propnotifications) %>%
@@ -165,7 +163,7 @@ hivAborigCum <- hivSet %>%
   select(-notifications) %>%
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = cumnotifications / 
-           sum(cumnotifications))  %>%
+      sum(cumnotifications))  %>%
   select(-cumnotifications) %>%
   spread(aboriggroup, propnotifications) %>%
   mutate(indigenous = ifelse(is.na(indigenous), 0, indigenous)) %>%
@@ -181,14 +179,14 @@ hivGenderAnn <- hivSet %>%
   select(-unknown) %>%
   gather("sex", "notifications", 2:4) %>%
   mutate(notifications = ifelse(is.na(notifications), 0, 
-                                notifications)) %>%
+    notifications)) %>%
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = notifications / sum(notifications)) %>%
   select(-notifications) %>%
   spread(sex, propnotifications) %>%
   mutate(female = ifelse(is.na(female), 0, female),
-         male = ifelse(is.na(male), 0, male),
-         transgender = ifelse(is.na(transgender), 0, transgender)) %>%
+    male = ifelse(is.na(male), 0, male),
+    transgender = ifelse(is.na(transgender), 0, transgender)) %>%
   rename(year = yeardiagnosis)
 
 hivGenderCum <- hivSet %>% 
@@ -203,14 +201,14 @@ hivGenderCum <- hivSet %>%
   select(-unknown) %>%
   gather("sex", "cumnotifications", 2:4) %>%
   mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
-                                cumnotifications)) %>%
+    cumnotifications)) %>%
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
   select(-cumnotifications) %>%
   spread(sex, propnotifications) %>%
   mutate(female = ifelse(is.na(female), 0, female),
-         male = ifelse(is.na(male), 0, male),
-         transgender = ifelse(is.na(transgender), 0, transgender)) %>%
+    male = ifelse(is.na(male), 0, male),
+    transgender = ifelse(is.na(transgender), 0, transgender)) %>%
   rename(year = yeardiagnosis)
 
 # Country of birth - Australia versus overseas
@@ -222,11 +220,11 @@ hivCobAnn <- hivSet %>%
   select(-`<NA>`) %>%
   gather("countrygroup", "notifications", 2:5) %>%
   mutate(notifications = ifelse(is.na(notifications), 0, 
-                                notifications)) %>%
+    notifications)) %>%
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = notifications / sum(notifications)) %>%
   mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
-                                propnotifications)) %>%
+    propnotifications)) %>%
   select(-notifications) %>%
   ungroup() %>% 
   spread(countrygroup, propnotifications) %>%
@@ -244,11 +242,11 @@ hivCobCum <- hivSet %>%
   select(-`<NA>`) %>%
   gather("countrygroup", "cumnotifications", 2:5) %>%
   mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
-                                cumnotifications)) %>%
+    cumnotifications)) %>%
   group_by(yeardiagnosis) %>% 
   mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
   mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
-                                propnotifications)) %>%
+    propnotifications)) %>%
   select(-cumnotifications) %>%
   ungroup() %>% 
   spread(countrygroup, propnotifications) %>%
@@ -274,19 +272,19 @@ duplicateNotifications <- duplicateSet %>%
   ungroup() %>%
   rename(year = yeardiagnosis)
 duplicateNotifications <- FillDataFrame(allYears, 
-                                        duplicateNotifications)
+  duplicateNotifications)
 
 overallPropUnique <- ProportionUnique(duplicateSet,             
   duplicateNotifications$totalnotifications,
-                                      allYears)
+  allYears)
 
 annPropUnique <- AnnualUnique(duplicateNotifications$notifications,
-                              overallPropUnique) /
+  overallPropUnique) /
   duplicateNotifications$notifications
 annPropUnique[is.nan(annPropUnique)] <- 0 # replace infinite numbers 
 hivBaseRates$cumunique_female <- overallPropUnique
 hivBaseRates$annunique_female <- annPropUnique
-  
+
 # Males or MSM  
 duplicateSet <- hivSet %>%
   filter(sex == "male")
@@ -297,13 +295,13 @@ duplicateNotifications <- duplicateSet %>%
   ungroup() %>%
   rename(year = yeardiagnosis)
 duplicateNotifications <- FillDataFrame(allYears, 
-                                        duplicateNotifications)
+  duplicateNotifications)
 overallPropUnique <- ProportionUnique(duplicateSet,             
   duplicateNotifications$totalnotifications,
-                                      allYears)
+  allYears)
 
 annPropUnique <- AnnualUnique(duplicateNotifications$notifications,
-                              overallPropUnique) /
+  overallPropUnique) /
   duplicateNotifications$notifications
 annPropUnique[is.nan(annPropUnique)] <- 0 # replace infinite numbers  
 hivBaseRates$cumunique_male <- overallPropUnique
@@ -315,10 +313,10 @@ duplicateNotifications <- hivResults
 
 overallPropUnique <- ProportionUnique(duplicateSet,             
   duplicateNotifications$totalnotifications,
-                                      allYears)
+  allYears)
 
 annPropUnique <- AnnualUnique(duplicateNotifications$notifications,
-                              overallPropUnique) /
+  overallPropUnique) /
   duplicateNotifications$notifications
 annPropUnique[is.nan(annPropUnique)] <- 0 # replace infinite numbers  
 hivBaseRates$cumunique_all <- overallPropUnique
@@ -336,7 +334,7 @@ hivBaseRates$annunique_all <- annPropUnique
 # Load all the data sets we need - the ABS data is stored in the main 
 # Cascade_calculations respository data/ directory
 mainDataFolder <- file.path(dirname(getwd()), "data")
- 
+
 absMigration <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
@@ -366,45 +364,131 @@ hivBaseRates$migrationrate_upper <- baseMigrationUpper
 
 # Adjustments ------------------------------------------------------------
 
+# Load NOM data from ABS which is used to adjust the 
+# overall migration rates for subpopulations.
+removeCountries <- c("Adelie Land (France)", 
+  "Antarctica", 
+  "Angentinian Antartic Territory",
+  "Australia External Territories, nec", 
+  "Australia External Territories, nfd", 
+  "Australian Antartic Territory",
+  "British Antartic Territory", 
+  "Chilean Antartic Territory", 
+  "Queen Maude Land (Norway)", 
+  "Ross Dependency (New Zealand)", 
+  "At Sea")
+
+# Read in the ABS nom data (only available for years 2004 to 2014. Does
+# contain 2015 data but this is only for first siz months. 
+nomData <- read.csv(file.path(mainDataFolder, "ABS_nom_2015.csv"))
+
+# Clean up NOM data for analysis
+cleanNom <- nomData %>%
+  select(-cob_code) %>%
+  filter(!(cob %in% removeCountries)) %>%
+  mutate(age = tolower(trimws(age)),
+    gender = tolower(trimws(gender)),
+    state = tolower(state)) %>%
+  mutate(age = paste0("a", age)) %>%
+  mutate(age = gsub("-", "_", age),
+    gender = gsub("s", "", gender),
+    cob = as.character(cob)) %>%
+  mutate(age = ifelse(age == "atotal", "all", age),
+    state = ifelse(state == "aus", "all", state),
+    gender = ifelse(gender == "peron", "all", gender),
+    cob = ifelse(cob == "Total", "all", cob)) %>%
+  tbl_df()
+
+# Save cleaned data so it is quicker to load
+save(cleanNom, file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
+
 # Gender
 
-# Hard coded adjustment factor to account for age > 15 years and 
-# sex. These harded coded estimates for 1981-2015 are determined in 
+# Use nome data to adjust migration rates for age abnd gender. Originally 
+# used a hard coded adjustment factor to account for age > 15 years and 
+# sex. These harded coded estimates for 1981-2016 are determined in 
 # the file project_care_cascades/data/Migration_options-2016-10-12.xlsx
 
-# TODO: make this calculation automatic from the data 
+# The code now does this automatically using the 2004 to 2014 NOM data from 
+# the ABS. WARNING ERP unavailablein 5 year bins for > 75 years old so 
+# "a70-7" contains all people older than > 75. Older bins contain the
+# same > 75 ERP value. As there are not many departures in the > 75 we 
+# exclude them and assume the same rate as the 75+ age group
 
-allAdultsAdjust <- c(1.2499, 1.2499,	1.2499,	1.240169381, 1.235807895,
-                     1.235391781, 1.236048319,	1.236375068,
-                     1.236578904, 1.235863902, 1.23556672, 1.235166515,
-                     1.234926588, 1.234456001, 1.234217118, 1.233938271,
-                     1.233473343, 1.232885687, 1.23528249, 1.234803523,
-                     1.234243908, 1.231400608, 1.231146313, 1.230567577,
-                     1.22257888, 1.211940692, 1.20153294, 1.191640652,
-                     1.180852205, 1.170562151, 1.160456052,	1.150374872,
-                     1.140323439, 1.130276173, 1.12031362, 1.12031362)
-  
-  
-maleAdultsAdjust <- c(1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 
-                      1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 1.2499,
-                      1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 1.2499,
-                      1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 
-                      1.2392, 1.2285, 1.2178, 1.2071, 1.1964, 1.1857,
-                      1.175, 1.1643, 1.1536, 1.1429, 1.1322, 1.1322)
+males15 <- cleanNom %>% 
+  filter(year %in% 2004:2014) %>%
+  filter(cob == "all", !(age %in% c("a0_4", "a5_9", "a10_14",
+    "a80_84", "a85+", "all")), 
+  state == "all", gender == "male") %>% 
+  group_by(year) %>%
+  summarise(departures = sum(nom),
+    erp = sum(erp)) %>%
+  mutate(migrate = departures / erp)
 
-if (analysisYear > 2015) {
-  allAdultsAdjust <- c(allAdultsAdjust, tail(allAdultsAdjust, 1))
-  maleAdultsAdjust <- c(maleAdultsAdjust, tail(maleAdultsAdjust, 1))
-}
+females15 <- cleanNom %>% 
+  filter(year %in% 2004:2014) %>%
+  filter(cob == "all", !(age %in% c("a0_4", "a5_9", "a10_14", 
+    "a80_84", "a85+", "all")), 
+  state == "all", gender == "female") %>% 
+  group_by(year) %>%
+  summarise(departures = sum(nom),
+    erp = sum(erp)) %>%
+  mutate(migrate = departures / erp)
 
-femaleAdultsAdjust <- rep(1, length(allYears))
+allPop <- cleanNom %>% 
+  filter(year %in% 2004:2014) %>%
+  filter(cob == "all", age == "all", 
+  state == "all", gender == "all") %>% 
+  group_by(year) %>%
+  summarise(departures = sum(nom),
+    erp = sum(erp)) %>%
+  mutate(migrate = departures / erp)
+    
+adultMale <- data.frame(relrate = males15$migrate / allPop$migrate, 
+  year = 2004:2014)
+lmAdultMale <- lm(relrate ~ year, data = adultMale)
+maleAdultsAdjust <- predict(lmAdultMale, 
+  data.frame(year = 1980:analysisYear))
+
+# maleAdultsAdjust <- c(1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 
+#   1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 1.2499,
+#   1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 1.2499,
+#   1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 1.2499, 
+#   1.2392, 1.2285, 1.2178, 1.2071, 1.1964, 1.1857,
+#   1.175, 1.1643, 1.1536, 1.1429, 1.1322, 1.1322)
+
+adultFemale <- data.frame(relrate = females15$migrate / allPop$migrate, 
+  year = 2004:2014)
+lmAdultFemale <- lm(relrate ~ year, data = adultFemale)
+femaleAdultsAdjust <- predict(lmAdultFemale, 
+  data.frame(year = 1980:analysisYear))
+
+# femaleAdultsAdjust <- rep(1, length(allYears))
+
+allAdultsAdjust <- hivGenderCum$male * maleAdultsAdjust  + 
+  (1 - hivGenderCum$male) * femaleAdultsAdjust 
+
+# allAdultsAdjust <- c(1.2499, 1.2499,	1.2499,	1.240169381, 1.235807895,
+#   1.235391781, 1.236048319,	1.236375068,
+#   1.236578904, 1.235863902, 1.23556672, 1.235166515,
+#   1.234926588, 1.234456001, 1.234217118, 1.233938271,
+#   1.233473343, 1.232885687, 1.23528249, 1.234803523,
+#   1.234243908, 1.231400608, 1.231146313, 1.230567577,
+#   1.22257888, 1.211940692, 1.20153294, 1.191640652,
+#   1.180852205, 1.170562151, 1.160456052,	1.150374872,
+#   1.140323439, 1.130276173, 1.12031362, 1.12031362)
+
+# if (analysisYear > 2015) {
+#   allAdultsAdjust <- c(allAdultsAdjust, tail(allAdultsAdjust, 1))
+#   maleAdultsAdjust <- c(maleAdultsAdjust, tail(maleAdultsAdjust, 1))
+# }
 
 # Start storing things
 hivAdjustments <- data.frame(year = allYears,
-                           mrate_all_adults = allAdultsAdjust,
-                           mrate_male_adults = maleAdultsAdjust,
-                           mrate_female_adults = femaleAdultsAdjust)
-  
+  mrate_all_adults = allAdultsAdjust,
+  mrate_male_adults = maleAdultsAdjust,
+  mrate_female_adults = femaleAdultsAdjust)
+
 # State
 
 states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act")
@@ -416,7 +500,7 @@ absMigration <- mutate(absMigration, migrate = departures / erp)
 nonmrateAll <- filter(absMigration, state == "all")
 lmrateAll <- lm(migrate ~ year, data = nonmrateAll)
 expmrateAll <- predict(lmrateAll, data.frame(year = allYears),
-                       level = 0.9, interval = "confidence")
+  level = 0.9, interval = "confidence")
 
 for (region in states) {
   # Adjust national rate to reflect difference at state level using 
@@ -427,7 +511,7 @@ for (region in states) {
   # Now we need to fit and extrapolate for other years
   lmrate <- lm(migrate ~ year, data = nonmrate)
   expmrate <- predict(lmrate, data.frame(year = allYears),
-                      level = 0.9, interval = "confidence")
+    level = 0.9, interval = "confidence")
   
   stateAdjust <- expmrate[, 1] / expmrateAll[, 1]
   
@@ -451,7 +535,7 @@ nonAborigMigrationFactor <- hivResults$totalnotifications / nonAborigDiags
 
 hivAdjustments$pstay_indigenous <- 1
 hivAdjustments$pstay_non_indigenous <- (1 - (1- hivBaseRates$propstay) * 
-  nonAborigMigrationFactor) / hivBaseRates$propstay
+    nonAborigMigrationFactor) / hivBaseRates$propstay
 
 hivAdjustments$non_aborig_migration <- nonAborigMigrationFactor
 
@@ -497,8 +581,8 @@ hivAdjustments$pstay_vic_upper <- propStayUpperVic /
 # Load all the data sets we use for this estimate - use the parameter 
 # column as row names for easier subsetting
 hivParams <- read.csv(file.path(dataFolder, 
-                                "individualHIVparameters.csv"), 
-                      as.is = 1)
+  "individualHIVparameters.csv"), 
+  as.is = 1)
 hivParams <- select(hivParams, parameter, value)
 
 for (ii in 1:nrow(hivParams)) {
@@ -507,17 +591,17 @@ for (ii in 1:nrow(hivParams)) {
 
 # Load AHOD data to calculate mortality and do some simple cleaning
 ahodData <- read.csv(file.path(dataFolder, 
-                               paste0("ahod", toString(analysisYear), 
-                                     ".csv")))
+  paste0("ahod", toString(analysisYear), 
+    ".csv")))
 
 # Load gender deathrate ratios
 sexDrates <- read_excel(file.path(dataFolder,
-                                  "HIV_Gender_Deathrates.xlsx"),
-                        sheet = 2) %>%
+  "HIV_Gender_Deathrates.xlsx"),
+  sheet = 2) %>%
   select(1,4,5) %>%
   rename(year = Year)
 colnames(sexDrates)[2:3] <- c("males", "females")
-  
+
 
 # Pre-2003 death rates ---------------------------------------------------
 
@@ -555,8 +639,8 @@ hivDeaths <- arrange(hivDeaths, yeardeath)
 
 # First need to calculate annual unique notficatons
 overallPropUnique <- ProportionUnique(hivSet,
-                                      hivResults$totalnotifications,
-                                      allYears)
+  hivResults$totalnotifications,
+  allYears)
 
 cumDiagnoses <- hivResults$totalnotifications * overallPropUnique # cumulative
 annDiags <- c(cumDiagnoses[1], diff(cumDiagnoses))  # annual diagnoses
@@ -588,7 +672,7 @@ for (ii in 2:length(annDiags)) {
   # 
   # TODO: replace the calculation below with LivingDiagnosed.R so that
   # accidently differences are prevented.
-
+  
   # Old formula. Based on an Euler approximation approach but given the
   # annual time difference doesn't really capture what we want on an 
   # annual basis. 
@@ -625,7 +709,7 @@ for (ii in 2:length(annDiags)) {
   # numLiving_max[ii] <- numLiving_max[ii-1] + 
   #   hivBaseRates$propstay_lower[ii] * annDiags[ii] -
   #   deaths_min[ii] - numLiving_max[ii-1] * allMigrateLower[ii]
-
+  
 }
 
 # Calculate crude average annual mortality rates up to 2003
@@ -820,7 +904,7 @@ hivInterstate$departures <- NA
 
 for (region in states) {
   lmDepart <- lm(departures ~ year, data = filter(absInterstate, 
-                                                  state == region))
+    state == region))
   departState <- predict(lmDepart, data.frame(year = allYears))
   
   # Store extrapolated population
@@ -834,7 +918,7 @@ hivInterstate$arrivals <- NA
 
 for (region in states) {
   lmArrive <- lm(arrivals ~ year, data = filter(absInterstate, 
-                                                state == region))
+    state == region))
   arriveState <- predict(lmArrive, data.frame(year = allYears))
   
   # Store extrapolated population
@@ -851,7 +935,7 @@ hivInterstate[hivInterstate$state == "all", ]$arriverate <-
 # Add a net leaving rate relative to state ERP -- useful for separate 
 # state calculations 
 hivInterstate <- mutate(hivInterstate, 
-                        netrate = (departures - arrivals) / erp)
+  netrate = (departures - arrivals) / erp)
 
 ```
 
@@ -864,21 +948,21 @@ if (saveEstimates) {
     paste0("HIVbaseEstimates-", toString(analysisYear)))
   
   write.csv(hivBaseRates, file = paste0(saveBase, ".csv"), 
-            row.names = FALSE)
-
+    row.names = FALSE)
+  
   # Adjustments
   saveAdjust<- file.path(dataFolder, 
     paste0("HIVadjustments-", toString(analysisYear)))
   
   write.csv(hivAdjustments, file = paste0(saveAdjust, ".csv"), 
-            row.names = FALSE)
+    row.names = FALSE)
   
   # Interstate
   saveInterstate <- file.path(dataFolder, 
     paste0("HIVinterstateEstimates-", toString(analysisYear)))
   
   write.csv(hivInterstate, file = paste0(saveInterstate, ".csv"), 
-            row.names = FALSE)
+    row.names = FALSE)
 }
 
 
