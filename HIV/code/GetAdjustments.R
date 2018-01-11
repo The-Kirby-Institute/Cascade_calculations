@@ -117,64 +117,68 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
   
   # Extract migration rate
   # First set up base
-  if (targetGender == "male" || 
+  if (targetGender == "male" ||
       (length(targetExposure) == 1 && targetExposure[1] == "msm")) {
-    adjustments$mrate <- hivBase$migrationrate * 
+    adjustments$mrate <- hivBase$migrationrate *
       hivAdjustments$mrate_male_adults
-    adjustments$mrate_lower <- hivBase$migrationrate_lower * 
+    adjustments$mrate_lower <- hivBase$migrationrate_lower *
       hivAdjustments$mrate_male_adults
-    adjustments$mrate_upper <- hivBase$migrationrate_upper * 
+    adjustments$mrate_upper <- hivBase$migrationrate_upper *
       hivAdjustments$mrate_male_adults
   } else if (targetGender == "female") {
-    adjustments$mrate <- hivBase$migrationrate * 
+    adjustments$mrate <- hivBase$migrationrate *
       hivAdjustments$mrate_female_adults
-    adjustments$mrate_lower <- hivBase$migrationrate_lower * 
+    adjustments$mrate_lower <- hivBase$migrationrate_lower *
       hivAdjustments$mrate_female_adults
-    adjustments$mrate_upper <- hivBase$migrationrate_upper * 
+    adjustments$mrate_upper <- hivBase$migrationrate_upper *
       hivAdjustments$mrate_female_adults
   } else {
     # all
-    adjustments$mrate <- hivBase$migrationrate * 
+    adjustments$mrate <- hivBase$migrationrate *
       hivAdjustments$mrate_all_adults
-    adjustments$mrate_lower <- hivBase$migrationrate_lower * 
+    adjustments$mrate_lower <- hivBase$migrationrate_lower *
       hivAdjustments$mrate_all_adults
-    adjustments$mrate_upper <- hivBase$migrationrate_upper * 
+    adjustments$mrate_upper <- hivBase$migrationrate_upper *
       hivAdjustments$mrate_all_adults
   }
-  
+
   # Adjust  migration rate for location
   if (targetState != "all" && length(targetState) == 1) {
     mrate <- switch(targetState[1],
       "nsw" = hivAdjustments$mrate_nsw,
-      "vic" = hivAdjustments$mrate_nsw,
-      "qld" = hivAdjustments$mrate_nsw,
-      "nt" = hivAdjustments$mrate_nsw,
-      "wa" = hivAdjustments$mrate_nsw,
-      "sa" = hivAdjustments$mrate_nsw,
-      "tas" = hivAdjustments$mrate_nsw,
+      "vic" = hivAdjustments$mrate_vic,
+      "qld" = hivAdjustments$mrate_qld,
+      "nt" = hivAdjustments$mrate_nt,
+      "wa" = hivAdjustments$mrate_wa,
+      "sa" = hivAdjustments$mrate_sa,
+      "tas" = hivAdjustments$mrate_tas,
       "act" = hivAdjustments$mrate_act)
-    
+
     adjustments$mrate <- adjustments$mrate * mrate
     adjustments$mrate_lower <- adjustments$mrate_lower * mrate
     adjustments$mrate_upper <- adjustments$mrate_upper * mrate
   }
-  
+
   # Adjust migration rate for Indigenous population
-  if (targetAtsi == "indigenous" && length(targetCob) == 1 && 
+  if (targetAtsi == "indigenous" && length(targetCob) == 1 &&
       targetCob[1] == "Australia") {
     adjustments$mrate <- 0
     adjustments$mrate_lower <- 0
     adjustments$mrate_upper <- 0
-  } else if ((targetAtsi == "non_indigenous" &&  
-      targetCob[1] == "Australia")|| targetGlobalRegion[1] != "all" || 
+  } else if ((targetAtsi == "non_indigenous" &&
+      targetCob[1] == "Australia")|| targetGlobalRegion[1] != "all" ||
       targetCob[1] != "Australia") {
-    adjustments$mrate <- adjustments$mrate * 
+    adjustments$mrate <- adjustments$mrate *
       hivAdjustments$non_aborig_migration
-    adjustments$mrate_lower <- adjustments$mrate_lower * 
+    adjustments$mrate_lower <- adjustments$mrate_lower *
       hivAdjustments$non_aborig_migration
-    adjustments$mrate_upper <- adjustments$mrate_upper * 
+    adjustments$mrate_upper <- adjustments$mrate_upper *
       hivAdjustments$non_aborig_migration
   }
+  
+  # adjustments$mrate <- hivBase$migrationrate 
+  # adjustments$mrate_lower <- hivBase$migrationrate_lower 
+  # adjustments$mrate_upper <- hivBase$migrationrate_upper 
   
   # Interstate migration rate ---------------------------------------------
   # Adjust interstate migration rate for location
