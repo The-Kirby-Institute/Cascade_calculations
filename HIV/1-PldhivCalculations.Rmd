@@ -3,37 +3,31 @@ Calculation for number of people living with diagnosed HIV
 
 Neil Bretana and Richard T. Gray
 
-This script is used for calculating the number of people living with
-diagnosed HIV in Australia. This is one of the key steps for producing the
-estimates of the Australian HIV diagnosis and care cascade. 
+This script is used for calculating the number of people 
+living with diagnosed HIV in Australia. This is one of the key steps for
+producing the estimates of the Australian HIV diagnosis and care cascade. 
 
-This script is currently in draft form for updating the HIV cascade 
-calculation scripts to version 3.0.
+This script is part of a project containing version 3.0 of the HIV cascade
+calculation scripts. 
 
 ```{r Initialization}
 # Chunk to setup everything
-# Clear workspace
-rm(list=ls()) 
+
+# Open as a project (setting working directory to source and restarting R)
 
 # Setup directories
-basePath <- file.path(dirname(getwd()), "HIV")
-
-Rcode <- file.path(dirname(getwd()), "code") 
+basePath <- getwd()
+Rcode <- file.path(dirname(basePath), "code") # All cascades code
 HIVcode <- file.path(basePath, "code") 
 dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
-figuresFolder <- file.path(basePath, "output","figures")
-
-# Set working directory
-#setwd(basePath)
+figuresFolder <- file.path(basePath, "output", "figures")
 
 # Load standard libraries and options ----------------------------------
-source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
-source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
-source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+source(file.path(Rcode, "LoadLibrary.R"))
+source(file.path(Rcode, "DataLibraries.R"))
+source(file.path(Rcode, "PlotOptions.R"))
 
-# Primary script parameters
-# currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 ```
 
 The following chunck specifies all the parameters for producing the
@@ -49,19 +43,20 @@ specified project folder and have a cascade file handle.
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- TRUE
+saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
 projectOutput <- 'CALD_Cascades' #'.' for main output folder 
 
-cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
+# cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
+cascadeName <- "temp"
 targetGender <- 'all' # all, male, female (single)
 targetAge <- 'all' #groups a0_4, a5_9, a10_14,...,a85+, not (combination)
 targetCob <- 'all' # all=including n/a, Thailand, etc. (combination)
 targetExposure <- 'all' #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- 'all' # all, indigenous or non_indigenous.
                     # Only used if country is Australia (single)
-targetState <- c("nsw", "vic") # nsw, sa, nt, qld, vic, wa, act, tas
+targetState <- "all" # c("nsw", "vic") # nsw, sa, nt, qld, vic, wa, act, tas
                                # (combination)
 targetLocalRegion <- 'all' #tbd (combination)
 targetGlobalRegion <- 'all' # South-East Asia, Sub-Saharan Africa, 
@@ -79,8 +74,7 @@ if (targetAtsi != "all" && targetCob[1] != "Australia" &&
 }
 
 # Script options for calculations
-interState <- ifelse((targetState[1] != "all" && 
-    length(targetState) != 1), TRUE, FALSE)
+interState <- ifelse(targetState[1] != "all", TRUE, FALSE)
 excludeAborig <- FALSE
 doAge <- FALSE # TRUE for aging calculations
 doRetained <- FALSE # TRUE for appending retained in care
@@ -116,30 +110,31 @@ hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
 # Load functions used for analysis 
 
 # Source functions for filling in missing data
-source(file.path(Rcode, "FillMissing.R"), echo=TRUE)
-source(file.path(Rcode, "FillDataFrame.R"), echo=TRUE)
+source(file.path(Rcode, "FillMissing.R"))
+source(file.path(Rcode, "FillDataFrame.R"))
 
 # Load function to calculate number living with diagnosed HIV
-source(file.path(HIVcode,"LivingDiagnosed.R"), echo=TRUE)
+source(file.path(HIVcode,"LivingDiagnosed.R"))
 
 # Function to easily extract sub-populations of interest 
-source(file.path(HIVcode, "SubHivSet.R"), echo=TRUE)
+source(file.path(HIVcode, "SubHivSet.R"))
 
 # Function for removing duplicates annually
-source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
+source(file.path(HIVcode, "DeduplicationFunctions.R"))
 
 # Function to replace estimates
-source(file.path(HIVcode, "ReplaceEstimates.R"), echo=TRUE)
+source(file.path(HIVcode, "ReplaceEstimates.R"))
 
 # Function to tidy notifications
-source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
+source(file.path(HIVcode, "TidyNotifications.R"))
 
 # Functions to output ECDC model data
-source(file.path(HIVcode, "EcdcCalculations.R"), echo=TRUE)
-source(file.path(HIVcode, "EcdcFiles.R"), echo=TRUE)
+source(file.path(HIVcode, "EcdcCalculations.R"))
+source(file.path(HIVcode, "EcdcFiles.R"))
 
-# Function for adjustments
-source(file.path(HIVcode, "GetAdjustments.R"), echo=TRUE)
+# Functions for adjustments
+source(file.path(HIVcode, "GetAdjustments.R"))
+source(file.path(HIVcode, "GetMigrate.R"))
 
 ```
 
@@ -204,7 +199,33 @@ hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
 
+# Calculation cumulative proportion male. This is used for gender weighted
+# migration rates
+ 
+hivGenderCum <- hivSet %>% 
+  group_by(yeardiagnosis, sex) %>% 
+  summarise(notifications = n()) %>% 
+  ungroup() %>% 
+  group_by(sex) %>% 
+  mutate(cumnotifications = cumsum(notifications)) %>%
+  ungroup() %>%
+  select(-notifications) %>%
+  spread(sex, cumnotifications) %>%
+  select(-unknown) %>%
+  gather("sex", "cumnotifications", 2:4) %>%
+  mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
+    cumnotifications)) %>%
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
+  select(-cumnotifications) %>%
+  spread(sex, propnotifications) %>%
+  mutate(female = ifelse(is.na(female), 0, female),
+    male = ifelse(is.na(male), 0, male),
+    transgender = ifelse(is.na(transgender), 0, transgender)) %>%
+  rename(year = yeardiagnosis)
+
 ```
+
 
 ```{r Annual notifications and proportions}
 # This chunk creates a dataframe of the annual notifications for the
@@ -216,7 +237,6 @@ includeDiags <- hivSet %>%
   ungroup() %>%
   rename(year = yeardiagnosis)
 includeDiags <- FillDataFrame(allYears, includeDiags)
-
 
 # If excluded and unknown is empty replace with zeros
 if (length(hivSetExcluded) == 0) {
@@ -307,28 +327,82 @@ if (doAge) {
 # This loads the adjustment files for adjusting the death rates and
 # migration rates  
 hivBase <- read.csv(file.path(dataFolder, paste0("HIVbaseEstimates-",
-                    toString(analysisYear), ".csv")))
+  toString(analysisYear), ".csv")))
 hivAdjustments <- read.csv(file.path(dataFolder,
-                    paste0("HIVadjustments-",
-                    toString(analysisYear), ".csv")))
+  paste0("HIVadjustments-",
+    toString(analysisYear), ".csv")))
 hivInterstate <- read.csv(file.path(dataFolder,
-                              paste0("HIVinterstateEstimates-",
-                    toString(analysisYear), ".csv")))
+  paste0("HIVinterstateEstimates-",
+    toString(analysisYear), ".csv")))
 
-# Now get the death rates, migration rates, and proportion stay rates
+# Load cleaned NOM data variable (cleanNom)
+load(file = file.path(dirname(basePath),
+  "data", "cleaned_ABS_nom_data.R"))
+
+# Now get the death rates, base migration rates, and proportion stay rates
+# Migration rates are now calculated using GetMigrate
 subsetRates <- GetAdjustments(hivBase, hivAdjustments, hivInterstate, 
-                              targetAge, targetGender,
-                              targetExposure, targetCob,
-                              targetAtsi, targetLocalRegion,
-                              targetState, targetGlobalRegion) 
-if (interState) {
-  subsetRatesAll <- GetAdjustments(hivBase, hivAdjustments, hivInterstate,
-                                   targetAge, targetGender,
-                                   targetExposure, targetCob,
-                                   targetAtsi, targetLocalRegion,
-                                   "all", targetGlobalRegion)  
+  targetAge, targetGender,
+  targetExposure, targetCob,
+  targetAtsi, targetLocalRegion,
+  targetState, targetGlobalRegion) 
+
+# Get migration rate adjustments 
+relMigration <- GetMigrate(cleanNom, targetAge, targetGender,
+  targetExposure, targetCob,
+  targetAtsi, targetLocalRegion,
+  targetState, targetGlobalRegion, propMale = hivGenderCum$male)
+
+# Adjust migration rate for Indigenous population if required
+# Potentially move into GetMigrate
+if (targetAtsi == "indigenous" && length(targetCob) == 1 &&
+    targetCob[1] == "Australia") {
+  relMigration <- 0
+} else if ((targetAtsi == "non_indigenous" &&
+    targetCob[1] == "Australia")|| targetGlobalRegion[1] != "all" ||
+    (targetCob[1] != "all" && targetCob[1] != "Australia")) {
+  relMigration <- relMigration *
+    hivAdjustments$non_aborig_migration
 }
 
+# Final migration rates
+subsetRates$mrate <- relMigration * hivBase$migrationrate
+subsetRates$mrate_lower <- relMigration * hivBase$migrationrate_lower
+subsetRates$mrate_upper <- relMigration * hivBase$migrationrate_upper
+
+if (interState) {
+  # For interstate calculations also need overall estimates
+  subsetRatesAll <- GetAdjustments(hivBase, hivAdjustments, hivInterstate,
+    targetAge, targetGender,
+    targetExposure, targetCob,
+    targetAtsi, targetLocalRegion,
+    "all", targetGlobalRegion)  
+  
+  # Get migration rate adjustments 
+  relMigrationAll <- GetMigrate(cleanNom, targetAge, targetGender,
+    targetExposure, targetCob,
+    targetAtsi, targetLocalRegion,
+    "all", targetGlobalRegion, propMale = hivGenderCum$male)
+  
+  # Adjust migration rate for Indigenous population if required
+  # Potentially move into GetMigrate
+  if (targetAtsi == "indigenous" && length(targetCob) == 1 &&
+      targetCob[1] == "Australia") {
+    relMigrationAll <- 0
+  } else if ((targetAtsi == "non_indigenous" &&
+      targetCob[1] == "Australia")|| targetGlobalRegion[1] != "all" ||
+      (targetCob[1] != "all" && targetCob[1] != "Australia")) {
+    relMigrationAll <- relMigrationAll *
+      hivAdjustments$non_aborig_migration
+  }
+  
+  # Final migration rates
+  subsetRatesAll$mrate <- relMigrationAll * hivBase$migrationrate
+  subsetRatesAll$mrate_lower <- relMigrationAll *
+    hivBase$migrationrate_lower
+  subsetRatesAll$mrate_upper <- relMigrationAll *
+    hivBase$migrationrate_upper
+}
 
 ```
 

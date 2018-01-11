@@ -114,23 +114,6 @@ GetMigrate <- function(nomData, targetAge, targetGender,targetExposure,
     }
   }
   
-  # Adjust migration rate for Indigenous population
-  # if (targetAtsi == "indigenous" && length(targetCob) == 1 && 
-  #     targetCob[1] == "Australia") {
-  #   adjustments$mrate <- 0
-  #   adjustments$mrate_lower <- 0
-  #   adjustments$mrate_upper <- 0
-  # } else if ((targetAtsi == "non_indigenous" &&  
-  #     targetCob[1] == "Australia")|| targetGlobalRegion[1] != "all" || 
-  #     targetCob[1] != "Australia") {
-  #   adjustments$mrate <- adjustments$mrate * 
-  #     hivAdjustments$non_aborig_migration
-  #   adjustments$mrate_lower <- adjustments$mrate_lower * 
-  #     hivAdjustments$non_aborig_migration
-  #   adjustments$mrate_upper <- adjustments$mrate_upper * 
-  #     hivAdjustments$non_aborig_migration
-  # }
-  
   # Return final relative rate
   return(relmrate)
 }
