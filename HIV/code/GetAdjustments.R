@@ -143,7 +143,7 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
   }
 
   # Adjust  migration rate for location
-  if (targetState != "all" && length(targetState) == 1) {
+  if (targetState[1] != "all" && length(targetState) == 1) {
     mrate <- switch(targetState[1],
       "nsw" = hivAdjustments$mrate_nsw,
       "vic" = hivAdjustments$mrate_vic,
@@ -167,7 +167,7 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     adjustments$mrate_upper <- 0
   } else if ((targetAtsi == "non_indigenous" &&
       targetCob[1] == "Australia")|| targetGlobalRegion[1] != "all" ||
-      targetCob[1] != "Australia") {
+      (targetCob[1] != "all" && targetCob[1] != "Australia")) {
     adjustments$mrate <- adjustments$mrate *
       hivAdjustments$non_aborig_migration
     adjustments$mrate_lower <- adjustments$mrate_lower *
