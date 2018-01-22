@@ -63,7 +63,7 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
     adjustments$propstay_upper <- hivAdjustments$pstay_indigenous
   } else if ((targetAtsi == "non_indigenous" &&  
       targetCob[1] == "Australia")|| targetGlobalRegion[1] != "all" || 
-      targetCob[1] != "Australia") {
+      (targetCob[1] != "all" && targetCob[1] != "Australia")) {
     # Australian born non-indiegnous or those born overseas
     adjustments$deathrate <- hivBase$deathrate * 
       hivAdjustments$drate_non_indigenous
@@ -251,11 +251,11 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
   } 
   
   if (targetState[1] == "vic" && length(targetState) == 1) {
-    adjustments$propstay <- adjustments$propstay * 
+    adjustments$propstay <- adjustments$propstay *
       hivAdjustments$pstay_vic
-    adjustments$propstay_lower <- adjustments$propstay_lower * 
+    adjustments$propstay_lower <- adjustments$propstay_lower *
       hivAdjustments$pstay_vic_lower
-    adjustments$propstay_upper <- adjustments$propstay_upper * 
+    adjustments$propstay_upper <- adjustments$propstay_upper *
       hivAdjustments$pstay_vic_upper
     
     adjustments$deathrate <- adjustments$deathrate * 
