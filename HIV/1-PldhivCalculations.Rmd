@@ -462,6 +462,7 @@ if (interState) {
 if (doAge) {
   # Load age based relative deathrates and migration rates.
   
+  # Relative death rates - uses overall data
   # ageDeath <- 
   
   # Relative migration rates
