@@ -37,7 +37,8 @@ specified project folder and have a cascade file handle.
 *Current projects*
 - ASR_2017 (2017 ASR cascades for year 2016)
 - CALD_Cascades
-- Paper_2016 (national cascade for paper) 
+- Paper_2016 (national cascade for paper)
+- Aging_Estimates (todo)
 
 
 ```{r Script parameters}
@@ -202,10 +203,20 @@ hivSetUnknown <- hivSetReturn[[3]]
 # Calculation cumulative proportion male. This is used for gender weighted
 # migration rates
  
-hivGenderCum <- hivSet %>% 
+hivSetGender <- hivSet %>% 
   group_by(yeardiagnosis, sex) %>% 
   summarise(notifications = n()) %>% 
-  ungroup() %>% 
+  ungroup() %>%
+  spread(sex, notifications) %>%
+  rename(year = yeardiagnosis)
+hivSetGender[is.na(hivSetGender)] <- 0
+
+# Fill in missing years with zeros
+hivSetGender <- FillDataFrame(1980:analysisYear, hivSetGender) %>%
+  gather("sex", "notifications", 2:5) %>%
+  arrange(year)
+
+hivGenderCum <- hivSetGender %>% 
   group_by(sex) %>% 
   mutate(cumnotifications = cumsum(notifications)) %>%
   ungroup() %>%
@@ -215,14 +226,59 @@ hivGenderCum <- hivSet %>%
   gather("sex", "cumnotifications", 2:4) %>%
   mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
     cumnotifications)) %>%
-  group_by(yeardiagnosis) %>% 
+  group_by(year) %>% 
   mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
   select(-cumnotifications) %>%
   spread(sex, propnotifications) %>%
   mutate(female = ifelse(is.na(female), 0, female),
     male = ifelse(is.na(male), 0, male),
-    transgender = ifelse(is.na(transgender), 0, transgender)) %>%
-  rename(year = yeardiagnosis)
+    transgender = ifelse(is.na(transgender), 0, transgender)) 
+
+if (doAge) {
+  # Calculation cumulative proportion male for each age group. 
+  hivSetGenderAge <- hivSet %>% 
+    group_by(yeardiagnosis, sex, agebin) %>% 
+    summarise(notifications = n()) %>% 
+    ungroup() %>%
+    spread(sex, notifications)
+  hivSetGenderAge[is.na(hivSetGenderAge)] <- 0
+  hivSetGenderAge <- hivSetGenderAge %>%
+    mutate(other = female+transgender+unknown) %>%
+    rename(year = yeardiagnosis) %>%
+    select(year, agebin, male, other)
+  hivSetGenderAge[is.na(hivSetGenderAge)] <- 0
+  
+  # Fill in missing years with zeros - have to do males and others and
+  # then rebind seperately 
+  hivSetMaleAge <- hivSetGenderAge %>%
+    select(-other) %>% 
+    spread(agebin, male)
+  hivSetMaleAge[is.na(hivSetMaleAge)] <- 0
+  hivSetMaleAge <- FillDataFrame(1980:analysisYear, hivSetMaleAge) %>%
+    gather("agebin", "male", 2:20) %>%
+    arrange(year)
+  
+   hivSetOtherAge <- hivSetGenderAge %>%
+    select(-male) %>% 
+    spread(agebin, other)
+  hivSetOtherAge[is.na(hivSetOtherAge)] <- 0
+  hivSetOtherAge <- FillDataFrame(1980:analysisYear, hivSetOtherAge) %>%
+    gather("agebin", "other", 2:20) %>%
+    arrange(year)
+  
+  hivGenderAgeCum <- hivSetMaleAge %>%
+    mutate(other = hivSetOtherAge$other) %>%
+    group_by(agebin) %>%
+    mutate(cummale = cumsum(male),
+      cumother = cumsum(other)) %>%
+    ungroup() %>%
+    select(-male, -other) %>%
+    group_by(year, agebin) %>% 
+    mutate(propmale = cummale / (cummale + cumother)) %>%
+    mutate(propmale = ifelse(is.nan(propmale), 1, propmale)) %>%
+    select(-cummale, -cumother) %>%
+    spread(agebin, propmale)
+}
 
 ```
 
@@ -348,9 +404,8 @@ subsetRates <- GetAdjustments(hivBase, hivAdjustments, hivInterstate,
   targetState, targetGlobalRegion) 
 
 # Get migration rate adjustments 
-relMigration <- GetMigrate(cleanNom, targetAge, targetGender,
-  targetExposure, targetCob,
-  targetAtsi, targetLocalRegion,
+relMigration <- GetMigrate(analysisYear, cleanNom, targetAge,
+  targetGender, targetExposure, targetCob, targetAtsi, targetLocalRegion,
   targetState, targetGlobalRegion, propMale = hivGenderCum$male)
 
 # Adjust migration rate for Indigenous population if required
@@ -371,7 +426,7 @@ subsetRates$mrate_lower <- relMigration * hivBase$migrationrate_lower
 subsetRates$mrate_upper <- relMigration * hivBase$migrationrate_upper
 
 if (interState) {
-  # For interstate calculations also need overall estimates
+  # For interstate calculations also need overall population estimates
   subsetRatesAll <- GetAdjustments(hivBase, hivAdjustments, hivInterstate,
     targetAge, targetGender,
     targetExposure, targetCob,
@@ -402,6 +457,18 @@ if (interState) {
     hivBase$migrationrate_lower
   subsetRatesAll$mrate_upper <- relMigrationAll *
     hivBase$migrationrate_upper
+}
+
+if (doAge) {
+  # Load age based relative deathrates and migration rates.
+  
+  # ageDeath <- 
+  
+  # Relative migration rates
+  ageMigrate <- GetMigrateAge(analysisYear, cleanNom, targetGender, 
+  targetExposure, targetCob, targetAtsi, targetLocalRegion, targetState, 
+  targetGlobalRegion, propMale = NULL)
+  
 }
 
 ```
