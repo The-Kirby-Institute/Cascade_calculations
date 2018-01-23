@@ -116,7 +116,7 @@ GetMigrate <- function(finalYear, nomData, targetAge, targetGender
   return(relmrate)
 }
 
-# Function for all age groups ---------------------------------------------  
+# Function for all age groups ---------------------------------------------
 GetMigrateAge <- function(year, nomData, targetGender, targetExposure, 
   targetCob, targetAtsi,targetLocalRegion, targetState, 
   targetGlobalRegion, propMale = NULL) {
