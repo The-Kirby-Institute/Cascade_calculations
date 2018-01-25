@@ -77,7 +77,7 @@ if (targetAtsi != "all" && targetCob[1] != "Australia" &&
 # Script options for calculations
 interState <- ifelse(targetState[1] != "all", TRUE, FALSE)
 excludeAborig <- FALSE
-doAge <- FALSE # TRUE for aging calculations
+doAge <- TRUE # TRUE for aging calculations
 doRetained <- FALSE # TRUE for appending retained in care
 if (doRetained) {
   # Need to specify years for reatined in care calculations
@@ -349,31 +349,43 @@ if (doAge) {
     group_by(yeardiagnosis, agebin) %>%
     summarise(diags = n()) %>%
     ungroup() %>%
-    spread(agebin, diags) 
-  
-  #fill missing years
-  fillYears <- includeDiags$year[!(includeDiags$year %in%
-                                     agedDiags$yeardiagnosis)]
-  fillDiags <- agedDiags[0,]
-  fillDiags[1:length(fillYears),] <- NA
-  fillDiags$yeardiagnosis <- fillYears
-  agedDiags <- rbind(agedDiags, fillDiags)
-  agedDiags <- agedDiags[order(agedDiags$yeardiagnosis),]
-
-
-
-  if("not_reported" %in% names(hivSet)){  
-    agedDiags <- agedDiags %>% select(-yeardiagnosis, -not_reported)
-  }else{
-    agedDiags <- agedDiags %>% select(-yeardiagnosis)
-  }
-  
+    spread(agebin, diags) %>%
+    rename(year = yeardiagnosis)
   agedDiags[is.na(agedDiags)] <- 0
-  propAge <- t(apply(agedDiags, 1, 
-                     function(row) row/sum(row)))
-  agedSubset <- bind_cols(includeDiags, agedDiags)
+
+  #fill missing years
+  agedDiags <- FillDataFrame(1980:analysisYear, agedDiags) %>%
+    gather("agebin", "diagnoses", 2:20) %>%
+    arrange(year) %>%
+    filter(agebin != "not_reported") %>%
+    group_by(year) %>%
+    mutate(propdiags = diagnoses / sum(diagnoses)) %>%
+    mutate(propdiags = ifelse(is.nan(propdiags), 0 , propdiags)) %>%
+    ungroup()
+    
+  nyears <- analysisYear - 1980 + 1
+  nages <- 18
   
-  agedSubsetProp <- bind_cols(includeDiags, as.data.frame(propAge))
+  ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
+    "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
+    "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
+  
+  yearList <- paste("y", as.character(1980:analysisYear), sep = "")
+  
+  hivResultsAge <- agedDiags %>% 
+    left_join(., hivResults, by = "year") %>%
+    select(-diagnoses, -cumnotifications) %>%
+    group_by(year, agebin) %>%
+    mutate(diags = propdiags * notifications) %>%
+    select(-propdiags, -notifications) %>%
+    spread(year, diags) %>%
+    ungroup() %>%
+    slice(c(1,10,2:9,11:18)) %>%
+    select(-agebin) %>%
+    as.matrix()
+
+  colnames(hivResultsAge) <- yearList
+  rownames(hivResultsAge) <- ageList
 
 }
 
