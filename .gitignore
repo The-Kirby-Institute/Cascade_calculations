@@ -42,6 +42,8 @@ HIV/output.dta
 HIV/docs/
 HIV/subprojects/
 
+HIV/hivageing.Rmd
+
 # Chlamydia directory
 Chlamydia/data/raw/*
 Chlamydia/data/chlamRetestVariation*.csv
