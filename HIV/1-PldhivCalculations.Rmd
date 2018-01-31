@@ -47,20 +47,29 @@ analysisYear <- 2016
 saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
-projectOutput <- 'CALD_Cascades' #'.' for main output folder 
+projectOutput <- "Test_Cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "temp"
-targetGender <- 'all' # all, male, female (single)
-targetAge <- 'all' #groups a0_4, a5_9, a10_14,...,a85+, not (combination)
-targetCob <- 'all' # all=including n/a, Thailand, etc. (combination)
-targetExposure <- 'all' #msm, hetero, pwid, otherexp (combination)
-targetAtsi <- 'all' # all, indigenous or non_indigenous.
+cascadeName <- "TestAge"
+targetGender <- "all" # all, male, female (single)
+targetAge <- "split" # all or split
+
+# Note regarding ageing: The calculations don't specifically target 
+# specific ages.  Rather this simply chooses whether age is considered or 
+# not."all" means there is no division by age whereas "split" means teh 
+# calculations are doen for all agegroups specified as a0_4, a5_9, 
+# a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
+# split and then filter out age estimates as requi essentially turns on 
+# doAge below. 
+
+targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
+targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
+targetAtsi <- "all" # all, indigenous or non_indigenous.
                     # Only used if country is Australia (single)
 targetState <- "all" # c("nsw", "vic") # nsw, sa, nt, qld, vic, wa, act, tas
                                # (combination)
-targetLocalRegion <- 'all' #tbd (combination)
-targetGlobalRegion <- 'all' # South-East Asia, Sub-Saharan Africa, 
+targetLocalRegion <- "all" #tbd (combination)
+targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
                             # Oceania, South American, Other cob, etc
                             # (combination)
 
@@ -76,9 +85,12 @@ if (targetAtsi != "all" && targetCob[1] != "Australia" &&
 
 # Script options for calculations
 interState <- ifelse(targetState[1] != "all", TRUE, FALSE)
+doAge <- ifelse(targetAge == "split", TRUE, FALSE) # TRUE for ageing
+
 excludeAborig <- FALSE
-doAge <- TRUE # TRUE for aging calculations
+
 doRetained <- FALSE # TRUE for appending retained in care
+doRetained <- ifelse(doAge, FALSE, doRetained) # Turn off for ageing
 if (doRetained) {
   # Need to specify years for reatined in care calculations
   # This is simply a proportion based on James McMahon's paper
@@ -88,6 +100,8 @@ if (doRetained) {
 
 # Settings for generating ECDC model inputs ------------------------------
 ecdcData <- TRUE
+ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
+
 ecdcVersion <- '1.2.2'
 excludeOS <- FALSE
 
@@ -97,6 +111,8 @@ if (excludeOS) {
   # for ECDC calculations
   saveResults <- TRUE
 }
+
+
 
 # Store paramaters for saving
 hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
@@ -136,6 +152,7 @@ source(file.path(HIVcode, "EcdcFiles.R"))
 # Functions for adjustments
 source(file.path(HIVcode, "GetAdjustments.R"))
 source(file.path(HIVcode, "GetMigrate.R"))
+# source(file.path(HIVcode, "GetDeathAge.R"))
 
 ```
 
@@ -192,7 +209,7 @@ if (excludeAborig) {
 }
 
 # Extract subset of notifications we want
-hivSetReturn <- SubHivSet(hivSetAll, targetAge, targetGender,
+hivSetReturn <- SubHivSet(hivSetAll, "all", targetGender,
                           targetExposure, targetCob, targetAtsi,
                           targetState, targetGlobalRegion)
 
@@ -281,7 +298,6 @@ if (doAge) {
 }
 
 ```
-
 
 ```{r Annual notifications and proportions}
 # This chunk creates a dataframe of the annual notifications for the
@@ -410,13 +426,11 @@ load(file = file.path(dirname(basePath),
 # Now get the death rates, base migration rates, and proportion stay rates
 # Migration rates are now calculated using GetMigrate
 subsetRates <- GetAdjustments(hivBase, hivAdjustments, hivInterstate, 
-  targetAge, targetGender,
-  targetExposure, targetCob,
-  targetAtsi, targetLocalRegion,
-  targetState, targetGlobalRegion) 
+  "all", targetGender, targetExposure, targetCob, targetAtsi, 
+  targetLocalRegion, targetState, targetGlobalRegion) 
 
 # Get migration rate adjustments 
-relMigration <- GetMigrate(analysisYear, cleanNom, targetAge,
+relMigration <- GetMigrate(analysisYear, cleanNom, "all",
   targetGender, targetExposure, targetCob, targetAtsi, targetLocalRegion,
   targetState, targetGlobalRegion, propMale = hivGenderCum$male)
 
@@ -440,15 +454,12 @@ subsetRates$mrate_upper <- relMigration * hivBase$migrationrate_upper
 if (interState) {
   # For interstate calculations also need overall population estimates
   subsetRatesAll <- GetAdjustments(hivBase, hivAdjustments, hivInterstate,
-    targetAge, targetGender,
-    targetExposure, targetCob,
-    targetAtsi, targetLocalRegion,
-    "all", targetGlobalRegion)  
+    "all", targetGender, targetExposure, targetCob, targetAtsi, 
+    targetLocalRegion, "all", targetGlobalRegion)  
   
   # Get migration rate adjustments 
-  relMigrationAll <- GetMigrate(cleanNom, targetAge, targetGender,
-    targetExposure, targetCob,
-    targetAtsi, targetLocalRegion,
+  relMigrationAll <- GetMigrate(cleanNom, "all", targetGender,
+    targetExposure, targetCob, targetAtsi, targetLocalRegion,
     "all", targetGlobalRegion, propMale = hivGenderCum$male)
   
   # Adjust migration rate for Indigenous population if required
@@ -474,14 +485,25 @@ if (interState) {
 if (doAge) {
   # Load age based relative deathrates and migration rates.
   
-  # Relative death rates - uses overall data
-  # ageDeath <- 
+  # Relative death rates - based on overall data
+  hivAgeDeath <- read.csv(file.path(dataFolder,
+    paste0("HIVageEstimates-",
+      toString(analysisYear), ".csv")))
+  relAgeDeath <- hivAgeDeath %>%
+    filter(population == targetGender, year <= analysisYear) %>%
+    select(year, age, reldeathrate) %>%
+    spread(year, reldeathrate) %>%
+    select(-age)
+  colnames(relAgeDeath) <- yearList
+  rownames(relAgeDeath) <- ageList
   
   # Relative migration rates
-  ageMigrate <- GetMigrateAge(analysisYear, cleanNom, targetGender, 
+  relAgeMigrate <- GetMigrateAge(analysisYear, cleanNom, targetGender, 
   targetExposure, targetCob, targetAtsi, targetLocalRegion, targetState, 
   targetGlobalRegion, propMale = NULL)
   
+  colnames(relAgeMigrate) <- yearList
+  rownames(relAgeMigrate) <- ageList
 }
 
 ```
@@ -491,107 +513,135 @@ if (doAge) {
 # HIV
 
 if (interState) {
-  # Calculate for interregional migration
-  pldhivOverall <- LivingDiagnosed(adjustDiags$all,
-                                   subsetRates$annunique, 
-                                   subsetRatesAll$deathrate,
-                                   subsetRatesAll$mrate,
-                                   subsetRatesAll$propstay) %>%
-    mutate(year = allYears) %>%
-    select(year, everything())
-  
-  pldhivOverallMin <- LivingDiagnosed(adjustDiags$all,
-                                  subsetRates$annunique,  
-                                  subsetRatesAll$deathrate_upper,
-                                  subsetRatesAll$mrate_upper,
-                                  subsetRatesAll$propstay_lower) %>%
-    mutate(year = allYears) %>%
-    select(year, everything())
-  
-  pldhivOverallMax <- LivingDiagnosed(adjustDiags$all,
-                                  subsetRates$annunique,  
-                                  subsetRatesAll$deathrate_lower,
-                                  subsetRatesAll$mrate_lower,
-                                  subsetRatesAll$propstay_upper) %>%
-    mutate(year = allYears) %>%
-    select(year, everything())
-  
-  
-  
-  
-  # Now do regional migration
-  pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
-                               subsetRates$annunique,  
-                               subsetRates$deathrate,
-                               subsetRates$mrate,
-                               subsetRates$propstay, 
-                               arrivals = subsetRates$inter_arriverate,
-                               departs = subsetRates$inter_departrate,
-                               pldhiv = pldhivOverall$pldhiv) %>%
-    mutate(year = allYears) %>%
-    select(year, everything())
-  
-  # Use best estimate overall for min and max
-  pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  subsetRates$annunique,  
-                                  subsetRates$deathrate_upper,
-                                  subsetRates$mrate_upper,
-                                  subsetRates$propstay_lower,
-                                  arrivals = subsetRates$inter_arriverate,
-                                  departs = subsetRates$inter_departrate,
-                                  pldhiv = pldhivOverall$pldhiv) %>%
-    mutate(year = allYears) %>%
-    select(year, everything())
-  
-  pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  subsetRates$annunique,  
-                                  subsetRates$deathrate_lower,
-                                  subsetRates$mrate_lower,
-                                  subsetRates$propstay_upper,
-                                  arrivals = subsetRates$inter_arriverate,
-                                  departs = subsetRates$inter_departrate,
-                                  pldhiv = pldhivOverall$pldhiv) %>%
-    mutate(year = allYears) %>%
-    select(year, everything())
-  
-
+  # A bit more work to do if we do inter-regional migration
+  if (doAge) {
+    # Do age based calculations
+    
+  } else {
+    # Calculate overall first for inter-regional migration
+    pldhivOverall <- LivingDiagnosed(adjustDiags$all,
+      subsetRates$annunique, 
+      subsetRatesAll$deathrate,
+      subsetRatesAll$mrate,
+      subsetRatesAll$propstay) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    pldhivOverallMin <- LivingDiagnosed(adjustDiags$all,
+      subsetRates$annunique,  
+      subsetRatesAll$deathrate_upper,
+      subsetRatesAll$mrate_upper,
+      subsetRatesAll$propstay_lower) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    pldhivOverallMax <- LivingDiagnosed(adjustDiags$all,
+      subsetRates$annunique,  
+      subsetRatesAll$deathrate_lower,
+      subsetRatesAll$mrate_lower,
+      subsetRatesAll$propstay_upper) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    # Now do regional migration
+    pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
+      subsetRates$annunique,  
+      subsetRates$deathrate,
+      subsetRates$mrate,
+      subsetRates$propstay, 
+      arrivals = subsetRates$inter_arriverate,
+      departs = subsetRates$inter_departrate,
+      pldhiv = pldhivOverall$pldhiv) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    # Use best estimate overall for min and max
+    pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
+      subsetRates$annunique,  
+      subsetRates$deathrate_upper,
+      subsetRates$mrate_upper,
+      subsetRates$propstay_lower,
+      arrivals = subsetRates$inter_arriverate,
+      departs = subsetRates$inter_departrate,
+      pldhiv = pldhivOverall$pldhiv) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
+      subsetRates$annunique,  
+      subsetRates$deathrate_lower,
+      subsetRates$mrate_lower,
+      subsetRates$propstay_upper,
+      arrivals = subsetRates$inter_arriverate,
+      departs = subsetRates$inter_departrate,
+      pldhiv = pldhivOverall$pldhiv) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+  } 
 } else {
   
-  # Now do regional migration
-  pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
-                               subsetRates$annunique, 
-                               subsetRates$deathrate,
-                               subsetRates$mrate,
-                               subsetRates$propstay) %>%
-    mutate(year = allYears) %>%
-    select(year, everything())
-  
-  pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  subsetRates$annunique,  
-                                  subsetRates$deathrate_upper,
-                                  subsetRates$mrate_upper,
-                                  subsetRates$propstay_lower) %>%
-    mutate(year = allYears) %>%
-    select(year, everything())
-  
-  pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
-                                  subsetRates$annunique,  
-                                  subsetRates$deathrate_lower,
-                                  subsetRates$mrate_lower,
-                                  subsetRates$propstay_upper) %>%
-    mutate(year = allYears) %>%
-    select(year, everything())
-  
+  # Do overall calculations only
+  if (doAge) {
+    # Do age based calculations
+    pldhivOverall <- LivingDiagnosed(adjustDiags$all,
+      subsetRates$annunique, 
+      subsetRatesAll$deathrate,
+      subsetRatesAll$mrate,
+      subsetRatesAll$propstay) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    pldhivAll <- LivingDiagnosedAge(adjustDiags$adjusted_included,
+      subsetRates$annunique, 
+      subsetRates$deathrate,
+      subsetRates$mrate,
+      subsetRates$propstay,
+      ageDeath = relAgeDeath,
+      ageMigrate = relAgeMigrate, 
+      normalize = pldhivOverall$pldhiv) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+  } else {
+    pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
+      subsetRates$annunique, 
+      subsetRates$deathrate,
+      subsetRates$mrate,
+      subsetRates$propstay) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
+      subsetRates$annunique,  
+      subsetRates$deathrate_upper,
+      subsetRates$mrate_upper,
+      subsetRates$propstay_lower) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
+      subsetRates$annunique,  
+      subsetRates$deathrate_lower,
+      subsetRates$mrate_lower,
+      subsetRates$propstay_upper) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+  }
 }
 
 # Store results
-hivDiagnosed <- data.frame(stage = "pldhiv",
-                           year = allYears,
-                           population = "all",
-                           value = pldhivAll$pldhiv,
-                           lower = pldhivAllMin$pldhiv,
-                           upper = pldhivAllMax$pldhiv)
-
+if (doAge) {
+  
+} else {
+  # Don't need to store age
+  hivDiagnosed <- data.frame(stage = "pldhiv",
+    year = allYears,
+    population = "all",
+    value = pldhivAll$pldhiv,
+    lower = pldhivAllMin$pldhiv,
+    upper = pldhivAllMax$pldhiv)
+}
 
 ```
 

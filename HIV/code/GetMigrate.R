@@ -125,14 +125,16 @@ GetMigrateAge <- function(year, nomData, targetGender, targetExposure,
     "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", "a60_64", 
     "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
   
-  ageMigrate <- matrix(0, nrow = length(ages), ncol = length(1980:year))
-  rownames(ageMigrate) <- ages
+  relAgeMigrate <- matrix(0, nrow = length(ages), ncol = length(1980:year))
+  rownames(relAgeMigrate) <- ages
   
   # Loop over ages 
   for (age in ages) {
     
     if (!is.null(propMale)) {
       propMaleAge <- propMale[age, ]
+    } else {
+      propMaleAge <- NULL
     }
     
     tempMigrate <- GetMigrate(year, nomData, age, targetGender,
@@ -140,8 +142,8 @@ GetMigrateAge <- function(year, nomData, targetGender, targetExposure,
       targetState, targetGlobalRegion, assumeAdult = FALSE, 
       propMale = propMaleAge)
     
-    ageMigrate[age, ] <- tempMigrate
+    relAgeMigrate[age, ] <- tempMigrate
   }
   
-  return(ageMigrate)
+  return(relAgeMigrate)
 }
