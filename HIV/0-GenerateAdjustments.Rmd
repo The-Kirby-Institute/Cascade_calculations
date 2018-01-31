@@ -1333,57 +1333,77 @@ agePldhivDf <- as.data.frame(agePldhiv) %>%
   mutate(age = ageList) %>%
   select(age, everything()) %>%
   gather(year, pldhiv, 2:(nyears + 1)) %>%
-  mutate(year = as.numeric(sub("y", "", year))) 
+  mutate(year = as.numeric(sub("y", "", year))) %>%
+  as_tibble() 
 
 ageMortalityDf <- as.data.frame(ageMortality) %>%
   mutate(age = ageList) %>%
   select(age, everything()) %>%
   gather(year, deaths, 2:(nyears + 1)) %>%
-  mutate(year = as.numeric(sub("y", "", year))) 
+  mutate(year = as.numeric(sub("y", "", year))) %>%
+  as_tibble() 
 
 ageDataAll <- agePldhivDf %>%
   mutate(population = "all") %>%
   select(year, age, population, pldhiv) %>%
   mutate(deaths = ageMortalityDf$deaths) %>%
-  mutate(deathrate = ifelse(pldhiv == 0, 0, deaths / pldhiv))
+  mutate(deathrate = ifelse(pldhiv == 0, 0, deaths / pldhiv)) %>%
+  mutate(deathrate_all = rep(hivBaseRates$deathrate, each = nages)) %>% 
+  mutate(reldeathrate = ifelse(deathrate_all == 0, 1, 
+    deathrate / deathrate_all)) %>%
+  as_tibble() 
 
 # Males
 agePldhivDfMale <- as.data.frame(agePldhivMale) %>%
   mutate(age = ageList) %>%
   select(age, everything()) %>%
   gather(year, pldhiv, 2:(nyears + 1)) %>%
-  mutate(year = as.numeric(sub("y", "", year))) 
+  mutate(year = as.numeric(sub("y", "", year))) %>%
+  as_tibble()
 
 ageMortalityDfMale <- as.data.frame(ageMortalityMale) %>%
   mutate(age = ageList) %>%
   select(age, everything()) %>%
   gather(year, deaths, 2:(nyears + 1)) %>%
-  mutate(year = as.numeric(sub("y", "", year))) 
+  mutate(year = as.numeric(sub("y", "", year))) %>%
+  as_tibble() 
 
 ageDataMale <- agePldhivDfMale %>%
   mutate(population = "male") %>%
   select(year, age, population, pldhiv) %>%
   mutate(deaths = ageMortalityDfMale$deaths) %>%
-  mutate(deathrate = ifelse(pldhiv == 0, 0, deaths / pldhiv))
+  mutate(deathrate = ifelse(pldhiv == 0, 0, deaths / pldhiv)) %>%
+  mutate(deathrate_all = rep(hivAdjustments$drate_male * 
+      hivBaseRates$deathrate, each = nages)) %>%
+  mutate(reldeathrate = ifelse(deathrate_all == 0, 1, 
+    deathrate / deathrate_all)) %>%
+  as_tibble()
 
 # Females
 agePldhivDfFemale <- as.data.frame(agePldhivFemale) %>%
   mutate(age = ageList) %>%
   select(age, everything()) %>%
   gather(year, pldhiv, 2:(nyears + 1)) %>%
-  mutate(year = as.numeric(sub("y", "", year))) 
+  mutate(year = as.numeric(sub("y", "", year))) %>%
+  as_tibble()
 
 ageMortalityDfFemale <- as.data.frame(ageMortalityFemale) %>%
   mutate(age = ageList) %>%
   select(age, everything()) %>%
   gather(year, deaths, 2:(nyears + 1)) %>%
-  mutate(year = as.numeric(sub("y", "", year))) 
+  mutate(year = as.numeric(sub("y", "", year))) %>%
+  as_tibble()
 
 ageDataFemale <- agePldhivDfFemale %>%
   mutate(population = "female") %>%
   select(year, age, population, pldhiv) %>%
   mutate(deaths = ageMortalityDfFemale$deaths) %>%
-  mutate(deathrate = ifelse(pldhiv == 0, 0, deaths / pldhiv))
+  mutate(deathrate = ifelse(pldhiv == 0, 0, deaths / pldhiv)) %>%
+  mutate(deathrate_all = rep(hivAdjustments$drate_female * 
+      hivBaseRates$deathrate, each = nages)) %>%
+  mutate(reldeathrate = ifelse(deathrate_all == 0, 1, 
+    deathrate / deathrate_all)) %>%
+  as_tibble()
   
 # Put it all in one data frame
 ageData <- bind_rows(ageDataAll, ageDataMale) %>%
