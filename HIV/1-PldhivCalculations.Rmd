@@ -132,6 +132,7 @@ source(file.path(Rcode, "FillDataFrame.R"))
 
 # Load function to calculate number living with diagnosed HIV
 source(file.path(HIVcode,"LivingDiagnosed.R"))
+source(file.path(HIVcode,"LivingDiagnosedAge.R"))
 
 # Function to easily extract sub-populations of interest 
 source(file.path(HIVcode, "SubHivSet.R"))
@@ -152,7 +153,6 @@ source(file.path(HIVcode, "EcdcFiles.R"))
 # Functions for adjustments
 source(file.path(HIVcode, "GetAdjustments.R"))
 source(file.path(HIVcode, "GetMigrate.R"))
-# source(file.path(HIVcode, "GetDeathAge.R"))
 
 ```
 
@@ -341,20 +341,21 @@ adjustDiags <- includeDiags %>%
   left_join(unknownDiags, by = "year") %>%
   mutate(all = included + excluded + unknown) %>%
   mutate(included = ifelse(is.na(included), 0, included),
-         excluded = ifelse(is.na(excluded), 0, excluded),
-         unknown = ifelse(is.na(unknown), 0, unknown)) %>%
+    excluded = ifelse(is.na(excluded), 0, excluded),
+    unknown = ifelse(is.na(unknown), 0, unknown)) %>%
   mutate(prop_included = included / (included + excluded),
-         prop_excluded = excluded / (included + excluded)) %>%
+    prop_excluded = excluded / (included + excluded)) %>%
   mutate(prop_included = ifelse(is.nan(prop_included), 0, prop_included), 
-         prop_excluded = ifelse(is.nan(prop_excluded), 0, 
-                                prop_excluded)) %>%
+    prop_excluded = ifelse(is.nan(prop_excluded), 0, 
+      prop_excluded)) %>%
   mutate(adjusted_included = included  + unknown * prop_included,
-         adjusted_excluded = excluded + unknown * prop_excluded)
+    adjusted_excluded = excluded + unknown * prop_excluded)
 
 hivResults <- data_frame(year = adjustDiags$year,
-                         notifications = adjustDiags$adjusted_included,
-                         cumnotifications =
-                           cumsum(adjustDiags$adjusted_included))
+  notifications = adjustDiags$adjusted_included,
+  cumnotifications = cumsum(adjustDiags$adjusted_included),
+  all_notifications = adjustDiags$all,
+  all_cumnotifications = cumsum(adjustDiags$all))
 
 # Proportion in each age group--------------------------------------------
 # For the known diagnoses calculate proportion by age bin, exposure group,
@@ -388,6 +389,7 @@ if (doAge) {
   
   yearList <- paste("y", as.character(1980:analysisYear), sep = "")
   
+  # Adjust_included notifications by age and year
   hivResultsAge <- agedDiags %>% 
     left_join(., hivResults, by = "year") %>%
     select(-diagnoses, -cumnotifications) %>%
@@ -584,24 +586,30 @@ if (interState) {
   # Do overall calculations only
   if (doAge) {
     # Do age based calculations
-    pldhivOverall <- LivingDiagnosed(adjustDiags$all,
+    pldhivOverall <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique, 
-      subsetRatesAll$deathrate,
-      subsetRatesAll$mrate,
-      subsetRatesAll$propstay) %>%
+      subsetRates$deathrate,
+      subsetRates$mrate,
+      subsetRates$propstay) %>%
       mutate(year = allYears) %>%
-      select(year, everything())
+      select(year, everything()) %>%
+      as_tibble()
     
-    pldhivAll <- LivingDiagnosedAge(adjustDiags$adjusted_included,
+    pldhivAll <- LivingDiagnosedAge(hivResultsAge,
       subsetRates$annunique, 
       subsetRates$deathrate,
       subsetRates$mrate,
       subsetRates$propstay,
-      ageDeath = relAgeDeath,
-      ageMigrate = relAgeMigrate, 
-      normalize = pldhivOverall$pldhiv) %>%
-      mutate(year = allYears) %>%
-      select(year, everything())
+      agedeath = relAgeDeath,
+      agemigrate = relAgeMigrate)
+    
+    # , 
+    #   normalize = pldhivOverall$pldhiv) 
+    
+      # %>%
+      # mutate(year = allYears) %>%
+      # select(year, everything()) %>%
+      # as_tibble()
     
   } else {
     pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
