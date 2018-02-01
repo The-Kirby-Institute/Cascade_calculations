@@ -1281,8 +1281,10 @@ for (ii in 2:nyears) {
     # Update current age group for current year - assuming same 
     # overseas migration rate for each age group equal to overall 
     # migration rate
-    agePldhiv[jj, ii] <- agePldhiv[jj, ii - 1] + ageDiag[jj, ii] - 
-      (1-hivBaseRates$propstay[ii-1]) * ageDiag[jj, ii] - 
+    agePldhiv[jj, ii] <- agePldhiv[jj, ii - 1] + 
+      hivBaseRates$annunique_all[ii] * ageDiag[jj, ii] - 
+      (1-hivBaseRates$propstay[ii-1]) * hivBaseRates$annunique_all[ii-1] *
+        ageDiag[jj, ii-1] - 
       ageDeath[jj, ii - 1] - unknownAgeDeaths[jj] - 
       agePldhiv[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] - 
       agePldhiv[jj, ii - 1] * ageRate[jj] + ageUp  
@@ -1297,8 +1299,9 @@ for (ii in 2:nyears) {
     
     # By gender - Male
     agePldhivMale[jj, ii] <- agePldhivMale[jj, ii - 1] + 
-      ageDiagMale[jj, ii] - 
-      (1-hivBaseRates$propstay[ii-1]) * ageDiagMale[jj, ii] - 
+      hivBaseRates$annunique_male[ii] * ageDiagMale[jj, ii] - 
+      (1-hivBaseRates$propstay[ii-1]) * 
+        hivBaseRates$annunique_male[ii-1] * ageDiagMale[jj, ii] - 
       ageDeathMale[jj, ii - 1] - unknownAgeDeathsMale[jj] - 
       agePldhivMale[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] - 
       agePldhivMale[jj, ii - 1] * ageRate[jj] + ageUpMale 
@@ -1312,8 +1315,9 @@ for (ii in 2:nyears) {
     
     # By gender - Female
     agePldhivFemale[jj, ii] <- agePldhivFemale[jj, ii - 1] + 
-      ageDiagFemale[jj, ii] - 
-      (1-hivBaseRates$propstay[ii-1]) * ageDiagFemale[jj, ii] - 
+      hivBaseRates$annunique_female[ii] * ageDiagFemale[jj, ii] - 
+      (1-hivBaseRates$propstay[ii-1]) * 
+        hivBaseRates$annunique_female[ii-1] * ageDiagFemale[jj, ii] - 
       ageDeathFemale[jj, ii - 1] - unknownAgeDeathsFemale[jj] - 
       agePldhivFemale[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] - 
       agePldhivFemale[jj, ii - 1] * ageRate[jj] + ageUpFemale 
