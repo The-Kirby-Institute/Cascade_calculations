@@ -1,4 +1,4 @@
-## R function to calculate appropriate migration rate adjustments 
+## R functions to calculate appropriate migration rate adjustments 
 
 # Richard T. Gray
 
