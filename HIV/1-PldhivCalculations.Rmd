@@ -563,31 +563,18 @@ if (interState) {
       mutate(year = allYears) %>%
       select(year, everything())
     
-    # Victoria testing
-    viCSubset <- subsetRates
-    # viCSubset$deathrate <- subsetRatesAll$deathrate
-    # zeros <- rep(0,16)
-    # viCSubset$inter_departrate <- 0.9 * viCSubset$inter_departrate
-    # viCSubset$inter_arriverate <- 1.1 * viCSubset$inter_arriverate
-    # viCSubset$mrate <- subsetRatesAll$mrate
-    # viCSubset$mrate <- 0
-    # viCSubset$propstay <- 1
-    
     # Now do regional migration
     pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
-      viCSubset$annunique, 
-      viCSubset$deathrate, 
-      viCSubset$mrate,
-      viCSubset$propstay,
-      arrivals = viCSubset$inter_arriverate, 
-      departs = viCSubset$inter_departrate, 
+      subsetRates$annunique, 
+      subsetRates$deathrate, 
+      subsetRates$mrate,
+      subsetRates$propstay,
+      arrivals = subsetRates$inter_arriverate, 
+      departs = subsetRates$inter_departrate, 
       pldhiv = pldhivOverall$pldhiv) %>%
       mutate(year = allYears) %>%
       select(year, everything()) %>%
       as_tibble()
-
-    pldhivAll %>% filter(year >= 2000)
-    
     
     # Use best estimate overall for min and max
     pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
