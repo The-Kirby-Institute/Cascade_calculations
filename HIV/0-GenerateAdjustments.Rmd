@@ -901,41 +901,75 @@ hivInterstate <- hivInterstate %>%
 
 # Calculate departure rate
 hivInterstate$departures <- NA
+hivInterstate$departrate2 <- NA
 
-for (region in states) {
+for (region in head(states, -1)) {
   lmDepart <- lm(departures ~ year, data = filter(absInterstate, 
     state == region))
   departState <- predict(lmDepart, data.frame(year = allYears))
   
   # Store extrapolated population
-  hivInterstate[hivInterstate$state == region, ]$departures <- departState
+  hivInterstate[hivInterstate$state == region, ]$departures <-
+    departState
+  
+  # Alternative
+  tempData <- filter(hivInterstate, state == region, year >= 1982)
+  departs2 <- filter(absInterstate, state == region)$departures
+  tempData$departRate2 <- departs2/tempData$erp
+  
+  lmDepart2 <- lm(departRate2 ~ year, data = tempData)
+  departState2 <- predict(lmDepart2, data.frame(year = allYears))
+  
+  # Store extrapolated population
+  hivInterstate[hivInterstate$state == region, ]$departrate2 <-
+    departState2
+  
 }
 
-hivInterstate <- mutate(hivInterstate, departrate = departures / erp) 
-
+hivInterstate <- hivInterstate %>% 
+  mutate(departrate = departures / erp,
+    departures2 = departrate2 * erp) 
+ 
+  
 # Calculate arrival rate
 hivInterstate$arrivals <- NA
+hivInterstate$arriverate2 <- NA
 
-for (region in states) {
+for (region in head(states, -1)) {
   lmArrive <- lm(arrivals ~ year, data = filter(absInterstate, 
     state == region))
   arriveState <- predict(lmArrive, data.frame(year = allYears))
   
   # Store extrapolated population
   hivInterstate[hivInterstate$state == region, ]$arrivals <- arriveState
+  
+  # Alternative
+  tempData <- filter(hivInterstate, state == region, year >= 1982)
+  arrives2 <- filter(absInterstate, state == region)$arrivals
+  tempData$arriveRate2 <- arrives2/tempData$intererp
+  
+  lmArrive2 <- lm(arriveRate2 ~ year, data = tempData)
+  arriveState2 <- predict(lmArrive2, data.frame(year = allYears))
+  
+  # Store extrapolated population
+  hivInterstate[hivInterstate$state == region, ]$arriverate2 <-
+    arriveState2
+  
 }
 
-hivInterstate <- mutate(hivInterstate, arriverate = arrivals / intererp) 
+hivInterstate <- hivInterstate %>% 
+  mutate(arriverate = arrivals / intererp,
+    arrivals2 = arriverate2 * intererp) 
 
 # As intererp is zero national set arriverate to departure rate for "all"
 # Gives indication of rate people move interstate nationally
-hivInterstate[hivInterstate$state == "all", ]$arriverate <- 
-  hivInterstate[hivInterstate$state == "all", ]$departrate
-
-# Add a net leaving rate relative to state ERP -- useful for separate 
-# state calculations 
-hivInterstate <- mutate(hivInterstate, 
-  netrate = (departures - arrivals) / erp)
+# hivInterstate[hivInterstate$state == "all", ]$arriverate <- 
+#   hivInterstate[hivInterstate$state == "all", ]$departrate
+# 
+# # Add a net leaving rate relative to state ERP -- useful for separate 
+# # state calculations 
+# hivInterstate <- mutate(hivInterstate, 
+#   netrate = (departures - arrivals) / erp)
 
 ```
 
