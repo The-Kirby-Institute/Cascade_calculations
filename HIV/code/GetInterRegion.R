@@ -17,7 +17,7 @@ GetInterRegion <- function(finalYear, erpData, interstateData,
   if (length(targetRegion) == 1 && targetRegion[1] == "all") {
     # We are doing state calculations 
     # First estimate erp for each state
-    states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act", "all")
+    # states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act", "all")
     
     # Estimate ERP from ABS migration data - 2004 to 2014
     erpState <- erpData %>%
@@ -47,22 +47,25 @@ GetInterRegion <- function(finalYear, erpData, interstateData,
       mutate(outererp = erpall - erp)
 
     # Extract arrivals and departures
-    interstateData %>% 
+    interstateData <- interstateData %>% 
       filter(state %in% targetState) %>%
       group_by(year) %>%
       summarise(arrivals = sum(arrivals),
         departures = sum(departures))
 
-    lmDepart <- lm(departures ~ year, data = interstateData)
-    departState <- predict(lmDepart, data.frame(year = allYears))
+    # lmDepart <- lm(departures ~ year, data = interstateData)
+    # departState <- predict(lmDepart, data.frame(year = allYears))
+    departState <- interstateData$departures
     
-    lmArrive <- lm(arrivals ~ year, data = interstateData)
-    arriveState <- predict(lmArrive, data.frame(year = allYears))
+    # lmArrive <- lm(arrivals ~ year, data = interstateData)
+    # arriveState <- predict(lmArrive, data.frame(year = allYears))
+    arriveState <- interstateData$arrivals
     
     hivInterRegion <- hivInterRegion %>%
+      filter(year >= 1982) %>%
       mutate(departs = departState,
         arrives = arriveState) %>%
-      mutate(departrate = departs/ erp,
+      mutate(departrate = departs / erp,
         arriverate = arrives / outererp)
     
   } else {

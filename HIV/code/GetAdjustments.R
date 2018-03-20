@@ -184,52 +184,51 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
   # Adjust interstate migration rate for location
   # TODO: create a function to do this adjustment for 
   # combinations of states
-  if (targetState != "all" && length(targetState) == 1) {
-    arriverate <- switch(targetState[1],
-      "nsw" = filter(hivInterstate, 
-        state == "nsw")$arriverate,
-      "vic" = filter(hivInterstate, 
-        state == "vic")$arriverate,
-      "qld" = filter(hivInterstate, 
-        state == "qld")$arriverate,
-      "nt" = filter(hivInterstate, 
-        state == "nt")$arriverate,
-      "wa" = filter(hivInterstate, 
-        state == "wa")$arriverate,
-      "sa" = filter(hivInterstate, 
-        state == "sa")$arriverate,
-      "tas" = filter(hivInterstate, 
-        state == "tas")$arriverate,
-      "act" = filter(hivInterstate, 
-        state == "act")$arriverate)
-    
-    adjustments$inter_arriverate <- arriverate
-    
-    departrate <- switch(targetState[1],
-      "nsw" = filter(hivInterstate, 
-        state == "nsw")$departrate,
-      "vic" = filter(hivInterstate, 
-        state == "vic")$departrate,
-      "qld" = filter(hivInterstate, 
-        state == "qld")$departrate,
-      "nt" = filter(hivInterstate, 
-        state == "nt")$departrate,
-      "wa" = filter(hivInterstate, 
-        state == "wa")$departrate,
-      "sa" = filter(hivInterstate, 
-        state == "sa")$departrate,
-      "tas" = filter(hivInterstate, 
-        state == "tas")$departrate,
-      "act" = filter(hivInterstate, 
-        state == "act")$departrate)
-    
-    adjustments$inter_departrate <- departrate
-    
-  } else {
-    adjustments$inter_arriverate <- 0
-    adjustments$inter_departrate <- 0
-  }
-  
+  # if (targetState != "all" && length(targetState) == 1) {
+  #   arriverate <- switch(targetState[1],
+  #     "nsw" = filter(hivInterstate, 
+  #       state == "nsw")$arriverate,
+  #     "vic" = filter(hivInterstate, 
+  #       state == "vic")$arriverate,
+  #     "qld" = filter(hivInterstate, 
+  #       state == "qld")$arriverate,
+  #     "nt" = filter(hivInterstate, 
+  #       state == "nt")$arriverate,
+  #     "wa" = filter(hivInterstate, 
+  #       state == "wa")$arriverate,
+  #     "sa" = filter(hivInterstate, 
+  #       state == "sa")$arriverate,
+  #     "tas" = filter(hivInterstate, 
+  #       state == "tas")$arriverate,
+  #     "act" = filter(hivInterstate, 
+  #       state == "act")$arriverate)
+  #   
+  #   adjustments$inter_arriverate <- arriverate
+  #   
+  #   departrate <- switch(targetState[1],
+  #     "nsw" = filter(hivInterstate, 
+  #       state == "nsw")$departrate,
+  #     "vic" = filter(hivInterstate, 
+  #       state == "vic")$departrate,
+  #     "qld" = filter(hivInterstate, 
+  #       state == "qld")$departrate,
+  #     "nt" = filter(hivInterstate, 
+  #       state == "nt")$departrate,
+  #     "wa" = filter(hivInterstate, 
+  #       state == "wa")$departrate,
+  #     "sa" = filter(hivInterstate, 
+  #       state == "sa")$departrate,
+  #     "tas" = filter(hivInterstate, 
+  #       state == "tas")$departrate,
+  #     "act" = filter(hivInterstate, 
+  #       state == "act")$departrate)
+  #   
+  #   adjustments$inter_departrate <- departrate
+  #   
+  # } else {
+  #   adjustments$inter_arriverate <- 0
+  #   adjustments$inter_departrate <- 0
+  # }
   
   # Further adjust propstay and deathrate by location
   # Now adjust for location only have this for nsw and vic

@@ -66,7 +66,7 @@ targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
 targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
                     # Only used if country is Australia (single)
-targetState <- c("nsw", "vic") # nsw, sa, nt, qld, vic, wa, act, tas
+targetState <- "wa" # nsw, sa, nt, qld, vic, wa, act, tas
                                # (combination)
 targetLocalRegion <- "all" #tbd (combination)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
@@ -231,7 +231,7 @@ hivSetGender[is.na(hivSetGender)] <- 0
 
 # Fill in missing years with zeros
 hivSetGender <- FillDataFrame(1980:analysisYear, hivSetGender) %>%
-  gather("sex", "notifications", 2:5) %>%
+  gather("sex", "notifications", 2:ncol(.)) %>%
   arrange(year)
 
 hivGenderCum <- hivSetGender %>% 
@@ -240,8 +240,8 @@ hivGenderCum <- hivSetGender %>%
   ungroup() %>%
   select(-notifications) %>%
   spread(sex, cumnotifications) %>%
-  select(-unknown) %>%
-  gather("sex", "cumnotifications", 2:4) %>%
+  select(-starts_with("unknown")) %>%
+  gather("sex", "cumnotifications", 2:ncol(.)) %>%
   mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
     cumnotifications)) %>%
   group_by(year) %>% 
@@ -426,6 +426,7 @@ hivInterstate <- read.csv(file.path(dataFolder,
 load(file = file.path(dirname(basePath),
   "data", "cleaned_ABS_nom_data.R"))
 
+mainDataFolder <- file.path(dirname(getwd()), "data")
 absMigration <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
@@ -493,12 +494,13 @@ if (interState) {
     hivBase$migrationrate_upper
 }
 
-# Get interregion rates
+# Get interregion rates -only have date since 1982 assume zero rate for
+# 1980-81. 
 interRegionRates <- GetInterRegion(analysisYear, absMigration, 
   absInterstate, NULL, targetState, targetLocalRegion)
 
-subsetRates$inter_arriverate <- interRegionRates$arriverate
-subsetRates$inter_departrate <- interRegionRates$departrate
+subsetRates$inter_arriverate <- c(0, 0, interRegionRates$arriverate)
+subsetRates$inter_departrate <- c(0, 0, interRegionRates$departrate)
 
 if (doAge) {
   # Load age based relative deathrates and migration rates.
@@ -569,15 +571,16 @@ if (interState) {
     # viCSubset$inter_arriverate <- 1.1 * viCSubset$inter_arriverate
     # viCSubset$mrate <- subsetRatesAll$mrate
     # viCSubset$mrate <- 0
+    # viCSubset$propstay <- 1
     
     # Now do regional migration
     pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
-      viCSubset$annunique,  
-      viCSubset$deathrate,
+      viCSubset$annunique, 
+      viCSubset$deathrate, 
       viCSubset$mrate,
-      viCSubset$propstay, 
-      arrivals = viCSubset$inter_arriverate,
-      departs = viCSubset$inter_departrate,
+      viCSubset$propstay,
+      arrivals = viCSubset$inter_arriverate, 
+      departs = viCSubset$inter_departrate, 
       pldhiv = pldhivOverall$pldhiv) %>%
       mutate(year = allYears) %>%
       select(year, everything()) %>%
