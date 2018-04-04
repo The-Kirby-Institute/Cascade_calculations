@@ -4,10 +4,11 @@ Calculation for number of people living with diagnosed HIV
 Neil Bretana and Richard T. Gray
 
 This script is used for calculating the number of people 
-living with diagnosed HIV in Australia. This is one of the key steps for
-producing the estimates of the Australian HIV diagnosis and care cascade. 
+living with diagnosed HIV in Australia for a single region or jurisdiction.
+This is the core script for producing the estimates of the Australian HIV
+diagnosis and care cascade. 
 
-This script is part of a project containing version 3.0 of the HIV cascade
+This script is part of a project containing version 4.0 of the HIV cascade
 calculation scripts. 
 
 ```{r Initialization}
@@ -25,8 +26,8 @@ figuresFolder <- file.path(basePath, "output", "figures")
 
 # Load standard libraries and options ----------------------------------
 source(file.path(Rcode, "LoadLibrary.R"))
-source(file.path(Rcode, "DataLibraries.R"))
 source(file.path(Rcode, "PlotOptions.R"))
+LoadLibray(tidyverse) # TODO: Make code more tidyverse like
 
 ```
 
@@ -42,7 +43,8 @@ specified project folder and have a cascade file handle.
 
 
 ```{r Script parameters}
-# Chunk to enter all the script parameters we will use
+# Chunk to enter all the script parameters we will use for a single 
+# region
 analysisYear <- 2016
 saveResults <- FALSE
 
@@ -50,28 +52,31 @@ saveResults <- FALSE
 projectOutput <- "Test_Cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "TestVic"
+cascadeName <- "Test"
 targetGender <- "all" # all, male, female (single)
 targetAge <- "all" # all or split
 
 # Note regarding ageing: The calculations don't specifically target 
 # specific ages.  Rather this simply chooses whether age is considered or 
 # not."all" means there is no division by age whereas "split" means teh 
-# calculations are doen for all agegroups specified as a0_4, a5_9, 
+# calculations are done for all age groups specified as a0_4, a5_9, 
 # a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
-# split and then filter out age estimates as requi essentially turns on 
+# split and then filter out age estimates as required essentially turns on 
 # doAge below. 
 
 targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
 targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
                     # Only used if country is Australia (single)
-targetState <- "wa" # nsw, sa, nt, qld, vic, wa, act, tas
-                               # (combination)
-targetLocalRegion <- "all" #tbd (combination)
+targetState <- "wa" # all, nsw, sa, nt, qld, vic, wa, act, tas
+                    # (can handle combinations but this produces
+                    # inaccurate estimates)
+targetLocalRegion <- "all" # TODO: (can handle combinations but this 
+                           # produces inaccurate estimates)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
                             # Oceania, South American, Other cob, etc
-                            # (combination)
+                            # (can handle combinations but this 
+                            # produces inaccurate estimates)
 
 # Some error checking 
 if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
@@ -111,8 +116,6 @@ if (excludeOS) {
   # for ECDC calculations
   saveResults <- TRUE
 }
-
-
 
 # Store paramaters for saving
 hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
@@ -208,6 +211,8 @@ if (excludeAborig) {
   hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
   hivSetAll <- filter(hivSetAll, aboriggroup == 'non_indigenous')
 }
+
+# WHERE FUNCTION NEEDS TO START ##
 
 # Extract subset of notifications we want
 hivSetReturn <- SubHivSet(hivSetAll, "all", targetGender,
