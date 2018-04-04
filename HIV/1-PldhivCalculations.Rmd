@@ -63,7 +63,7 @@ targetAge <- "all" # all or split
 # doAge below. 
 
 targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
-targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
+targetExposure <- "msm" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
                     # Only used if country is Australia (single)
 targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
@@ -676,6 +676,82 @@ if (doAge) {
     lower = pldhivAllMin$pldhiv,
     upper = pldhivAllMax$pldhiv)
 }
+
+```
+
+```{r Temporary projections}
+# This is a temporary chunk for quickly generating projections. Quickly put 
+# together for Laila's delphi project. She wants a projection of the number
+# of HIV positive MSM in 2060. 
+# 
+# To do the projections we simply assume everything in terms of annual 
+# diagnoses and rates stays the same as in 2016 for 2017-2060 period. 
+# 
+# Also done some projections for reductions in diagnoses due to PrEP. 
+# 
+# Issues: haven't really accounted for aging properly which is probably 
+# necessary 
+
+# Set final year for porjections
+projectYear <- 2060
+projectYears <- (analysisYear + 1):projectYear
+nprojYears <- length(projectYears)
+totalYears <- c(allYears, projectYears)
+
+# Functions for setting up vectors
+End <- function(vector) return(tail(vector, 1))
+ProjVec <- function(vector, nyears) return(c(vector, 
+  rep(End(vector), nyears)))
+
+# Vectors for initial projections
+diagnoses <- ProjVec(adjustDiags$adjusted_included, nprojYears)
+annUnique <- c(subsetRates$annunique, rep(1, nprojYears))
+deathrate <- ProjVec(subsetRates$deathrate, nprojYears)
+osrate <- ProjVec(subsetRates$mrate, nprojYears)
+propStay <- ProjVec(subsetRates$propstay, nprojYears)   
+
+# Alternative diagnoses vectors showing 35%, 50%, and 100% decrease in 
+# diagnoses due to PrEP
+diagnoses0 <- c(adjustDiags$adjusted_included, rep(0, nprojYears))
+diagnoses35 <- c(adjustDiags$adjusted_included, 
+  0.65 * rep(End(adjustDiags$adjusted_included), nprojYears))
+diagnoses50 <- c(adjustDiags$adjusted_included, 
+  0.5 * rep(End(adjustDiags$adjusted_included), nprojYears))
+
+# Do future projections
+pldhivAllFuture <- LivingDiagnosed(diagnoses,
+      annUnique, 
+      deathrate,
+      osrate,
+      propStay) %>%
+      mutate(year = totalYears) %>%
+      select(year, everything())
+
+# Future projections for alternative diagnoses scenarios
+pldhivAllFuture35 <- LivingDiagnosed(diagnoses35,
+      annUnique, 
+      deathrate,
+      osrate,
+      propStay) %>%
+      mutate(year = totalYears) %>%
+      select(year, everything())
+
+pldhivAllFuture50 <- LivingDiagnosed(diagnoses50,
+      annUnique, 
+      deathrate,
+      osrate,
+      propStay) %>%
+      mutate(year = totalYears) %>%
+      select(year, everything())
+
+# No more diagnoses
+pldhivAllFuture0 <- LivingDiagnosed(diagnoses0,
+      annUnique, 
+      deathrate,
+      osrate,
+      propStay) %>%
+      mutate(year = totalYears) %>%
+      select(year, everything())
 
 ```
 
