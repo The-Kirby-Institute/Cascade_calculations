@@ -50,9 +50,9 @@ saveResults <- FALSE
 projectOutput <- "Test_Cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "AllProject"
+cascadeName <- "all"
 targetGender <- "all" # all, male, female (single)
-targetAge <- "all" # all or split
+targetAge <- "split" # all or split
 
 # Note regarding ageing: The calculations don't specifically target 
 # specific ages.  Rather this simply chooses whether age is considered or 
@@ -392,8 +392,9 @@ if (doAge) {
   
   # Adjust_included notifications by age and year
   hivResultsAge <- agedDiags %>% 
-    left_join(., hivResults, by = "year") %>%
-    select(-diagnoses, -cumnotifications) %>%
+    left_join(., hivResults, by = "year") %>% 
+    select(-diagnoses, -cumnotifications, -all_notifications,
+      -all_cumnotifications) %>%
     group_by(year, agebin) %>%
     mutate(diags = propdiags * notifications) %>%
     select(-propdiags, -notifications) %>%
@@ -621,13 +622,17 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
+    relrate1 <- matrix(1, nages, nyears)
+    relrate2 <- matrix(1, nages, nyears)
     pldhivAll <- LivingDiagnosedAge(hivResultsAge,
       subsetRates$annunique, 
       subsetRates$deathrate,
-      subsetRates$mrate,
+      hivBase$migrationrate,
       subsetRates$propstay,
       agedeath = relAgeDeath,
       agemigrate = relAgeMigrate)
+    
+      # agemigrate = )
     
     # , 
     #   normalize = pldhivOverall$pldhiv) 
