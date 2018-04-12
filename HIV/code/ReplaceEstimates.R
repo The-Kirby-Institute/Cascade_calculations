@@ -17,7 +17,7 @@ ReplaceEstimates <- function(cascade, hardcode) {
              lower = ifelse(population == hardcode$population[ii] &
                               year == hardcode$year[ii] &
                               stage == hardcode$stage[ii], 
-                            hardCodeValues$lower[ii],
+                            hardcode$lower[ii],
                             lower),
              upper = ifelse(population == hardcode$population[ii] &
                               year == hardcode$year[ii] &
