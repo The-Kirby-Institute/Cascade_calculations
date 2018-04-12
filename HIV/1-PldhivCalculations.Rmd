@@ -911,8 +911,8 @@ if (projectPldhiv) {
   # 
   # Example showing counterfactual to calculate number living 
   # diagnosed before 1996 etc
-  diagnoses[totalYears > 2006] <- 0 
-  projectName <- "pre2006"
+  # diagnoses[totalYears > 1996] <- 0 
+  # projectName <- "pre1996"
   # Example looking at future impact of PrEP after 2016 assuming 
   # 50% reduction in diagnoses
   # diagnoses[totalYears > 2016] <- 0.5 * diagnoses[totalYears > 2016]
