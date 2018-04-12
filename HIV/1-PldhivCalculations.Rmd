@@ -47,10 +47,10 @@ analysisYear <- 2016
 saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
-projectOutput <- "Test_Cascades" # "." for main output folder 
+projectOutput <- "ASR_2017" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "AllProject"
+cascadeName <- "All-2016"
 targetGender <- "all" # all, male, female (single)
 targetAge <- "all" # all or split
 
@@ -59,11 +59,11 @@ targetAge <- "all" # all or split
 # not."all" means there is no division by age whereas "split" means teh 
 # calculations are doen for all agegroups specified as a0_4, a5_9, 
 # a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
-# split and then filter out age estimates as requi essentially turns on 
+# split and then filter out age estimates as required essentially turns on 
 # doAge below. 
 
 targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
-targetExposure <- "msm" #msm, hetero, pwid, otherexp (combination)
+targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
                     # Only used if country is Australia (single)
 targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
@@ -112,7 +112,9 @@ if (excludeOS) {
   saveResults <- TRUE
 }
 
-
+# Leave projections chunk turned off so it is not called unless required. 
+# Simply run projections from within then chunk. 
+projectPldhiv <- FALSE 
 
 # Store paramaters for saving
 hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
@@ -679,81 +681,6 @@ if (doAge) {
 
 ```
 
-```{r Temporary projections}
-# This is a temporary chunk for quickly generating projections. Quickly put 
-# together for Laila's delphi project. She wants a projection of the number
-# of HIV positive MSM in 2060. 
-# 
-# To do the projections we simply assume everything in terms of annual 
-# diagnoses and rates stays the same as in 2016 for 2017-2060 period. 
-# 
-# Also done some projections for reductions in diagnoses due to PrEP. 
-# 
-# Issues: haven't really accounted for aging properly which is probably 
-# necessary 
-
-# Set final year for porjections
-projectYear <- 2060
-projectYears <- (analysisYear + 1):projectYear
-nprojYears <- length(projectYears)
-totalYears <- c(allYears, projectYears)
-
-# Functions for setting up vectors
-End <- function(vector) return(tail(vector, 1))
-ProjVec <- function(vector, nyears) return(c(vector, 
-  rep(End(vector), nyears)))
-
-# Vectors for initial projections
-diagnoses <- ProjVec(adjustDiags$adjusted_included, nprojYears)
-annUnique <- c(subsetRates$annunique, rep(1, nprojYears))
-deathrate <- ProjVec(subsetRates$deathrate, nprojYears)
-osrate <- ProjVec(subsetRates$mrate, nprojYears)
-propStay <- ProjVec(subsetRates$propstay, nprojYears)   
-
-# Alternative diagnoses vectors showing 35%, 50%, and 100% decrease in 
-# diagnoses due to PrEP
-diagnoses0 <- c(adjustDiags$adjusted_included, rep(0, nprojYears))
-diagnoses35 <- c(adjustDiags$adjusted_included, 
-  0.65 * rep(End(adjustDiags$adjusted_included), nprojYears))
-diagnoses50 <- c(adjustDiags$adjusted_included, 
-  0.5 * rep(End(adjustDiags$adjusted_included), nprojYears))
-
-# Do future projections
-pldhivAllFuture <- LivingDiagnosed(diagnoses,
-      annUnique, 
-      deathrate,
-      osrate,
-      propStay) %>%
-      mutate(year = totalYears) %>%
-      select(year, everything())
-
-# Future projections for alternative diagnoses scenarios
-pldhivAllFuture35 <- LivingDiagnosed(diagnoses35,
-      annUnique, 
-      deathrate,
-      osrate,
-      propStay) %>%
-      mutate(year = totalYears) %>%
-      select(year, everything())
-
-pldhivAllFuture50 <- LivingDiagnosed(diagnoses50,
-      annUnique, 
-      deathrate,
-      osrate,
-      propStay) %>%
-      mutate(year = totalYears) %>%
-      select(year, everything())
-
-# No more diagnoses
-pldhivAllFuture0 <- LivingDiagnosed(diagnoses0,
-      annUnique, 
-      deathrate,
-      osrate,
-      propStay) %>%
-      mutate(year = totalYears) %>%
-      select(year, everything())
-
-```
 
 ```{r ECDC Outputs}
 # ECDC calculations-------------------------------------------------------
@@ -920,4 +847,90 @@ if (saveResults) {
 
 ```
 
+```{r Projections}
+# This chunk is used for generating projections of the number of people 
+# living with diagnosed HIV. To do the projections we simply make
+# assumptions about the future changes to annual diagnoses, deathrates, 
+# migration rates into a specified future period.  
+# 
+# Any change in inputs to LivingDiagnosed function can be manually 
+# specified the default is to keep everything the same as the analysis 
+# year.
+# 
+# Any counterfactual or future projection scenario can be manually 
+# specified.
+# 
+# Maybe move this into a separate function or script but fits nicely here. 
 
+if (projectPldhiv) { 
+  
+  # Manually set final year for projections and projection name
+  projectYear <- analysisYear + 10  
+  projectName <- "future"
+  
+  saveProjResults <- TRUE 
+  # Reset if saving things overall
+  saveProjResults <- ifelse(saveResults, TRUE, saveProjResults) 
+  
+  # Functions for setting up vectors
+  End <- function(vector) return(tail(vector, 1))
+  ProjVec <- function(vector, nyears) return(c(vector, 
+    rep(End(vector), nyears)))
+  
+  # Setup projection years
+  projectYears <- (analysisYear + 1):projectYear
+  nprojYears <- length(projectYears)
+  totalYears <- c(allYears, projectYears)
+  
+  # Default vectors for projections assume everything stays the same.
+  # Keeping the number of diagnoses and annUnique the same as the 
+  # analysis year value means the same number of unique diagnoses will
+  # occur each year. MANUALLY CHANGE TO RUN ALTERNATE SCENARIOS.
+  
+  # Defaults - for diagnoses either assume a 5 year trend or the same 
+  # number every year (status quo)
+  #
+  # Status quo diagnoses
+  diagnosesSq <- ProjVec(adjustDiags$adjusted_included, nprojYears)
+  
+  # Trend diagnoses (using trend over last 5 years)
+  trendlm <- lm(diagnoses ~ year, 
+    data.frame(year = (analysisYear - 4):analysisYear, 
+      diagnoses = tail(adjustDiags$adjusted_included, 5)))
+  trendDiags <- predict(trendlm, data.frame(year = projectYears))
+  diagnosesTrend <- c(adjustDiags$adjusted_included, trendDiags)
+  
+  # Use trend diagnoses as default
+  diagnoses <- diagnosesTrend
+  annUnique <- ProjVec(subsetRates$annunique, nprojYears)
+  deathrate <- ProjVec(subsetRates$deathrate, nprojYears)
+  osrate <- ProjVec(subsetRates$mrate, nprojYears)
+  propStay <- ProjVec(subsetRates$propstay, nprojYears)   
+  
+  # CHANGE DEFAULTS HERE
+  # 
+  # Example showing counterfactual to calculate number living 
+  # diagnosed before 1996 etc
+  diagnoses[totalYears > 2006] <- 0 
+  projectName <- "pre2006"
+  # Example looking at future impact of PrEP after 2016 assuming 
+  # 50% reduction in diagnoses
+  # diagnoses[totalYears > 2016] <- 0.5 * diagnoses[totalYears > 2016]
+  
+  # Do future projections
+  pldhivAllFuture <- LivingDiagnosed(diagnoses,
+    annUnique, 
+    deathrate,
+    osrate,
+    propStay) %>%
+    mutate(year = totalYears) %>%
+    select(year, everything())
+  
+  if (saveProjResults) {
+    write_csv(pldhivAllFuture, paste0(saveStringDetails, projectName,
+      ".csv"))
+  }
+  
+  # TODO: Develop similiar process for pldhiv split by age 
+}
+```
