@@ -42,6 +42,8 @@ HIV/output.dta
 HIV/docs/
 HIV/subprojects/
 
+HIV/hivageing.Rmd
+
 # Chlamydia directory
 Chlamydia/data/raw/*
 Chlamydia/data/chlamRetestVariation*.csv
@@ -52,8 +54,11 @@ Chlamydia/data/retestsNSWgp2015.csv
 # Chlamydia/output/figures/
 Chlamydia/output/*
 !Chlamydia/output/2016
+Chlamydia/output/2016/figures/*.tiff
 Chlamydia/ChlamydiaCascade.nb.html
 
 HCV cascade/
 HIV/misc/
 HIV/2017_HIV_cascade_tracker.xlsx
+.Rproj.user
+HIV/Vic_migration
