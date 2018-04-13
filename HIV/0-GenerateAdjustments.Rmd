@@ -16,7 +16,8 @@ population_rate = base * population_adjustment.
 ```{r Initialization}
 # Chunk to setup everything
 
-# Open as a project (setting working directory to source and restarting R)
+# Open as a project (setting working directory to source and 
+# restarting R)
 
 # Setup directories
 basePath <- file.path(dirname(getwd()), "HIV")
