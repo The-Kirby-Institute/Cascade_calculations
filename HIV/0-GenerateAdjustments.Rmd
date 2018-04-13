@@ -1027,8 +1027,13 @@ hivGenderAgeCum <- hivSetMaleAge %>%
     cumtotal = cumsum(total)) %>%
   ungroup() %>%
   group_by(year, agebin) %>% 
-  mutate(propmale = cummale / cumtotal) %>%
-  mutate(propmale = ifelse(is.nan(propmale), 1, propmale)) 
+  mutate(cumpropmale = cummale / cumtotal) %>%
+  mutate(cumpropmale = ifelse(is.nan(cumpropmale), 1, cumpropmale)) %>%
+  ungroup() %>%
+  group_by(year) %>%
+  mutate(annpropmale = sum(male) / sum(total)) %>%
+  mutate(annpropmale = ifelse(is.nan(annpropmale), 1, annpropmale)) %>%
+  ungroup()
 
 # Create age diagnosis matrices for overall, male and female and 
 # adjust for notifications with missing age proportionally.
@@ -1067,7 +1072,7 @@ colnames(ageDeath) <- yearList
 
 # By sex
 ageDiagMale <- hivGenderAgeCum %>%
-  select(year, agebin, male, propmale) %>%
+  select(year, agebin, male, annpropmale) %>%
   group_by(year) %>%
   arrange(year) %>%
   filter(agebin != "not_reported") %>%
@@ -1077,8 +1082,8 @@ ageDiagMale <- hivGenderAgeCum %>%
   left_join(., hivResults, by = "year") %>%
   select(-male, -totalnotifications) %>%
   group_by(year, agebin) %>%
-  mutate(diags = propdiags * notifications * propmale) %>%
-  select(-propdiags, -notifications, -propmale) %>%
+  mutate(diags = propdiags * notifications * annpropmale) %>%
+  select(-propdiags, -notifications, -annpropmale) %>%
   spread(year, diags) %>%
   ungroup() %>%
   slice(c(1,10,2:9,11:18)) %>%
@@ -1092,7 +1097,7 @@ rownames(ageDeathMale) <- ageList
 colnames(ageDeathMale) <- yearList
 
 ageDiagFemale <- hivGenderAgeCum %>%
-  select(year, agebin, other, propmale) %>%
+  select(year, agebin, other, annpropmale) %>%
   group_by(year) %>%
   arrange(year) %>%
   filter(agebin != "not_reported") %>%
@@ -1102,8 +1107,8 @@ ageDiagFemale <- hivGenderAgeCum %>%
   left_join(., hivResults, by = "year") %>%
   select(-other, -totalnotifications) %>%
   group_by(year, agebin) %>%
-  mutate(diags = propdiags * notifications * (1 - propmale)) %>%
-  select(-propdiags, -notifications, -propmale) %>%
+  mutate(diags = propdiags * notifications * (1 - annpropmale)) %>%
+  select(-propdiags, -notifications, -annpropmale) %>%
   spread(year, diags) %>%
   ungroup() %>%
   slice(c(1,10,2:9,11:18)) %>%
