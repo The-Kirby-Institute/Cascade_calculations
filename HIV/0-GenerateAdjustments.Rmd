@@ -1067,10 +1067,24 @@ colnames(ageDeath) <- yearList
 
 # By sex
 ageDiagMale <- hivGenderAgeCum %>%
-  select(year, agebin, male) %>%
-  spread(year, male)
-ageDiagMale <- as.matrix(ageDiagMale[, 2:ncol(ageDiagMale)])
-rownames(ageDiagMale) <- c(ageList, "not_reported")
+  select(year, agebin, male, propmale) %>%
+  group_by(year) %>%
+  arrange(year) %>%
+  filter(agebin != "not_reported") %>%
+  mutate(propdiags = male / sum(male)) %>%
+  mutate(propdiags = ifelse(is.nan(propdiags), 0 , propdiags)) %>%
+  ungroup() %>%
+  left_join(., hivResults, by = "year") %>%
+  select(-male, -totalnotifications) %>%
+  group_by(year, agebin) %>%
+  mutate(diags = propdiags * notifications * propmale) %>%
+  select(-propdiags, -notifications, -propmale) %>%
+  spread(year, diags) %>%
+  ungroup() %>%
+  slice(c(1,10,2:9,11:18)) %>%
+  select(-agebin) %>%
+  as.matrix()
+rownames(ageDiagMale) <- ageList
 colnames(ageDiagMale) <- yearList
 
 ageDeathMale <- matrix(0, nages, nyears)
@@ -1078,9 +1092,23 @@ rownames(ageDeathMale) <- ageList
 colnames(ageDeathMale) <- yearList
 
 ageDiagFemale <- hivGenderAgeCum %>%
-  select(year, agebin, other) %>%
-  spread(year, other)
-ageDiagFemale <- as.matrix(ageDiagFemale[, 2:ncol(ageDiagFemale)])
+  select(year, agebin, other, propmale) %>%
+  group_by(year) %>%
+  arrange(year) %>%
+  filter(agebin != "not_reported") %>%
+  mutate(propdiags = other / sum(other)) %>%
+  mutate(propdiags = ifelse(is.nan(propdiags), 0 , propdiags)) %>%
+  ungroup() %>%
+  left_join(., hivResults, by = "year") %>%
+  select(-other, -totalnotifications) %>%
+  group_by(year, agebin) %>%
+  mutate(diags = propdiags * notifications * (1 - propmale)) %>%
+  select(-propdiags, -notifications, -propmale) %>%
+  spread(year, diags) %>%
+  ungroup() %>%
+  slice(c(1,10,2:9,11:18)) %>%
+  select(-agebin) %>%
+  as.matrix()
 rownames(ageDiagFemale) <- c(ageList, "not_reported")
 colnames(ageDiagFemale) <- yearList
 
@@ -1088,75 +1116,8 @@ ageDeathFemale <- matrix(0, nages, nyears)
 rownames(ageDeathFemale) <- ageList
 colnames(ageDeathFemale) <- yearList
 
-# Reallocate unknown age via sample - should be a very small number.
+# Extract age of death
 for (ii in 1:nyears) {
-  # Get aged diagnoses for this year
-  # yearDiags <- ageDiag[, ii]
-  yearDiagsMale <- ageDiagMale[, ii]
-  yearDiagsFemale <- ageDiagFemale[, ii]
-  
-  # if (tail(yearDiags, 1) > 0) {
-  #   probVec <- head(yearDiags, -1) / sum(head(yearDiags, -1))
-  #   
-  #   reallocate <- sample(nages, tail(yearDiags, 1),
-  #     replace = TRUE, prob = probVec)
-  #   
-  #   yearDiags[sort(unique(reallocate))] <- 
-  #     yearDiags[sort(unique(reallocate))] +
-  #     as.vector(table(reallocate))
-  # }
-  
-  if (tail(yearDiagsMale, 1) > 0) {
-    probVecMale <- head(yearDiagsMale, -1) / sum(head(yearDiagsMale, -1))
-    
-    reallocateMale <- sample(nages, tail(yearDiagsMale, 1),
-      replace = TRUE, prob = probVecMale)
-    
-    yearDiagsMale[sort(unique(reallocateMale))] <- 
-      yearDiagsMale[sort(unique(reallocateMale))] +
-      as.vector(table(reallocateMale))
-  }
-  
-  if (tail(yearDiagsFemale, 1) > 0) {
-    probVecFemale <- head(yearDiagsFemale, -1) / 
-      sum(head(yearDiagsFemale, -1))
-    
-    reallocateFemale <- sample(nages, tail(yearDiagsFemale, 1),
-      replace = TRUE, prob = probVecFemale)
-    
-    yearDiagsFemale[sort(unique(reallocateFemale))] <- 
-      yearDiagsFemale[sort(unique(reallocateFemale))] +
-      as.vector(table(reallocateFemale))
-  }
-  
-  # Tidy up age bins and add to the agediag matix
-  # yearDiags <- head(yearDiags, -1)
-  yearDiagsMale <- head(yearDiagsMale, -1)
-  yearDiagsFemale <- head(yearDiagsFemale, -1)
-  
-  # Adjust age bins to remove duplicates normalizing to the number
-  # of unique cases 
-  # if (sum(yearDiags) != 0) {
-  #   ageDiag[1:nages, ii] <- yearDiags * 
-  #     hivBaseRates$annunique_all[ii]
-  # } else {
-  #   ageDiag[1:nages, ii] <- 0
-  # }
-  
-  if (sum(yearDiagsMale) != 0) {
-    ageDiagMale[1:nages, ii] <- yearDiagsMale * 
-      hivBaseRates$annunique_male[ii]
-  } else {
-    ageDiagMale[1:nages, ii] <- 0
-  }
-  
-  if (sum(yearDiagsFemale) != 0) {
-    ageDiagFemale[1:nages, ii] <- yearDiagsFemale * 
-      hivBaseRates$annunique_female[ii]
-  } else {
-    ageDiagFemale[1:nages, ii] <- 0
-  } 
-  
   # Extract known deaths in this year and age at death
   year <- 1980 + ii - 1
   
@@ -1192,10 +1153,6 @@ for (ii in 1:nyears) {
   ageDeathFemale[, ii] <- deathbinsFemale
   
 }
-
-# ageDiag <- ageDiag[1:nages, ]
-ageDiagMale <- ageDiagMale[1:nages, ]
-ageDiagFemale <- ageDiagFemale[1:nages, ]
 ```
 
 ```{r Calculate deaths by age} 
