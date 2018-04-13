@@ -390,7 +390,7 @@ if (doAge) {
   
   yearList <- paste("y", as.character(1980:analysisYear), sep = "")
   
-  # Adjust_included notifications by age and year
+  # Adjust_included notifications by age and year and convert to matrix
   hivResultsAge <- agedDiags %>% 
     left_join(., hivResults, by = "year") %>% 
     select(-diagnoses, -cumnotifications, -all_notifications,
@@ -621,9 +621,7 @@ if (interState) {
       mutate(year = allYears) %>%
       select(year, everything()) %>%
       as_tibble()
-    
-    relrate1 <- matrix(1, nages, nyears)
-    relrate2 <- matrix(1, nages, nyears)
+
     pldhivAll <- LivingDiagnosedAge(hivResultsAge,
       subsetRates$annunique, 
       subsetRates$deathrate,
@@ -631,16 +629,7 @@ if (interState) {
       subsetRates$propstay,
       agedeath = relAgeDeath,
       agemigrate = relAgeMigrate)
-    
-      # agemigrate = )
-    
-    # , 
     #   normalize = pldhivOverall$pldhiv) 
-    
-      # %>%
-      # mutate(year = allYears) %>%
-      # select(year, everything()) %>%
-      # as_tibble()
     
   } else {
     pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
