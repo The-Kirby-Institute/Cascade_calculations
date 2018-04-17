@@ -159,7 +159,9 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
     
     # If specified normalize age estimates to overall estimate
     if (doNormalize) {
-      nliving[, ii] <- nliving[, ii] * normalize[ii] / sum(nliving[, ii])
+      if (sum(nliving[, ii]) != 0) {
+        nliving[, ii] <- nliving[, ii] * normalize[ii] / sum(nliving[, ii])
+      } 
     }
     
   } 

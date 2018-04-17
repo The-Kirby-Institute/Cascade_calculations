@@ -48,7 +48,7 @@ if (analysisYear <= 2014) {
   stop("This code not set up for earlier than 2015")
 }
 
-saveEstimates <- FALSE
+saveEstimates <- TRUE
 
 ```
 
@@ -1173,6 +1173,10 @@ load(file = file.path(dirname(basePath),
 source(file.path(HIVcode, "GetMigrate.R"))
 relAgeMigrate <- GetMigrateAge(analysisYear, cleanNom, "all",
   "all", "all", "all", "all", "all", "all", propMale = NULL)
+relAgeMigrateMale <- GetMigrateAge(analysisYear, cleanNom, "male",
+  "all", "all", "all", "all", "all", "all", propMale = NULL)
+relAgeMigrateFemale <- GetMigrateAge(analysisYear, cleanNom, "female",
+  "all", "all", "all", "all", "all", "all", propMale = NULL)
 
 # Load deathrates data from ABS for 2014 - as we distribute unknown deaths
 # to age groups based on the ABS death rates for each group
@@ -1265,31 +1269,31 @@ for (ii in 2:nyears) {
   # unknown deaths - can be negative if unknownDeaths is negative equates
   # to adding people rather than removing them. This keeps things 
   # consistent with estimated total deaths.
-  unknownTest <- sum(agePldhiv[, ii-1]) * hivBaseRates$deathrate[ii-1] -
+  unknownAll <- sum(agePldhiv[, ii-1]) * hivBaseRates$deathrate[ii-1] -
     sum(ageDeath[, ii-1])
-  unknownTestMale <- sum(agePldhivMale[, ii-1]) * 
+  unknownMale <- sum(agePldhivMale[, ii-1]) * 
     hivBaseRates$deathrate[ii-1] * hivAdjustments$drate_male[ii-1] -
     sum(ageDeathMale[, ii-1])
-  unknownTestFemale <- sum(agePldhivFemale[, ii-1]) * 
+  unknownFemale <- sum(agePldhivFemale[, ii-1]) * 
     hivBaseRates$deathrate[ii-1] * hivAdjustments$drate_female[ii-1] -
     sum(ageDeathFemale[, ii-1])
   
   if (sum(deathsABSrate) !=0) {
-    adjustFactor <- unknownTest / sum(deathsABSrate)
+    adjustFactor <- unknownAll / sum(deathsABSrate)
     unknownAgeDeaths <- adjustFactor * deathsABSrate
   } else {
     unknownAgeDeaths <- rep(0, nages)
   }
   
   if (sum(deathsABSrateMale) !=0) {
-    adjustFactorMale <- unknownTestMale / sum(deathsABSrateMale)
+    adjustFactorMale <- unknownMale / sum(deathsABSrateMale)
     unknownAgeDeathsMale <- adjustFactorMale * deathsABSrateMale
   } else {
     unknownAgeDeathsMale <- rep(0, nages)
   }
   
   if (sum(deathsABSrateFemale) !=0) {
-    adjustFactorFemale <- unknownTestFemale / sum(deathsABSrateFemale)
+    adjustFactorFemale <- unknownFemale / sum(deathsABSrateFemale)
     unknownAgeDeathsFemale <- adjustFactorFemale * deathsABSrateFemale
   } else {
     unknownAgeDeathsFemale <- rep(0, nages)
@@ -1321,8 +1325,6 @@ for (ii in 2:nyears) {
         relAgeMigrate[jj, ii - 1] - 
       agePldhiv[jj, ii - 1] * ageRate[jj] + ageUp  
     
-    ageMigration[jj, ii-1] <- agePldhiv[jj, ii - 1] * 
-      hivBaseRates$migrationrate[ii-1] * relAgeMigrate[jj, ii - 1]
     ageMortality[jj, ii-1] <- ageDeath[jj, ii-1] + unknownAgeDeaths[jj]
     
     # For low numbers the previous calculation could give number less
@@ -1341,7 +1343,7 @@ for (ii in 2:nyears) {
         relAgeMigrate[jj, ii - 1] - 
       agePldhivMale[jj, ii - 1] * ageRate[jj] + ageUpMale 
     
-    ageMortalityMale[jj, ii] <- ageDeathMale[jj, ii] +
+    ageMortalityMale[jj, ii-1] <- ageDeathMale[jj, ii-1] +
       unknownAgeDeathsMale[jj]
     
     if (agePldhivMale[jj, ii] < 0) {
@@ -1355,10 +1357,10 @@ for (ii in 2:nyears) {
         hivBaseRates$annunique_female[ii-1] * ageDiagFemale[jj, ii] - 
       ageDeathFemale[jj, ii - 1] - unknownAgeDeathsFemale[jj] - 
       agePldhivFemale[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] * 
-        relAgeMigrate[jj, ii - 1] - 
+        relAgeMigrateFemale[jj, ii - 1] - 
       agePldhivFemale[jj, ii - 1] * ageRate[jj] + ageUpFemale 
     
-    ageMortalityFemale[jj, ii] <- ageDeathFemale[jj, ii] +
+    ageMortalityFemale[jj, ii-1] <- ageDeathFemale[jj, ii-1] +
       unknownAgeDeathsFemale[jj]
     
     if (agePldhivFemale[jj, ii] < 0) {

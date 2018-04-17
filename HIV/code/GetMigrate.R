@@ -78,7 +78,6 @@ GetMigrate <- function(finalYear, nomData, targetAge, targetGender
       finalYear)
     
   } else if (targetGender == "female") {
-    adjustments$mrate <- hivAdjustments$mrate_female_adults
     
     # Female data and rates
     femaleData <- extractData(cleanNom, targetCob, adjustAges, 
