@@ -4,12 +4,12 @@ Generate HIV cascade death and migration adjustments
 Author: Richard T. Gray
 
 This scripts calculates the overseas migration rate and death rate 
-adjustments for specific populations of PLWHIV. The results of these 
+adjustments for specific populations of PLHIV. The results of these 
 calculations are stored as files which are read in by the main HIV cascade
 calculations scripts and functions. 
 
 The basic approach is to produce a base estimates for the overall 
-population of PLWHIV and then adjustment factors for specific 
+population of PLHIV and then adjustment factors for specific 
 populations. The overall migration or death rate is then given by: 
 population_rate = base * population_adjustment.
 
@@ -253,12 +253,11 @@ hivCobCum <- hivSet %>%
   spread(countrygroup, propnotifications) %>%
   rename(year = yeardiagnosis) 
 
-
 ```
 
 ```{r Annual proportion unique}
 # This chunk is used to estimate the annual proportion of notifications 
-# that are unique
+# that are unique in overall diagnoses
 
 # Need to consider males and females deparately as there were not many 
 # duplicates in the early years for females in the epidemic.
@@ -566,8 +565,6 @@ hivAdjustments$pstay_vic_lower <- propStayLowerVic /
 hivAdjustments$pstay_vic_upper <- propStayUpperVic /
   hivBaseRates$propstay_upper
 
-
-
 ```
 
 ```{r Death rates}
@@ -732,7 +729,6 @@ linkageMortalityMax <- deaths_max / numLiving_min
 
 # Calculate crude death rate for each state and year - use 95% CI as the
 #  upper and lower bound
-
 ahodDeaths <- ahodData %>% 
   filter(population == "ALL") %>%
   group_by(year, state, population) %>%
@@ -977,6 +973,7 @@ hivInterstate <- hivInterstate %>%
 ## Ageing calculations for deaths
 
 ```{r Annual diagnoses and known deaths by age}
+
 # Organize diagnoses and known deaths into matrices
 # Each row is an age group and each column is a year after 1980
 # Age groups: <15, 15-19, 20-24, 25-29, 30-34, 35-39, 40-44, 45-49, 
@@ -1031,16 +1028,44 @@ hivGenderAgeCum <- hivSetMaleAge %>%
     cumtotal = cumsum(total)) %>%
   ungroup() %>%
   group_by(year, agebin) %>% 
-  mutate(propmale = cummale / cumtotal) %>%
-  mutate(propmale = ifelse(is.nan(propmale), 1, propmale)) 
+  mutate(cumpropmale = cummale / cumtotal) %>%
+  mutate(cumpropmale = ifelse(is.nan(cumpropmale), 1, cumpropmale)) %>%
+  ungroup() %>%
+  group_by(year) %>%
+  mutate(annpropmale = sum(male) / sum(total)) %>%
+  mutate(annpropmale = ifelse(is.nan(annpropmale), 1, annpropmale)) %>%
+  ungroup()
 
-# Convert aged diags into matrices - overall, male and female. 
+# Create age diagnosis matrices for overall, male and female and 
+# adjust for notifications with missing age proportionally.
 ageDiag <- hivGenderAgeCum %>%
   select(year, agebin, total) %>%
-  spread(year, total)
-ageDiag <- as.matrix(ageDiag[, 2:ncol(ageDiag)])
-rownames(ageDiag) <- c(ageList, "not_reported")
-colnames(ageDiag) <- yearList  
+  group_by(year) %>%
+  arrange(year) %>%
+  filter(agebin != "not_reported") %>%
+  mutate(propdiags = total / sum(total)) %>%
+  mutate(propdiags = ifelse(is.nan(propdiags), 0 , propdiags)) %>%
+  ungroup() %>%
+  left_join(., hivResults, by = "year") %>%
+  select(-total, -totalnotifications) %>%
+  group_by(year, agebin) %>%
+  mutate(diags = propdiags * notifications) %>%
+  select(-propdiags, -notifications) %>%
+  spread(year, diags) %>%
+  ungroup() %>%
+  slice(c(1,10,2:9,11:18)) %>%
+  select(-agebin) %>%
+  as.matrix()
+colnames(ageDiag) <- yearList
+rownames(ageDiag) <- ageList  
+
+# Convert aged diags into matrices - overall, male and female. 
+# ageDiag <- hivGenderAgeCum %>%
+#   select(year, agebin, total) %>%
+#   spread(year, total)
+# ageDiag <- as.matrix(ageDiag[, 2:ncol(ageDiag)])
+# rownames(ageDiag) <- c(ageList, "not_reported")
+# colnames(ageDiag) <- yearList  
 
 ageDeath <- matrix(0, nages, nyears)
 rownames(ageDeath) <- ageList
@@ -1048,10 +1073,24 @@ colnames(ageDeath) <- yearList
 
 # By sex
 ageDiagMale <- hivGenderAgeCum %>%
-  select(year, agebin, male) %>%
-  spread(year, male)
-ageDiagMale <- as.matrix(ageDiagMale[, 2:ncol(ageDiagMale)])
-rownames(ageDiagMale) <- c(ageList, "not_reported")
+  select(year, agebin, male, annpropmale) %>%
+  group_by(year) %>%
+  arrange(year) %>%
+  filter(agebin != "not_reported") %>%
+  mutate(propdiags = male / sum(male)) %>%
+  mutate(propdiags = ifelse(is.nan(propdiags), 0 , propdiags)) %>%
+  ungroup() %>%
+  left_join(., hivResults, by = "year") %>%
+  select(-male, -totalnotifications) %>%
+  group_by(year, agebin) %>%
+  mutate(diags = propdiags * notifications * annpropmale) %>%
+  select(-propdiags, -notifications, -annpropmale) %>%
+  spread(year, diags) %>%
+  ungroup() %>%
+  slice(c(1,10,2:9,11:18)) %>%
+  select(-agebin) %>%
+  as.matrix()
+rownames(ageDiagMale) <- ageList
 colnames(ageDiagMale) <- yearList
 
 ageDeathMale <- matrix(0, nages, nyears)
@@ -1059,9 +1098,23 @@ rownames(ageDeathMale) <- ageList
 colnames(ageDeathMale) <- yearList
 
 ageDiagFemale <- hivGenderAgeCum %>%
-  select(year, agebin, other) %>%
-  spread(year, other)
-ageDiagFemale <- as.matrix(ageDiagFemale[, 2:ncol(ageDiagFemale)])
+  select(year, agebin, other, annpropmale) %>%
+  group_by(year) %>%
+  arrange(year) %>%
+  filter(agebin != "not_reported") %>%
+  mutate(propdiags = other / sum(other)) %>%
+  mutate(propdiags = ifelse(is.nan(propdiags), 0 , propdiags)) %>%
+  ungroup() %>%
+  left_join(., hivResults, by = "year") %>%
+  select(-other, -totalnotifications) %>%
+  group_by(year, agebin) %>%
+  mutate(diags = propdiags * notifications * (1 - annpropmale)) %>%
+  select(-propdiags, -notifications, -annpropmale) %>%
+  spread(year, diags) %>%
+  ungroup() %>%
+  slice(c(1,10,2:9,11:18)) %>%
+  select(-agebin) %>%
+  as.matrix()
 rownames(ageDiagFemale) <- c(ageList, "not_reported")
 colnames(ageDiagFemale) <- yearList
 
@@ -1069,75 +1122,8 @@ ageDeathFemale <- matrix(0, nages, nyears)
 rownames(ageDeathFemale) <- ageList
 colnames(ageDeathFemale) <- yearList
 
-# Reallocate unknown age via sample - should be a very small number.
+# Extract age of death
 for (ii in 1:nyears) {
-  # Get aged diagnoses for this year
-  yearDiags <- ageDiag[, ii]
-  yearDiagsMale <- ageDiagMale[, ii]
-  yearDiagsFemale <- ageDiagFemale[, ii]
-  
-  if (tail(yearDiags, 1) > 0) {
-    probVec <- head(yearDiags, -1) / sum(head(yearDiags, -1))
-    
-    reallocate <- sample(nages, tail(yearDiags, 1),
-      replace = TRUE, prob = probVec)
-    
-    yearDiags[sort(unique(reallocate))] <- 
-      yearDiags[sort(unique(reallocate))] +
-      as.vector(table(reallocate))
-  }
-  
-  if (tail(yearDiagsMale, 1) > 0) {
-    probVecMale <- head(yearDiagsMale, -1) / sum(head(yearDiagsMale, -1))
-    
-    reallocateMale <- sample(nages, tail(yearDiagsMale, 1),
-      replace = TRUE, prob = probVecMale)
-    
-    yearDiagsMale[sort(unique(reallocateMale))] <- 
-      yearDiagsMale[sort(unique(reallocateMale))] +
-      as.vector(table(reallocateMale))
-  }
-  
-  if (tail(yearDiagsFemale, 1) > 0) {
-    probVecFemale <- head(yearDiagsFemale, -1) / 
-      sum(head(yearDiagsFemale, -1))
-    
-    reallocateFemale <- sample(nages, tail(yearDiagsFemale, 1),
-      replace = TRUE, prob = probVecFemale)
-    
-    yearDiagsFemale[sort(unique(reallocateFemale))] <- 
-      yearDiagsFemale[sort(unique(reallocateFemale))] +
-      as.vector(table(reallocateFemale))
-  }
-  
-  # Tidy up age bins and add to the agediag matix
-  yearDiags <- head(yearDiags, -1)
-  yearDiagsMale <- head(yearDiagsMale, -1)
-  yearDiagsFemale <- head(yearDiagsFemale, -1)
-  
-  # Adjust age bins to remove duplicates normalizing to the number
-  # of unique cases 
-  if (sum(yearDiags) != 0) {
-    ageDiag[1:nages, ii] <- yearDiags * 
-      hivBaseRates$cumunique_all[ii]
-  } else {
-    ageDiag[1:nages, ii] <- 0
-  }
-  
-  if (sum(yearDiagsMale) != 0) {
-    ageDiagMale[1:nages, ii] <- yearDiagsMale * 
-      hivBaseRates$cumunique_male[ii]
-  } else {
-    ageDiagMale[1:nages, ii] <- 0
-  }
-  
-  if (sum(yearDiagsFemale) != 0) {
-    ageDiagFemale[1:nages, ii] <- yearDiagsFemale * 
-      hivBaseRates$cumunique_female[ii]
-  } else {
-    ageDiagFemale[1:nages, ii] <- 0
-  } 
-  
   # Extract known deaths in this year and age at death
   year <- 1980 + ii - 1
   
@@ -1173,14 +1159,25 @@ for (ii in 1:nyears) {
   ageDeathFemale[, ii] <- deathbinsFemale
   
 }
-
-ageDiag <- ageDiag[1:nages, ]
-ageDiagMale <- ageDiagMale[1:nages, ]
-ageDiagFemale <- ageDiagFemale[1:nages, ]
 ```
 
 ```{r Calculate deaths by age} 
 # Calculate the number of PLDHIV and the overall number in each age group
+
+# First calculate aged migration rates
+
+# Load cleaned NOM data variable (cleanNom)
+load(file = file.path(dirname(basePath),
+  "data", "cleaned_ABS_nom_data.R"))
+
+# Relative migration rates
+source(file.path(HIVcode, "GetMigrate.R"))
+relAgeMigrate <- GetMigrateAge(analysisYear, cleanNom, "all",
+  "all", "all", "all", "all", "all", "all", propMale = NULL)
+relAgeMigrateMale <- GetMigrateAge(analysisYear, cleanNom, "male",
+  "all", "all", "all", "all", "all", "all", propMale = NULL)
+relAgeMigrateFemale <- GetMigrateAge(analysisYear, cleanNom, "female",
+  "all", "all", "all", "all", "all", "all", propMale = NULL)
 
 # Load deathrates data from ABS for 2014 - as we distribute unknown deaths
 # to age groups based on the ABS death rates for each group
@@ -1211,6 +1208,10 @@ agePldhivFemale <- agePldhiv
 ageMortality <- matrix(0, nages, nyears)
 rownames(ageMortality) <- ageList
 colnames(ageMortality) <- yearList
+
+ageMigration <- matrix(0, nages, nyears)
+rownames(ageMigration) <- ageList
+colnames(ageMigration) <- yearList
 
 ageMortalityMale <- ageMortality
 ageMortalityFemale <- ageMortality
@@ -1269,31 +1270,31 @@ for (ii in 2:nyears) {
   # unknown deaths - can be negative if unknownDeaths is negative equates
   # to adding people rather than removing them. This keeps things 
   # consistent with estimated total deaths.
-  unknownTest <- sum(agePldhiv[, ii-1]) * hivBaseRates$deathrate[ii-1] -
+  unknownAll <- sum(agePldhiv[, ii-1]) * hivBaseRates$deathrate[ii-1] -
     sum(ageDeath[, ii-1])
-  unknownTestMale <- sum(agePldhivMale[, ii-1]) * 
+  unknownMale <- sum(agePldhivMale[, ii-1]) * 
     hivBaseRates$deathrate[ii-1] * hivAdjustments$drate_male[ii-1] -
     sum(ageDeathMale[, ii-1])
-  unknownTestFemale <- sum(agePldhivFemale[, ii-1]) * 
+  unknownFemale <- sum(agePldhivFemale[, ii-1]) * 
     hivBaseRates$deathrate[ii-1] * hivAdjustments$drate_female[ii-1] -
     sum(ageDeathFemale[, ii-1])
   
   if (sum(deathsABSrate) !=0) {
-    adjustFactor <- unknownTest / sum(deathsABSrate)
+    adjustFactor <- unknownAll / sum(deathsABSrate)
     unknownAgeDeaths <- adjustFactor * deathsABSrate
   } else {
     unknownAgeDeaths <- rep(0, nages)
   }
   
   if (sum(deathsABSrateMale) !=0) {
-    adjustFactorMale <- unknownTestMale / sum(deathsABSrateMale)
+    adjustFactorMale <- unknownMale / sum(deathsABSrateMale)
     unknownAgeDeathsMale <- adjustFactorMale * deathsABSrateMale
   } else {
     unknownAgeDeathsMale <- rep(0, nages)
   }
   
   if (sum(deathsABSrateFemale) !=0) {
-    adjustFactorFemale <- unknownTestFemale / sum(deathsABSrateFemale)
+    adjustFactorFemale <- unknownFemale / sum(deathsABSrateFemale)
     unknownAgeDeathsFemale <- adjustFactorFemale * deathsABSrateFemale
   } else {
     unknownAgeDeathsFemale <- rep(0, nages)
@@ -1321,10 +1322,11 @@ for (ii in 2:nyears) {
       (1-hivBaseRates$propstay[ii-1]) * hivBaseRates$annunique_all[ii-1] *
         ageDiag[jj, ii-1] - 
       ageDeath[jj, ii - 1] - unknownAgeDeaths[jj] - 
-      agePldhiv[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] - 
+      agePldhiv[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] *
+        relAgeMigrate[jj, ii - 1] - 
       agePldhiv[jj, ii - 1] * ageRate[jj] + ageUp  
     
-    ageMortality[jj, ii] <- ageDeath[jj, ii] + unknownAgeDeaths[jj]
+    ageMortality[jj, ii-1] <- ageDeath[jj, ii-1] + unknownAgeDeaths[jj]
     
     # For low numbers the previous calculation could give number less
     # than zero. In this case repalce with zero
@@ -1338,10 +1340,11 @@ for (ii in 2:nyears) {
       (1-hivBaseRates$propstay[ii-1]) * 
         hivBaseRates$annunique_male[ii-1] * ageDiagMale[jj, ii] - 
       ageDeathMale[jj, ii - 1] - unknownAgeDeathsMale[jj] - 
-      agePldhivMale[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] - 
+      agePldhivMale[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] * 
+        relAgeMigrate[jj, ii - 1] - 
       agePldhivMale[jj, ii - 1] * ageRate[jj] + ageUpMale 
     
-    ageMortalityMale[jj, ii] <- ageDeathMale[jj, ii] +
+    ageMortalityMale[jj, ii-1] <- ageDeathMale[jj, ii-1] +
       unknownAgeDeathsMale[jj]
     
     if (agePldhivMale[jj, ii] < 0) {
@@ -1354,10 +1357,11 @@ for (ii in 2:nyears) {
       (1-hivBaseRates$propstay[ii-1]) * 
         hivBaseRates$annunique_female[ii-1] * ageDiagFemale[jj, ii] - 
       ageDeathFemale[jj, ii - 1] - unknownAgeDeathsFemale[jj] - 
-      agePldhivFemale[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] - 
+      agePldhivFemale[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] * 
+        relAgeMigrateFemale[jj, ii - 1] - 
       agePldhivFemale[jj, ii - 1] * ageRate[jj] + ageUpFemale 
     
-    ageMortalityFemale[jj, ii] <- ageDeathFemale[jj, ii] +
+    ageMortalityFemale[jj, ii-1] <- ageDeathFemale[jj, ii-1] +
       unknownAgeDeathsFemale[jj]
     
     if (agePldhivFemale[jj, ii] < 0) {

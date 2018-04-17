@@ -23,11 +23,11 @@ dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
 figuresFolder <- file.path(basePath, "output", "figures")
 
-# Load standard libraries and options ----------------------------------
+# Load standard libraries and options ------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"))
 source(file.path(Rcode, "DataLibraries.R"))
 source(file.path(Rcode, "PlotOptions.R"))
-
+LoadLibrary(tibble)
 ```
 
 The following chunck specifies all the parameters for producing the
@@ -44,15 +44,16 @@ specified project folder and have a cascade file handle.
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- FALSE
+saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
-projectOutput <- "ASR_2017" # "." for main output folder 
+
+projectOutput <- "Aging_Paper" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "All-2016"
+cascadeName <- "All"
 targetGender <- "all" # all, male, female (single)
-targetAge <- "all" # all or split
+targetAge <- "split" # all or split
 
 # Note regarding ageing: The calculations don't specifically target 
 # specific ages.  Rather this simply chooses whether age is considered or 
@@ -392,10 +393,11 @@ if (doAge) {
   
   yearList <- paste("y", as.character(1980:analysisYear), sep = "")
   
-  # Adjust_included notifications by age and year
+  # Adjust_included notifications by age and year and convert to matrix
   hivResultsAge <- agedDiags %>% 
-    left_join(., hivResults, by = "year") %>%
-    select(-diagnoses, -cumnotifications) %>%
+    left_join(., hivResults, by = "year") %>% 
+    select(-diagnoses, -cumnotifications, -all_notifications,
+      -all_cumnotifications) %>%
     group_by(year, agebin) %>%
     mutate(diags = propdiags * notifications) %>%
     select(-propdiags, -notifications) %>%
@@ -613,8 +615,15 @@ if (interState) {
   
   # Do overall calculations only
   if (doAge) {
-    # Do age based calculations
-    pldhivOverall <- LivingDiagnosed(hivResults$notifications,
+    # Do age based calculations - age group estimates should almost 
+    # always be normalized to the overall estimates as differences in 
+    # death rates and migration rates can produce inconsistenices across
+    # the age groups. Normalization can be turned off for testing to make
+    # sure the results are not too different (comapring 
+    # pldhivOverall$pldhiv vs colSums(pldhivAll). 
+    
+    # Calculate overall (non-age) PLDHIV estimates for normalization
+    pldhivOverall <- LivingDiagnosed(adjustDiags$adjusted_included,
       subsetRates$annunique, 
       subsetRates$deathrate,
       subsetRates$mrate,
@@ -623,21 +632,52 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
+    pldhivOveralllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
+      subsetRates$annunique,  
+      subsetRates$deathrate_upper,
+      subsetRates$mrate_upper,
+      subsetRates$propstay_lower) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    pldhivOverallMax <- LivingDiagnosed(adjustDiags$adjusted_included,
+      subsetRates$annunique,  
+      subsetRates$deathrate_lower,
+      subsetRates$mrate_lower,
+      subsetRates$propstay_upper) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    # Calculate age group estimates 
+    # NOTE: use base migration rate as mrate is calculated assuming people
+    # are aged > 15 years
     pldhivAll <- LivingDiagnosedAge(hivResultsAge,
       subsetRates$annunique, 
       subsetRates$deathrate,
-      subsetRates$mrate,
+      hivBase$migrationrate, 
       subsetRates$propstay,
       agedeath = relAgeDeath,
-      agemigrate = relAgeMigrate)
+      agemigrate = relAgeMigrate,
+      normalize = pldhivOverall$pldhiv) 
     
-    # , 
-    #   normalize = pldhivOverall$pldhiv) 
+    pldhivAllMin <- LivingDiagnosedAge(hivResultsAge,
+      subsetRates$annunique, 
+      subsetRates$deathrate_upper,
+      hivBase$migrationrate_upper, 
+      subsetRates$propstay_lower,
+      agedeath = relAgeDeath,
+      agemigrate = relAgeMigrate,
+      normalize = pldhivOveralllMin$pldhiv)
     
-      # %>%
-      # mutate(year = allYears) %>%
-      # select(year, everything()) %>%
-      # as_tibble()
+    pldhivAllMax <- LivingDiagnosedAge(hivResultsAge,
+      subsetRates$annunique, 
+      subsetRates$deathrate_lower,
+      hivBase$migrationrate_lower, 
+      subsetRates$propstay_upper,
+      agedeath = relAgeDeath,
+      agemigrate = relAgeMigrate,
+      normalize = pldhivOverallMax$pldhiv)
+    
     
   } else {
     pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
@@ -668,12 +708,40 @@ if (interState) {
 
 # Store results
 if (doAge) {
+  # Store estimates by year and age
+  pldhivDf <- as.data.frame(pldhivAll) %>% 
+    rownames_to_column(var = "agebin") %>%
+    gather("year", "pldhiv", 2:ncol(.)) %>%
+    select(year, everything()) %>%
+    mutate(year = as.integer(str_sub(year, 2))) %>%
+    as_tibble()
+  
+  pldhivDfMin <- as.data.frame(pldhivAllMin) %>% 
+    rownames_to_column(var = "agebin") %>%
+    gather("year", "pldhiv", 2:ncol(.)) %>%
+    select(year, everything()) %>%
+    mutate(year = as.integer(str_sub(year, 2))) %>%
+    as_tibble()
+  
+  pldhivDfMax <- as.data.frame(pldhivAllMax) %>% 
+    rownames_to_column(var = "agebin") %>%
+    gather("year", "pldhiv", 2:ncol(.)) %>%
+    select(year, everything()) %>%
+    mutate(year = as.integer(str_sub(year, 2))) %>%
+    as_tibble()
+  
+  hivDiagnosed <- data.frame(stage = "pldhiv",
+    year = pldhivDf$year,
+    agebin = pldhivDf$agebin,
+    value = pldhivDf$pldhiv,
+    lower = pldhivDfMin$pldhiv,
+    upper = pldhivDfMax$pldhiv) %>%
+    as_tibble()
   
 } else {
   # Don't need to store age
   hivDiagnosed <- data.frame(stage = "pldhiv",
     year = allYears,
-    population = "all",
     value = pldhivAll$pldhiv,
     lower = pldhivAllMin$pldhiv,
     upper = pldhivAllMax$pldhiv)
@@ -827,15 +895,29 @@ if (saveResults) {
   dir.create(resultsPath, showWarnings = FALSE, recursive = TRUE)
   
   # Save all estimates
-  saveStringDetails <- file.path(resultsPath, 
-    paste0("pldhiv-", toString(analysisYear), "-"))
-  write_csv(pldhivAll, paste0(saveStringDetails, "all.csv"))
-  write_csv(pldhivAllMax, paste0(saveStringDetails, "max.csv"))
-  write_csv(pldhivAllMin, paste0(saveStringDetails, "min.csv"))
+  if (doAge) {
+    saveStringDetails <- file.path(resultsPath, 
+      paste0("pldhiv-", toString(analysisYear), "-age-"))
+    write_csv(rownames_to_column(as.data.frame(pldhivAll), var = "agebin"),
+      paste0(saveStringDetails, "all.csv"))
+    write_csv(rownames_to_column(as.data.frame(pldhivAllMin), 
+      var = "agebin"), paste0(saveStringDetails, "min.csv"))
+    write_csv(rownames_to_column(as.data.frame(pldhivAllMax), 
+      var = "agebin"), paste0(saveStringDetails, "max.csv"))
+  } else {
+    saveStringDetails <- file.path(resultsPath, 
+      paste0("pldhiv-", toString(analysisYear), "-"))
+    write_csv(pldhivAll, paste0(saveStringDetails, "all.csv"))
+    write_csv(pldhivAllMin, paste0(saveStringDetails, "min.csv"))
+    write_csv(pldhivAllMax, paste0(saveStringDetails, "max.csv"))
+  }
   
   # Save main results
   saveStringPldhiv <- file.path(resultsPath, 
     paste0("HIVpldhivEstimates-", toString(analysisYear)))
+  if (doAge) {
+    saveStringPldhiv <- paste0(saveStringPldhiv, "-age")
+  }
   write_csv(hivDiagnosed, paste0(saveStringPldhiv, ".csv"))
   
   #save parameters 
