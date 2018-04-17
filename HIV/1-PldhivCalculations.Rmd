@@ -391,7 +391,7 @@ if (doAge) {
     "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
     "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
   
-  yearList <- paste("y", as.character(1980:analysisYear), sep = "")
+  yearList <- paste0("y", as.character(1980:analysisYear))
   
   # Adjust_included notifications by age and year and convert to matrix
   hivResultsAge <- agedDiags %>% 
@@ -749,7 +749,6 @@ if (doAge) {
 
 ```
 
-
 ```{r ECDC Outputs}
 # ECDC calculations-------------------------------------------------------
 if (ecdcData) {
@@ -950,6 +949,10 @@ if (projectPldhiv) {
   projectYear <- analysisYear + 10  
   projectName <- "future"
   
+  # Specifiy projection option for future diagnoses
+  projectOption <- "reduce" #status-quo, linear, reduce 
+  projectDecrease <- 0.5
+  
   saveProjResults <- TRUE 
   # Reset if saving things overall
   saveProjResults <- ifelse(saveResults, TRUE, saveProjResults) 
@@ -964,26 +967,36 @@ if (projectPldhiv) {
   nprojYears <- length(projectYears)
   totalYears <- c(allYears, projectYears)
   
+  # Setup Projection relative decrease (linear over projectYears)
+  projectDecreaseFuture <- seq(1, projectDecrease, length = (nprojYears+1))
+  projectDecreaseAll <- c(rep(1, nyears), 
+    tail(projectDecreaseFuture, nprojYears))
+  
   # Default vectors for projections assume everything stays the same.
   # Keeping the number of diagnoses and annUnique the same as the 
   # analysis year value means the same number of unique diagnoses will
-  # occur each year. MANUALLY CHANGE TO RUN ALTERNATE SCENARIOS.
+  # occur each year. SELECT STANDARD OPTION OR MANUALLY CHANGE TO RUN
+  #  ALTERNATE SCENARIOS.
   
-  # Defaults - for diagnoses either assume a 5 year trend or the same 
-  # number every year (status quo)
-  #
-  # Status quo diagnoses
-  diagnosesSq <- ProjVec(adjustDiags$adjusted_included, nprojYears)
-  
-  # Trend diagnoses (using trend over last 5 years)
-  trendlm <- lm(diagnoses ~ year, 
-    data.frame(year = (analysisYear - 4):analysisYear, 
-      diagnoses = tail(adjustDiags$adjusted_included, 5)))
-  trendDiags <- predict(trendlm, data.frame(year = projectYears))
-  diagnosesTrend <- c(adjustDiags$adjusted_included, trendDiags)
+  # Dignoses options
+  if (projectOption == "status-quo") {
+    diagnosesFuture <- ProjVec(adjustDiags$adjusted_included, nprojYears)
+  } else if (projectOption == "linear") {
+    # Trend diagnoses (using trend over last 5 years)
+    trendlm <- lm(diagnoses ~ year, 
+      data.frame(year = (analysisYear - 4):analysisYear, 
+        diagnoses = tail(adjustDiags$adjusted_included, 5)))
+    trendDiags <- predict(trendlm, data.frame(year = projectYears))
+    diagnosesFuture <- c(adjustDiags$adjusted_included, trendDiags)
+  } else if(projectOption == "reduce") {
+    diagnosesFuture <- projectDecreaseAll * 
+      ProjVec(adjustDiags$adjusted_included, nprojYears)
+  } else {
+    # MANUALLY CHANGE HERE TO RUN ALTERNATE SCENARIOS
+  }
   
   # Use trend diagnoses as default
-  diagnoses <- diagnosesTrend
+  diagnoses <- diagnosesFuture
   annUnique <- ProjVec(subsetRates$annunique, nprojYears)
   deathrate <- ProjVec(subsetRates$deathrate, nprojYears)
   osrate <- ProjVec(subsetRates$mrate, nprojYears)
@@ -1008,11 +1021,101 @@ if (projectPldhiv) {
     mutate(year = totalYears) %>%
     select(year, everything())
   
-  if (saveProjResults) {
-    write_csv(pldhivAllFuture, paste0(saveStringDetails, projectName,
-      ".csv"))
+  # Do a similar process for each age group if doing age and run in 
+  # Living DiagnosedAge(). To do past 5 years age trends we need to loop
+  # cross age groups to generate estimates.
+  if (doAge) {
+    
+    # Setup hivResultsAge for future. Most are the same as for the non-age
+    # calculations except diagnoses, relAgeDeath, and relAgeMigrate need to
+    # be extended into the future
+    
+    
+    # Status quo diagnoses and relative reductions can be applied across
+    # the age groups
+    
+    
+    if (projectOption == "status-quo") {
+      hivResultsAgeFuture <- cbind(hivResultsAge,
+        matrix(rep(hivResultsAge[,ncol(hivResultsAge-1)], nprojYears), 
+          ncol = nprojYears))
+      colnames(hivResultsAgeFuture) <- paste0("y", 
+        as.character(totalYears))
+    } else if (projectOption == "linear") {
+      # Project each age group independently
+      hivResultsAgeFuture <- cbind(hivResultsAge,
+        matrix(0, ncol = nprojYears, nrow = nages))
+      colnames(hivResultsAgeFuture) <- paste0("y", 
+        as.character(totalYears))
+      for (age in 1:nages) {
+        # Extract age group diagnoses
+        ageDiagnoses <- hivResultsAge[age, ]
+        
+        # Estimate trends
+        trendlm <- lm(diagnoses ~ year, 
+          data.frame(year = (analysisYear - 4):analysisYear, 
+            diagnoses = tail(ageDiagnoses, 5)))
+        trendDiags <- predict(trendlm, data.frame(year = projectYears))
+        
+        # Make sure diagnoses are at least zero (okay as normalization 
+        # should fix this.
+        trendDiags[trendDiags < 0] <- 0
+        
+        # Store final age trends
+        hivResultsAgeFuture[age, ] <-c(ageDiagnoses, trendDiags)
+      } 
+    } else if(projectOption == "reduce") {
+      # Assume same reduction across all age groups
+      hivResultsAgeFuture <- cbind(hivResultsAge,
+        matrix(0, ncol = nprojYears, nrow = nages))
+      colnames(hivResultsAgeFuture) <- paste0("y", 
+        as.character(totalYears))
+      for (age in 1:nages) {
+        # Extract age group diagnoses
+        ageDiagnoses <- hivResultsAge[age, ]
+        
+        # Reduce future diagnoses
+        diagnosesFuture <- projectDecreaseAll * ProjVec(ageDiagnoses, 
+          nprojYears)
+        
+        # Store final age trends
+        hivResultsAgeFuture[age, ] <- diagnosesFuture
+      }
+    } else {
+      # MANUALLY CHANGE HERE TO RUN ALTERNATE SCENARIOS
+    }
+    
+    # Set aged diagnoses option
+    diagnosesAge <- hivResultsAgeFuture
+    
+    # Deaths is a bit tricky because the final row is zero
+    relAgeDeathFuture <- cbind(relAgeDeath[, 1:(ncol(relAgeDeath)-1)], 
+      matrix(rep(relAgeDeath[, (ncol(relAgeDeath)-1)], nprojYears), 
+        ncol = nprojYears), relAgeDeath[, ncol(relAgeDeath)])
+    colnames(relAgeDeathFuture) <- paste0("y", as.character(totalYears))
+    
+    # Migration is straight forward
+    relAgeMigrateFuture <- cbind(relAgeMigrate,
+      matrix(rep(relAgeMigrate[,ncol(relAgeMigrate-1)], nprojYears), 
+        ncol = nprojYears))
+    colnames(relAgeMigrateFuture) <- paste0("y", as.character(totalYears))
+    
+    # Now run projections
+    pldhivAgeFuture <- LivingDiagnosedAge(diagnosesAge,
+      annUnique, 
+      deathrate,
+      osrate, 
+      propStay, 
+      agedeath = relAgeDeathFuture,
+      agemigrate = relAgeMigrateFuture,
+      normalize = pldhivAllFuture$pldhiv) 
+    
   }
   
-  # TODO: Develop similiar process for pldhiv split by age 
+  # if (saveProjResults) {
+  #   write_csv(pldhivAllFuture, paste0(saveStringDetails, projectName,
+  #     ".csv"))
+  # }
+  
 }
 ```
