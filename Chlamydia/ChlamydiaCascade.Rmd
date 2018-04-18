@@ -20,9 +20,9 @@ knitr::opts_chunk$set(echo = FALSE,
 
 <!--- Code for calculating the cascade --->
 ```{r initialization}
-# Clear workspace
-rm(list=ls()) 
-options(scipen=999)  # To get rid of scientific notation
+# Chunk to setup everything
+# 
+# Open as a project (setting working directory to source and restarting R)
 
 # Set session working directory manually to source file location
 # setwd(source file location)
@@ -37,6 +37,7 @@ dataFolder <- file.path(basePath, "data")
 source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 source(file.path(Rcode, "LoadLibrary.R"), echo = TRUE)
 source(file.path(Rcode, "DataLibraries.R"), echo = TRUE)
+LoadLibrary(tidyverse)
 
 # Current time for appending to outputs
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files

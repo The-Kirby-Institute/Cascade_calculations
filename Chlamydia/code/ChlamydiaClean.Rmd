@@ -29,12 +29,11 @@ folder:
 - chlamtreatmentYear.csv
 
 ```{r initialization}
-# Clear workspace
-rm(list=ls()) 
+# Open as a project (setting working directory to source and restarting R)
 
 # Key folder paths
 basePath <- file.path(path.expand("~"), "Research",
-                      "!Evaluation_Modelling","project_care_cascades")
+  "!Evaluation_Modelling","project_care_cascades")
 dataPath <- file.path(basePath, "Chlamydia", "data","raw")
 
 cleanDataFolder <- file.path(basePath, "Chlamydia", "data")
@@ -48,10 +47,11 @@ setwd(file.path(basePath,"code"))
 source(file.path(basePath, "code", "LoadLibrary.R"), echo=TRUE)
 
 # Libraries for data manipulation
+LoadLibrary(tidyverse)
 LoadLibrary(readxl)
-LoadLibrary(dplyr)
-LoadLibrary(tidyr)
-LoadLibrary(utils)
+# LoadLibrary(dplyr)
+# LoadLibrary(tidyr)
+# LoadLibrary(utils)
 
 # Primary script parameters - data year 
 dataYear <- 2016
@@ -89,7 +89,7 @@ temp1 <- chlamdata %>%
   select(-year) %>%
   select(male,everything()) %>%
   rename("female < 15 yrs" = female, "male < 15 yrs" = male, 
-         "missing < 15 yrs" = missing)
+    "missing < 15 yrs" = missing)
 
 temp15 <- chlamdata %>% 
   filter(age >= 15 & age <= 19) %>%
@@ -99,7 +99,7 @@ temp15 <- chlamdata %>%
   select(-year) %>%
   select(male,everything()) %>%
   rename("female 15-19 yrs" = female, "male 15-19 yrs" = male, 
-         "missing 15-19 yrs" = missing)
+    "missing 15-19 yrs" = missing)
 
 temp20 <- chlamdata %>% 
   filter(age >= 20 & age <= 24) %>%
@@ -109,7 +109,7 @@ temp20 <- chlamdata %>%
   select(-year) %>%
   select(male,everything()) %>%
   rename("female 20-24 yrs" = female, "male 20-24 yrs" = male, 
-         "missing 20-24 yrs" = missing)
+    "missing 20-24 yrs" = missing)
 
 temp25 <- chlamdata %>% 
   filter(age >= 25 & age <= 29) %>%
@@ -119,7 +119,7 @@ temp25 <- chlamdata %>%
   select(-year) %>%
   select(male,everything()) %>%
   rename("female 25-29 yrs" = female, "male 25-29 yrs" = male, 
-         "missing 25-29 yrs" = missing)
+    "missing 25-29 yrs" = missing)
 
 temp30 <- chlamdata %>% 
   filter(age >= 30 & age <= 34) %>%
@@ -129,7 +129,7 @@ temp30 <- chlamdata %>%
   select(-year) %>%
   select(male,everything()) %>%
   rename("female 30-34 yrs" = female, "male 30-34 yrs" = male, 
-         "missing 30-34 yrs" = missing)
+    "missing 30-34 yrs" = missing)
 
 temp35 <- chlamdata %>% 
   filter(age >= 35) %>%
@@ -139,7 +139,7 @@ temp35 <- chlamdata %>%
   select(-year) %>%
   select(male,everything()) %>%
   rename("female > 34 yrs" = female, "male > 34 yrs" = male, 
-         "missing >34 yrs" = missing)
+    "missing >34 yrs" = missing)
 
 tempAll <- chlamdata %>% 
   group_by(sex,year) %>% 
@@ -148,7 +148,7 @@ tempAll <- chlamdata %>%
   select(-year) %>%
   select(male,everything()) %>%
   rename("female all" = female, "male all" = male, 
-         "missing all" = missing)
+    "missing all" = missing)
 
 tempMiss <- chlamdata %>% 
   filter(is.na(age)) %>%
@@ -158,16 +158,16 @@ tempMiss <- chlamdata %>%
   select(-year) %>%
   select(male,everything()) %>%
   rename("female no age" = female, "male no age" = male, 
-         "missing no age" = missing)
+    "missing no age" = missing)
 
 #Bind into a wide data frame
 chlamNotifications <- cbind(temp1, temp15, temp20, temp25, temp30, temp35, 
-                            tempAll, tempMiss)
+  tempAll, tempMiss)
 
 # Rearrange to match model input
 chlamNotifications <- chlamNotifications %>% select(starts_with("male"), 
-                                                    starts_with("female"), 
-                                                    everything()) 
+  starts_with("female"), 
+  everything()) 
 
 ### Sort out missing data
 
@@ -175,19 +175,23 @@ chlamNotifications <- chlamNotifications %>% select(starts_with("male"),
 subNotifications <- chlamNotifications %>%
   select(ends_with("yrs"), -starts_with("missing")) 
 
-propNotifications <- subNotifications/apply(subNotifications, 1, sum, na.rm = TRUE)
+propNotifications <- subNotifications/apply(subNotifications, 1, sum, 
+  na.rm = TRUE)
 
 allNotifications <- chlamNotifications %>%
   select(ends_with("all"), -starts_with("missing"))
 
-propNotificationsAll <- allNotifications/apply(allNotifications, 1, sum, na.rm = TRUE)
+propNotificationsAll <- allNotifications/apply(allNotifications, 1, sum, 
+  na.rm = TRUE)
 
 propNotifications <- cbind(propNotifications, propNotificationsAll)
-propNotifications <- select(propNotifications, starts_with("male"), everything())
+propNotifications <- select(propNotifications, 
+  starts_with("male"), everything())
 
 # Distribute missing notifications across age groups
 missingNotifications <- chlamNotifications %>% 
-  select(-ends_with("yrs"), -starts_with("female all"), -starts_with("male all")) %>%
+  select(-ends_with("yrs"), -starts_with("female all"), 
+    -starts_with("male all")) %>%
   apply(1, sum, na.rm = TRUE)
 
 extraNotifications <- round(propNotifications * missingNotifications)
@@ -208,7 +212,7 @@ finalNotifications <- cbind(year, finalNotifications)
 # Save cleaned chlamdata
 write.csv(finalNotifications, file = file.path(cleanDataFolder,           
   paste0("chlamnotifications", toString(dataYear), ".csv")), 
-          row.names = FALSE)
+  row.names = FALSE)
 
 ```
 
@@ -222,7 +226,7 @@ LoadLibrary(readstata13)
 
 # Raw testing file
 rawdata <- file.path(dataPath, paste0("CHLAMYDIA_MBS-", 
-                                    toString(dataYear), ".dta"))
+  toString(dataYear), ".dta"))
 
 # Load raw testing data
 if (dataYear < 2015) {
@@ -251,10 +255,10 @@ chlamtests$year <- NA
 
 for (ii in 1:nrow(chlamtests)) {
   tempstr <- chlamtests$date[ii]
-#   tempSplit <- strsplit(tempstr, "-")
-#   year <- tempSplit[[1]][2]
+  #   tempSplit <- strsplit(tempstr, "-")
+  #   year <- tempSplit[[1]][2]
   year <- format(tempstr, "%Y")
-#   year <- paste("20", year, sep = "")
+  #   year <- paste("20", year, sep = "")
   chlamtests$year[ii] <- year
 }
 
@@ -275,7 +279,7 @@ youngtests <- chlamtests %>%
 
 oldtests <- chlamtests %>% 
   select(one_of(c(">=85", "35-44", "45-54", "55-64", "65-74", 
-                  "75-84"))) %>% 
+    "75-84"))) %>% 
   apply(1,sum)
 
 chlamtests$young <- youngtests
@@ -284,7 +288,7 @@ chlamtests$old <- oldtests
 # Finally pull out the columns we need
 chlamtests <- chlamtests %>% 
   select(-one_of(c(">=85", "35-44", "45-54", "55-64", "65-74", "75-84",
-                   "0-4", "5-14"))) %>%
+    "0-4", "5-14"))) %>%
   rename("<15" = young, ">34" = old)
 
 # Reorgonize into the format we need --------------------------------------
@@ -294,9 +298,9 @@ maletests <- chlamtests %>%
   filter(sex == "male") %>%
   select(-year, -sex) %>%
   select(one_of("<15"), everything())
-  
+
 colnames(maletests) <- c("males < 15 yrs", "males 15-24 yrs", 
-                         "males 25-34 yrs", "males > 34 yrs")
+  "males 25-34 yrs", "males > 34 yrs")
 maletests$all <- apply(maletests, 1, sum)
 
 # Female tests
@@ -304,9 +308,9 @@ femaletests <- chlamtests %>%
   filter(sex == "female") %>%
   select(-year, -sex) %>%
   select(one_of("<15"), everything())
-  
+
 colnames(femaletests) <- c("females < 15 yrs", "females 15-24 yrs", 
-                         "females 25-34 yrs", "females > 34 yrs")
+  "females 25-34 yrs", "females > 34 yrs")
 femaletests$all <- apply(femaletests, 1, sum)
 
 # Bind the male and female tests
@@ -316,7 +320,7 @@ finalTests <- cbind(year, maletests, femaletests)
 # Save cleaned chlamdata
 write.csv(finalTests, file = file.path(cleanDataFolder, 
   paste0("chlamtests", toString(dataYear), ".csv")), 
-          row.names = FALSE)
+  row.names = FALSE)
 
 ```
 
@@ -334,13 +338,22 @@ intervals are calculated.
 dataStartYear <- 2007
 mergeRemote <-TRUE # add remote and regional data
 
+# For ACCESS re-testing data do we want a split in male re-tests into MSM
+# and non-MSM
+msmSplit <- TRUE
+
 # Raw testing file
-rawDataTreatment <- file.path(dataPath, paste0("access_cascade_data-", 
-                                    toString(dataYear), ".xlsx"))
+if (msmSplit) {
+  rawDataTreatment <- file.path(dataPath, paste0("access_cascade_data-", 
+    toString(dataYear), "_MSM.xlsx"))
+} else {
+  rawDataTreatment <- file.path(dataPath, paste0("access_cascade_data-", 
+    toString(dataYear), ".xlsx"))
+}
 
 # Load raw re-testing data
 chlamRetest <- read_excel(rawDataTreatment, sheet = 1, skip = 3,
-                          col_names = FALSE)
+  col_names = FALSE)
 
 # Clean up data ----------------------------------------------------------
 
@@ -349,16 +362,27 @@ colnames(chlamRetest)[2] <- "variable"
 
 # Manually relable columns by all, male and female data
 dataYears <- dataStartYear:(dataStartYear + 
-                              (dataYear - dataStartYear))
+    (dataYear - dataStartYear))
 numDataYears <- length(dataYears)
 
 colnames(chlamRetest)[3:(3 + numDataYears - 1)] <- 
   paste0(dataYears, "all")
-colnames(chlamRetest)[(3 + numDataYears + 1):(3 + 2 * numDataYears)] <- 
-  paste0(dataYears, "male")
-colnames(chlamRetest)[(3 + 2 * numDataYears + 2):
-                        (3 + 3 * numDataYears + 1)] <- paste0(dataYears,
-                                                              "female")
+if (msmSplit) {
+  colnames(chlamRetest)[(3 + numDataYears + 1):(3 + 2 * numDataYears)] <- 
+    paste0(dataYears, "non_msm")
+  colnames(chlamRetest)[(3 + 2 * numDataYears + 2):
+      (3 + 3 * numDataYears + 1)] <- paste0(dataYears,
+        "msm")
+  colnames(chlamRetest)[(3 + 3 * numDataYears + 3):
+      (3 + 4 * numDataYears + 2)] <- paste0(dataYears,
+        "female")
+} else {
+  colnames(chlamRetest)[(3 + numDataYears + 1):(3 + 2 * numDataYears)] <- 
+    paste0(dataYears, "male")
+  colnames(chlamRetest)[(3 + 2 * numDataYears + 2):
+      (3 + 3 * numDataYears + 1)] <- paste0(dataYears,
+        "female")
+}
 
 # Just keep the data and calculate proportions separately
 chlamRetest <- chlamRetest %>%
@@ -368,7 +392,7 @@ chlamRetest <- chlamRetest %>%
 chlamRetest[chlamRetest$variable == "# of diagnoses", ]$variable <-
   "diagnoses"
 chlamRetest[chlamRetest$variable == "# re-tested in 42-180 days",
-            ]$variable <- "retested"
+  ]$variable <- "retested"
 
 # Pull out setting and copy
 settingNames <- filter(chlamRetest, !is.na(setting))$setting
@@ -395,9 +419,9 @@ chlamRetest <- chlamRetest %>%
 
 # Split year and sex
 yearsexYear <- as.character(sapply(chlamRetest$yearsex, 
-                                   function(s) substr(s, 1, 4)))
+  function(s) substr(s, 1, 4)))
 yearsexSex <- as.character(sapply(chlamRetest$yearsex, 
-                                   function(s) substr(s, 5, nchar(s))))
+  function(s) substr(s, 5, nchar(s))))
 
 chlamRetest$sex <- yearsexSex
 chlamRetest$year <- yearsexYear
@@ -415,10 +439,10 @@ if (mergeRemote) {
   
   # Add regional and remote data
   mergedData$diagnoses <- filter(chlamRetest, 
-                                 region == "regional")$diagnoses +
+    region == "regional")$diagnoses +
     filter(chlamRetest, region == "remote")$diagnoses
   mergedData$retested <- filter(chlamRetest, 
-                                region == "regional")$retested +
+    region == "regional")$retested +
     filter(chlamRetest, region == "remote")$retested
   
   # Add to chlamRetest
@@ -440,9 +464,9 @@ UpperProp <- function(x, y) prop.test(x, y)[[6]][2]
 indices <- !is.na(chlamRetest$retested)
 
 propLower <- mapply(LowerProp, chlamRetest$retested[indices],
-                     chlamRetest$diagnoses[indices])
+  chlamRetest$diagnoses[indices])
 propUpper <- mapply(UpperProp, chlamRetest$retested[indices],
-                     chlamRetest$diagnoses[indices])
+  chlamRetest$diagnoses[indices])
 
 chlamRetest$prop_lower <- NA
 chlamRetest$prop_upper <- NA
@@ -456,10 +480,15 @@ chlamRetest <- chlamRetest %>%
   filter(year == dataYear)
 
 # Write to file 
-write.csv(chlamRetest, file = file.path(cleanDataFolder,
-  paste0("retestsAccess", toString(dataYear), ".csv")),
-          row.names = FALSE)
-
+if (msmSplit) {
+  write.csv(chlamRetest, file = file.path(cleanDataFolder,
+    paste0("retestsAccess", toString(dataYear), "_MSM.csv")),
+    row.names = FALSE)
+} else {
+  write.csv(chlamRetest, file = file.path(cleanDataFolder,
+    paste0("retestsAccess", toString(dataYear), ".csv")),
+    row.names = FALSE)
+}
 ```
 
 ```{r retesting ACCEPt}
@@ -472,7 +501,7 @@ rawDataTreatment <- file.path(dataPath, paste0("accept_cascade_data-2015.xlsx"))
 
 # Load raw re-testing data for control group
 retestAccept <- read_excel(rawDataTreatment, sheet = 2, skip = 3,
-                          col_names = FALSE)
+  col_names = FALSE)
 
 # Clean up data ----------------------------------------------------------
 
@@ -482,7 +511,7 @@ colnames(retestAccept)[2] <- "variable"
 # Manually relable columns by all, male and female data
 # Available data only goes up to 2014
 dataYears <- dataStartYear:(dataStartYear + 
-                              (min(dataYear, 2014) - dataStartYear))
+    (min(dataYear, 2014) - dataStartYear))
 numDataYears <- length(dataYears)
 
 colnames(retestAccept)[3:(3 + numDataYears - 1)] <- 
@@ -500,16 +529,16 @@ retestAccept <- retestAccept %>%
 retestAccept[retestAccept$variable == "# of diagnoses", ]$variable <-
   "diagnoses"
 retestAccept[retestAccept$variable == "# re-tested in 42-180 days",
-            ]$variable <- "retested"
+  ]$variable <- "retested"
 
 # Pull out setting, copy and fix up names
 settingNames <- filter(retestAccept, !is.na(setting))$setting
 retestAccept[is.na(retestAccept$setting), ]$setting <- settingNames
 
 retestAccept[retestAccept$setting == "Regional - inner/outer",
-             ]$setting <- "Regional"
+  ]$setting <- "Regional"
 retestAccept[retestAccept$setting == "Remote/very remote",
-             ]$setting <- "Remote"
+  ]$setting <- "Remote"
 
 # Split setting names into two variables
 # settingList <- strsplit(retestAccept$setting, " - ")
@@ -541,9 +570,9 @@ retestAll$diagnoses <-
   retestAccept$diagnoses[retestAccept$sex == "male"]
 
 retestAll$retested <-
-retestAccept$retested[retestAccept$sex == "female"] +
+  retestAccept$retested[retestAccept$sex == "female"] +
   retestAccept$retested[retestAccept$sex == "male"]
- 
+
 retestAccept <- bind_rows(retestAccept, retestAll)
 
 # Now calculate proportion retest and lower and upper bound --------------
@@ -559,9 +588,9 @@ UpperProp <- function(x, y) prop.test(x, y)[[6]][2]
 indices <- !is.na(retestAccept$retested)
 
 propLower <- mapply(LowerProp, retestAccept$retested[indices],
-                     retestAccept$diagnoses[indices])
+  retestAccept$diagnoses[indices])
 propUpper <- mapply(UpperProp, retestAccept$retested[indices],
-                     retestAccept$diagnoses[indices])
+  retestAccept$diagnoses[indices])
 
 retestAccept$prop_lower <- NA
 retestAccept$prop_upper <- NA
@@ -577,7 +606,7 @@ retestAccept <- retestAccept %>%
 # Write to file
 write.csv(retestAccept, file = file.path(cleanDataFolder,
   paste0("retestsAccept", toString(min(dataYear, 2014)), ".csv")),
-          row.names = FALSE)
+  row.names = FALSE)
 
 ```
 
@@ -588,11 +617,11 @@ dataStartYear <- 2007
 
 # Raw testing file
 rawDataTreatment <- file.path(dataPath,
-                              paste0("access_nsw_gp_data-2015.xlsx"))
+  paste0("access_nsw_gp_data-2015.xlsx"))
 
 # Load raw re-testing data for 15-29 year olds in NSW GPs
 retestNSWgp <- read_excel(rawDataTreatment, sheet = 2, skip = 3,
-                          col_names = FALSE)
+  col_names = FALSE)
 
 # Clean up data ----------------------------------------------------------
 
@@ -601,7 +630,7 @@ colnames(retestNSWgp)[2] <- "variable"
 
 # Manually relable columns by all, male and female data
 dataYears <- dataStartYear:(dataStartYear + 
-                              (dataYear - dataStartYear))
+    (dataYear - dataStartYear))
 numDataYears <- length(dataYears)
 
 colnames(retestNSWgp)[3:(3 + numDataYears - 1)] <- 
@@ -619,7 +648,7 @@ retestNSWgp <- retestNSWgp %>%
 retestNSWgp[retestNSWgp$variable == "# of diagnoses", ]$variable <-
   "diagnoses"
 retestNSWgp[retestNSWgp$variable == "# re-tested in 42-180 days",
-            ]$variable <- "retested"
+  ]$variable <- "retested"
 
 # Pull out setting and copy
 settingNames <- filter(retestNSWgp, !is.na(setting))$setting
@@ -655,7 +684,7 @@ retestAll$diagnoses <-
   retestNSWgp$diagnoses[retestNSWgp$sex == "male"]
 
 retestAll$retested <-
-retestNSWgp$retested[retestNSWgp$sex == "female"] +
+  retestNSWgp$retested[retestNSWgp$sex == "female"] +
   retestNSWgp$retested[retestNSWgp$sex == "male"]
 
 retestNSWgp <- bind_rows(retestNSWgp, retestAll)
@@ -673,9 +702,9 @@ UpperProp <- function(x, y) prop.test(x, y)[[6]][2]
 indices <- !is.na(retestNSWgp$retested)
 
 propLower <- mapply(LowerProp, retestNSWgp$retested[indices],
-                     retestNSWgp$diagnoses[indices])
+  retestNSWgp$diagnoses[indices])
 propUpper <- mapply(UpperProp, retestNSWgp$retested[indices],
-                     retestNSWgp$diagnoses[indices])
+  retestNSWgp$diagnoses[indices])
 
 retestNSWgp$prop_lower <- NA
 retestNSWgp$prop_upper <- NA
@@ -691,7 +720,7 @@ retestNSWgp <- retestNSWgp %>%
 # Write to file
 write.csv(retestNSWgp, file = file.path(cleanDataFolder,
   paste0("retestsNSWgp2015.csv")),
-          row.names = FALSE)
+  row.names = FALSE)
 
 ```
 
@@ -703,12 +732,12 @@ dataStartYear <- 2007
 
 # Raw testing file
 rawDataTreatment <- file.path(dataPath,
-                              paste0("access_chlamydia_shc_data-", 
-                                    toString(dataYear), ".xlsx"))
+  paste0("access_chlamydia_shc_data-", 
+    toString(dataYear), ".xlsx"))
 
 # Load raw re-testing data for 15-29 year olds in NSW GPs
 retestVariation <- read_excel(rawDataTreatment, sheet = 1, skip = 3,
-                          col_names = FALSE)
+  col_names = FALSE)
 
 # Clean up data ----------------------------------------------------------
 
@@ -717,15 +746,15 @@ colnames(retestVariation)[2] <- "variable"
 
 # Manually relable columns by all, male and female data
 dataYears <- dataStartYear:(dataStartYear + 
-                              (dataYear - dataStartYear))
+    (dataYear - dataStartYear))
 numDataYears <- length(dataYears)
 
 colnames(retestVariation)[3:(3 + numDataYears - 1)] <- 
   paste0(dataYears, "all")
 colnames(retestVariation)[(3 + numDataYears):(3 + 2 * numDataYears - 1)] <- paste0(dataYears, "males")
 colnames(retestVariation)[(3 + 2 * numDataYears):
-                        (3 + 3 * numDataYears - 1)] <- paste0(dataYears,
-                                                              "females")
+    (3 + 3 * numDataYears - 1)] <- paste0(dataYears,
+      "females")
 
 # Get rid of excess rows and columns
 retestVariation <- retestVariation %>% 
@@ -735,18 +764,18 @@ retestVariation <- retestVariation %>%
 # Just keep the data and calculate proportions separately
 retestVariation <- retestVariation %>%
   filter(variable %in% c("# of diagnoses", "# re-tested in 42-180 days",
-                         "# re-tested in 42-120 days",
-                         "# re-tested in 7-180 days"))
+    "# re-tested in 42-120 days",
+    "# re-tested in 7-180 days"))
 
 # clean variable names
 retestVariation[retestVariation$variable == "# of diagnoses", 
-                ]$variable <- "diagnoses"
+  ]$variable <- "diagnoses"
 retestVariation[retestVariation$variable == "# re-tested in 42-180 days",
-            ]$variable <- "retested42-180"
+  ]$variable <- "retested42-180"
 retestVariation[retestVariation$variable == "# re-tested in 42-120 days",
-            ]$variable <- "retested42-120"
+  ]$variable <- "retested42-120"
 retestVariation[retestVariation$variable == "# re-tested in 7-180 days",
-            ]$variable <- "retested7-180"
+  ]$variable <- "retested7-180"
 
 # Pull out setting and copy
 settingNames <- filter(retestVariation, !is.na(setting))$setting
@@ -763,7 +792,7 @@ retestVariation <- retestVariation %>%
 
 # Rename context variable
 retestVariation[retestVariation$context == "Sexual health network", 
-            ]$context <- "shc"
+  ]$context <- "shc"
 
 # Convert to long format -------------------------------------------------
 retestVariation <- retestVariation %>%
@@ -771,9 +800,9 @@ retestVariation <- retestVariation %>%
 
 # Split year and sex
 yearsexYear <- as.character(sapply(retestVariation$yearsex, 
-                                   function(s) substr(s, 1, 4)))
+  function(s) substr(s, 1, 4)))
 yearsexSex <- as.character(sapply(retestVariation$yearsex, 
-                                   function(s) substr(s, 5, nchar(s))))
+  function(s) substr(s, 5, nchar(s))))
 
 retestVariation$sex <- yearsexSex
 retestVariation$year <- yearsexYear
@@ -788,10 +817,10 @@ retestVariation <- retestVariation %>%
 # Reformat retesting period
 retestVariation <- retestVariation %>%
   rename(`42-120` = `retested42-120`, `42-180` = `retested42-180`,
-         `7-180` = `retested7-180`) %>%
+    `7-180` = `retested7-180`) %>%
   gather("period", "retested", 6:8) %>%
   mutate(retested = as.numeric(retested),
-         diagnoses = as.numeric(diagnoses))
+    diagnoses = as.numeric(diagnoses))
 
 
 # Now calculate proportion retest and lower and upper bound --------------
@@ -805,14 +834,14 @@ LowerProp <- function(x, y) prop.test(x, y)[[6]][1]
 UpperProp <- function(x, y) prop.test(x, y)[[6]][2]
 
 qcal <- function(x, y) round(100*c(x/y, LowerProp(x, y), UpperProp(x, y)),
-                             digits = 1)
+  digits = 1)
 
 indices <- !is.na(retestVariation$retested)
 
 propLower <- mapply(LowerProp, retestVariation$retested[indices],
-                     retestVariation$diagnoses[indices])
+  retestVariation$diagnoses[indices])
 propUpper <- mapply(UpperProp, retestVariation$retested[indices],
-                     retestVariation$diagnoses[indices])
+  retestVariation$diagnoses[indices])
 
 retestVariation$prop_lower <- NA
 retestVariation$prop_upper <- NA
@@ -828,6 +857,6 @@ retestVariation <- retestVariation %>%
 # Write to file
 write.csv(retestVariation, file = file.path(cleanDataFolder,
   paste0("chlamRetestVariation", toString(dataYear), ".csv")),
-          row.names = FALSE)
+  row.names = FALSE)
 ```
 
