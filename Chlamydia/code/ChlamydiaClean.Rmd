@@ -731,9 +731,13 @@ write.csv(retestNSWgp, file = file.path(cleanDataFolder,
 dataStartYear <- 2007
 
 # Raw testing file
-rawDataTreatment <- file.path(dataPath,
-  paste0("access_chlamydia_shc_data-", 
-    toString(dataYear), ".xlsx"))
+if (msmSplit) {
+  rawDataTreatment <- file.path(dataPath, 
+    paste0("access_chlamydia_shc_data-", toString(dataYear), "_MSM.xlsx"))
+} else {
+  rawDataTreatment <- file.path(dataPath, 
+    paste0("access_chlamydia_shc_data-", toString(dataYear), ".xlsx"))
+}
 
 # Load raw re-testing data for 15-29 year olds in NSW GPs
 retestVariation <- read_excel(rawDataTreatment, sheet = 1, skip = 3,
@@ -745,20 +749,29 @@ colnames(retestVariation)[1] <- "setting"
 colnames(retestVariation)[2] <- "variable"
 
 # Manually relable columns by all, male and female data
-dataYears <- dataStartYear:(dataStartYear + 
-    (dataYear - dataStartYear))
+dataYears <- dataStartYear:(dataStartYear + (dataYear - dataStartYear))
 numDataYears <- length(dataYears)
 
 colnames(retestVariation)[3:(3 + numDataYears - 1)] <- 
   paste0(dataYears, "all")
-colnames(retestVariation)[(3 + numDataYears):(3 + 2 * numDataYears - 1)] <- paste0(dataYears, "males")
-colnames(retestVariation)[(3 + 2 * numDataYears):
-    (3 + 3 * numDataYears - 1)] <- paste0(dataYears,
-      "females")
+if (msmSplit) {
+  colnames(retestVariation)[(3 + numDataYears + 1):
+      (3 + 2 * numDataYears)] <- paste0(dataYears, "non_msm")
+  colnames(retestVariation)[(3 + 2 * numDataYears + 2):
+      (3 + 3 * numDataYears + 1)] <- paste0(dataYears, "msm")
+  colnames(retestVariation)[(3 + 3 * numDataYears + 3):
+      (3 + 4 * numDataYears + 2)] <- paste0(dataYears, "females")
+} else {
+  colnames(retestVariation)[(3 + numDataYears + 1):
+      (3 + 2 * numDataYears)] <- paste0(dataYears, "males")
+  colnames(retestVariation)[(3 + 2 * numDataYears + 2):
+      (3 + 3 * numDataYears + 1)] <- paste0(dataYears, "females")
+}
 
 # Get rid of excess rows and columns
 retestVariation <- retestVariation %>% 
-  filter(rowSums(is.na(.)) != ncol(.)) %>%
+  #filter(rowSums(is.na(.)) != ncol(.)) %>%
+  select(-contains("X_")) %>%
   filter(!is.na(variable))
 
 # Just keep the data and calculate proportions separately
@@ -836,7 +849,8 @@ UpperProp <- function(x, y) prop.test(x, y)[[6]][2]
 qcal <- function(x, y) round(100*c(x/y, LowerProp(x, y), UpperProp(x, y)),
   digits = 1)
 
-indices <- !is.na(retestVariation$retested)
+indices <- (!is.na(retestVariation$retested) &
+  (retestVariation$diagnoses != 0))
 
 propLower <- mapply(LowerProp, retestVariation$retested[indices],
   retestVariation$diagnoses[indices])
@@ -849,14 +863,57 @@ retestVariation$prop_upper <- NA
 retestVariation[indices, ]$prop_lower <- propLower
 retestVariation[indices, ]$prop_upper <- propUpper
 
+retestVariation[is.na(retestVariation)] <- 0
+
 # Extract data year and write to file ------------------------------------
 
 retestVariation <- retestVariation %>%
   filter(year == dataYear)
 
+# Do weighted all and male calculations
+msmRestest <- retestVariation %>% 
+  filter(sex == "msm") %>%
+  select(region, context, year, period, everything()) %>%
+  rename(msm_diagnoses = diagnoses, msm_retested = retested, 
+    msm_prop_retested = prop_retested, msm_prop_lower = prop_lower,
+    msm_prop_upper = prop_upper) %>%
+  select(-sex)
+    
+heteroRestest <- retestVariation %>% 
+  filter(sex == "non_msm") %>%
+  select(region, context, year, period, everything()) %>%
+  rename(hetero_diagnoses = diagnoses, hetero_retested = retested, 
+    hetero_prop_retested = prop_retested, hetero_prop_lower = prop_lower,
+    hetero_prop_upper = prop_upper) %>%
+  select(-sex)
+
+femRestest <- retestVariation %>% 
+  filter(sex == "female") %>%
+  select(region, context, year, period, everything()) %>%
+  rename(fem_diagnoses = diagnoses, fem_retested = retested, 
+    fem_prop_retested = prop_retested, fem_prop_lower = prop_lower,
+    fem_prop_upper = prop_upper) %>%
+  select(-sex)
+
+allWeightedRetest <- left_join(msmRestest, heteroRestest, 
+    by = c("region", "context", "year", "period")) %>%
+  left_join(femRestest, by = c("region", "context", "year", "period")) %>%
+  mutate(male_diagnoses = msm_diagnoses + hetero_diagnoses,
+    all_diagnoses = msm_diagnoses + hetero_diagnoses + fem_diagnoses) %>%
+  mutate(male_retested = (msm_retested + hetero_retested) / male_diagnoses,
+    male_weighted_retested = msm_diagnoses / male_diagnoses *
+      msm_prop_retested + hetero_diagnoses / male_diagnoses * hetero_prop_retested)
+
 # Write to file
-write.csv(retestVariation, file = file.path(cleanDataFolder,
-  paste0("chlamRetestVariation", toString(dataYear), ".csv")),
-  row.names = FALSE)
+# if (msmSplit) { 
+#   write.csv(retestVariation, file = file.path(cleanDataFolder,
+#     paste0("chlamRetestVariation", toString(dataYear), "_MSM.csv")),
+#     row.names = FALSE)
+# } else {
+#   write.csv(retestVariation, file = file.path(cleanDataFolder,
+#     paste0("chlamRetestVariation", toString(dataYear), ".csv")),
+#     row.names = FALSE)
+# }
+
 ```
 
