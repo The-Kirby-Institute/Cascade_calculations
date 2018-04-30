@@ -406,7 +406,7 @@ save(cleanNom, file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
 
 # Gender
 
-# Use nome data to adjust migration rates for age abnd gender. Originally 
+# Use NOM data to adjust migration rates for age and gender. Originally 
 # used a hard coded adjustment factor to account for age > 15 years and 
 # sex. These harded coded estimates for 1981-2016 are determined in 
 # the file project_care_cascades/data/Migration_options-2016-10-12.xlsx
