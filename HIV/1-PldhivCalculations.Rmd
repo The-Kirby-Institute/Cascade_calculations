@@ -44,14 +44,14 @@ specified project folder and have a cascade file handle.
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- TRUE
+saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
 
-projectOutput <- "Duplicates" # "." for main output folder 
+projectOutput <- "Test_Cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "Vic-1992"
+cascadeName <- "All"
 targetGender <- "all" # all, male, female (single)
 targetAge <- "all" # all or split
 
@@ -67,7 +67,7 @@ targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
 targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
 # Only used if country is Australia (single)
-targetState <- "vic" # nsw, sa, nt, qld, vic, wa, act, tas
+targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
 # (combination)
 targetLocalRegion <- "all" #tbd (combination)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
