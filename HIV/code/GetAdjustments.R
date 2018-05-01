@@ -4,7 +4,7 @@
 
 # R function to extract subset of interest from adjustments
 
-GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
+GetAdjustments <- function(hivBase, hivAdjustments,
   targetAge, targetGender,targetExposure, targetCob, targetAtsi,
   targetLocalRegion, targetState, targetGlobalRegion) {
   
@@ -18,8 +18,10 @@ GetAdjustments <- function(hivBase, hivAdjustments, hivInterstate,
   
   # Unique notifications------------------------------------------------
   
-  # Adjusted only for sex (msm included) and indigenous status
-  # Any combination of exposure assumed to have base proportion 
+  # Adjusted only for sex (msm included) and indigenous status for the 
+  # national cascade. Any combination of exposure assumed to have base 
+  # proportion. For other sub-populations need to run this calculation
+  # separately. 
   
   # Extract proportion notifications unique - if more than 
   # one target population drop to the base estimates

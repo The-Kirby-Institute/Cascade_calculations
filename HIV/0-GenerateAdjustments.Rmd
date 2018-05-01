@@ -257,7 +257,8 @@ hivCobCum <- hivSet %>%
 
 ```{r Annual proportion unique}
 # This chunk is used to estimate the annual proportion of notifications 
-# that are unique in overall diagnoses
+# that are unique in overall diagnoses. For other sub-populations need to 
+# run this calculation separately using GetUnique.R. 
 
 # Need to consider males and females deparately as there were not many 
 # duplicates in the early years for females in the epidemic.
@@ -309,7 +310,16 @@ hivBaseRates$annunique_male <- annPropUnique
 
 #All
 duplicateSet <- hivSet
-duplicateNotifications <- hivResults
+# duplicateNotifications <- hivResults
+duplicateNotifications <- duplicateSet %>%
+  group_by(yeardiagnosis) %>%
+  summarise(notifications = n()) %>%
+  mutate(totalnotifications = cumsum(notifications)) %>%
+  ungroup() %>%
+  rename(year = yeardiagnosis)
+
+duplicateNotifications <- FillDataFrame(allYears, 
+  duplicateNotifications)
 
 overallPropUnique <- ProportionUnique(duplicateSet,             
   duplicateNotifications$totalnotifications,

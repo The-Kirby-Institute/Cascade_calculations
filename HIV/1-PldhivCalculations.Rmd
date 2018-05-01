@@ -48,12 +48,12 @@ saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-projectOutput <- "Aging_Paper" # "." for main output folder 
+projectOutput <- "Duplicates" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "All"
+cascadeName <- "Vic-1992"
 targetGender <- "all" # all, male, female (single)
-targetAge <- "split" # all or split
+targetAge <- "all" # all or split
 
 # Note regarding ageing: The calculations don't specifically target 
 # specific ages.  Rather this simply chooses whether age is considered or 
@@ -66,13 +66,13 @@ targetAge <- "split" # all or split
 targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
 targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
-                    # Only used if country is Australia (single)
-targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
-                               # (combination)
+# Only used if country is Australia (single)
+targetState <- "vic" # nsw, sa, nt, qld, vic, wa, act, tas
+# (combination)
 targetLocalRegion <- "all" #tbd (combination)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
-                            # Oceania, South American, Other cob, etc
-                            # (combination)
+# Oceania, South American, Other cob, etc
+# (combination)
 
 # Some error checking 
 if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
@@ -99,8 +99,14 @@ if (doRetained) {
   retainedYears <- 2013:analysisYear
 }
 
+doUnique <- TRUE
+yearUnique <- 1992
+
+doUnique <- ifelse(targetAtsi == "indigenous", FALSE, doUnique)
+yearUnique <- ifelse(is.null(yearUnique), 2100, yearUnique) # Well past today
+  
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- TRUE
+ecdcData <- FALSE
 ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
 
 ecdcVersion <- '1.2.2'
@@ -119,10 +125,9 @@ projectPldhiv <- FALSE
 
 # Store paramaters for saving
 hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
-                        targetExposure, targetAtsi, targetState,
-                        targetLocalRegion, targetGlobalRegion,
-                        interState, doAge, doRetained,
-                        excludeAborig, ecdcData, ecdcVersion, excludeOS)
+  targetExposure, targetAtsi, targetState, targetLocalRegion,
+  targetGlobalRegion, interState, doAge, excludeAborig, doRetained,
+  doUnique, yearUnique, ecdcData, ecdcVersion, excludeOS)
 
 ```
 
@@ -166,7 +171,7 @@ source(file.path(HIVcode, "GetInterRegion.R"))
 
 # Load cleaned notifications data
 origHivData <- read.csv(file.path(dataFolder, paste0("hivnotifications",
-                    toString(analysisYear), ".csv"))) 
+  toString(analysisYear), ".csv"))) 
 
 # Read in country code data
 countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
@@ -214,16 +219,22 @@ if (excludeAborig) {
 
 # Extract subset of notifications we want
 hivSetReturn <- SubHivSet(hivSetAll, "all", targetGender,
-                          targetExposure, targetCob, targetAtsi,
-                          targetState, targetGlobalRegion)
+  targetExposure, targetCob, targetAtsi,
+  targetState, targetGlobalRegion)
 
 hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
 
+# Calculate unique notifications and duplicates
+if (doUnique) {
+  uniqueNotifications <- GetUnique(hivSet, allYears, 
+    yearUnique = yearUnique)
+} 
+
 # Calculation cumulative proportion male. This is used for gender weighted
 # migration rates
- 
+
 hivSetGender <- hivSet %>% 
   group_by(yeardiagnosis, sex) %>% 
   summarise(notifications = n()) %>% 
@@ -279,7 +290,7 @@ if (doAge) {
     gather("agebin", "male", 2:20) %>%
     arrange(year)
   
-   hivSetOtherAge <- hivSetGenderAge %>%
+  hivSetOtherAge <- hivSetGenderAge %>%
     select(-male) %>% 
     spread(agebin, other)
   hivSetOtherAge[is.na(hivSetOtherAge)] <- 0
@@ -317,7 +328,7 @@ includeDiags <- FillDataFrame(allYears, includeDiags)
 # If excluded and unknown is empty replace with zeros
 if (length(hivSetExcluded) == 0) {
   excludedDiags <- data_frame(year = allYears,
-                            excluded = 0)
+    excluded = 0)
 } else {
   excludedDiags <- hivSetExcluded %>%
     group_by(yeardiagnosis) %>% 
@@ -328,13 +339,13 @@ if (length(hivSetExcluded) == 0) {
 excludedDiags <- FillDataFrame(allYears, excludedDiags)
 
 if (length(hivSetUnknown) == 0) {
- unknownDiags <- data_frame(year = allYears,
-                            unknown = 0)
+  unknownDiags <- data_frame(year = allYears,
+    unknown = 0)
 } else {
-unknownDiags <- hivSetUnknown %>%
-  group_by(yeardiagnosis) %>% 
-  summarise(unknown = n()) %>%
-  rename(year = yeardiagnosis)
+  unknownDiags <- hivSetUnknown %>%
+    group_by(yeardiagnosis) %>% 
+    summarise(unknown = n()) %>%
+    rename(year = yeardiagnosis)
 }
 unknownDiags <- FillDataFrame(allYears, unknownDiags)
 
@@ -373,7 +384,7 @@ if (doAge) {
     spread(agebin, diags) %>%
     rename(year = yeardiagnosis)
   agedDiags[is.na(agedDiags)] <- 0
-
+  
   #fill missing years
   agedDiags <- FillDataFrame(1980:analysisYear, agedDiags) %>%
     gather("agebin", "diagnoses", 2:20) %>%
@@ -383,7 +394,7 @@ if (doAge) {
     mutate(propdiags = diagnoses / sum(diagnoses)) %>%
     mutate(propdiags = ifelse(is.nan(propdiags), 0 , propdiags)) %>%
     ungroup()
-    
+  
   nyears <- analysisYear - 1980 + 1
   nages <- 18
   
@@ -406,10 +417,10 @@ if (doAge) {
     slice(c(1,10,2:9,11:18)) %>%
     select(-agebin) %>%
     as.matrix()
-
+  
   colnames(hivResultsAge) <- yearList
   rownames(hivResultsAge) <- ageList
-
+  
 }
 
 ```
@@ -422,27 +433,32 @@ hivBase <- read.csv(file.path(dataFolder, paste0("HIVbaseEstimates-",
 hivAdjustments <- read.csv(file.path(dataFolder,
   paste0("HIVadjustments-",
     toString(analysisYear), ".csv")))
-hivInterstate <- read.csv(file.path(dataFolder,
-  paste0("HIVinterstateEstimates-",
-    toString(analysisYear), ".csv")))
+# hivInterstate <- read.csv(file.path(dataFolder,
+#   paste0("HIVinterstateEstimates-",
+#     toString(analysisYear), ".csv")))
 
 # Load cleaned NOM data variable (cleanNom)
 load(file = file.path(dirname(basePath),
   "data", "cleaned_ABS_nom_data.R"))
 
 mainDataFolder <- file.path(dirname(getwd()), "data")
-absMigration <- read.csv(file.path(mainDataFolder, 
-  paste0("ABS_migration_clean-", toString(analysisYear), ".csv")), 
-  as.is = 1)
-absInterstate <- read.csv(file.path(mainDataFolder, 
-  paste0("ABS_interstate_clean-", toString(analysisYear), ".csv")), 
-  as.is = 1)
+# absMigration <- read.csv(file.path(mainDataFolder,
+#   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")),
+#   as.is = 1)
+absInterstate <- read_csv(file.path(mainDataFolder, 
+  paste0("ABS_interstate_age_sex_clean-", toString(analysisYear), ".csv")))
 
 # Now get the death rates, base migration rates, and proportion stay rates
 # Migration rates are now calculated using GetMigrate
-subsetRates <- GetAdjustments(hivBase, hivAdjustments, hivInterstate, 
+subsetRates <- GetAdjustments(hivBase, hivAdjustments, 
   "all", targetGender, targetExposure, targetCob, targetAtsi, 
   targetLocalRegion, targetState, targetGlobalRegion) 
+
+# Get the annual proportion unique
+if (doUnique) {
+  subsetRates$cumunique <- uniqueNotifications$cumunique 
+  subsetRates$ annunique <- uniqueNotifications$annunique
+} 
 
 # Get migration rate adjustments 
 relMigration <- GetMigrate(analysisYear, cleanNom, "all",
@@ -468,7 +484,7 @@ subsetRates$mrate_upper <- relMigration * hivBase$migrationrate_upper
 
 if (interState) {
   # For interstate calculations also need overall population estimates
-  subsetRatesAll <- GetAdjustments(hivBase, hivAdjustments, hivInterstate,
+  subsetRatesAll <- GetAdjustments(hivBase, hivAdjustments,
     "all", targetGender, targetExposure, targetCob, targetAtsi, 
     targetLocalRegion, "all", targetGlobalRegion)  
   
@@ -498,14 +514,15 @@ if (interState) {
     hivBase$migrationrate_upper
 }
 
-# Get interregion rates -only have date since 1982 assume zero rate for
+# Get interregion rates - only have date since 1982 assume zero rate for
 # 1980-81. 
 if (interState) {
-  interRegionRates <- GetInterRegion(analysisYear, absMigration, 
-    absInterstate, NULL, targetState, targetLocalRegion)
+  interRegionRates <- GetInterRegion(analysisYear, cleanNom, 
+    absInterstate, NULL, "all", targetState, targetLocalRegion,
+    assumeAdult = TRUE)
   
-  subsetRates$inter_arriverate <- c(0, 0, interRegionRates$arriverate)
-  subsetRates$inter_departrate <- c(0, 0, interRegionRates$departrate)
+  subsetRates$inter_arriverate <- interRegionRates$arriverate
+  subsetRates$inter_departrate <- interRegionRates$departrate
 } else {
   subsetRates$inter_arriverate <- 0
   subsetRates$inter_departrate <- 0
@@ -528,11 +545,15 @@ if (doAge) {
   
   # Relative migration rates
   relAgeMigrate <- GetMigrateAge(analysisYear, cleanNom, targetGender, 
-  targetExposure, targetCob, targetAtsi, targetLocalRegion, targetState, 
-  targetGlobalRegion, propMale = NULL)
+    targetExposure, targetCob, targetAtsi, targetLocalRegion, targetState, 
+    targetGlobalRegion, propMale = NULL)
   
   colnames(relAgeMigrate) <- yearList
   rownames(relAgeMigrate) <- ageList
+  
+  if (interState) {
+    
+  }
 }
 
 ```
@@ -762,14 +783,14 @@ if (ecdcData) {
   if (excludeOS) {
     # excluding OS diagnosis
     dataAll <- EcdcFolders(ecdcFolder, ecdcModel, 
-                           includeOS = FALSE)
+      includeOS = FALSE)
     EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique,
-              propKnown = normalizeFactor)
+      propKnown = normalizeFactor)
   } else {
     # including OS diagnosis
     dataAll <- EcdcFolders(ecdcFolder, ecdcModel)
     EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique,
-              propKnown = normalizeFactor) 
+      propKnown = normalizeFactor) 
   }
   
   # Create output directory
@@ -793,9 +814,9 @@ if (ecdcData) {
   if (interState) {
     emigrants <- pldhivAll %>% 
       select(year, emigrants, diag_departs, inter_departs,
-             inter_arrivals) %>%
+        inter_arrivals) %>%
       mutate(total = emigrants + diag_departs + inter_departs -
-               inter_arrivals) %>%
+          inter_arrivals) %>%
       select(year, total) %>%
       rename(all = total)
   } else {
@@ -828,12 +849,12 @@ if (ecdcData) {
   hivExpCum <- hivExpCum %>% select(-unknown) %>%
     gather("expgroup", "cumnotifications", 2:5) %>%
     mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
-                                     cumnotifications)) %>%
+      cumnotifications)) %>%
     group_by(yeardiagnosis) %>% 
     mutate(propnotifications = cumnotifications /
-             sum(cumnotifications)) %>%
+        sum(cumnotifications)) %>%
     mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
-                                      propnotifications)) %>%
+      propnotifications)) %>%
     select(-cumnotifications) %>%
     ungroup() %>% 
     spread(expgroup, propnotifications) %>%
@@ -851,15 +872,15 @@ if (ecdcData) {
     matrix(rep(emigrants$all, 4), ncol = 4)
   
   EcdcWrite(expEmig, dataAll[[2]], "emigrants")
-
+  
 }
 
 ```
 
 ```{r Append retained}
 if (doRetained) {
- # Perform and append retained in care calculations
- source(file.path(HIVcode, "RetainedCare.R"))
+  # Perform and append retained in care calculations
+  source(file.path(HIVcode, "RetainedCare.R"))
   
   # Load retained in care data - Use McMahon et al data for 2013 onwards
   # Hardcoded: value, lower, upper.  Lower and upper ranges correspond 
@@ -867,7 +888,7 @@ if (doRetained) {
   # et al., Clinic Network Collaboration and Patient Tracing to Maximize 
   # Retention in HIV Care, PLOS One, May 26, 2015.
   hivParameters <- read.csv(file.path(dataFolder, 
-                                "individualHIVparameters.csv"), as.is = 1)
+    "individualHIVparameters.csv"), as.is = 1)
   hivParameters <- select(hivParameters, parameter, value)
   
   for (ii in 1:nrow(hivParameters)) {
@@ -879,7 +900,7 @@ if (doRetained) {
   retainedUpper <- vicClinicRetainedUpper
   
   hivRetained <- RetainedCare(hivDiagnosed, retained, retainedLower,
-                              retainedUpper, retainedYears)
+    retainedUpper, retainedYears)
   
   # Merge with hivDiagnosed
   hivDiagnosed <- bind_rows(hivDiagnosed, hivRetained)
@@ -924,6 +945,13 @@ if (saveResults) {
   
   # Write to csv
   write_csv(hivParams, paste0(saveStringParams, ".csv"))
+  
+  # Write uniqueNotifications to file
+  if (doUnique) {
+    saveStringUnique <- file.path(resultsPath, "UniqueNotifications")
+    write_csv(uniqueNotifications, paste0(saveStringUnique, ".csv"))
+  }
+  
 }
 
 ```
