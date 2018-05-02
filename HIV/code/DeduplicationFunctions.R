@@ -7,8 +7,8 @@
 
 # Main function for calculating number of duplicates----------------------
 RemoveDuplicates <- function(dobvector, days.ignore, 
-                             na.rm = FALSE, 
-                             write = NA){
+  na.rm = FALSE, 
+  write = NA){
   # Calculate the number of unique people given recorded date of birth. 
   # Requires dplyr library.
   # Args:
@@ -81,7 +81,7 @@ RemoveDuplicates <- function(dobvector, days.ignore,
   # Years, leap years and days in each year
   years <- min(birth.year,na.rm = TRUE):max(birth.year,na.rm = TRUE)
   leap.years <- seq(min(birth.year,na.rm = TRUE),max(birth.year,na.rm = TRUE),
-                    by=4) 
+    by=4) 
   leap.years <- leap.years[leap.years != 1900]  # 1900 is not a leap year but 2000 is
   
   year.days <- rep(365,length(years))
@@ -111,7 +111,7 @@ RemoveDuplicates <- function(dobvector, days.ignore,
   variance.cases <- possible.days * unique.dates$n / (possible.days - unique.dates$n)
   
   unique.sub.cases <- possible.days.ignore * log(possible.days.ignore / 
-                                                   (possible.days.ignore - sub.unique.dates$n))
+      (possible.days.ignore - sub.unique.dates$n))
   variance.sub.cases <- possible.days.ignore * sub.unique.dates$n / 
     (possible.days.ignore - sub.unique.dates$n)
   
@@ -146,7 +146,7 @@ RemoveDuplicates <- function(dobvector, days.ignore,
     # Create an output data frame and write to file   
     # Initilize an output dataframe
     outputcols <- c("birthyear","cases","days","totaldates","unique","variance",
-                    "subcases","subdays","subtotaldates","subunique","subvariance")
+      "subcases","subdays","subtotaldates","subunique","subvariance")
     output <- data.frame(matrix(0,nrow = length(years),ncol = length(outputcols)))
     colnames(output) <-outputcols
     
@@ -193,7 +193,7 @@ NumUnique <- function(dobframe, years, ignore, file = NULL) {
 }
 
 ProportionUnique <- function(notificationsData, cumNotifications, 
-                             allYears){
+  allYears){
   # Function to produce proportion of cummulative infections that are
   # unique for each year.
   
@@ -209,7 +209,7 @@ ProportionUnique <- function(notificationsData, cumNotifications,
   numberUniqueAll[is.na(numberUniqueAll)] <- 0
   
   # Add variable for proportion unique - due to statistical calculations 
-  # proportion mybe slightly higher than one. In those cases round down to
+  # proportion maybe slightly higher than one. In those cases round down to
   # 1.
   propunique <- numberUniqueAll / cumNotifications
   propunique[is.na(propunique)] <- 0
@@ -221,7 +221,99 @@ ProportionUnique <- function(notificationsData, cumNotifications,
 AnnualUnique <- function(notifications, propunique) {
   totalNotifications <- cumsum(notifications)
   unique <- c(totalNotifications[1], 
-                              diff(totalNotifications * propunique))
+    diff(totalNotifications * propunique))
   return(unique)
+}
+
+AnnNotifications <- function(hivSet, years) {
+ # Function to calculate annual number of diagnoses in a set of 
+ # notifications 
+
+  notifications <- hivSet %>% 
+      group_by(yeardiagnosis) %>%
+      summarise(notifications = n()) %>%
+      mutate(totalnotifications = cumsum(notifications)) %>%
+      ungroup() %>%
+      rename(year = yeardiagnosis) %>%
+      FillDataFrame(years, .)  
+  
+  notifications <- FillDataFrame(allYears, notifications)
+  
+  return(notifications)
+  
+}
+
+GetUnique <- function(hivSet, allYears, yearUnique = NULL) {
+  # Function to estimate the number of duplicate notifications in 
+  # a subset of the HIV registry notifications data. 
+  
+  if (is.null(yearUnique)) {
+    uniqueYear <- max(allYears) + 1
+    fixUnique <- FALSE
+  } else {
+    uniqueYear <- yearUnique
+    fixUnique <- TRUE
+  }
+  
+  if (targetGender == "male" ) {
+    totalSet <- hivSet %>%
+      filter(sex == "male")
+  } else if (targetGender != "male" &&  targetGender != "all") {
+    totalSet <- hivSet %>%
+      filter(sex != "male")
+  } else if (targetGender == "all" ) {
+    totalSet <- hivSet
+  }
+  
+  uniqueNotifications <- AnnNotifications(totalSet, allYears)
+  uniqueNotifications$cumpropunique <- ProportionUnique(totalSet, 
+    uniqueNotifications$totalnotifications, allYears)
+  uniqueNotifications <- uniqueNotifications %>%
+    mutate(cumpropunique = ifelse(is.nan(cumpropunique), 0, 
+      cumpropunique))
+  uniqueNotifications$cum_unique <- 
+    uniqueNotifications$cumpropunique * uniqueNotifications$totalnotifications
+  
+  
+  uniqueNotifications$unique <- AnnualUnique(uniqueNotifications$notifications,
+    uniqueNotifications$cumpropunique) 
+  uniqueNotifications$propunique <- uniqueNotifications$unique /
+    uniqueNotifications$notifications
+  
+  uniqueNotifications <- uniqueNotifications %>%
+    mutate(propunique = ifelse(is.nan(propunique), 0, 
+      propunique)) %>% # replace infinite numbers
+    mutate(duplicates = notifications - unique,
+      cumduplicates = totalnotifications - cum_unique) %>%
+    # Add replce columns these will be the same as previous columns if yearUnique = NULL
+    mutate(propunique_replace = ifelse(year >= uniqueYear, 1, propunique)) %>%
+    mutate(unique_replace = propunique_replace * notifications) %>%
+    mutate(duplicates_replace = notifications - unique_replace,
+      cum_unique_replace = cumsum(unique_replace)) %>%
+    mutate(cumpropunique_replace = cum_unique_replace / totalnotifications,
+      cumduplicates_replace = totalnotifications - cum_unique_replace) %>%
+    mutate(cumpropunique_replace = ifelse(is.nan(cumpropunique_replace), 0, 
+      cumpropunique_replace))
+  
+  # 
+  if (fixUnique) {
+    uniqueNotifications <- uniqueNotifications %>%
+      mutate(annunique = propunique_replace,
+        cumunique = cumpropunique_replace)
+  } else {
+    uniqueNotifications <- uniqueNotifications %>%
+      mutate(annunique = propunique,
+        cumunique = cumpropunique)
+  } 
+  
+  uniqueNotifications <- uniqueNotifications %>%  
+    select(year, notifications, annunique, cumunique, propunique, unique, 
+      duplicates, totalnotifications, cumpropunique, cum_unique, cumduplicates,
+      propunique_replace, unique_replace, duplicates_replace,
+      cumpropunique_replace, cum_unique_replace, cumduplicates_replace)
+      
+  # Return results
+  return(uniqueNotifications)
+  
 }
 

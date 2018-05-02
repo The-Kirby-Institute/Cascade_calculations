@@ -148,7 +148,6 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
         migration[ii-1] * agemigrate[jj, ii-1] * nliving[jj, ii-1] -
         departs[ii-1] * nliving[jj, ii-1] +
         arrivals[ii-1] * (pldhiv[jj, ii-1] - nliving[jj, ii-1]) -
-        
         nliving[jj, ii - 1] * ageRate[jj] + ageUp
       
       # For low numbers the previous calculation could give number less
@@ -160,7 +159,9 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
     
     # If specified normalize age estimates to overall estimate
     if (doNormalize) {
-      nliving[, ii] <- nliving[, ii] * normalize[ii] / sum(nliving[, ii])
+      if (sum(nliving[, ii]) != 0) {
+        nliving[, ii] <- nliving[, ii] * normalize[ii] / sum(nliving[, ii])
+      } 
     }
     
   } 

@@ -23,11 +23,11 @@ dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
 figuresFolder <- file.path(basePath, "output", "figures")
 
-# Load standard libraries and options ----------------------------------
+# Load standard libraries and options ------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"))
 source(file.path(Rcode, "DataLibraries.R"))
 source(file.path(Rcode, "PlotOptions.R"))
-
+LoadLibrary(tibble)
 ```
 
 The following chunck specifies all the parameters for producing the
@@ -47,10 +47,11 @@ analysisYear <- 2016
 saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
+
 projectOutput <- "Test_Cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "TestVic"
+cascadeName <- "All"
 targetGender <- "all" # all, male, female (single)
 targetAge <- "all" # all or split
 
@@ -59,19 +60,19 @@ targetAge <- "all" # all or split
 # not."all" means there is no division by age whereas "split" means teh 
 # calculations are doen for all agegroups specified as a0_4, a5_9, 
 # a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
-# split and then filter out age estimates as requi essentially turns on 
+# split and then filter out age estimates as required essentially turns on 
 # doAge below. 
 
 targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
 targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
-                    # Only used if country is Australia (single)
-targetState <- "wa" # nsw, sa, nt, qld, vic, wa, act, tas
-                               # (combination)
+# Only used if country is Australia (single)
+targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
+# (combination)
 targetLocalRegion <- "all" #tbd (combination)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
-                            # Oceania, South American, Other cob, etc
-                            # (combination)
+# Oceania, South American, Other cob, etc
+# (combination)
 
 # Some error checking 
 if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
@@ -98,8 +99,14 @@ if (doRetained) {
   retainedYears <- 2013:analysisYear
 }
 
+doUnique <- TRUE
+yearUnique <- 1992
+
+doUnique <- ifelse(targetAtsi == "indigenous", FALSE, doUnique)
+yearUnique <- ifelse(is.null(yearUnique), 2100, yearUnique) # Well past today
+  
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- TRUE
+ecdcData <- FALSE
 ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
 
 ecdcVersion <- '1.2.2'
@@ -112,14 +119,15 @@ if (excludeOS) {
   saveResults <- TRUE
 }
 
-
+# Leave projections chunk turned off so it is not called unless required. 
+# Simply run projections from within then chunk. 
+projectPldhiv <- FALSE 
 
 # Store paramaters for saving
 hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
-                        targetExposure, targetAtsi, targetState,
-                        targetLocalRegion, targetGlobalRegion,
-                        interState, doAge, doRetained,
-                        excludeAborig, ecdcData, ecdcVersion, excludeOS)
+  targetExposure, targetAtsi, targetState, targetLocalRegion,
+  targetGlobalRegion, interState, doAge, excludeAborig, doRetained,
+  doUnique, yearUnique, ecdcData, ecdcVersion, excludeOS)
 
 ```
 
@@ -163,7 +171,7 @@ source(file.path(HIVcode, "GetInterRegion.R"))
 
 # Load cleaned notifications data
 origHivData <- read.csv(file.path(dataFolder, paste0("hivnotifications",
-                    toString(analysisYear), ".csv"))) 
+  toString(analysisYear), ".csv"))) 
 
 # Read in country code data
 countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
@@ -211,16 +219,22 @@ if (excludeAborig) {
 
 # Extract subset of notifications we want
 hivSetReturn <- SubHivSet(hivSetAll, "all", targetGender,
-                          targetExposure, targetCob, targetAtsi,
-                          targetState, targetGlobalRegion)
+  targetExposure, targetCob, targetAtsi,
+  targetState, targetGlobalRegion)
 
 hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
 
+# Calculate unique notifications and duplicates
+if (doUnique) {
+  uniqueNotifications <- GetUnique(hivSet, allYears, 
+    yearUnique = yearUnique)
+} 
+
 # Calculation cumulative proportion male. This is used for gender weighted
 # migration rates
- 
+
 hivSetGender <- hivSet %>% 
   group_by(yeardiagnosis, sex) %>% 
   summarise(notifications = n()) %>% 
@@ -276,7 +290,7 @@ if (doAge) {
     gather("agebin", "male", 2:20) %>%
     arrange(year)
   
-   hivSetOtherAge <- hivSetGenderAge %>%
+  hivSetOtherAge <- hivSetGenderAge %>%
     select(-male) %>% 
     spread(agebin, other)
   hivSetOtherAge[is.na(hivSetOtherAge)] <- 0
@@ -314,7 +328,7 @@ includeDiags <- FillDataFrame(allYears, includeDiags)
 # If excluded and unknown is empty replace with zeros
 if (length(hivSetExcluded) == 0) {
   excludedDiags <- data_frame(year = allYears,
-                            excluded = 0)
+    excluded = 0)
 } else {
   excludedDiags <- hivSetExcluded %>%
     group_by(yeardiagnosis) %>% 
@@ -325,13 +339,13 @@ if (length(hivSetExcluded) == 0) {
 excludedDiags <- FillDataFrame(allYears, excludedDiags)
 
 if (length(hivSetUnknown) == 0) {
- unknownDiags <- data_frame(year = allYears,
-                            unknown = 0)
+  unknownDiags <- data_frame(year = allYears,
+    unknown = 0)
 } else {
-unknownDiags <- hivSetUnknown %>%
-  group_by(yeardiagnosis) %>% 
-  summarise(unknown = n()) %>%
-  rename(year = yeardiagnosis)
+  unknownDiags <- hivSetUnknown %>%
+    group_by(yeardiagnosis) %>% 
+    summarise(unknown = n()) %>%
+    rename(year = yeardiagnosis)
 }
 unknownDiags <- FillDataFrame(allYears, unknownDiags)
 
@@ -370,7 +384,7 @@ if (doAge) {
     spread(agebin, diags) %>%
     rename(year = yeardiagnosis)
   agedDiags[is.na(agedDiags)] <- 0
-
+  
   #fill missing years
   agedDiags <- FillDataFrame(1980:analysisYear, agedDiags) %>%
     gather("agebin", "diagnoses", 2:20) %>%
@@ -380,7 +394,7 @@ if (doAge) {
     mutate(propdiags = diagnoses / sum(diagnoses)) %>%
     mutate(propdiags = ifelse(is.nan(propdiags), 0 , propdiags)) %>%
     ungroup()
-    
+  
   nyears <- analysisYear - 1980 + 1
   nages <- 18
   
@@ -388,12 +402,13 @@ if (doAge) {
     "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
     "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
   
-  yearList <- paste("y", as.character(1980:analysisYear), sep = "")
+  yearList <- paste0("y", as.character(1980:analysisYear))
   
-  # Adjust_included notifications by age and year
+  # Adjust_included notifications by age and year and convert to matrix
   hivResultsAge <- agedDiags %>% 
-    left_join(., hivResults, by = "year") %>%
-    select(-diagnoses, -cumnotifications) %>%
+    left_join(., hivResults, by = "year") %>% 
+    select(-diagnoses, -cumnotifications, -all_notifications,
+      -all_cumnotifications) %>%
     group_by(year, agebin) %>%
     mutate(diags = propdiags * notifications) %>%
     select(-propdiags, -notifications) %>%
@@ -402,10 +417,10 @@ if (doAge) {
     slice(c(1,10,2:9,11:18)) %>%
     select(-agebin) %>%
     as.matrix()
-
+  
   colnames(hivResultsAge) <- yearList
   rownames(hivResultsAge) <- ageList
-
+  
 }
 
 ```
@@ -418,27 +433,32 @@ hivBase <- read.csv(file.path(dataFolder, paste0("HIVbaseEstimates-",
 hivAdjustments <- read.csv(file.path(dataFolder,
   paste0("HIVadjustments-",
     toString(analysisYear), ".csv")))
-hivInterstate <- read.csv(file.path(dataFolder,
-  paste0("HIVinterstateEstimates-",
-    toString(analysisYear), ".csv")))
+# hivInterstate <- read.csv(file.path(dataFolder,
+#   paste0("HIVinterstateEstimates-",
+#     toString(analysisYear), ".csv")))
 
 # Load cleaned NOM data variable (cleanNom)
 load(file = file.path(dirname(basePath),
   "data", "cleaned_ABS_nom_data.R"))
 
 mainDataFolder <- file.path(dirname(getwd()), "data")
-absMigration <- read.csv(file.path(mainDataFolder, 
-  paste0("ABS_migration_clean-", toString(analysisYear), ".csv")), 
-  as.is = 1)
-absInterstate <- read.csv(file.path(mainDataFolder, 
-  paste0("ABS_interstate_clean-", toString(analysisYear), ".csv")), 
-  as.is = 1)
+# absMigration <- read.csv(file.path(mainDataFolder,
+#   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")),
+#   as.is = 1)
+absInterstate <- read_csv(file.path(mainDataFolder, 
+  paste0("ABS_interstate_age_sex_clean-", toString(analysisYear), ".csv")))
 
 # Now get the death rates, base migration rates, and proportion stay rates
 # Migration rates are now calculated using GetMigrate
-subsetRates <- GetAdjustments(hivBase, hivAdjustments, hivInterstate, 
+subsetRates <- GetAdjustments(hivBase, hivAdjustments, 
   "all", targetGender, targetExposure, targetCob, targetAtsi, 
   targetLocalRegion, targetState, targetGlobalRegion) 
+
+# Get the annual proportion unique
+if (doUnique) {
+  subsetRates$cumunique <- uniqueNotifications$cumunique 
+  subsetRates$ annunique <- uniqueNotifications$annunique
+} 
 
 # Get migration rate adjustments 
 relMigration <- GetMigrate(analysisYear, cleanNom, "all",
@@ -464,7 +484,7 @@ subsetRates$mrate_upper <- relMigration * hivBase$migrationrate_upper
 
 if (interState) {
   # For interstate calculations also need overall population estimates
-  subsetRatesAll <- GetAdjustments(hivBase, hivAdjustments, hivInterstate,
+  subsetRatesAll <- GetAdjustments(hivBase, hivAdjustments,
     "all", targetGender, targetExposure, targetCob, targetAtsi, 
     targetLocalRegion, "all", targetGlobalRegion)  
   
@@ -494,13 +514,19 @@ if (interState) {
     hivBase$migrationrate_upper
 }
 
-# Get interregion rates -only have date since 1982 assume zero rate for
+# Get interregion rates - only have date since 1982 assume zero rate for
 # 1980-81. 
-interRegionRates <- GetInterRegion(analysisYear, absMigration, 
-  absInterstate, NULL, targetState, targetLocalRegion)
-
-subsetRates$inter_arriverate <- c(0, 0, interRegionRates$arriverate)
-subsetRates$inter_departrate <- c(0, 0, interRegionRates$departrate)
+if (interState) {
+  interRegionRates <- GetInterRegion(analysisYear, cleanNom, 
+    absInterstate, NULL, "all", targetState, targetLocalRegion,
+    assumeAdult = TRUE)
+  
+  subsetRates$inter_arriverate <- interRegionRates$arriverate
+  subsetRates$inter_departrate <- interRegionRates$departrate
+} else {
+  subsetRates$inter_arriverate <- 0
+  subsetRates$inter_departrate <- 0
+}
 
 if (doAge) {
   # Load age based relative deathrates and migration rates.
@@ -519,11 +545,15 @@ if (doAge) {
   
   # Relative migration rates
   relAgeMigrate <- GetMigrateAge(analysisYear, cleanNom, targetGender, 
-  targetExposure, targetCob, targetAtsi, targetLocalRegion, targetState, 
-  targetGlobalRegion, propMale = NULL)
+    targetExposure, targetCob, targetAtsi, targetLocalRegion, targetState, 
+    targetGlobalRegion, propMale = NULL)
   
   colnames(relAgeMigrate) <- yearList
   rownames(relAgeMigrate) <- ageList
+  
+  if (interState) {
+    
+  }
 }
 
 ```
@@ -606,8 +636,15 @@ if (interState) {
   
   # Do overall calculations only
   if (doAge) {
-    # Do age based calculations
-    pldhivOverall <- LivingDiagnosed(hivResults$notifications,
+    # Do age based calculations - age group estimates should almost 
+    # always be normalized to the overall estimates as differences in 
+    # death rates and migration rates can produce inconsistenices across
+    # the age groups. Normalization can be turned off for testing to make
+    # sure the results are not too different (comapring 
+    # pldhivOverall$pldhiv vs colSums(pldhivAll). 
+    
+    # Calculate overall (non-age) PLDHIV estimates for normalization
+    pldhivOverall <- LivingDiagnosed(adjustDiags$adjusted_included,
       subsetRates$annunique, 
       subsetRates$deathrate,
       subsetRates$mrate,
@@ -616,21 +653,52 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
+    pldhivOveralllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
+      subsetRates$annunique,  
+      subsetRates$deathrate_upper,
+      subsetRates$mrate_upper,
+      subsetRates$propstay_lower) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    pldhivOverallMax <- LivingDiagnosed(adjustDiags$adjusted_included,
+      subsetRates$annunique,  
+      subsetRates$deathrate_lower,
+      subsetRates$mrate_lower,
+      subsetRates$propstay_upper) %>%
+      mutate(year = allYears) %>%
+      select(year, everything())
+    
+    # Calculate age group estimates 
+    # NOTE: use base migration rate as mrate is calculated assuming people
+    # are aged > 15 years
     pldhivAll <- LivingDiagnosedAge(hivResultsAge,
       subsetRates$annunique, 
       subsetRates$deathrate,
-      subsetRates$mrate,
+      hivBase$migrationrate, 
       subsetRates$propstay,
       agedeath = relAgeDeath,
-      agemigrate = relAgeMigrate)
+      agemigrate = relAgeMigrate,
+      normalize = pldhivOverall$pldhiv) 
     
-    # , 
-    #   normalize = pldhivOverall$pldhiv) 
+    pldhivAllMin <- LivingDiagnosedAge(hivResultsAge,
+      subsetRates$annunique, 
+      subsetRates$deathrate_upper,
+      hivBase$migrationrate_upper, 
+      subsetRates$propstay_lower,
+      agedeath = relAgeDeath,
+      agemigrate = relAgeMigrate,
+      normalize = pldhivOveralllMin$pldhiv)
     
-      # %>%
-      # mutate(year = allYears) %>%
-      # select(year, everything()) %>%
-      # as_tibble()
+    pldhivAllMax <- LivingDiagnosedAge(hivResultsAge,
+      subsetRates$annunique, 
+      subsetRates$deathrate_lower,
+      hivBase$migrationrate_lower, 
+      subsetRates$propstay_upper,
+      agedeath = relAgeDeath,
+      agemigrate = relAgeMigrate,
+      normalize = pldhivOverallMax$pldhiv)
+    
     
   } else {
     pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
@@ -661,12 +729,40 @@ if (interState) {
 
 # Store results
 if (doAge) {
+  # Store estimates by year and age
+  pldhivDf <- as.data.frame(pldhivAll) %>% 
+    rownames_to_column(var = "agebin") %>%
+    gather("year", "pldhiv", 2:ncol(.)) %>%
+    select(year, everything()) %>%
+    mutate(year = as.integer(str_sub(year, 2))) %>%
+    as_tibble()
+  
+  pldhivDfMin <- as.data.frame(pldhivAllMin) %>% 
+    rownames_to_column(var = "agebin") %>%
+    gather("year", "pldhiv", 2:ncol(.)) %>%
+    select(year, everything()) %>%
+    mutate(year = as.integer(str_sub(year, 2))) %>%
+    as_tibble()
+  
+  pldhivDfMax <- as.data.frame(pldhivAllMax) %>% 
+    rownames_to_column(var = "agebin") %>%
+    gather("year", "pldhiv", 2:ncol(.)) %>%
+    select(year, everything()) %>%
+    mutate(year = as.integer(str_sub(year, 2))) %>%
+    as_tibble()
+  
+  hivDiagnosed <- data.frame(stage = "pldhiv",
+    year = pldhivDf$year,
+    agebin = pldhivDf$agebin,
+    value = pldhivDf$pldhiv,
+    lower = pldhivDfMin$pldhiv,
+    upper = pldhivDfMax$pldhiv) %>%
+    as_tibble()
   
 } else {
   # Don't need to store age
   hivDiagnosed <- data.frame(stage = "pldhiv",
     year = allYears,
-    population = "all",
     value = pldhivAll$pldhiv,
     lower = pldhivAllMin$pldhiv,
     upper = pldhivAllMax$pldhiv)
@@ -687,14 +783,14 @@ if (ecdcData) {
   if (excludeOS) {
     # excluding OS diagnosis
     dataAll <- EcdcFolders(ecdcFolder, ecdcModel, 
-                           includeOS = FALSE)
+      includeOS = FALSE)
     EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique,
-              propKnown = normalizeFactor)
+      propKnown = normalizeFactor)
   } else {
     # including OS diagnosis
     dataAll <- EcdcFolders(ecdcFolder, ecdcModel)
     EcdcFiles(hivSet, dataAll, propUnique = subsetRates$cumunique,
-              propKnown = normalizeFactor) 
+      propKnown = normalizeFactor) 
   }
   
   # Create output directory
@@ -718,9 +814,9 @@ if (ecdcData) {
   if (interState) {
     emigrants <- pldhivAll %>% 
       select(year, emigrants, diag_departs, inter_departs,
-             inter_arrivals) %>%
+        inter_arrivals) %>%
       mutate(total = emigrants + diag_departs + inter_departs -
-               inter_arrivals) %>%
+          inter_arrivals) %>%
       select(year, total) %>%
       rename(all = total)
   } else {
@@ -753,12 +849,12 @@ if (ecdcData) {
   hivExpCum <- hivExpCum %>% select(-unknown) %>%
     gather("expgroup", "cumnotifications", 2:5) %>%
     mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
-                                     cumnotifications)) %>%
+      cumnotifications)) %>%
     group_by(yeardiagnosis) %>% 
     mutate(propnotifications = cumnotifications /
-             sum(cumnotifications)) %>%
+        sum(cumnotifications)) %>%
     mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
-                                      propnotifications)) %>%
+      propnotifications)) %>%
     select(-cumnotifications) %>%
     ungroup() %>% 
     spread(expgroup, propnotifications) %>%
@@ -776,15 +872,15 @@ if (ecdcData) {
     matrix(rep(emigrants$all, 4), ncol = 4)
   
   EcdcWrite(expEmig, dataAll[[2]], "emigrants")
-
+  
 }
 
 ```
 
 ```{r Append retained}
 if (doRetained) {
- # Perform and append retained in care calculations
- source(file.path(HIVcode, "RetainedCare.R"))
+  # Perform and append retained in care calculations
+  source(file.path(HIVcode, "RetainedCare.R"))
   
   # Load retained in care data - Use McMahon et al data for 2013 onwards
   # Hardcoded: value, lower, upper.  Lower and upper ranges correspond 
@@ -792,7 +888,7 @@ if (doRetained) {
   # et al., Clinic Network Collaboration and Patient Tracing to Maximize 
   # Retention in HIV Care, PLOS One, May 26, 2015.
   hivParameters <- read.csv(file.path(dataFolder, 
-                                "individualHIVparameters.csv"), as.is = 1)
+    "individualHIVparameters.csv"), as.is = 1)
   hivParameters <- select(hivParameters, parameter, value)
   
   for (ii in 1:nrow(hivParameters)) {
@@ -804,7 +900,7 @@ if (doRetained) {
   retainedUpper <- vicClinicRetainedUpper
   
   hivRetained <- RetainedCare(hivDiagnosed, retained, retainedLower,
-                              retainedUpper, retainedYears)
+    retainedUpper, retainedYears)
   
   # Merge with hivDiagnosed
   hivDiagnosed <- bind_rows(hivDiagnosed, hivRetained)
@@ -819,15 +915,29 @@ if (saveResults) {
   dir.create(resultsPath, showWarnings = FALSE, recursive = TRUE)
   
   # Save all estimates
-  saveStringDetails <- file.path(resultsPath, 
-    paste0("pldhiv-", toString(analysisYear), "-"))
-  write_csv(pldhivAll, paste0(saveStringDetails, "all.csv"))
-  write_csv(pldhivAllMax, paste0(saveStringDetails, "max.csv"))
-  write_csv(pldhivAllMin, paste0(saveStringDetails, "min.csv"))
+  if (doAge) {
+    saveStringDetails <- file.path(resultsPath, 
+      paste0("pldhiv-", toString(analysisYear), "-age-"))
+    write_csv(rownames_to_column(as.data.frame(pldhivAll), var = "agebin"),
+      paste0(saveStringDetails, "all.csv"))
+    write_csv(rownames_to_column(as.data.frame(pldhivAllMin), 
+      var = "agebin"), paste0(saveStringDetails, "min.csv"))
+    write_csv(rownames_to_column(as.data.frame(pldhivAllMax), 
+      var = "agebin"), paste0(saveStringDetails, "max.csv"))
+  } else {
+    saveStringDetails <- file.path(resultsPath, 
+      paste0("pldhiv-", toString(analysisYear), "-"))
+    write_csv(pldhivAll, paste0(saveStringDetails, "all.csv"))
+    write_csv(pldhivAllMin, paste0(saveStringDetails, "min.csv"))
+    write_csv(pldhivAllMax, paste0(saveStringDetails, "max.csv"))
+  }
   
   # Save main results
   saveStringPldhiv <- file.path(resultsPath, 
     paste0("HIVpldhivEstimates-", toString(analysisYear)))
+  if (doAge) {
+    saveStringPldhiv <- paste0(saveStringPldhiv, "-age")
+  }
   write_csv(hivDiagnosed, paste0(saveStringPldhiv, ".csv"))
   
   #save parameters 
@@ -835,8 +945,205 @@ if (saveResults) {
   
   # Write to csv
   write_csv(hivParams, paste0(saveStringParams, ".csv"))
+  
+  # Write uniqueNotifications to file
+  if (doUnique) {
+    saveStringUnique <- file.path(resultsPath, "UniqueNotifications")
+    write_csv(uniqueNotifications, paste0(saveStringUnique, ".csv"))
+  }
+  
 }
 
 ```
 
+```{r Projections}
+# This chunk is used for generating projections of the number of people 
+# living with diagnosed HIV. To do the projections we simply make
+# assumptions about the future changes to annual diagnoses, deathrates, 
+# migration rates into a specified future period.  
+# 
+# Any change in inputs to LivingDiagnosed function can be manually 
+# specified the default is to keep everything the same as the analysis 
+# year.
+# 
+# Any counterfactual or future projection scenario can be manually 
+# specified.
+# 
+# Maybe move this into a separate function or script but fits nicely here. 
 
+if (projectPldhiv) { 
+  
+  # Manually set final year for projections and projection name
+  projectYear <- analysisYear + 10  
+  projectName <- "future"
+  
+  # Specifiy projection option for future diagnoses
+  projectOption <- "reduce" #status-quo, linear, reduce 
+  projectDecrease <- 0.5
+  
+  saveProjResults <- TRUE 
+  # Reset if saving things overall
+  saveProjResults <- ifelse(saveResults, TRUE, saveProjResults) 
+  
+  # Functions for setting up vectors
+  End <- function(vector) return(tail(vector, 1))
+  ProjVec <- function(vector, nyears) return(c(vector, 
+    rep(End(vector), nyears)))
+  
+  # Setup projection years
+  projectYears <- (analysisYear + 1):projectYear
+  nprojYears <- length(projectYears)
+  totalYears <- c(allYears, projectYears)
+  
+  # Setup Projection relative decrease (linear over projectYears)
+  projectDecreaseFuture <- seq(1, projectDecrease, length = (nprojYears+1))
+  projectDecreaseAll <- c(rep(1, nyears), 
+    tail(projectDecreaseFuture, nprojYears))
+  
+  # Default vectors for projections assume everything stays the same.
+  # Keeping the number of diagnoses and annUnique the same as the 
+  # analysis year value means the same number of unique diagnoses will
+  # occur each year. SELECT STANDARD OPTION OR MANUALLY CHANGE TO RUN
+  #  ALTERNATE SCENARIOS.
+  
+  # Dignoses options
+  if (projectOption == "status-quo") {
+    diagnosesFuture <- ProjVec(adjustDiags$adjusted_included, nprojYears)
+  } else if (projectOption == "linear") {
+    # Trend diagnoses (using trend over last 5 years)
+    trendlm <- lm(diagnoses ~ year, 
+      data.frame(year = (analysisYear - 4):analysisYear, 
+        diagnoses = tail(adjustDiags$adjusted_included, 5)))
+    trendDiags <- predict(trendlm, data.frame(year = projectYears))
+    diagnosesFuture <- c(adjustDiags$adjusted_included, trendDiags)
+  } else if(projectOption == "reduce") {
+    diagnosesFuture <- projectDecreaseAll * 
+      ProjVec(adjustDiags$adjusted_included, nprojYears)
+  } else {
+    # MANUALLY CHANGE HERE TO RUN ALTERNATE SCENARIOS
+  }
+  
+  # Use trend diagnoses as default
+  diagnoses <- diagnosesFuture
+  annUnique <- ProjVec(subsetRates$annunique, nprojYears)
+  deathrate <- ProjVec(subsetRates$deathrate, nprojYears)
+  osrate <- ProjVec(subsetRates$mrate, nprojYears)
+  propStay <- ProjVec(subsetRates$propstay, nprojYears)   
+  
+  # CHANGE DEFAULTS HERE
+  # 
+  # Example showing counterfactual to calculate number living 
+  # diagnosed before 1996 etc
+  # diagnoses[totalYears > 1996] <- 0 
+  # projectName <- "pre1996"
+  # Example looking at future impact of PrEP after 2016 assuming 
+  # 50% reduction in diagnoses
+  # diagnoses[totalYears > 2016] <- 0.5 * diagnoses[totalYears > 2016]
+  
+  # Do future projections
+  pldhivAllFuture <- LivingDiagnosed(diagnoses,
+    annUnique, 
+    deathrate,
+    osrate,
+    propStay) %>%
+    mutate(year = totalYears) %>%
+    select(year, everything())
+  
+  # Do a similar process for each age group if doing age and run in 
+  # Living DiagnosedAge(). To do past 5 years age trends we need to loop
+  # cross age groups to generate estimates.
+  if (doAge) {
+    
+    # Setup hivResultsAge for future. Most are the same as for the non-age
+    # calculations except diagnoses, relAgeDeath, and relAgeMigrate need to
+    # be extended into the future
+    
+    
+    # Status quo diagnoses and relative reductions can be applied across
+    # the age groups
+    
+    
+    if (projectOption == "status-quo") {
+      hivResultsAgeFuture <- cbind(hivResultsAge,
+        matrix(rep(hivResultsAge[,ncol(hivResultsAge-1)], nprojYears), 
+          ncol = nprojYears))
+      colnames(hivResultsAgeFuture) <- paste0("y", 
+        as.character(totalYears))
+    } else if (projectOption == "linear") {
+      # Project each age group independently
+      hivResultsAgeFuture <- cbind(hivResultsAge,
+        matrix(0, ncol = nprojYears, nrow = nages))
+      colnames(hivResultsAgeFuture) <- paste0("y", 
+        as.character(totalYears))
+      for (age in 1:nages) {
+        # Extract age group diagnoses
+        ageDiagnoses <- hivResultsAge[age, ]
+        
+        # Estimate trends
+        trendlm <- lm(diagnoses ~ year, 
+          data.frame(year = (analysisYear - 4):analysisYear, 
+            diagnoses = tail(ageDiagnoses, 5)))
+        trendDiags <- predict(trendlm, data.frame(year = projectYears))
+        
+        # Make sure diagnoses are at least zero (okay as normalization 
+        # should fix this.
+        trendDiags[trendDiags < 0] <- 0
+        
+        # Store final age trends
+        hivResultsAgeFuture[age, ] <-c(ageDiagnoses, trendDiags)
+      } 
+    } else if(projectOption == "reduce") {
+      # Assume same reduction across all age groups
+      hivResultsAgeFuture <- cbind(hivResultsAge,
+        matrix(0, ncol = nprojYears, nrow = nages))
+      colnames(hivResultsAgeFuture) <- paste0("y", 
+        as.character(totalYears))
+      for (age in 1:nages) {
+        # Extract age group diagnoses
+        ageDiagnoses <- hivResultsAge[age, ]
+        
+        # Reduce future diagnoses
+        diagnosesFuture <- projectDecreaseAll * ProjVec(ageDiagnoses, 
+          nprojYears)
+        
+        # Store final age trends
+        hivResultsAgeFuture[age, ] <- diagnosesFuture
+      }
+    } else {
+      # MANUALLY CHANGE HERE TO RUN ALTERNATE SCENARIOS
+    }
+    
+    # Set aged diagnoses option
+    diagnosesAge <- hivResultsAgeFuture
+    
+    # Deaths is a bit tricky because the final row is zero
+    relAgeDeathFuture <- cbind(relAgeDeath[, 1:(ncol(relAgeDeath)-1)], 
+      matrix(rep(relAgeDeath[, (ncol(relAgeDeath)-1)], nprojYears), 
+        ncol = nprojYears), relAgeDeath[, ncol(relAgeDeath)])
+    colnames(relAgeDeathFuture) <- paste0("y", as.character(totalYears))
+    
+    # Migration is straight forward
+    relAgeMigrateFuture <- cbind(relAgeMigrate,
+      matrix(rep(relAgeMigrate[,ncol(relAgeMigrate-1)], nprojYears), 
+        ncol = nprojYears))
+    colnames(relAgeMigrateFuture) <- paste0("y", as.character(totalYears))
+    
+    # Now run projections
+    pldhivAgeFuture <- LivingDiagnosedAge(diagnosesAge,
+      annUnique, 
+      deathrate,
+      osrate, 
+      propStay, 
+      agedeath = relAgeDeathFuture,
+      agemigrate = relAgeMigrateFuture,
+      normalize = pldhivAllFuture$pldhiv) 
+    
+  }
+  
+  # if (saveProjResults) {
+  #   write_csv(pldhivAllFuture, paste0(saveStringDetails, projectName,
+  #     ".csv"))
+  # }
+  
+}
+```

@@ -6,31 +6,35 @@
 # rate for a specified sub-population. 
 
 # Define local functions --------------------------------------------------
-  extractData <- function(data, fcob, fage, fstate, fgender) {
-    subData <- data %>% 
-      filter(year %in% 2004:2014) %>%
-      filter(cob %in% fcob, age %in% fage, 
-        state %in% fstate, gender %in% fgender) %>% 
-      group_by(year) %>%
-      summarise(departures = sum(nom),
-        erp = sum(erp)) %>%
-      mutate(migrate = departures / erp)
-    return(subData)
-  }
-  
-  predictRates <- function(subrate, allrate, year) {
-    relRate <- data.frame(relrate = subrate/ allrate, 
-      year = 2004:2014)
-    lmRate <- lm(relrate ~ year, data = relRate)
-    adjust <- predict(lmRate, 
-      data.frame(year = 1980:year))
-    return(adjust)
-  }
-  
+extractData <- function(data, fcob, fage, fstate, fgender) {
+  subData <- data %>% 
+    filter(year %in% 2004:2014) %>%
+    filter(cob %in% fcob, age %in% fage, 
+      state %in% fstate, gender %in% fgender) %>% 
+    group_by(year) %>%
+    summarise(departures = sum(nom),
+      erp = sum(erp)) %>%
+    mutate(migrate = departures / erp)
+  return(subData)
+}
+
+predictRates <- function(subrate, allrate, year) {
+  relRate <- data.frame(relrate = subrate/ allrate, 
+    year = 2004:2014)
+  lmRate <- lm(relrate ~ year, data = relRate)
+  adjust <- predict(lmRate, 
+    data.frame(year = 1980:year))
+  return(adjust)
+}
+
 # Overall relative rate for a specified population -----------------------
 GetMigrate <- function(finalYear, nomData, targetAge, targetGender
   ,targetExposure, targetCob, targetAtsi,targetLocalRegion, targetState,
   targetGlobalRegion, assumeAdult = TRUE, propMale = NULL) {
+  
+  
+  
+  
   
   # Sort out age categories - a bit complicated because we generally assume 
   # HIV-positive are adults and ERP data unavailable in 5 year bins for 
@@ -72,16 +76,15 @@ GetMigrate <- function(finalYear, nomData, targetAge, targetGender
       (length(targetExposure) == 1 && targetExposure[1] == "msm")) {
     
     # Male data and rates
-    maleData <- extractData(cleanNom, targetCob, adjustAges, targetState, 
+    maleData <- extractData(nomData, targetCob, adjustAges, targetState, 
       "male")
     relmrate <- predictRates(maleData$migrate, allData$migrate,
       finalYear)
     
   } else if (targetGender == "female") {
-    adjustments$mrate <- hivAdjustments$mrate_female_adults
     
     # Female data and rates
-    femaleData <- extractData(cleanNom, targetCob, adjustAges, 
+    femaleData <- extractData(nomData, targetCob, adjustAges, 
       targetState, "female")
     relmrate <- predictRates(femaleData$migrate, allData$migrate,
       finalYear)
@@ -90,7 +93,7 @@ GetMigrate <- function(finalYear, nomData, targetAge, targetGender
   } else {
     if (is.null(propMale)) {
       # Don't adjust for gender  
-      subData <-  extractData(cleanNom, targetCob, adjustAges, 
+      subData <-  extractData(nomData, targetCob, adjustAges, 
         targetState, "all") 
       relmrate <- predictRates(subData$migrate, allData$migrate,
         finalYear)
@@ -98,11 +101,11 @@ GetMigrate <- function(finalYear, nomData, targetAge, targetGender
     # Adjust for gender using propMale 
     
     # Male and female calculations
-    maleData <- extractData(cleanNom, targetCob, adjustAges, targetState, 
+    maleData <- extractData(nomData, targetCob, adjustAges, targetState, 
       "male")
     adjustMales <- predictRates(maleData$migrate, allData$migrate,
       finalYear)
-    femaleData <- extractData(cleanNom, targetCob, adjustAges, 
+    femaleData <- extractData(nomData, targetCob, adjustAges, 
       targetState, "female")
     adjustFemales <- predictRates(femaleData$migrate, allData$migrate,
       finalYear)  
