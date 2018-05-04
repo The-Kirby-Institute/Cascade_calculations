@@ -384,6 +384,11 @@ if (msmSplit) {
         "female")
 }
 
+# Get rid of excess rows and columns
+chlamRetest <- chlamRetest %>% 
+  select(-contains("X_")) %>%
+  filter(!is.na(variable))
+
 # Just keep the data and calculate proportions separately
 chlamRetest <- chlamRetest %>%
   filter(variable %in% c("# of diagnoses", "# re-tested in 42-180 days"))
@@ -450,6 +455,25 @@ if (mergeRemote) {
   
 }
 
+# Replace NAs with zeros
+chlamRetest[is.na(chlamRetest)] <- 0
+
+# Calculate overall male if we have split by MSM
+if (msmSplit) {
+  maleData <- chlamRetest %>%
+    filter(sex %in% c("msm", "non_msm")) %>%
+    group_by(region, context, year) %>%
+    summarise(sex = "male",
+      diagnoses = sum(diagnoses),
+      retested = sum(retested)) %>%
+    ungroup()
+  
+  # Add to all data
+  chlamRetest <- chlamRetest %>%
+    bind_rows(maleData) %>%
+    arrange(region, context, year)
+  
+}
 
 # Now calculate proportion retest and lower and upper bound --------------
 chlamRetest <- chlamRetest %>%
@@ -461,7 +485,8 @@ chlamRetest <- chlamRetest %>%
 LowerProp <- function(x, y) prop.test(x, y)[[6]][1]
 UpperProp <- function(x, y) prop.test(x, y)[[6]][2]
 
-indices <- !is.na(chlamRetest$retested)
+indices <- (!is.na(chlamRetest$retested) &
+  (chlamRetest$diagnoses != 0))
 
 propLower <- mapply(LowerProp, chlamRetest$retested[indices],
   chlamRetest$diagnoses[indices])
@@ -770,7 +795,6 @@ if (msmSplit) {
 
 # Get rid of excess rows and columns
 retestVariation <- retestVariation %>% 
-  #filter(rowSums(is.na(.)) != ncol(.)) %>%
   select(-contains("X_")) %>%
   filter(!is.na(variable))
 
@@ -835,6 +859,25 @@ retestVariation <- retestVariation %>%
   mutate(retested = as.numeric(retested),
     diagnoses = as.numeric(diagnoses))
 
+# Replace NAs with zeros
+retestVariation[is.na(retestVariation)] <- 0
+
+# Calculate overall male if we have split by MSM
+if (msmSplit) {
+  maleData <- retestVariation %>%
+    filter(sex %in% c("msm", "non_msm")) %>%
+    group_by(region, context, year, period) %>%
+    summarise(sex = "male",
+      diagnoses = sum(diagnoses),
+      retested = sum(retested)) %>%
+    ungroup()
+  
+  # Add to all data
+  retestVariation <- retestVariation %>%
+    bind_rows(maleData) %>%
+    arrange(region, context, year, period)
+  
+}
 
 # Now calculate proportion retest and lower and upper bound --------------
 retestVariation <- retestVariation %>%
@@ -870,50 +913,16 @@ retestVariation[is.na(retestVariation)] <- 0
 retestVariation <- retestVariation %>%
   filter(year == dataYear)
 
-# Do weighted all and male calculations
-msmRestest <- retestVariation %>% 
-  filter(sex == "msm") %>%
-  select(region, context, year, period, everything()) %>%
-  rename(msm_diagnoses = diagnoses, msm_retested = retested, 
-    msm_prop_retested = prop_retested, msm_prop_lower = prop_lower,
-    msm_prop_upper = prop_upper) %>%
-  select(-sex)
-    
-heteroRestest <- retestVariation %>% 
-  filter(sex == "non_msm") %>%
-  select(region, context, year, period, everything()) %>%
-  rename(hetero_diagnoses = diagnoses, hetero_retested = retested, 
-    hetero_prop_retested = prop_retested, hetero_prop_lower = prop_lower,
-    hetero_prop_upper = prop_upper) %>%
-  select(-sex)
-
-femRestest <- retestVariation %>% 
-  filter(sex == "female") %>%
-  select(region, context, year, period, everything()) %>%
-  rename(fem_diagnoses = diagnoses, fem_retested = retested, 
-    fem_prop_retested = prop_retested, fem_prop_lower = prop_lower,
-    fem_prop_upper = prop_upper) %>%
-  select(-sex)
-
-allWeightedRetest <- left_join(msmRestest, heteroRestest, 
-    by = c("region", "context", "year", "period")) %>%
-  left_join(femRestest, by = c("region", "context", "year", "period")) %>%
-  mutate(male_diagnoses = msm_diagnoses + hetero_diagnoses,
-    all_diagnoses = msm_diagnoses + hetero_diagnoses + fem_diagnoses) %>%
-  mutate(male_retested = (msm_retested + hetero_retested) / male_diagnoses,
-    male_weighted_retested = msm_diagnoses / male_diagnoses *
-      msm_prop_retested + hetero_diagnoses / male_diagnoses * hetero_prop_retested)
-
 # Write to file
-# if (msmSplit) { 
-#   write.csv(retestVariation, file = file.path(cleanDataFolder,
-#     paste0("chlamRetestVariation", toString(dataYear), "_MSM.csv")),
-#     row.names = FALSE)
-# } else {
-#   write.csv(retestVariation, file = file.path(cleanDataFolder,
-#     paste0("chlamRetestVariation", toString(dataYear), ".csv")),
-#     row.names = FALSE)
-# }
+if (msmSplit) {
+  write.csv(retestVariation, file = file.path(cleanDataFolder,
+    paste0("chlamRetestVariation", toString(dataYear), "_MSM.csv")),
+    row.names = FALSE)
+} else {
+  write.csv(retestVariation, file = file.path(cleanDataFolder,
+    paste0("chlamRetestVariation", toString(dataYear), ".csv")),
+    row.names = FALSE)
+}
 
 ```
 
