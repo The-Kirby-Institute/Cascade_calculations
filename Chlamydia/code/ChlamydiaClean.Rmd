@@ -355,6 +355,9 @@ if (msmSplit) {
 chlamRetest <- read_excel(rawDataTreatment, sheet = 1, skip = 3,
   col_names = FALSE)
 
+# For some reason 7th column is read as char
+chlamRetest$X__7 <- as.numeric(chlamRetest$X__7)
+
 # Clean up data ----------------------------------------------------------
 
 colnames(chlamRetest)[1] <- "setting"
