@@ -100,12 +100,10 @@ if (doRetained) {
 }
 
 doUnique <- TRUE
-yearUnique <- NULL
-saveUnique <- FALSE
+yearUnique <- 1992
 
 doUnique <- ifelse(targetAtsi == "indigenous", FALSE, doUnique)
 yearUnique <- ifelse(is.null(yearUnique), 2100, yearUnique) # Well past today
-saveUnique <- ifelse(!saveResults, FALSE, saveUnique)
   
 # Settings for generating ECDC model inputs ------------------------------
 ecdcData <- FALSE
@@ -118,7 +116,7 @@ ecdcModel <- cascadeName # name
 if (excludeOS) {
   # If excludeOS don't save the pldhiv estimates as we are only using this
   # for ECDC calculations
-  saveResults <- FALSE
+  saveResults <- TRUE
 }
 
 # Leave projections chunk turned off so it is not called unless required. 
@@ -147,7 +145,7 @@ source(file.path(HIVcode,"LivingDiagnosedAge.R"))
 # Function to easily extract sub-populations of interest 
 source(file.path(HIVcode, "SubHivSet.R"))
 
-# Functions for removing duplicates annually
+# Function for removing duplicates annually
 source(file.path(HIVcode, "DeduplicationFunctions.R"))
 
 # Function to replace estimates
@@ -228,7 +226,7 @@ hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
 
-# Calculate unique notifications and duplicates for the known set.
+# Calculate unique notifications and duplicates
 if (doUnique) {
   uniqueNotifications <- GetUnique(hivSet, allYears, 
     yearUnique = yearUnique)

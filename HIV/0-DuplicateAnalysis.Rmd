@@ -1,0 +1,489 @@
+---
+title: "Exploration of duplicates in HIV notifications"
+author: "Richard T. Gray"
+date: '`r format(Sys.Date(), format="%d %B %Y")`'
+output: 
+  word_document:
+    pandoc_args: --output="docs/Duplicate_analysis.docx"
+---
+
+This Rmarkdown document describes an exploration of the number and 
+proportion of duplicate notifications in the Australian HIV Registry. The 
+primary reason for this exploration is to assess the validity of using the
+deduplication algorithm published in:
+
+> Law, M G, A M McDonald, and J M Kaldor. "Estimation of Cumulative HIV 
+> Incidence in Australia, Based on National Case Reporting." Australian 
+> and New Zealand Journal of Public Health 20, no. 2 (April 1996): 215-7.
+
+for use in the Australian HIV diagnosis and care cascades. 
+
+```{r knitr_options, include=FALSE} 
+knitr::opts_chunk$set(echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  include = FALSE) 
+```
+
+## Settings and assumptions
+
+We applied the deduplication algorithm to the entire set of notifications 
+in the HIV registry to the end of 2016 and separately for notifications 
+from the states of New South Wales (NSW) and Victoria (Vic). For these
+settings we estimated annual and cumulative notifications (including 
+duplicates), the cumulative number and proportion of notifications that 
+are unique, and the annual number and proportion of notifications that are
+unique each year. 
+
+The algorithm is statistical in nature and is applied to all notifications
+since the start of Australia's HIV epidemic in 1980 (year of first 
+notification). Annual estimates for a given year are obtained by applying 
+this algorithm to all the notifications between 1980 and each given year 
+and then taking the difference. This can lead to invalid estimates where 
+the annual proportion unique is > 1 and the number of duplicates is 
+negative. However, adding the annual number of duplicates will produce the
+correct cumulative number of unique notifications and this value is the 
+key estimate for the HIV cascades. Thus we pretend the annual estimates 
+are valid for the purposes of our calculations and estimates. 
+
+In recent years there is likely to be very few duplicates in the registry 
+due to validation processes as part of HIV surveillance especially 
+following an audit of all notifications in 2002 (I believe). So far we 
+have simply applied the algorithm to all notifications and assumed the 
+estimates are valid, even if the number of duplicates seems a bit high in 
+recent years, and assumed other (uncertain) components of the cascade 
+calculations (such as emigration) balance out any errors in the estimates 
+for duplicates. We explored the validity of this assumption by considering
+scenarios where all notifications since 1992 or 2002 overall and for each 
+state are unique (arbitrarily chosen years). We then compared the 
+estimates for each setting and scenario.
+
+```{r Initilization}
+# Open as a project (setting working directory to source and restarting R)
+
+# Setup directories
+basePath <- getwd()
+Rcode <- file.path(dirname(basePath), "code") # All cascades code
+HIVcode <- file.path(basePath, "code") 
+dataFolder <- file.path(basePath, "data")
+resultsFolder <- file.path(basePath, "output")
+figuresFolder <- file.path(basePath, "output", "figures")
+
+# Load libraries and standard functions
+source(file.path(Rcode, "LoadLibrary.R"))
+LoadLibrary(tidyverse)
+LoadLibrary(cowplot)
+LoadLibrary(captioner)
+LoadLibrary(scales)
+
+# Script options
+savePlots <- TRUE
+analysisYear <- 2016
+
+# It can take a while to generate the results so create the option to just
+# save and load the results.
+recreateResults <- FALSE # If false load from "DuplicateAnalysis.Rda" in
+                        # results folder 
+
+# Captions setup
+figs <- captioner()
+tabs <- captioner(prefix = "Table")
+
+```
+
+```{r Load and clean notifications}
+# This chunk loads the national notifications and subsets based on the
+# specified criteria in Script paramaters
+
+# Function to tidy notifications
+source(file.path(HIVcode, "TidyNotifications.R"))
+
+# Load cleaned notifications data
+origHivData <- read_csv(file.path(dataFolder, paste0("hivnotifications",
+  toString(analysisYear), ".csv"))) 
+
+# Read in country code data
+countryCodes <- read_csv(file.path(dataFolder, "countryRegionCodes.csv"))
+
+# Tidy up notifications for calculations
+hivData <- TidyNotifications(origHivData, analysisYear, countryCodes)
+
+# Data checks-------------------------------------------------------------
+
+# Quick check that we are not doing analysis outside of the data
+if (max(hivData$yeardiagnosis) < analysisYear) {
+  stop("No data specified for final year of analysis.")
+}
+
+# HIV data variables------------------------------------------------------
+
+# Setup variables for overarching analysis                  
+allYears <- min(hivData$yeardiagnosis):analysisYear # all years of data
+
+```
+
+```{r Generate results}
+# This chunk generates the estimates for duplicates for the key 
+# sub-populations we are investigating. 
+# recreateResults <- TRUE # within chunk change
+
+if (recreateResults) {
+  hivSetAll <- filter(hivData, yeardiagnosis <= analysisYear)
+  
+  # Get our subsets ------------------------------------------------------
+  # Extract subset of notifications we want using function to easily
+  # extract sub-populations of interest 
+  source(file.path(HIVcode, "SubHivSet.R"))
+  
+  # SubHivSet(hivSetAll, targetAge, targetGender, targetExposure,
+  #   targetCob, targetAtsi, targetState, targetGlobalRegion)
+  allHiv <- SubHivSet(hivSetAll, "all", "all", "all", "all", "all", "all",
+    "all")[[1]]
+  maleHiv <- SubHivSet(hivSetAll, "all", "male", "all", "all", "all",
+    "all", "all")[[1]]
+  femaleHiv <- SubHivSet(hivSetAll, "all", "female", "all", "all", "all",
+    "all", "all")[[1]]
+  heteroHiv <- SubHivSet(hivSetAll, "all", "male", "hetero", "all", "all",
+    "all", "all")[[1]]
+  
+  nswHiv <- SubHivSet(hivSetAll, "all", "all", "all", "all", "all", "nsw",
+    "all")[[1]]
+  vicHiv <- SubHivSet(hivSetAll, "all", "all", "all", "all", "all", "vic",
+    "all")[[1]]
+  
+  nonNswHiv <- SubHivSet(hivSetAll, "all", "all", "all", "all", "all",
+    "nsw", "all")[[2]]
+  nswMaleHiv <- SubHivSet(hivSetAll, "all", "male", "all", "all", "all",
+    "nsw", "all")[[1]]
+  nonNswMaleHiv <- SubHivSet(maleHiv, "all", "all", "all", "all",
+    "all", "nsw", "all")[[2]]
+
+  
+  
+  # Generate results we want ---------------------------------------------
+  # Functions for removing duplicates annually
+  source(file.path(Rcode, "FillMissing.R"))
+  source(file.path(Rcode, "FillDataFrame.R"))
+  source(file.path(HIVcode, "DeduplicationFunctions.R"))
+  
+  all2022 <- GetUnique(allHiv, allYears) %>%
+    mutate(population = "all", replace = "2022")
+  male2022 <- GetUnique(maleHiv, allYears) %>%
+    mutate(population = "male", replace = "2022")
+  female2022 <- GetUnique(femaleHiv, allYears) %>%
+    mutate(population = "female", replace = "2022")
+  hetero2022 <- GetUnique(heteroHiv, allYears) %>%
+    mutate(population = "heteromale", replace = "2022")
+  
+  all2002 <- GetUnique(allHiv, allYears, yearUnique = 2002) %>%
+    mutate(population = "all", replace = "2002")
+  all1992 <- GetUnique(allHiv, allYears, yearUnique = 1992) %>%
+    mutate(population = "all", replace = "1992")
+  
+  nsw2022 <- GetUnique(nswHiv, allYears) %>%
+    mutate(population = "nsw", replace = "2022")
+  nsw2002 <- GetUnique(nswHiv, allYears, yearUnique = 2002) %>%
+    mutate(population = "nsw", replace = "2002")
+  nsw1992 <- GetUnique(nswHiv, allYears, yearUnique = 1992) %>%
+    mutate(population = "nsw", replace = "1992")
+  
+  vic2022 <- GetUnique(vicHiv, allYears) %>%
+    mutate(population = "vic", replace = "2022")
+  vic2002 <- GetUnique(vicHiv, allYears, yearUnique = 2002) %>%
+    mutate(population = "vic", replace = "2002")
+  vic1992 <- GetUnique(vicHiv, allYears, yearUnique = 1992) %>%
+    mutate(population = "vic", replace = "1992")
+  
+  nonnsw2022 <- GetUnique(nonNswHiv, allYears) %>%
+    mutate(population = "nonnsw", replace = "2022")
+  nswMale2022 <- GetUnique(nswMaleHiv, allYears) %>%
+    mutate(population = "nswmale", replace = "2022")
+  nonnswmale2022 <- GetUnique(nonNswMaleHiv, allYears) %>%
+    mutate(population = "nonnswmale", replace = "2022")
+  
+  # Put everything into a giant data frame
+  duplicateResults <- bind_rows(all2022, male2022, female2022, all2002,
+    all1992, nsw2022, nsw2002, nsw1992, vic2022, vic2002, vic1992, 
+    nonnsw2022, nswMale2022, nonnswmale2022, 
+    .id = "set") %>%
+    select(set, year, population, replace, everything())
+  
+  # Save results for reloading
+  save(duplicateResults, file = file.path(resultsFolder,
+    "DuplicateAnalysis.Rda"))
+} else {
+  # Load previoulsly generated file
+  load(file = file.path(resultsFolder,
+    "DuplicateAnalysis.Rda"))
+}
+```
+
+\pagebreak
+
+## Results
+
+```{r Plot results}
+# This chuck produces all the plots.
+source(file.path(Rcode, "PlotOptions.R"))
+source(file.path(Rcode, "PlotColors.R"))
+# source(file.path(Rcode, "GetLegend.R"))
+source(file.path(Rcode, "SaveFigure.R"))
+
+# Setup plot specifications ----------------------------------------------
+cols <- PlotColors("main")
+
+scenarios <- c("total", "cum1992", "cum2002", "cumall")
+scenarioNames <- c("total" = "All notifications",
+  "cum2002" = "Assumed unique since 2002",
+  "cum1992" = "Assumed unique since 1992",
+  "cumall" = "Unique notifications")
+scenarioCols <- cols[1:4]
+names(scenarioCols) <- scenarios
+
+plotOpts <- PlotOptions() + theme(legend.position = "right",
+    plot.title = element_text(hjust = 0.5))
+
+#` Function for plotting results for cumulative notifications
+resultsPlot <- function(data, zoom = FALSE) {
+  
+  plot <- ggplot(data = filter(data, replace == 2022), 
+    aes(x = year)) +
+    geom_line(aes(y = totalnotifications, colour = "total")) +
+    geom_line(data = filter(data, replace == 1992),
+      aes(y = cum_unique_replace, colour = "cum1992")) +
+    geom_line(data = filter(data, replace == 2002),
+      aes(y = cum_unique_replace, colour = "cum2002")) +
+    geom_line(aes(y = cum_unique, colour = "cumall")) +
+    scale_colour_manual(name = "", 
+      limits = scenarios,
+      breaks = scenarios,
+      labels = scenarioNames[scenarios],
+      values = scenarioCols[scenarios]) +
+    scale_y_continuous(label = comma) + 
+    labs(x = "Year", y = "Cumulative\nnotifications") + 
+    plotOpts
+  
+  return(plot)
+}
+
+# Figure 1 ---------------------------------------------------------------
+# Figure comparing national, nsw, and victorian notifications
+
+allResults <-resultsPlot(filter(duplicateResults, population == "all")) +
+    labs(title = "National notifications")
+nswResults <-resultsPlot(filter(duplicateResults, population == "nsw")) +
+    labs(title = "NSW notifications")
+vicResults <-resultsPlot(filter(duplicateResults, population == "vic")) +
+    labs(title = "Victoria notifications")
+
+# Create a combined figure
+# legend <- GetLegend(allResults)
+# figure1a <- allResults + theme(legend.position = "none") 
+# figure1b <- nswResults + theme(legend.position = "none") 
+# figure1c <- vicResults + theme(legend.position = "none") 
+
+figure1 <- plot_grid(allResults, nswResults, vicResults,
+  labels = c("A", "B", "C", ""), ncol = 1, nrow = 3)
+
+# Figure caption 
+figs("figure1", "Cumulative total (black line) and unique notifications 
+(green line) for A) Australia overall, B) NSW, and C) Victoria. The blue
+  and red lines show the results when all notifications since 1992
+  and 2002 are assumed to be unique, respectively.")
+
+# Figure 2 ---------------------------------------------------------------
+
+allResultsZoom <- allResults + 
+ xlim(2010, analysisYear) + 
+ scale_y_continuous(label = comma, limits = c(25000, NA))
+nswResultsZoom <- nswResults + 
+ xlim(2010, analysisYear) + 
+ scale_y_continuous(label = comma, limits = c(15000, NA))
+vicResultsZoom <- vicResults + 
+ xlim(2010, analysisYear) + 
+ scale_y_continuous(label = comma, limits = c(6000, NA))
+
+# Create a combined figure
+figure2 <- plot_grid(allResultsZoom, nswResultsZoom, vicResultsZoom,
+  labels = c("A", "B", "C"), ncol = 1, nrow = 3)
+
+# Figure caption 
+figs("figure2", "Zoom in on results from Figure 1.")
+
+# Figure 3 ---------------------------------------------------------------
+# Figure 3a - Compare male and female cumulative poportion
+propSexData <- filter(duplicateResults, 
+  population %in% c("all", "male", "female"), replace == "2022")
+
+sexs <- c("female", "male", "all")
+sexNames <- c("female" = "Females", 
+  "male" = "Males", 
+  "all" = "Overall")
+sexCols <- cols[1:3]
+names(sexCols) <- sexs
+
+propPlotSex <- ggplot(data = propSexData, aes(x = year, y = cumunique,
+  colour = population)) + 
+  geom_line() +
+  scale_colour_manual(name = "Population", 
+    breaks = sexs,
+    limits = sexs,
+    labels = sexNames[sexs],
+    values = sexCols[sexs]) + 
+  coord_cartesian(xlim = c(1986, analysisYear), ylim = c(0.75,1)) +
+  scale_y_continuous(label = percent) +
+  labs(y = "Cumulative proportion", x = "Year",
+    title = "Proportion unique by sex") + 
+  plotOpts
+
+# Figure 3b - Compare state cumulative poportion
+propStateData <- filter(duplicateResults, 
+  population %in% c("all", "nsw", "vic"), replace == "2022")
+
+states<- c("vic", "nsw", "all")
+stateNames <- c("vic" = "Victoria", 
+  "nsw" = "NSW", 
+  "all" = "National")
+stateCols <- cols[1:3]
+names(stateCols) <- states
+
+propPlotState <- ggplot(data = propStateData, aes(x = year, y = cumunique,
+  colour = population)) + 
+  geom_line() +
+  scale_colour_manual(name = "Population", 
+    breaks = states,
+    limits = states,
+    labels = stateNames[states],
+    values = stateCols[states]) + 
+  coord_cartesian(xlim = c(1986, analysisYear), ylim = c(0.75,1)) +
+  scale_y_continuous(label = percent) +
+  labs(y = "Cumulative proportion", x = "Year", 
+    title = "Proportion unique by state") + 
+  plotOpts
+
+# Create a combined figure
+figure3 <- plot_grid(propPlotSex, propPlotState,
+  labels = c("A", "B"), ncol = 1, nrow = 2)
+
+# Figure caption 
+figs("figure3", "Cumulative proportion unique by sex and state.")
+
+# Figure 4 ---------------------------------------------------------------
+# Compare NSW to non-NSW data 
+propPopData <- filter(duplicateResults, 
+  population %in% c("all", "male", "nsw", "nswmale", "nonnsw",
+    "nonnswmale"), replace == "2022")
+
+pops <- c("nonnswmale", "nonnsw", "nswmale", "nsw", "male", "all") 
+popNames <- c(
+  "nonnswmale" = "Males outside of NSW",
+  "nonnsw" = "Outside of NSW",
+  "nswmale" = "NSW males",
+  "nsw" = "NSW", 
+  "male" = "Males", 
+  "all" = "Overall")
+popCols <- cols[1:6]
+names(popCols) <- pops
+
+figure4 <- ggplot(data = propPopData, aes(x = year, y = cumunique,
+  colour = population)) + 
+  geom_line() +
+  scale_colour_manual(name = "Population", 
+    breaks = pops,
+    limits = pops,
+    labels = popNames[pops],
+    values = popCols[pops]) + 
+  coord_cartesian(xlim = c(1986, analysisYear), ylim = c(0.75,1)) +
+  scale_y_continuous(label = percent) +
+  labs(y = "Cumulative proportion", x = "Year",
+    title = "Proportion unique NSW vs rest of Australia") + 
+  plotOpts
+
+# Figure caption 
+figs("figure4", "Cumulative proportion unique for NSW comapred to rest of
+  Australia.")
+
+# Save all the plots -----------------------------------------------------
+if (savePlots) {
+  SaveFigure(figuresFolder, "Duplicates_state_notifications", figure1,
+    height = 17.5, width = 15, units = "cm")
+  
+  SaveFigure(figuresFolder, "Duplicates_zoom_notifications", figure2,
+    height = 17.5, width = 15, units = "cm")
+  
+  SaveFigure(figuresFolder, "Duplicates_prop_unique", figure3,
+    height = 15, width = 15, units = "cm")
+  
+  SaveFigure(figuresFolder, "Duplicates_prop_unique_test", figure4,
+    height = 7.5, width = 15, units = "cm")
+  
+}
+```
+
+The following figures show selected results for each population. Figures 1
+and 2 show the change in cumulative notifications over time for each state
+under various assumptions for when all annual notifications rare unique. 
+Figure 1 shows the majority of duplicate notifications occurred prior to 
+1992 and the number of duplicates from Victoria is small. Zooming in to 
+recent years (Figure 2) shows there is little difference between the 
+algorithm output and the assumption all notifications are unique since 
+2002 (though the difference is a bit larger for NSW).   
+
+`r figs("figure1")`
+
+```{r Figure 1, include = TRUE, fig.width = 5, fig.height = 6}
+figure1
+```
+
+\pagebreak
+
+`r figs("figure2")`
+
+```{r Figure 2, include = TRUE, fig.width = 6, fig.height = 7}
+figure2
+```
+
+Figure 3 shows the cumulative proportion of notifications that are unique 
+by sex and state. Over 95% of female and Overall Victorian notifications
+are unique. The proportion in males, overall NSW, and overall nationally 
+are very similar according to the algorithm.   
+
+\pagebreak
+
+`r figs("figure3")`
+
+```{r Figure 3, include = TRUE, fig.width = 6, fig.height = 6}
+figure3
+```
+
+I was still a little concerned there could be a saturation effect when 
+applying the algorithm to large numbers of notifications. For example the 
+proportion unique is very similar for national, male, and NSW 
+notifications. Figure 4 compares the cumulative proportion unique in 
+notifications in NSW and outside of NSW (with similar numbers of 
+duplications). This figure suggests the majority of duplicates occurred in
+NSW males.  
+
+`r figs("figure4")`
+
+```{r Figure 4, include = TRUE, fig.width = 6, fig.height = 3}
+figure4
+```
+
+
+## Dicsussion
+
+* Using the overall proportion unique by applying the deduplication to all
+notifications for males and the NSW population seems reasonable but 
+separate calculations should be done for females and other states.
+* For the 2017 ASR I did the deduplication calculations for males and 
+females separately as required but the calculations should be done for 
+each sub-population.
+* Previously published estimates for the number unique in NSW obtained 
+using the national estimates remain valid but NSW specific estimates will 
+be generated in the future.
+* Assuming all notifications since 2002 are unique will have little impact
+on the HIV cascade estimates. 
+* Seems like the majority of duplicates occurred in NSW males prior to 1992 (which makes sense I think). 
+
+
