@@ -143,6 +143,8 @@ if (recreateResults) {
     "all", "all")[[1]]
   femaleHiv <- SubHivSet(hivSetAll, "all", "female", "all", "all", "all",
     "all", "all")[[1]]
+  heteroHiv <- SubHivSet(hivSetAll, "all", "male", "hetero", "all", "all",
+    "all", "all")[[1]]
   
   nswHiv <- SubHivSet(hivSetAll, "all", "all", "all", "all", "all", "nsw",
     "all")[[1]]
@@ -156,6 +158,8 @@ if (recreateResults) {
   nonNswMaleHiv <- SubHivSet(maleHiv, "all", "all", "all", "all",
     "all", "nsw", "all")[[2]]
 
+  
+  
   # Generate results we want ---------------------------------------------
   # Functions for removing duplicates annually
   source(file.path(Rcode, "FillMissing.R"))
@@ -168,6 +172,8 @@ if (recreateResults) {
     mutate(population = "male", replace = "2022")
   female2022 <- GetUnique(femaleHiv, allYears) %>%
     mutate(population = "female", replace = "2022")
+  hetero2022 <- GetUnique(heteroHiv, allYears) %>%
+    mutate(population = "heteromale", replace = "2022")
   
   all2002 <- GetUnique(allHiv, allYears, yearUnique = 2002) %>%
     mutate(population = "all", replace = "2002")
