@@ -25,7 +25,7 @@
 #' @export
 #'
 PlotColors <- function(set = c("main", "lines", "cbPalette", "hivcascade4",
-  "hivcascade5", "crayons")) {
+  "hivcascade5", "sticascade", "crayons")) {
 
   set <- match.arg(set)
 
@@ -39,7 +39,7 @@ PlotColors <- function(set = c("main", "lines", "cbPalette", "hivcascade4",
   # Colour scheme used in ASR
   hivcascade4 <- c("#621C20", "#AB2322", "#D95728", "#E97164")
   hivcascade5 <- c("#621C20", "#AB2322", "#A63603", "#D95728", "#E97164")
-  #sticasade <-
+  sticascade <- c("#2C4452", "#2B97B0") # c(males, females)
 
   # Setup crayon colours which are used for most of my main plots
   crayons <- c("Almond"="#efdecd",
@@ -194,6 +194,7 @@ PlotColors <- function(set = c("main", "lines", "cbPalette", "hivcascade4",
     cbPalette=cbPalette,
     hivcascade4=hivcascade4,
     hivcascade5=hivcascade5,
+    sticascade=sticascade,
     crayons=crayons)
 
   # Return final vector
