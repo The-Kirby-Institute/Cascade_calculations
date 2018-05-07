@@ -26,7 +26,7 @@ RemoveDuplicates <- function(dobvector, days.ignore,
   #   The estimated number of unique cases in the list of date of birth  
   #   vector. If specified a csv file of results is also saved. 
   #
-  # Setup -----------------------------------------------------------------
+  # Setup ----------------------------------------------------------------
   
   # Make sure we have required libraries 
   if (require("dplyr")) {
