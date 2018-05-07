@@ -33,9 +33,9 @@ library(scales)
 #' Overwrites the plotcolors argument if TRUE. Optional and set to FALSE by 
 #' default
 #'
-#' @return List with plothandes for number and proportion by age
+#' @return List with plot handles for number and proportion by age
 #' 
-#' @author Richard T Gray, \email{Rgray@kirby.unsw.edu.au}
+#' @author Richard T. Gray, \email{Rgray@kirby.unsw.edu.au}
 #' 
 PlotAgeCascade <- function(pldhivage, startyear = 1986, plotcolors = NULL,
   grayscale = FALSE) {
