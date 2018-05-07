@@ -15,20 +15,20 @@ treated,regional,other,all,1,1,1,(Foster et al. 2016),Foster et al. Does being i
 treated,remote,shc,all,0.96,0.96,0.96,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
 treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),"Guy R, et al. The impact of sexually transmissible infection programs in remote Aboriginal communities in Australia: a systematic review. Sexual Health. 2012;9 (3):205-12."
 retested,urban,shc,males,0.381746032,0.354928933,0.409292616,ACCESS shc urban,
-retested,regional,shc,males,0.27014218,0.212569421,0.336256284,ACCESS shc regional+remote,
-retested,remote,shc,males,0.27014218,0.212569421,0.336256284,ACCESS shc regional+remote,
-retested,urban,gp,males,0.518072289,0.439556697,0.59573834,ACCESS gp urban,
+retested,regional,shc,males,0.194,0.154,0.24,ACCESS shc regional+remote,
+retested,remote,shc,males,0.194,0.154,0.24,ACCESS shc regional+remote,
+retested,urban,gp,males,0.366,0.188,0.533,ACCESS gp urban (assumption),
 retested,regional,gp,males,0.1,0.056473475,0.168134349,ACCEPT,2014 data
 retested,remote,gp,males,0.1,0.056473475,0.168134349,ACCEPT,assumed same as regional
 retested,urban,shc,females,0.31,0.273499494,0.348972188,ACCESS shc urban,
 retested,regional,shc,females,0.289256198,0.212264752,0.379868064,ACCESS shc regional+remote,
 retested,remote,shc,females,0.289256198,0.212264752,0.379868064,ACCESS shc regional+remote,
-retested,urban,gp,females,0.372340426,0.27659454,0.478644765,ACCESS gp urban,
+retested,urban,gp,females,0.283,0.194,0.372,ACCESS gp urban (assumption),
 retested,regional,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,2014 data
 retested,remote,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,assumed same as regional
 retested,urban,shc,all,0.358602151,0.336854182,0.380940154,ACCESS shc urban,
 retested,regional,shc,all,0.277108434,0.230313128,0.329161113,ACCESS shc regional+remote,
 retested,remote,shc,all,0.277108434,0.230313128,0.329161113,ACCESS shc regional+remote,
-retested,urban,gp,all,0.465384615,0.403820645,0.527988304,ACCESS gp urban,
+retested,urban,gp,all,0.356,0.324,0.391,ACCESS gp urban (calculated from male and female diagnoses data and assumed proportions),
 retested,regional,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,2014 data
 retested,remote,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,assumed same as regional
