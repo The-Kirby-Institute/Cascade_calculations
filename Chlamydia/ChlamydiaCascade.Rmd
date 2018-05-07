@@ -20,12 +20,9 @@ knitr::opts_chunk$set(echo = FALSE,
 
 <!--- Code for calculating the cascade --->
 ```{r initialization}
-# Clear workspace
-rm(list=ls()) 
-options(scipen=999)  # To get rid of scientific notation
+# Chunk to setup everything
 
-# Set session working directory manually to source file location
-# setwd(source file location)
+# Open as a project (setting working directory to source and restarting R)
 
 # Details of results and outputs folders
 basePath <- getwd()
@@ -33,10 +30,13 @@ Rcode <- file.path(dirname(getwd()), "code")
 docFolder <- file.path(basePath, "docs")
 dataFolder <- file.path(basePath, "data")
 
-# Source useful functions
+# Loading function
+source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
+
+# Libraries and useful functions for data manipulation
+LoadLibrary(tidyverse)
+LoadLibrary(readxl)
 source(file.path(Rcode, "FormatData.R"), echo = TRUE)
-source(file.path(Rcode, "LoadLibrary.R"), echo = TRUE)
-source(file.path(Rcode, "DataLibraries.R"), echo = TRUE)
 
 # Current time for appending to outputs
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
@@ -45,7 +45,7 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 resultsYear <- 2016 # year of cascade we will calculate and plot     
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
-fileType <- ".png" # ".png" for documents 
+fileType <- ".png" # ".png" for documents; .tiff for paper
 retestRange <- TRUE # Calculate variations in retested
 
 ```
@@ -53,9 +53,8 @@ retestRange <- TRUE # Calculate variations in retested
 ```{r Front matter}
 # Some information on the packages and versions used to generate the 
 # results
-mainPackages <- c("readr","dplyr", "tidyr", "ggplot2")
 source(file.path(Rcode, "FrontMatter.R"))
-fmStr <- FrontMatter(mainPackages, rstudio = "1.0.153")
+fmStr <- FrontMatter(packages = "all", rstudio = "1.1.423")
 cat(fmStr)
 ```
 
@@ -78,8 +77,9 @@ treatment <- read.csv(treatFile)
   
 if (retestRange) {
   retestVarFile <- file.path(dataFolder, paste("chlamRetestVariation",
-    toString(tail(resultsYear, 1)), ".csv", sep = ""))  
+    toString(tail(resultsYear, 1)), ".csv", sep = "")) 
   retests <- read.csv(retestVarFile, stringsAsFactors = FALSE) %>%
+    filter(sex %in% c("all", "females", "male")) %>%
     select(-diagnoses, -retested, -year) %>%
     tbl_df()
   

@@ -29,8 +29,9 @@ folder:
 - chlamtreatmentYear.csv
 
 ```{r initialization}
-# Clear workspace
-rm(list=ls()) 
+# Chunk to setup everything
+
+# Open as a project (setting working directory to source and restarting R)
 
 # Key folder paths
 basePath <- file.path(path.expand("~"), "Research",
@@ -48,10 +49,8 @@ setwd(file.path(basePath,"code"))
 source(file.path(basePath, "code", "LoadLibrary.R"), echo=TRUE)
 
 # Libraries for data manipulation
+LoadLibrary(tidyverse)
 LoadLibrary(readxl)
-LoadLibrary(dplyr)
-LoadLibrary(tidyr)
-LoadLibrary(utils)
 
 # Primary script parameters - data year 
 dataYear <- 2016
