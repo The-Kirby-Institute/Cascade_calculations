@@ -13,10 +13,14 @@ Note the estimates in `chlamtreatment2014.csv` were used in the 2014 cascade. Th
 
 The retesting inputs in the `chlamtreatmentYEAR.csv` files are entered manually from three specific files which are stored locally (as this data is not publicly available) but are available on request (Rgray@kirby.unsw.edu.au):
 
-- `retestsAccessYEAR.csv`: Contains results for sexual health clinics in ACCESS by region nationally. These values were used for sexual health clinic estimates in the cascade calculations. For regional and remote areas we used the combined regional+remote values due to the small numbers for the remote settings. 
+- `retestsAccessYEAR.csv`: Contains results from ACCESS by sex and region nationally. These values were used for the urban and sexual health clinic estimates in the cascade calculations. For regional and remote areas we used the combined regional+remote values due to the small numbers for the remote settings.
+- `retestsAccessYEAR_MSM.csv`: Contains the same information as 
+`retestsAccessYEAR.csv` except male data has been split into MSM and other male (non_msm) data. This file is only available for 2016 onwards.
 - `restetsNSWgp2015.csv`: Contains results for general practice clinics in ACCESS by region for the state of NSW. These results were used for urban general practice estimates in the 2015 cascade calculations.
 - `retestsAccept2014.csv`: Contains results for general practice clinics in regional areas from the control arm of the ACCEPt study. These results were used for the regional and remote general practice estimates in the 2015 cascade calculations.
-
+- `chlamRetestVariationYEAR.csv`: Contains retesting results from ACCESS sexual health clinics by sex and region nationally and for the restesting periods 42-120 days, 42-180 days, and 7-180 days post-diagnosis. 
+- `chlamRetestVariationYEAR.csv`: Contains the same information as
+- `chlamRetestVariationYEAR.csv` except male data has been split into MSM and other male (non_msm) data. This file is only available for 2016 onwards.
 
 These files are produced by cleaning the raw data files provided by collaborators using the `~/Chlamydia/code/ChlamydiaClean.Rmd` script. The raw data files are stored in the raw/ sub-directory which is not included in the git repository. The notifications file for 2016,
 `CT notifications\_2016\_National\_Estimate.xlsx` is included in repository as it provides the notifications data excluding Victoria (which was unavailable in 2015-2016) and the calculations used to estimate the overall notifications given the missing data from Victoria. 
