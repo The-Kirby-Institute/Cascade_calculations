@@ -26,7 +26,7 @@ RemoveDuplicates <- function(dobvector, days.ignore,
   #   The estimated number of unique cases in the list of date of birth  
   #   vector. If specified a csv file of results is also saved. 
   #
-  # Setup -----------------------------------------------------------------
+  # Setup ----------------------------------------------------------------
   
   # Make sure we have required libraries 
   if (require("dplyr")) {
@@ -255,18 +255,18 @@ GetUnique <- function(hivSet, allYears, yearUnique = NULL) {
     fixUnique <- TRUE
   }
   
-  if (targetGender == "male" ) {
-    totalSet <- hivSet %>%
-      filter(sex == "male")
-  } else if (targetGender != "male" &&  targetGender != "all") {
-    totalSet <- hivSet %>%
-      filter(sex != "male")
-  } else if (targetGender == "all" ) {
-    totalSet <- hivSet
-  }
+  # if (targetGender == "male" ) {
+  #   totalSet <- hivSet %>%
+  #     filter(sex == "male")
+  # } else if (targetGender != "male" &&  targetGender != "all") {
+  #   totalSet <- hivSet %>%
+  #     filter(sex != "male")
+  # } else if (targetGender == "all" ) {
+  #   totalSet <- hivSet
+  # }
   
-  uniqueNotifications <- AnnNotifications(totalSet, allYears)
-  uniqueNotifications$cumpropunique <- ProportionUnique(totalSet, 
+  uniqueNotifications <- AnnNotifications(hivSet, allYears)
+  uniqueNotifications$cumpropunique <- ProportionUnique(hivSet, 
     uniqueNotifications$totalnotifications, allYears)
   uniqueNotifications <- uniqueNotifications %>%
     mutate(cumpropunique = ifelse(is.nan(cumpropunique), 0, 

@@ -25,10 +25,9 @@ figuresFolder <- file.path(basePath, "output", "figures")
 
 # Load standard libraries and options ------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"))
-# source(file.path(Rcode, "DataLibraries.R"))
-# source(file.path(Rcode, "PlotOptions.R"))
-LoadLibrary(tidyverse)
-# LoadLibrary(tibble)
+source(file.path(Rcode, "DataLibraries.R"))
+source(file.path(Rcode, "PlotOptions.R"))
+LoadLibrary(tibble)
 ```
 
 The following chunck specifies all the parameters for producing the
@@ -49,7 +48,7 @@ saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
 
-projectOutput <- "Test_cascades" # "." for main output folder 
+projectOutput <- "Test_Cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
 cascadeName <- "All"
@@ -101,12 +100,10 @@ if (doRetained) {
 }
 
 doUnique <- TRUE
-yearUnique <- NULL
-saveUnique <- FALSE
+yearUnique <- 1992
 
 doUnique <- ifelse(targetAtsi == "indigenous", FALSE, doUnique)
 yearUnique <- ifelse(is.null(yearUnique), 2100, yearUnique) # Well past today
-saveUnique <- ifelse(!saveResults, FALSE, saveUnique)
   
 # Settings for generating ECDC model inputs ------------------------------
 ecdcData <- FALSE
@@ -119,7 +116,7 @@ ecdcModel <- cascadeName # name
 if (excludeOS) {
   # If excludeOS don't save the pldhiv estimates as we are only using this
   # for ECDC calculations
-  saveResults <- FALSE
+  saveResults <- TRUE
 }
 
 # Leave projections chunk turned off so it is not called unless required. 
@@ -148,7 +145,7 @@ source(file.path(HIVcode,"LivingDiagnosedAge.R"))
 # Function to easily extract sub-populations of interest 
 source(file.path(HIVcode, "SubHivSet.R"))
 
-# Functions for removing duplicates annually
+# Function for removing duplicates annually
 source(file.path(HIVcode, "DeduplicationFunctions.R"))
 
 # Function to replace estimates
@@ -229,7 +226,7 @@ hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
 
-# Calculate unique notifications and duplicates for the known set.
+# Calculate unique notifications and duplicates
 if (doUnique) {
   uniqueNotifications <- GetUnique(hivSet, allYears, 
     yearUnique = yearUnique)
@@ -251,82 +248,68 @@ hivSetGender <- FillDataFrame(1980:analysisYear, hivSetGender) %>%
   gather("sex", "notifications", 2:ncol(.)) %>%
   arrange(year)
 
-if (targetGender == "all") {
-  hivGenderCum <- hivSetGender %>% 
-    group_by(sex) %>% 
-    mutate(cumnotifications = cumsum(notifications)) %>%
-    ungroup() %>%
-    select(-notifications) %>%
-    spread(sex, cumnotifications) %>%
-    select(-starts_with("unknown")) %>%
-    gather("sex", "cumnotifications", 2:ncol(.)) %>%
-    mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
-      cumnotifications)) %>%
-    group_by(year) %>% 
-    mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
-    select(-cumnotifications) %>%
-    spread(sex, propnotifications) %>%
-    mutate(female = ifelse(is.na(female), 0, female),
-      male = ifelse(is.na(male), 0, male),
-      transgender = ifelse(is.na(transgender), 0, transgender)) 
-  
-  propDiagsMale <- hivGenderCum$male
-} else {
-  propDiagsMale <- NULL
-} 
+hivGenderCum <- hivSetGender %>% 
+  group_by(sex) %>% 
+  mutate(cumnotifications = cumsum(notifications)) %>%
+  ungroup() %>%
+  select(-notifications) %>%
+  spread(sex, cumnotifications) %>%
+  select(-starts_with("unknown")) %>%
+  gather("sex", "cumnotifications", 2:ncol(.)) %>%
+  mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
+    cumnotifications)) %>%
+  group_by(year) %>% 
+  mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
+  select(-cumnotifications) %>%
+  spread(sex, propnotifications) %>%
+  mutate(female = ifelse(is.na(female), 0, female),
+    male = ifelse(is.na(male), 0, male),
+    transgender = ifelse(is.na(transgender), 0, transgender)) 
 
 if (doAge) {
+  # Calculation cumulative proportion male for each age group. 
+  hivSetGenderAge <- hivSet %>% 
+    group_by(yeardiagnosis, sex, agebin) %>% 
+    summarise(notifications = n()) %>% 
+    ungroup() %>%
+    spread(sex, notifications)
+  hivSetGenderAge[is.na(hivSetGenderAge)] <- 0
+  hivSetGenderAge <- hivSetGenderAge %>%
+    mutate(other = female+transgender+unknown) %>%
+    rename(year = yeardiagnosis) %>%
+    select(year, agebin, male, other)
+  hivSetGenderAge[is.na(hivSetGenderAge)] <- 0
   
-  # Calculation cumulative proportion male for each age group.
-  if (targetGender == "all") {
-    hivSetGenderAge <- hivSet %>%
-      group_by(yeardiagnosis, sex, agebin) %>%
-      summarise(notifications = n()) %>%
-      ungroup() %>%
-      spread(sex, notifications)
-    hivSetGenderAge[is.na(hivSetGenderAge)] <- 0
-    hivSetGenderAge <- hivSetGenderAge %>%
-      mutate(other = female+transgender+unknown) %>%
-      rename(year = yeardiagnosis) %>%
-      select(year, agebin, male, other)
-    hivSetGenderAge[is.na(hivSetGenderAge)] <- 0
-    
-    # Fill in missing years with zeros - have to do males and others and
-    # then rebind seperately
-    hivSetMaleAge <- hivSetGenderAge %>%
-      select(-other) %>%
-      spread(agebin, male)
-    hivSetMaleAge[is.na(hivSetMaleAge)] <- 0
-    hivSetMaleAge <- FillDataFrame(1980:analysisYear, hivSetMaleAge) %>%
-      gather("agebin", "male", 2:20) %>%
-      arrange(year)
-    
-    hivSetOtherAge <- hivSetGenderAge %>%
-      select(-male) %>%
-      spread(agebin, other)
-    hivSetOtherAge[is.na(hivSetOtherAge)] <- 0
-    hivSetOtherAge <- FillDataFrame(1980:analysisYear, hivSetOtherAge) %>%
-      gather("agebin", "other", 2:20) %>%
-      arrange(year)
-    
-    hivGenderAgeCum <- hivSetMaleAge %>%
-      mutate(other = hivSetOtherAge$other) %>%
-      group_by(agebin) %>%
-      mutate(cummale = cumsum(male),
-        cumother = cumsum(other)) %>%
-      ungroup() %>%
-      select(-male, -other) %>%
-      group_by(year, agebin) %>%
-      mutate(propmale = cummale / (cummale + cumother)) %>%
-      mutate(propmale = ifelse(is.nan(propmale), 1, propmale)) %>%
-      select(-cummale, -cumother) %>%
-      spread(agebin, propmale)
-    
-    propDiagsAgeMale <- as.matrix(hivGenderAgeCum)
-    
-  } else {
-    propDiagsAgeMale <- NULL
-  } 
+  # Fill in missing years with zeros - have to do males and others and
+  # then rebind seperately 
+  hivSetMaleAge <- hivSetGenderAge %>%
+    select(-other) %>% 
+    spread(agebin, male)
+  hivSetMaleAge[is.na(hivSetMaleAge)] <- 0
+  hivSetMaleAge <- FillDataFrame(1980:analysisYear, hivSetMaleAge) %>%
+    gather("agebin", "male", 2:20) %>%
+    arrange(year)
+  
+  hivSetOtherAge <- hivSetGenderAge %>%
+    select(-male) %>% 
+    spread(agebin, other)
+  hivSetOtherAge[is.na(hivSetOtherAge)] <- 0
+  hivSetOtherAge <- FillDataFrame(1980:analysisYear, hivSetOtherAge) %>%
+    gather("agebin", "other", 2:20) %>%
+    arrange(year)
+  
+  hivGenderAgeCum <- hivSetMaleAge %>%
+    mutate(other = hivSetOtherAge$other) %>%
+    group_by(agebin) %>%
+    mutate(cummale = cumsum(male),
+      cumother = cumsum(other)) %>%
+    ungroup() %>%
+    select(-male, -other) %>%
+    group_by(year, agebin) %>% 
+    mutate(propmale = cummale / (cummale + cumother)) %>%
+    mutate(propmale = ifelse(is.nan(propmale), 1, propmale)) %>%
+    select(-cummale, -cumother) %>%
+    spread(agebin, propmale)
 }
 
 ```
@@ -480,7 +463,7 @@ if (doUnique) {
 # Get migration rate adjustments 
 relMigration <- GetMigrate(analysisYear, cleanNom, "all",
   targetGender, targetExposure, targetCob, targetAtsi, targetLocalRegion,
-  targetState, targetGlobalRegion, propMale = propDiagsMale)
+  targetState, targetGlobalRegion, propMale = hivGenderCum$male)
 
 # Adjust migration rate for Indigenous population if required
 # Potentially move into GetMigrate
@@ -509,7 +492,7 @@ if (interState) {
   relMigrationAll <- GetMigrate(analysisYear, cleanNom, "all",
     targetGender, targetExposure, targetCob, targetAtsi,
     targetLocalRegion, "all", targetGlobalRegion, 
-    propMale = propDiagsMale)
+    propMale = hivGenderCum$male)
   
   # Adjust migration rate for Indigenous population if required
   # Potentially move into GetMigrate
@@ -563,7 +546,7 @@ if (doAge) {
   # Relative migration rates
   relAgeMigrate <- GetMigrateAge(analysisYear, cleanNom, targetGender, 
     targetExposure, targetCob, targetAtsi, targetLocalRegion, targetState, 
-    targetGlobalRegion, propMale = propDiagsAgeMale)
+    targetGlobalRegion, propMale = NULL)
   
   colnames(relAgeMigrate) <- yearList
   rownames(relAgeMigrate) <- ageList
@@ -992,11 +975,11 @@ if (projectPldhiv) {
   
   # Manually set final year for projections and projection name
   projectYear <- analysisYear + 10  
-  projectName <- "future_reduce50"
+  projectName <- "future"
   
   # Specifiy projection option for future diagnoses
   projectOption <- "reduce" #status-quo, linear, reduce 
-  projectDecrease <- 0.5 #None, 0.35, 0.5
+  projectDecrease <- 0.5
   
   saveProjResults <- TRUE 
   # Reset if saving things overall
@@ -1155,29 +1138,12 @@ if (projectPldhiv) {
       agemigrate = relAgeMigrateFuture,
       normalize = pldhivAllFuture$pldhiv) 
     
-    # COnvert to along data frame
-    hivDiagnosedFuture <- as.data.frame(pldhivAgeFuture) %>% 
-      rownames_to_column(var = "agebin") %>%
-      gather("year", "pldhiv", 2:ncol(.)) %>%
-      select(year, everything()) %>%
-      mutate(year = as.integer(str_sub(year, 2))) %>%
-      as_tibble()
   }
   
-  if (saveProjResults) {
-    if (doAge) {
-      write_csv(rownames_to_column(as.data.frame(pldhivAgeFuture), 
-        var = "agebin"), paste0(saveStringDetails, projectName,
-          ".csv")) 
-      write_csv(hivDiagnosedFuture, paste0(saveStringPldhiv, "-",
-        projectName, ".csv"))
-      write_csv(pldhivAllFuture, paste0(saveStringDetails, projectName,
-        "_overall.csv"))
-    } else {
-      write_csv(pldhivAllFuture, paste0(saveStringDetails, projectName,
-        ".csv"))
-    }
-  }
+  # if (saveProjResults) {
+  #   write_csv(pldhivAllFuture, paste0(saveStringDetails, projectName,
+  #     ".csv"))
+  # }
   
 }
 ```
