@@ -72,13 +72,13 @@ PlotAgeCascade <- function(pldhivage, startyear = 1986, agebins = NULL,
       getPalette <- gray.colors(nages, start = 0, end = 0.95)
       plotcolors <- rev(getPalette)
     } else {
-      palette <- PlotColors("crayons")
-      colIndices <- round(seq(1, length(palette), length = nages))
-      plotcolors <- unname(palette[colIndices])
+      cbPalette <- PlotColors("cbPalette")
+      getPalette <- colorRampPalette(cbPalette[3:9])
+      plotcolors <- rev(getPalette(nages))
     }
   } 
   
-  # Set deafults agenames
+  # Set defaults agenames
   if (is.null(agenames)) {
     agenames <- str_replace(ages, "a", "")
     agenames <- str_replace(agenames, "_", "-")
@@ -146,8 +146,7 @@ PlotAgeCascade <- function(pldhivage, startyear = 1986, agebins = NULL,
 #' @details The idea of this function is to produce plots for the default 
 #' HIV cascade agebins (5 year bins: 0-4, 5-9, ...., 80-84, 85+) for a 
 #' given year. This function requires the libraries ggplot2 and scales and 
-#' for the PlotOptions.R and PlotColors.R to be sourced. Multiple scenarios 
-#' and distributions can be plotted if they are stored separately under 
+#' for the PlotOptions.R and PlotColors.R to be sourced. Multiple scenarios #' and distributions can be plotted if they are stored separately under 
 #' "scenario" in the input data frame. The plotting is setup to produce a 
 #' nice figure file using ggsave with width = X cm and height = Y cm.  
 #' 
@@ -159,9 +158,64 @@ PlotAgeCascade <- function(pldhivage, startyear = 1986, agebins = NULL,
 #' 
 #' @author Richard T. Gray, \email{Rgray@kirby.unsw.edu.au}
 #' 
-PlotAgeCascade <- function(pldhivage, year = 2016, scenarios = NULL,
-  plotcolors = NULL) {
+PlotAgeDist <- function(distResults, resultsyear, 
+  sets = c("all", "male", "female"), plotcolors = NULL,
+  agenames = NULL,
+  setnames = c("Overall", "Males", "Females")) {
+  
+  # Quick error check
+  if (length(sets) != length(setnames)) {
+    stop("number of setnames incompatible with sets")
+  }
+  
+  # List of standard age bins for ordering the factor, annoying
+  ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
+    "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
+    "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
+  
+  # Sort out results
+  results <- distResults %>% 
+    filter(year == resultsyear, set %in% sets) %>%
+    group_by(set) %>%
+    mutate(proportion = value / sum(value)) %>%
+    mutate(agebin = factor(agebin, levels = ageList)) %>% # reorder...grrr
+    ungroup() 
+  
+  # Plot specs
+  if (is.null(plotcolors)) {
+    cols <- PlotColors()
+  } else {
+    cols <- plotcolors
+  }
+  setCols <- cols[1:length(sets)]
+  names(setCols) <- sets
+  
+  # Set defaults agenames
+  if (is.null(agenames)) {
+    agenames <- str_replace(ages, "a", "")
+    agenames <- str_replace(agenames, "_", "-")
+  }
+  
+  # Generate distribution plot for year and sets
+  plotDist <- ggplot(data = results, aes(x = agebin, y = proportion, 
+    group = set, colour = set)) +
+    geom_line() +
+    scale_colour_manual(name = "",
+      breaks = sets,
+      limits = sets,
+      labels = setnames,
+      values = setCols[sets]) +
+    scale_y_continuous(label = percent) + 
+    scale_x_discrete(labels = agenames) + 
+    labs(x = "Age", y = "Percentage of total") + 
+    PlotOptions() + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
+      legend.position = "right")
+  
+  # Return plot handles
+  return(plotDist)
   
 }
 
-PlotPldhivProjection <- function(pldhiv, startyear, scenarios, plotcolors)
+PlotPldhivProjection <- function(pldhiv, startyear, scenarios, 
+  plotcolors) {}

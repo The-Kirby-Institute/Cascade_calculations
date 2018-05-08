@@ -1,0 +1,181 @@
+---
+title: "HIV Cascade by Age Results"
+author: "Richard T. Gray"
+date: Latest version - `r format(Sys.Date(), format="%B %d %Y")`
+output:
+  word_document:
+    pandoc_args: --output="docs/HIVcascade_Age.docx"
+    reference_docx: docs/mystyles.docx
+csl: docs/plos.csl
+---
+
+This document is used to generate and explore the Australian HIV cascade
+by age and trends in the age distribution of people living with diagnosed
+HIV over time. It produces all the results and figures for the manuscript
+Bretana et al, "An ageing population of people living with diagnosed HIV in 
+Australia".
+
+```{r knitr_options, include=FALSE} 
+knitr::opts_chunk$set(echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  include = FALSE) 
+```
+
+```{r Setup}
+# Open as a project (setting working directory to source and restarting R)
+
+# Setup directories
+basePath <- getwd() #dirname(getwd())
+Rcode <- file.path(dirname(getwd()), "code")
+HIVcode <- file.path(basePath, "code") 
+dataFolder <- file.path(basePath, "data")
+resultsFolder <- file.path(basePath, "output")
+
+# Load libraries and standard functions
+source(file.path(Rcode, "LoadLibrary.R"))
+LoadLibrary(tidyverse)
+LoadLibrary(cowplot)
+LoadLibrary(captioner)
+LoadLibrary(scales)
+LoadLibrary(RColorBrewer)
+source(file.path(Rcode, "FormatData.R"))
+source(file.path(Rcode, "PlotOptions.R"))
+source(file.path(Rcode, "PlotColors.R"))
+source(file.path(Rcode, "SaveFigure.R"))
+source(file.path(HIVcode, "ResultsFunctions.R"))
+
+
+# Script parameters
+savePlots <- TRUE
+
+# Set up project and cascade to analyse
+projectName <- "Ageing_paper"  
+resultsFolder <- file.path(resultsFolder, projectName)
+cascadeNames <- c("All", "Male", "Female")
+
+# Create output directory
+if (savePlots) {
+  saveFormat <- ".png"
+  figFolder <- file.path(resultsFolder, "figures")
+  dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
+}
+
+# Captions
+figs <- captioner()
+tabs <- captioner(prefix = "Table")
+
+```
+
+```{r Load results}
+# This chunk loads all the results we need and stores them in long form 
+# data frames
+
+baseFile <- "HIVpldhivEstimates-2016-age"
+
+# Load main results up to 2016
+allMain <- read_csv(file.path(resultsFolder, "All",
+  paste0(baseFile, ".csv"))) %>%
+  mutate(set = "all")
+maleMain <- read_csv(file.path(resultsFolder, "Male",
+  paste0(baseFile, ".csv"))) %>%
+  mutate(set = "male")
+femaleMain <- read_csv(file.path(resultsFolder, "Female",
+  paste0(baseFile, ".csv"))) %>%
+  mutate(set = "female")
+
+mainResults <- bind_rows(allMain, maleMain, femaleMain) %>%
+  select(set, everything())
+
+# Load future projection results for main HIV cascade
+sqResults <- read_csv(file.path(resultsFolder, "All",
+  paste0(baseFile, "-future_sq.csv"))) %>%
+  mutate(set = "sq")
+linearResults <- read_csv(file.path(resultsFolder, "All",
+  paste0(baseFile, "-future_linear.csv"))) %>%
+  mutate(set = "linear")
+reduce35Results <- read_csv(file.path(resultsFolder, "All",
+  paste0(baseFile, "-future_reduce35.csv"))) %>%
+  mutate(set = "reduce35")
+reduce50Results <- read_csv(file.path(resultsFolder, "All",
+  paste0(baseFile, "-future_reduce50.csv"))) %>%
+  mutate(set = "reduce50")
+
+futureResults <- bind_rows(sqResults, linearResults, reduce35Results,
+  reduce50Results) %>%
+  select(set, everything())
+
+```
+
+```{r Plot age trends}
+# This chunk produces age trend plots for each main cascade
+
+# Only produce results for > 15 year olds
+ages <- unique(allMain$agebin)
+ageBins <- ages[4:length(ages)]
+
+# Use PlotAgeCascades function with default start year of 1986 and default
+# colours and labels
+allPlots <- PlotAgeCascade(allMain, agebins = ageBins)
+malePlots <- PlotAgeCascade(maleMain, agebins = ageBins)
+femalePlots <- PlotAgeCascade(femaleMain, agebins = ageBins)
+
+if (savePlots) {
+  
+  # Standard dimensions
+  width <- 17.5
+  height <- 13
+  units <- "cm"
+  
+  # Save all plots
+  SaveFigure(figFolder, "All-2016_number", allPlots[[1]],
+    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, "All-2016_proportion", allPlots[[2]],
+    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, "Male-2016_number", allPlots[[1]],
+    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, "Male-2016_proportion", allPlots[[2]],
+    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, "Female-2016_number", allPlots[[1]],
+    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, "Female-2016_proportion", allPlots[[2]],
+    format = saveFormat, width = width, height = height, units = units)
+  
+}
+```
+
+```{r Plot age distribution}
+# This chunk produces a simple age distrubtion for the number of people
+# diagnosed with HIV in 2016 overall and by sex and overall at the end
+# of teh projections in 2016. 
+resultsYear <- 2016
+currentSets <- c("all", "male", "female")
+currentSetNames <- c("Overall", "Males", "Females")
+ageDist2016 <- PlotAgeDist(mainResults, resultsYear, sets = currentSets,
+  setnames = currentSetNames)
+
+futureYear <- 2026
+futureDists <- futureResults %>%
+  rename(value = pldhiv)
+futureSets <- unique(futureResults$set)
+futureSetNames <- c("Status-quo", "Linear", "Reduce by 35%", 
+  "Reduce by 50%")
+ageDist2026 <-PlotAgeDist(futureDists, futureYear, sets = futureSets,
+  setnames = futureSetNames)
+
+if (savePlots) {
+  
+  # Standard dimensions
+  width <- 12
+  height <- 9
+  units <- "cm"
+  
+  # Save plots
+  SaveFigure(figFolder, "Distribution-2016", ageDist2016,
+    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, "All-Distribution-2026", ageDist2026,
+    format = saveFormat, width = width, height = height, units = units)
+  
+}
+
+```
