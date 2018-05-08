@@ -143,6 +143,8 @@ if (recreateResults) {
     "all", "all")[[1]]
   femaleHiv <- SubHivSet(hivSetAll, "all", "female", "all", "all", "all",
     "all", "all")[[1]]
+  msmHiv <- SubHivSet(hivSetAll, "all", "male", "msm", "all", "all",
+    "all", "all")[[1]]
   heteroHiv <- SubHivSet(hivSetAll, "all", "male", "hetero", "all", "all",
     "all", "all")[[1]]
   
@@ -158,8 +160,6 @@ if (recreateResults) {
   nonNswMaleHiv <- SubHivSet(maleHiv, "all", "all", "all", "all",
     "all", "nsw", "all")[[2]]
 
-  
-  
   # Generate results we want ---------------------------------------------
   # Functions for removing duplicates annually
   source(file.path(Rcode, "FillMissing.R"))
@@ -172,6 +172,8 @@ if (recreateResults) {
     mutate(population = "male", replace = "2022")
   female2022 <- GetUnique(femaleHiv, allYears) %>%
     mutate(population = "female", replace = "2022")
+  msm2022 <- GetUnique(msmHiv, allYears) %>%
+    mutate(population = "msm", replace = "2022")
   hetero2022 <- GetUnique(heteroHiv, allYears) %>%
     mutate(population = "heteromale", replace = "2022")
   
@@ -243,8 +245,8 @@ names(scenarioCols) <- scenarios
 plotOpts <- PlotOptions() + theme(legend.position = "right",
     plot.title = element_text(hjust = 0.5))
 
-#` Function for plotting results for cumulative notifications
-resultsPlot <- function(data, zoom = FALSE) {
+# Function for plotting results for cumulative notifications
+resultsPlot <- function(data) {
   
   plot <- ggplot(data = filter(data, replace == 2022), 
     aes(x = year)) +
@@ -400,8 +402,40 @@ figure4 <- ggplot(data = propPopData, aes(x = year, y = cumunique,
   plotOpts
 
 # Figure caption 
-figs("figure4", "Cumulative proportion unique for NSW comapred to rest of
+figs("figure4", "Cumulative proportion unique for NSW compared to rest of
   Australia.")
+
+# Figure 5 ---------------------------------------------------------------
+# Compare MSM and hetero males
+propMaleData <- filter(duplicateResults, 
+  population %in% c("all", "male", "msm", "nonnswmale"), replace == "2022")
+
+maleGroups <- c("nonnswmale", "msm", "male", "all")
+maleNames <- c("nonnswmale" = "Heterosexual males",
+  "msm" = "Men who have sex with men",
+  "male" = "All males", 
+  "all" = "Overall")
+maleCols <- cols[1:4]
+names(maleCols) <- maleGroups
+
+propPlotMale <- ggplot(data = propMaleData, aes(x = year, y = cumunique,
+  colour = population)) + 
+  geom_line() +
+  scale_colour_manual(name = "Population", 
+    breaks = maleGroups,
+    limits = maleGroups,
+    labels = sexNames[maleGroups],
+    values = sexCols[maleGroups]) + 
+  coord_cartesian(xlim = c(1986, analysisYear), ylim = c(0.75,1)) +
+  scale_y_continuous(label = percent) +
+  labs(y = "Cumulative proportion", x = "Year",
+    title = "Proportion unique by male group") + 
+  plotOpts
+
+# Figure caption 
+figs("figure5", "Cumulative proportion unique for male groups compared to 
+rest of Australia.")
+
 
 # Save all the plots -----------------------------------------------------
 if (savePlots) {
@@ -415,6 +449,9 @@ if (savePlots) {
     height = 15, width = 15, units = "cm")
   
   SaveFigure(figuresFolder, "Duplicates_prop_unique_test", figure4,
+    height = 7.5, width = 15, units = "cm")
+  
+  SaveFigure(figuresFolder, "Duplicates_prop_unique_male", figure5,
     height = 7.5, width = 15, units = "cm")
   
 }
@@ -470,6 +507,11 @@ NSW males.
 figure4
 ```
 
+`r figs("figure5")`
+
+```{r Figure 5, include = TRUE, fig.width = 6, fig.height = 3}
+figure5
+```
 
 ## Dicsussion
 
@@ -486,4 +528,25 @@ be generated in the future.
 on the HIV cascade estimates. 
 * Seems like the majority of duplicates occurred in NSW males prior to 1992 (which makes sense I think). 
 
+## Annual duplicates and proportion unique
 
+As stated previously when we estimated the number and proportion of duplciates 
+annually we sometimes get a proportion > 1 and a negative number of duplicates. 
+This is an artefact of the statistical method and calculation because we use the cumulative number to estimate annual duplicate numbers. Below is a table illustrating this using the national results from the last 10 years.
+
+
+```{r Annual duplicates}
+# This chunk produces plots for annual duplicates. This is primarily used for
+# illustration purposes so uses the national results from the last 10 years. 
+
+# Table of annual duplicates ----------------------------------------------
+
+
+# Plots of annual duplicates 
+```
+
+`r figs("Table1")`
+
+```{r}
+
+```
