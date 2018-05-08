@@ -75,6 +75,7 @@ LoadLibrary(tidyverse)
 LoadLibrary(cowplot)
 LoadLibrary(captioner)
 LoadLibrary(scales)
+source(file.path(Rcode, "FormatData.R"))
 
 # Script options
 savePlots <- TRUE
@@ -143,11 +144,24 @@ if (recreateResults) {
     "all", "all")[[1]]
   femaleHiv <- SubHivSet(hivSetAll, "all", "female", "all", "all", "all",
     "all", "all")[[1]]
-  msmHiv <- SubHivSet(hivSetAll, "all", "male", "msm", "all", "all",
-    "all", "all")[[1]]
-  heteroHiv <- SubHivSet(hivSetAll, "all", "male", "hetero", "all", "all",
-    "all", "all")[[1]]
   
+  # Males by exposure group
+  msmHiv <- hivSetAll %>%
+    filter(sex == "male", expgroup == "msm")
+  heteroHiv <- hivSetAll %>%
+    filter(sex == "male", expgroup == "hetero")
+  pwidHiv <- hivSetAll %>%
+    filter(sex == "male", expgroup == "pwid")
+  unknownHiv <- hivSetAll %>%
+    filter(sex == "male", expgroup == "unknown")
+  otherHiv <- hivSetAll %>%
+    filter(sex == "male", expgroup == "otherexp")
+  comboHiv1 <- hivSetAll %>%
+    filter(sex == "male", expgroup %in% c("msm", "unknown"))
+  comboHiv2 <- hivSetAll %>%
+    filter(sex == "male", expgroup %in% c("pwid", "unknown"))
+  
+  # By state
   nswHiv <- SubHivSet(hivSetAll, "all", "all", "all", "all", "all", "nsw",
     "all")[[1]]
   vicHiv <- SubHivSet(hivSetAll, "all", "all", "all", "all", "all", "vic",
@@ -168,15 +182,38 @@ if (recreateResults) {
   
   all2022 <- GetUnique(allHiv, allYears) %>%
     mutate(population = "all", replace = "2022")
+  
+  # By sex
   male2022 <- GetUnique(maleHiv, allYears) %>%
     mutate(population = "male", replace = "2022")
   female2022 <- GetUnique(femaleHiv, allYears) %>%
     mutate(population = "female", replace = "2022")
+  
+  # Male by exposure group
   msm2022 <- GetUnique(msmHiv, allYears) %>%
     mutate(population = "msm", replace = "2022")
   hetero2022 <- GetUnique(heteroHiv, allYears) %>%
     mutate(population = "heteromale", replace = "2022")
+  pwid2022 <- GetUnique(pwidHiv, allYears) %>%
+    mutate(population = "pwidmale", replace = "2022")
+  unknown2022 <- GetUnique(unknownHiv, allYears) %>%
+    mutate(population = "unknownmale", replace = "2022")
+  other2022 <- GetUnique(otherHiv, allYears) %>%
+    mutate(population = "othermale", replace = "2022")
+  combo12022 <- GetUnique(comboHiv1, allYears) %>%
+    mutate(population = "msmunknown", replace = "2022")
+  combo22022 <- GetUnique(comboHiv2, allYears) %>%
+    mutate(population = "msmidu", replace = "2022")
   
+  # compare overall proportion to summed proportion
+  weightedProp <- (msm2022$totalnotifications * msm2022$cumunique + 
+    hetero2022$totalnotifications * hetero2022$cumunique +
+    pwid2022$totalnotifications * pwid2022$cumunique +
+    unknown2022$totalnotifications * unknown2022$cumunique +
+    other2022$totalnotifications * other2022$cumunique) /
+    male2022$totalnotifications
+  
+  # Unique scenarios
   all2002 <- GetUnique(allHiv, allYears, yearUnique = 2002) %>%
     mutate(population = "all", replace = "2002")
   all1992 <- GetUnique(allHiv, allYears, yearUnique = 1992) %>%
@@ -204,14 +241,17 @@ if (recreateResults) {
     mutate(population = "nonnswmale", replace = "2022")
   
   # Put everything into a giant data frame
-  duplicateResults <- bind_rows(all2022, male2022, female2022, all2002,
-    all1992, nsw2022, nsw2002, nsw1992, vic2022, vic2002, vic1992, 
-    nonnsw2022, nswMale2022, nonnswmale2022, 
+  duplicateResults <- bind_rows(all2022, male2022, female2022, msm2022,
+    hetero2022, pwid2022, unknown2022, other2022, combo12022, combo22022, 
+    all2002, all1992, nsw2022, nsw2002, nsw1992, vic2022,
+    vic2002, vic1992, nonnsw2022, nswMale2022, nonnswmale2022, 
     .id = "set") %>%
     select(set, year, population, replace, everything())
   
   # Save results for reloading
-  save(duplicateResults, file = file.path(resultsFolder,
+  maleunique <- male2022$cumunique
+  save(duplicateResults, weightedProp, maleunique, all2022,
+    file = file.path(resultsFolder,
     "DuplicateAnalysis.Rda"))
 } else {
   # Load previoulsly generated file
@@ -279,11 +319,6 @@ vicResults <-resultsPlot(filter(duplicateResults, population == "vic")) +
     labs(title = "Victoria notifications")
 
 # Create a combined figure
-# legend <- GetLegend(allResults)
-# figure1a <- allResults + theme(legend.position = "none") 
-# figure1b <- nswResults + theme(legend.position = "none") 
-# figure1c <- vicResults + theme(legend.position = "none") 
-
 figure1 <- plot_grid(allResults, nswResults, vicResults,
   labels = c("A", "B", "C", ""), ncol = 1, nrow = 3)
 
@@ -406,36 +441,61 @@ figs("figure4", "Cumulative proportion unique for NSW compared to rest of
   Australia.")
 
 # Figure 5 ---------------------------------------------------------------
-# Compare MSM and hetero males
+# Compare males by exposure
 propMaleData <- filter(duplicateResults, 
-  population %in% c("all", "male", "msm", "nonnswmale"), replace == "2022")
+  population %in% c("all", "male", "msm", "heteromale", "pwidmale", 
+    "othermale", "unknownmale", "msmunknown", "msmidu"), 
+  replace == "2022")
 
-maleGroups <- c("nonnswmale", "msm", "male", "all")
-maleNames <- c("nonnswmale" = "Heterosexual males",
+maleGroups <- c("othermale", "heteromale", "pwidmale", "msm", 
+  "unknownmale", "msmidu", "msmunknown", "male", "all")
+maleNames <- c("othermale" = "Males other exposure",
+  "heteromale" = "Heterosexual males",
+  "pwidmale" = "PWID males",
   "msm" = "Men who have sex with men",
+  "unknownmale" = "Males unknown exposure",
+  "msmidu" = "MSM + PWID",
+  "msmunknown" = "MSM + unknown exposure",
   "male" = "All males", 
   "all" = "Overall")
-maleCols <- cols[1:4]
+maleCols <- cols[c(1:5, 7:10)]
 names(maleCols) <- maleGroups
 
-propPlotMale <- ggplot(data = propMaleData, aes(x = year, y = cumunique,
+figure5A <- ggplot(data = propMaleData, aes(x = year, y = cum_unique,
   colour = population)) + 
   geom_line() +
   scale_colour_manual(name = "Population", 
     breaks = maleGroups,
     limits = maleGroups,
-    labels = sexNames[maleGroups],
-    values = sexCols[maleGroups]) + 
-  coord_cartesian(xlim = c(1986, analysisYear), ylim = c(0.75,1)) +
-  scale_y_continuous(label = percent) +
-  labs(y = "Cumulative proportion", x = "Year",
-    title = "Proportion unique by male group") + 
+    labels = maleNames[maleGroups],
+    values = maleCols[maleGroups]) + 
+  coord_cartesian(xlim = c(1986, analysisYear)) +
+  scale_y_continuous(label = comma) +
+  labs(y = "Cumulative number", x = "Year",
+    title = "Number unique") + 
   plotOpts
 
-# Figure caption 
-figs("figure5", "Cumulative proportion unique for male groups compared to 
-rest of Australia.")
+figure5B <- ggplot(data = propMaleData, aes(x = year, y = cumunique,
+  colour = population)) + 
+  geom_line() +
+  scale_colour_manual(name = "Population", 
+    breaks = maleGroups,
+    limits = maleGroups,
+    labels = maleNames[maleGroups],
+    values = maleCols[maleGroups]) + 
+  coord_cartesian(xlim = c(1986, analysisYear), ylim = c(0.85,1)) +
+  scale_y_continuous(label = percent) +
+  labs(y = "Cumulative proportion", x = "Year",
+    title = "Proportion unique") + 
+  plotOpts
 
+# Create a combined figure
+figure5 <- plot_grid(figure5A, figure5B,
+  labels = c("A", "B"), ncol = 1, nrow = 2)
+
+# Figure caption 
+figs("figure5", "Cumulative number (A) and proportion (B) unique for male 
+exposure category groups.")
 
 # Save all the plots -----------------------------------------------------
 if (savePlots) {
@@ -452,7 +512,7 @@ if (savePlots) {
     height = 7.5, width = 15, units = "cm")
   
   SaveFigure(figuresFolder, "Duplicates_prop_unique_male", figure5,
-    height = 7.5, width = 15, units = "cm")
+    height = 15, width = 15, units = "cm")
   
 }
 ```
@@ -498,7 +558,7 @@ applying the algorithm to large numbers of notifications. For example the
 proportion unique is very similar for national, male, and NSW 
 notifications. Figure 4 compares the cumulative proportion unique in 
 notifications in NSW and outside of NSW (with similar numbers of 
-duplications). This figure suggests the majority of duplicates occurred in
+duplicates). This figure suggests the majority of duplicates occurred in
 NSW males.  
 
 `r figs("figure4")`
@@ -507,9 +567,21 @@ NSW males.
 figure4
 ```
 
+Looking at male notifications further, I ran the the deduplication
+algorithm on male notifications by exposure category. Figure 5 shows the
+cumulative proportion unique for each male exposure group. Considering the
+exposure groups separately results in an underestimate for the number of
+duplicates with an overall cumulative percentage of `r FormatData(100*tail(weightedProp, 1), suffix = "%")` compared to the 
+overall male percentage of `r FormatData(100*tail(maleunique,1), suffix = "%")`. This suggests duplicates are being missed because duplicate
+notifications occur in distinct exposure categories (and hence are not
+classified as duplicates when the algorithm is run on the separate exposure
+categories). Figure 5 suggests combining the MSM and unknown exposure group
+notifications produces a cumulative proportion unique that aligns with the 
+overall male and national populations. 
+
 `r figs("figure5")`
 
-```{r Figure 5, include = TRUE, fig.width = 6, fig.height = 3}
+```{r Figure 5, include = TRUE, fig.width = 6, fig.height = 6}
 figure5
 ```
 
@@ -526,27 +598,109 @@ using the national estimates remain valid but NSW specific estimates will
 be generated in the future.
 * Assuming all notifications since 2002 are unique will have little impact
 on the HIV cascade estimates. 
-* Seems like the majority of duplicates occurred in NSW males prior to 1992 (which makes sense I think). 
+* Seems like the majority of duplicates occurred in NSW males prior to 1992
+particularly in MSM and males in the unknown exposure category (which makes
+sense I think). 
 
-## Annual duplicates and proportion unique
+## Appendix - Annual duplicates and proportion unique
 
-As stated previously when we estimated the number and proportion of duplciates 
-annually we sometimes get a proportion > 1 and a negative number of duplicates. 
-This is an artefact of the statistical method and calculation because we use the cumulative number to estimate annual duplicate numbers. Below is a table illustrating this using the national results from the last 10 years.
-
+As stated previously when we estimated the number and proportion of 
+duplicates annually we sometimes get a proportion > 1 and a negative number
+of duplicates. This is an artifact of the statistical method and
+calculation because we use the cumulative number to estimate annual 
+duplicate numbers. Table 1 illustrates this using the national 
+results from the last 10 years.
 
 ```{r Annual duplicates}
 # This chunk produces plots for annual duplicates. This is primarily used for
 # illustration purposes so uses the national results from the last 10 years. 
 
+LoadLibrary(knitr)
+
 # Table of annual duplicates ----------------------------------------------
+table1 <- all2022 %>%
+  filter(year >= 2007) %>%
+  select(year, totalnotifications, cumunique, cum_unique, unique, 
+    notifications, duplicates, annunique) 
 
+table1Str <- table1 %>%
+  mutate(totalnotifications = FormatData(totalnotifications, places = 0), 
+    cumunique = FormatData(cumunique, places = 3),
+    cum_unique = FormatData(cum_unique, places = 1),
+    unique = FormatData(unique, places = 1),
+    notifications = FormatData(notifications),
+    duplicates = FormatData(duplicates, places = 1),
+    annunique = FormatData(annunique, places = 3))
 
+colnames(table1Str) <- c("Year",
+  "Cumulative notifications (A)",
+  "Cumulative proportion unique (B)", 
+  "Cumulative number unqiue (C = A*B)",
+  "Number unique each year (D = diff C)",
+  "Actual annual notifications (E)",
+  "Annual number of duplicates (F=E-D)",
+  "Annual proportion duplicates (G=F/D)")
+  
+tabs("Table1", "Annual numbers of duplicates for overall notifications. The
+  letters and equations in brackets show how each column relates to the 
+  other.")
+
+# Figure 6 ---------------------------------------------------------------
 # Plots of annual duplicates 
+figure6A <- ggplot(data = table1, aes(x = year, y = duplicates)) + 
+  geom_line(colour= cols["Blue"]) +
+  geom_point(colour= cols["Blue"]) +
+  geom_hline(yintercept = 0) +
+  coord_cartesian(ylim = c(-150,150)) +
+  ylab("Annual number") + xlab("Year") +
+  PlotOptions()
+
+figure6B <- ggplot(data = table1, aes(x = year, y = annunique)) + 
+  geom_line(colour= cols["Blue"]) +
+  geom_point(colour= cols["Blue"]) +
+  geom_hline(yintercept = 1) +
+  coord_cartesian(ylim = c(0.8, 1.2)) +
+  ylab("Annual proportion") + xlab("Year") +
+  PlotOptions()
+
+# Create a combined figure
+figure6 <- plot_grid(figure6A, figure6B,
+  labels = c("A", "B"), ncol = 1, nrow = 2)
+
+# Figure caption 
+figs("figure6", "Number (A) and proportion (B) of annual  
+  notifications that are unique for all national notifications.")
+
+# Save all the plots -----------------------------------------------------
+if (savePlots) {
+  SaveFigure(figuresFolder, "Duplicates_annual_unique", figure5,
+    height = 15, width = 10, units = "cm")
+}
+
+
 ```
 
-`r figs("Table1")`
+Even though proportions > 1 and negative number of duplicates don't make 
+sense, I pretend they do in the cascade calculations as the cumulative
+values do make sense and cumulative numbers are the important values in the
+cascade calculations (you may get a small of error going from year to year
+but that will be much smaller than the uncertainties in other aspects of 
+the calculation).
 
-```{r}
+Figure 6 shows the number and proportion of all annual notifications that 
+are duplicates since 2007. The values tend to bounce around zero and 1 
+respectively. Note the number of annual duplicates can be a far from zero 
+(> 100) because the numbers are obtained by taking the difference of
+cumulative notifications which are > 30,000. 
 
+`r tabs("Table1")`
+
+```{r Table 5 , include = TRUE, asis = "TRUE"}
+kable(table1Str, row.names = FALSE)
+```
+
+`r figs("figure6")`
+
+```{r Figure 6, include = TRUE, fig.width = 6, fig.height = 6}
+figure6
 ```

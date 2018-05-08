@@ -45,16 +45,16 @@ specified project folder and have a cascade file handle.
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- TRUE
+saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
 
-projectOutput <- "Aging_Paper" # "." for main output folder 
+projectOutput <- "Test_cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
 cascadeName <- "All"
 targetGender <- "all" # all, male, female (single)
-targetAge <- "split" # all or split
+targetAge <- "all" # all or split
 
 # Note regarding ageing: The calculations don't specifically target 
 # specific ages.  Rather this simply chooses whether age is considered or 

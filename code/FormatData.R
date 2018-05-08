@@ -90,7 +90,7 @@ FormatData <- function(estimate, lower = NA, upper = NA, places = NULL,
       } else if (value >= 10 && value < 1000) {
         places <- 1
       } else if (value >= 1000 && value < 10000) {
-        places - 0
+        places <- 0
       } else {
         places <- -2
       }
@@ -114,13 +114,15 @@ FormatData <- function(estimate, lower = NA, upper = NA, places = NULL,
   # Convert values and range into strings - TODO may need to add format as 
   # a variable to specify scientific notation. 
   estStr <- formatC(estValue, big.mark = thousands, decimal.mark = decimal,
-    format = "fg")
+    format = "f", drop0trailing = TRUE)
   lowStr <- ifelse(is.na(lowValue), "", formatC(lowValue, 
-    big.mark = thousands, decimal.mark = decimal, format = "fg"))
+    big.mark = thousands, decimal.mark = decimal, format = "f",
+    drop0trailing = TRUE))
   upStr <- ifelse(is.na(upValue), "", formatC(upValue, 
-    big.mark = thousands, decimal.mark = decimal, format = "fg"))
+    big.mark = thousands, decimal.mark = decimal, format = "f", 
+    drop0trailing = TRUE))
   
-  # Add suffixes and prefixes
+  # Add suffixes and prefixs
   if (units != "") {
     estStr <- paste0(prefix, estStr, suffix, " ", units) 
   } else {
