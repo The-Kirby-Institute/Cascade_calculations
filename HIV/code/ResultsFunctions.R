@@ -12,6 +12,21 @@ library(scales)
 
 # Plotting functions ------------------------------------------------------
 
+#' Plot number of PLDHIV over time
+#' 
+#' This function produces a plot of the number of people living with 
+#' diagnosed HIV over time for an inputed set of scenarios.
+#' 
+#' @details The idea of this function is to produce plots for the  
+#' 
+#' @param pldhiv Dataframe in long format showing estimated number of 
+#' people living with diagnosed HIV each year for each set. Column names
+#'  must include year agebin, set and pldhiv (for the estimates).
+#' 
+#' @return 
+#' 
+#' @author Richard T. Gray, \email{Rgray@kirby.unsw.edu.au}
+#' 
 PlotPldhivProjection <- function(pldhiv, startyear, endyear, 
   sets = NULL, setnames = NULL, plotcolors = NULL,
   xvalues = NULL) {
@@ -214,10 +229,17 @@ PlotAgeCascade <- function(pldhivage, startyear = 1986, agebins = NULL,
 #' 
 #' @author Richard T. Gray, \email{Rgray@kirby.unsw.edu.au}
 #' 
-PlotAgeDist <- function(distResults, resultsyear, 
-  sets = c("all", "male", "female"), plotcolors = NULL,
-  agenames = NULL,
-  setnames = c("Overall", "Males", "Females")) {
+PlotAgeDist <- function(distResults, resultsyear, sets = NULL, 
+  plotcolors = NULL, agenames = NULL, setnames = NULL) {
+  
+  # Set up defaults
+  if (is.null(sets)) {
+    sets <- unique(pldhiv$set)
+  } 
+  
+  if (is.null(setnames)) {
+    sets <- unique(pldhiv$set)
+  }
   
   # Quick error check
   if (length(sets) != length(setnames)) {
