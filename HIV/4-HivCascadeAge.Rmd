@@ -35,8 +35,8 @@ resultsFolder <- file.path(basePath, "output")
 # Load libraries and standard functions
 source(file.path(Rcode, "LoadLibrary.R"))
 LoadLibrary(tidyverse)
-LoadLibrary(cowplot)
-LoadLibrary(captioner)
+# LoadLibrary(cowplot)
+# LoadLibrary(captioner)
 LoadLibrary(scales)
 LoadLibrary(RColorBrewer)
 source(file.path(Rcode, "FormatData.R"))
@@ -62,8 +62,8 @@ if (savePlots) {
 }
 
 # Captions
-figs <- captioner()
-tabs <- captioner(prefix = "Table")
+# figs <- captioner()
+# tabs <- captioner(prefix = "Table")
 
 ```
 
@@ -132,13 +132,13 @@ if (savePlots) {
     format = saveFormat, width = width, height = height, units = units)
   SaveFigure(figFolder, "All-2016_proportion", allPlots[[2]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Male-2016_number", allPlots[[1]],
+  SaveFigure(figFolder, "Male-2016_number", malePlots[[1]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Male-2016_proportion", allPlots[[2]],
+  SaveFigure(figFolder, "Male-2016_proportion", malePlots[[2]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Female-2016_number", allPlots[[1]],
+  SaveFigure(figFolder, "Female-2016_number", femalePlots[[1]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Female-2016_proportion", allPlots[[2]],
+  SaveFigure(figFolder, "Female-2016_proportion", femalePlots[[2]],
     format = saveFormat, width = width, height = height, units = units)
   
 }
@@ -147,7 +147,8 @@ if (savePlots) {
 ```{r Plot age distribution}
 # This chunk produces a simple age distrubtion for the number of people
 # diagnosed with HIV in 2016 overall and by sex and overall at the end
-# of teh projections in 2016. 
+# of the projections in 2016. 
+
 resultsYear <- 2016
 currentSets <- c("all", "male", "female")
 currentSetNames <- c("Overall", "Males", "Females")
@@ -177,5 +178,30 @@ if (savePlots) {
     format = saveFormat, width = width, height = height, units = units)
   
 }
-
 ```
+
+```{r Plot future projections}
+# This chunk produces simple plots of the overall number of people
+# living with diagnosed HIV. 
+
+startYear <- 2011
+endYear <- 2026
+futureSets <- unique(futureResults$set)
+futureSetNames <- c("Status-quo", "Linear", "Reduce by 35%", 
+  "Reduce by 50%")
+futurePldhiv <- futureResults %>% 
+  group_by(year, set) %>%
+  summarise(pldhiv = sum(pldhiv))
+
+projectPlot <- PlotPldhivProjection(futurePldhiv, startYear, endYear, 
+  sets = futureSets, setnames = futureSetNames)
+
+if (savePlots) {
+  
+  # Save plots
+  SaveFigure(figFolder, "Pldhiv_projections", projectPlot,
+    format = saveFormat, width = 12, height = 8)
+  
+}
+```
+

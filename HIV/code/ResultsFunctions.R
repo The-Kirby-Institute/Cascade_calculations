@@ -12,6 +12,62 @@ library(scales)
 
 # Plotting functions ------------------------------------------------------
 
+PlotPldhivProjection <- function(pldhiv, startyear, endyear, 
+  sets = NULL, setnames = NULL, plotcolors = NULL,
+  xvalues = NULL) {
+  
+  # Set up defaults
+  if (is.null(sets)) {
+    sets <- unique(pldhiv$set)
+  } 
+  
+  if (is.null(setnames)) {
+    sets <- unique(pldhiv$set)
+  }
+  
+  if (is.null(xvalues)) {
+    xvalues <- seq(startYear, endyear, by = 5)
+  }
+  
+  # Quick error check
+  if (length(sets) != length(setnames)) {
+    stop("Number of scenario names incompatible with scenarios")
+  }
+  
+  # Plot specs
+  if (is.null(plotcolors)) {
+    cols <- PlotColors()
+  } else {
+    cols <- plotcolors
+  }
+  
+  setCols <- cols[1:length(sets)]
+  names(setCols) <- sets
+  
+  # Set up results
+  results <- pldhiv %>%
+    filter(year >= startyear, year <= endyear, set %in% sets)
+  
+  # Plot the scenarios
+  plotPldhiv <- ggplot(data = results, aes(x = year, y = pldhiv, 
+    group = set, colour = set)) +
+    geom_line() +
+    scale_colour_manual(name = "",
+      breaks = sets,
+      limits = sets,
+      labels = setnames,
+      values = setCols[sets]) +
+    scale_y_continuous(label = comma, limits = c(0, NA)) + 
+    scale_x_continuous(breaks = xvalues) + 
+    labs(x = "Year", y = "Number diagnosed") + 
+    PlotOptions() + 
+    theme(legend.position = "right")
+  
+  # Return plot handle
+  return(plotPldhiv)
+  
+}
+
 #' Plot diagnosed people living with HIV by age results
 #'
 #' This function produces ggplot plot handles for the number and proportion 
@@ -216,6 +272,3 @@ PlotAgeDist <- function(distResults, resultsyear,
   return(plotDist)
   
 }
-
-PlotPldhivProjection <- function(pldhiv, startyear, scenarios, 
-  plotcolors) {}
