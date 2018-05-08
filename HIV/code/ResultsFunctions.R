@@ -10,33 +10,37 @@
 library(tidyverse)
 library(scales)
 
-# Plotting functions ----------------------------------------------------------
+# Plotting functions ------------------------------------------------------
 
 #' Plot diagnosed people living with HIV by age results
 #'
-#' This function produces ggplot plot handles for the number and proportion of 
+#' This function produces ggplot plot handles for the number and proportion 
+#' of 
 #' diagnosed people living with HIV by agebin.
 #'
-#' @details The idea of this function is to produce plots for the default HIV
-#' cascade agebins (5 year bins: 0-4, 5-9, ...., 80-84, 85+). This function 
-#' requires the libraries ggplot2 and scales and for the PlotOptions.R and 
-#' PlotColors.R to be sourced. The plotting is setup to produce a nice
-#' figure file using ggsave with width = 17.5 cm and height = 13 cm. 
+#' @details The idea of this function is to produce plots for the default 
+#' HIV cascade agebins (5 year bins: 0-4, 5-9, ...., 80-84, 85+). This 
+#' function requires the libraries ggplot2 and scales and for the 
+#' PlotOptions.R and PlotColors.R to be sourced. The plotting is setup to 
+#' produce a nice figure file using ggsave with width = 17.5 cm and 
+#' height = 13 cm. 
 #'
-#' @param pldhiv Dataframe in long format showing estimated number of people
-#' living with diagnosed HIV by agebin and year. Column names must include year
-#' agebin and value (for the estimates) 
-#' @param startyear Year to start x-axis on plot. Optional and set to 1986 as 
-#' default
+#' @param pldhiv Dataframe in long format showing estimated number of 
+#' people living with diagnosed HIV by agebin and year. Column names must 
+#' include year agebin and value (for the estimates).
+#' @param startyear Year to start x-axis on plot. Optional and set to 1986 
+#' as default
 #' @param agebins Vector of strings specifiy age bins to be plotted. 
 #' Otional and set to NULL which corresponds to all bins. 
-#' @param plotcolors Vector of color strings for plots. Number of colors must 
-#' equal the number of age bins. Optional and NULL by default. 
-#' @param grayscale Logical sepcifying if grayscale should be used in the plots.
+#' @param plotcolors Vector of color strings for plots. Number of colors 
+#' must equal the number of age bins. Optional and NULL by default. 
+#' @param grayscale Logical sepcifying if grayscale should be used in the 
+#' plots.
 #' Overwrites the plotcolors argument if TRUE. Optional and set to FALSE by 
 #' default
-#' @param agenames Vector of strings specifying the legend values. Number of 
-#' labels must equal the number of age bins. Optional and NULL by default.
+#' @param agenames Vector of strings specifying the legend values. Number 
+#' of labels must equal the number of age bins. Optional and NULL by 
+#' default.
 #'
 #' @return List with plot handles for number and proportion by age
 #' 
@@ -115,7 +119,8 @@ PlotAgeCascade <- function(pldhivage, startyear = 1986, agebins = NULL,
     geom_bar(stat="identity", position = "fill") + 
     xlab("Year") + 
     ylab("Proportion diagnosed with HIV (%)") +
-    scale_fill_manual(values = plotcolors, name = "Age", labels = agenames) +
+    scale_fill_manual(values = plotcolors, name = "Age", 
+      labels = agenames) +
     scale_y_continuous(label = percent) + 
     scale_x_continuous(breaks = xValues)  + 
     PlotOptions() +
@@ -132,3 +137,31 @@ PlotAgeCascade <- function(pldhivage, startyear = 1986, agebins = NULL,
   return(list(barPlot, propPlot))
   
 }
+
+#' Plot distribution of PLDHIV by age
+#' 
+#' This function produces plot of the distrubtion of people living with 
+#' diagnosed HIV by age group for a given year.
+#' 
+#' @details The idea of this function is to produce plots for the default 
+#' HIV cascade agebins (5 year bins: 0-4, 5-9, ...., 80-84, 85+) for a 
+#' given year. This function requires the libraries ggplot2 and scales and 
+#' for the PlotOptions.R and PlotColors.R to be sourced. Multiple scenarios 
+#' and distributions can be plotted if they are stored separately under 
+#' "scenario" in the input data frame. The plotting is setup to produce a 
+#' nice figure file using ggsave with width = X cm and height = Y cm.  
+#' 
+#' @param pldhiv Dataframe in long format showing estimated number of 
+#' people living with diagnosed HIV by agebin and year. Column names must 
+#' include year agebin and value (for the estimates).
+#' 
+#' @return 
+#' 
+#' @author Richard T. Gray, \email{Rgray@kirby.unsw.edu.au}
+#' 
+PlotAgeCascade <- function(pldhivage, year = 2016, scenarios = NULL,
+  plotcolors = NULL) {
+  
+}
+
+PlotPldhivProjection <- function(pldhiv, startyear, scenarios, plotcolors)
