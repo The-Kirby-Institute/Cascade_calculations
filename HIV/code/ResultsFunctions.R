@@ -10,6 +10,52 @@
 library(tidyverse)
 library(scales)
 
+# Calculations ------------------------------------------------------------
+
+#' Calculate average age of PLDHIV 
+AverageAge <- function(pldhivage, resultsyear, agebins = NULL, 
+  agemidpoints = NULL) {
+  
+  # Setup defaults
+  if (is.null(agebins)) {
+    ages <- unique(pldhivage$agebin)
+  } else {
+    ages <- agebins
+  }
+  
+  # Sort out results
+  results <- pldhivage %>% 
+    filter(year == resultsyear, agebin %in% ages)
+    
+  # Set up agemidpoints
+  if (is.null(agemidpoints)) {
+    # Read in age bins and calculate midpoint automatically from lower
+    # and upper  values (assume agebin format is "aX_Y" or "aX+". 
+    ageStrings <- str_split(ages, "_")
+    lowerStr <- sapply(ageStrings, function(x) str_replace(x[1], "a", ""))
+    upperStr <- sapply(ageStrings, function(x) x[2])
+    lower <- unname(sapply(lowerStr, function(x) as.numeric(str_replace(x, 
+      "\\+", ""))))
+    upper <- as.numeric(upperStr)
+    
+    if (is.na(tail(upper,1))) {
+      upper[length(upper)] <- tail(lower, 1)
+    }
+    
+    midpoints <- (lower + upper) / 2
+  } else {
+    midpoints <- agemidpoints
+  } 
+  
+  # Calculate average age
+  nages <- length(ages)
+  average <- sum(midpoints * results$value) / sum(results$value)
+  
+  # Return average age
+  return(average)
+   
+}
+
 # Plotting functions ------------------------------------------------------
 
 #' Plot number of PLDHIV over time
@@ -107,7 +153,7 @@ PlotPldhivProjection <- function(pldhiv, startyear, endyear,
 #' must equal the number of age bins. Optional and NULL by default. 
 #' @param grayscale Logical sepcifying if grayscale should be used in the 
 #' plots.
-#' Overwrites the plotcolors argument if TRUE. Optional and set to FALSE by 
+#' Overwrites the plotcolors argument if TRUE. Optional and set to FALSE by
 #' default
 #' @param agenames Vector of strings specifying the legend values. Number 
 #' of labels must equal the number of age bins. Optional and NULL by 

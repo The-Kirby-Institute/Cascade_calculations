@@ -35,22 +35,25 @@ resultsFolder <- file.path(basePath, "output")
 # Load libraries and standard functions
 source(file.path(Rcode, "LoadLibrary.R"))
 LoadLibrary(tidyverse)
-# LoadLibrary(cowplot)
-# LoadLibrary(captioner)
+LoadLibrary(cowplot)
+LoadLibrary(captioner)
 LoadLibrary(scales)
 LoadLibrary(RColorBrewer)
+LoadLibrary(gridExtra)
 source(file.path(Rcode, "FormatData.R"))
 source(file.path(Rcode, "PlotOptions.R"))
 source(file.path(Rcode, "PlotColors.R"))
 source(file.path(Rcode, "SaveFigure.R"))
+source(file.path(Rcode, "GetLegend.R"))
 source(file.path(HIVcode, "ResultsFunctions.R"))
+
 
 
 # Script parameters
 savePlots <- TRUE
 
 # Set up project and cascade to analyse
-projectName <- "Ageing_paper"  
+projectName <- "Aging_paper"  
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadeNames <- c("All", "Male", "Female")
 
@@ -62,7 +65,7 @@ if (savePlots) {
 }
 
 # Captions
-# figs <- captioner()
+figs <- captioner()
 # tabs <- captioner(prefix = "Table")
 
 ```
@@ -107,6 +110,22 @@ futureResults <- bind_rows(sqResults, linearResults, reduce35Results,
 
 ```
 
+```{r Calculate average ages}
+# This chunk is used to calculate the average age of PLDHIV for 
+# specific years
+
+AverageAge(allMain, 2006)
+AverageAge(allMain, 2016)
+
+pldhivFuture <- linearResults %>%
+  rename(value = pldhiv) 
+AverageAge(pldhivFuture, 2006)
+AverageAge(pldhivFuture, 2016)
+AverageAge(pldhivFuture, 2026)
+
+```
+
+
 ```{r Plot age trends}
 # This chunk produces age trend plots for each main cascade
 
@@ -120,6 +139,7 @@ allPlots <- PlotAgeCascade(allMain, agebins = ageBins)
 malePlots <- PlotAgeCascade(maleMain, agebins = ageBins)
 femalePlots <- PlotAgeCascade(femaleMain, agebins = ageBins)
 
+# Save plots
 if (savePlots) {
   
   # Standard dimensions
@@ -143,6 +163,35 @@ if (savePlots) {
   
 }
 ```
+
+```{r Paper plot}
+# Create a combined plot for paper
+legend <- GetLegend(malePlots[[1]])
+paperFigureA <- malePlots[[1]] + labs(title = "Males") +
+  theme(legend.position = "none")
+paperFigureB <- femalePlots[[1]] + labs(title = "Females") +
+  theme(legend.position = "none")
+
+
+paperFigurePlot <- grid.arrange(paperFigureA, paperFigureB, legend, 
+  ncol = 3, nrow = 1,
+  layout_matrix = rbind(c(1, 2, 3)),
+  widths = c(4, 4, 0.8), heights = c(3))
+
+paperFigure <- ggdraw() +
+  draw_plot(paperFigurePlot, 0, 0, 1, 1) +
+  draw_plot_label(c("A", "B"), c(0, 0.5),
+    c(1, 1), size = 12)
+
+figs("paperfig", "Estimated number of diagnosed males (A) and females (B)
+  in Australia over 1986-2026 by 5-year age bin.")
+
+if (savePlots) {
+  SaveFigure(figFolder, "Combined_paper_figure", paperFigure,
+    format = saveFormat, width = 20, height = 10, units = units)
+}
+```
+
 
 ```{r Plot age distribution}
 # This chunk produces a simple age distrubtion for the number of people
