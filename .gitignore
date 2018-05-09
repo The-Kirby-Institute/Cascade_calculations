@@ -43,6 +43,8 @@ HIV/docs/
 HIV/subprojects/
 
 HIV/hivageing.Rmd
+HIV/1-PldhivCalculations.R
+HIV/1-PldhivSingle.Rmd
 
 # Chlamydia directory
 Chlamydia/data/raw/*
