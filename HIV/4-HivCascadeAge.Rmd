@@ -117,11 +117,20 @@ futureResults <- bind_rows(sqResults, linearResults, reduce35Results,
 AverageAge(allMain, 2006)
 AverageAge(allMain, 2016)
 
-pldhivFuture <- linearResults %>%
+pldhivLinear <- linearResults %>%
   rename(value = pldhiv) 
-AverageAge(pldhivFuture, 2006)
-AverageAge(pldhivFuture, 2016)
-AverageAge(pldhivFuture, 2026)
+AverageAge(pldhivLinear, 2016)
+AverageAge(pldhivLinear, 2026)
+
+pldhivReduce35 <- reduce35Results %>%
+  rename(value = pldhiv) 
+AverageAge(pldhivReduce35, 2016)
+AverageAge(pldhivReduce35, 2026)
+
+pldhivReduce50 <- reduce50Results %>%
+  rename(value = pldhiv) 
+AverageAge(pldhivReduce50, 2016)
+AverageAge(pldhivReduce50, 2026)
 
 ```
 
