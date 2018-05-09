@@ -135,7 +135,7 @@ GetMigrateAge <- function(year, nomData, targetGender, targetExposure,
   for (age in ages) {
     
     if (!is.null(propMale)) {
-      propMaleAge <- propMale[age, ]
+      propMaleAge <- as.vector(propMale[, age])
     } else {
       propMaleAge <- NULL
     }
