@@ -47,13 +47,11 @@ source(file.path(Rcode, "SaveFigure.R"))
 source(file.path(Rcode, "GetLegend.R"))
 source(file.path(HIVcode, "ResultsFunctions.R"))
 
-
-
 # Script parameters
 savePlots <- TRUE
 
 # Set up project and cascade to analyse
-projectName <- "Aging_paper"  
+projectName <- "Ageing_paper"  
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadeNames <- c("All", "Male", "Female")
 
@@ -114,9 +112,15 @@ futureResults <- bind_rows(sqResults, linearResults, reduce35Results,
 # This chunk is used to calculate the average age of PLDHIV for 
 # specific years
 
+# Main results
 AverageAge(allMain, 2006)
 AverageAge(allMain, 2016)
+AverageAge(maleMain, 2006)
+AverageAge(maleMain, 2016)
+AverageAge(femaleMain, 2006)
+AverageAge(femaleMain, 2016)
 
+# Projection results
 pldhivLinear <- linearResults %>%
   rename(value = pldhiv) 
 AverageAge(pldhivLinear, 2016)
@@ -197,7 +201,7 @@ figs("paperfig", "Estimated number of diagnosed males (A) and females (B)
 
 if (savePlots) {
   SaveFigure(figFolder, "Combined_paper_figure", paperFigure,
-    format = saveFormat, width = 20, height = 10, units = units)
+    format = saveFormat, width = 25, height = 10, units = units)
 }
 ```
 

@@ -29,7 +29,7 @@ PlotColors <- function(set = c("main", "lines", "cbPalette", "hivcascade4",
 
   set <- match.arg(set)
 
-  # Generate all the colour vector options -------------------------------------
+  # Generate all the colour vector options --------------------------------
 
 
   # Palette with black and grey (colour blind friendly)
@@ -39,11 +39,7 @@ PlotColors <- function(set = c("main", "lines", "cbPalette", "hivcascade4",
   # Colour scheme used in ASR
   hivcascade4 <- c("#621C20", "#AB2322", "#D95728", "#E97164")
   hivcascade5 <- c("#621C20", "#AB2322", "#A63603", "#D95728", "#E97164")
-<<<<<<< HEAD
   sticascade <- c("#2C4452", "#2B97B0") # c(males, females)
-=======
-  #sticasade <-
->>>>>>> develop
 
   # Setup crayon colours which are used for most of my main plots
   crayons <- c("Almond"="#efdecd",
