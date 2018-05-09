@@ -49,7 +49,7 @@ saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
 
-projectOutput <- "Test_cascades" # "." for main output folder 
+projectOutput <- "Test_Cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
 cascadeName <- "All"
@@ -986,17 +986,18 @@ if (saveResults) {
 # Any counterfactual or future projection scenario can be manually 
 # specified.
 # 
-# Maybe move this into a separate function or script but fits nicely here. 
-
+# Maybe move this into a separate function or script but fits nicely here.
+# projectPldhiv <- TRUE
 if (projectPldhiv) { 
   
   # Manually set final year for projections and projection name
   projectYear <- analysisYear + 10  
-  projectName <- "future_reduce50"
+  projectName <- "future_linear"
   
   # Specifiy projection option for future diagnoses
-  projectOption <- "reduce" #status-quo, linear, reduce 
-  projectDecrease <- 0.5 #None, 0.35, 0.5
+  projectOption <- "linear" #status-quo, linear, reduce 
+  projectDecrease <- 0.65 # 0, 0.65 (35% reduction), 0.5 (50% 
+                          # reduction) relative reduction!
   
   saveProjResults <- TRUE 
   # Reset if saving things overall
@@ -1023,7 +1024,7 @@ if (projectPldhiv) {
   # occur each year. SELECT STANDARD OPTION OR MANUALLY CHANGE TO RUN
   #  ALTERNATE SCENARIOS.
   
-  # Dignoses options
+  # Diagnoses options
   if (projectOption == "status-quo") {
     diagnosesFuture <- ProjVec(adjustDiags$adjusted_included, nprojYears)
   } else if (projectOption == "linear") {
@@ -1040,11 +1041,15 @@ if (projectPldhiv) {
     # MANUALLY CHANGE HERE TO RUN ALTERNATE SCENARIOS
   }
   
-  # Use trend diagnoses as default
+  # Use trend diagnoses as default - not need different emigration 
+  # rates for overall and age calculations because the overall rate assumes
+  # all PLDHIV are adults and to align with estimates above up to 
+  # analysis year.
   diagnoses <- diagnosesFuture
   annUnique <- ProjVec(subsetRates$annunique, nprojYears)
   deathrate <- ProjVec(subsetRates$deathrate, nprojYears)
-  osrate <- ProjVec(subsetRates$mrate, nprojYears)
+  osrateOverall <- ProjVec(subsetRates$mrate, nprojYears)
+  osrateAge <- ProjVec(hivBase$migrationrate, nprojYears)
   propStay <- ProjVec(subsetRates$propstay, nprojYears)   
   
   # CHANGE DEFAULTS HERE
@@ -1061,7 +1066,7 @@ if (projectPldhiv) {
   pldhivAllFuture <- LivingDiagnosed(diagnoses,
     annUnique, 
     deathrate,
-    osrate,
+    osrateOverall,
     propStay) %>%
     mutate(year = totalYears) %>%
     select(year, everything())
@@ -1078,7 +1083,6 @@ if (projectPldhiv) {
     
     # Status quo diagnoses and relative reductions can be applied across
     # the age groups
-    
     
     if (projectOption == "status-quo") {
       hivResultsAgeFuture <- cbind(hivResultsAge,
@@ -1149,11 +1153,11 @@ if (projectPldhiv) {
     pldhivAgeFuture <- LivingDiagnosedAge(diagnosesAge,
       annUnique, 
       deathrate,
-      osrate, 
+      osrateAge, 
       propStay, 
       agedeath = relAgeDeathFuture,
       agemigrate = relAgeMigrateFuture,
-      normalize = pldhivAllFuture$pldhiv) 
+      normalize = pldhivAllFuture$pldhiv)
     
     # COnvert to along data frame
     hivDiagnosedFuture <- as.data.frame(pldhivAgeFuture) %>% 
@@ -1165,6 +1169,27 @@ if (projectPldhiv) {
   }
   
   if (saveProjResults) {
+    # Create output directory
+    resultsPath <- file.path(outputFolder, projectOutput, cascadeName)
+    dir.create(resultsPath, showWarnings = FALSE, recursive = TRUE)
+    
+    # Set up files
+    if (doAge) {
+      saveStringDetails <- file.path(resultsPath, 
+        paste0("pldhiv-", toString(analysisYear), "-age-"))
+    } else {
+      saveStringDetails <- file.path(resultsPath, 
+        paste0("pldhiv-", toString(analysisYear), "-"))
+    }
+    
+    # Save main results
+    saveStringPldhiv <- file.path(resultsPath, 
+      paste0("HIVpldhivEstimates-", toString(analysisYear)))
+    if (doAge) {
+      saveStringPldhiv <- paste0(saveStringPldhiv, "-age")
+    }
+    
+    # Save results
     if (doAge) {
       write_csv(rownames_to_column(as.data.frame(pldhivAgeFuture), 
         var = "agebin"), paste0(saveStringDetails, projectName,
