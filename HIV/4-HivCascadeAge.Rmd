@@ -185,14 +185,10 @@ paperFigureA <- malePlots[[1]] + labs(title = "Males") +
 paperFigureB <- femalePlots[[1]] + labs(title = "Females") +
   theme(legend.position = "none")
 
-
-paperFigurePlot <- grid.arrange(paperFigureA, paperFigureB, legend, 
-  ncol = 3, nrow = 1,
-  layout_matrix = rbind(c(1, 2, 3)),
-  widths = c(4, 4, 0.8), heights = c(3))
-
 paperFigure <- ggdraw() +
-  draw_plot(paperFigurePlot, 0, 0, 1, 1) +
+  draw_plot(paperFigureA, 0, 0, 0.455, 1) +
+  draw_plot(paperFigureB, 0.455, 0, 0.455, 1) +
+  draw_plot(legend, 0.91, 0, 0.09, 1) +
   draw_plot_label(c("A", "B"), c(0, 0.5),
     c(1, 1), size = 12)
 
