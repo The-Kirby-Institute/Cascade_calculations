@@ -47,12 +47,12 @@ HIV/1-PldhivCalculations.R
 HIV/1-PldhivSingle.Rmd
 
 # Chlamydia directory
-Chlamydia/data/raw/*
+Chlamydia/data/CT notifications_2015_National_Estimate-2016-09-27.xlsx
 Chlamydia/data/chlamRetestVariation*.csv
 Chlamydia/data/chlamtests*.csv
-Chlamydia/data/retestsAccept2014.csv
+Chlamydia/data/retestsAccept_clean-2014.csv
 Chlamydia/data/retestsAccess*.csv
-Chlamydia/data/retestsNSWgp2015.csv
+Chlamydia/data/retestsNSWgp_clean-2015.csv
 # Chlamydia/output/figures/
 Chlamydia/output/*
 !Chlamydia/output/2016
