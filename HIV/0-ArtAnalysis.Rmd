@@ -11,12 +11,7 @@ available for 2013-2014. We only estimate the number on treatment since
 
 
 ```{r initialization} 
-# Set working directory to source file loaction
-#setwd(file.path(path.expand("~"), "Research", "!Evaluation_Modelling",
-#                "project_care_cascades"))
-
-# Clear workspace
-rm(list=ls())
+# Restart R and set working directory to source file location
 
 # Various directories
 basePath <- getwd() #dirname(getwd())
@@ -82,7 +77,7 @@ if (addTempResidents) {
 # Load the ART data
 artEstimates <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
 prospectionData <- read.csv(file.path(dataFolder,
-  paste("pharmdash_HIVpatients", toString(analysisYear),
+  paste("pharmdash_HIVpatients_clean-", toString(analysisYear),
     ".csv", sep = "")), as.is = c(1, 2))
 
 # Clean ART data ---------------------------------------------------------

@@ -19,6 +19,7 @@ calculation scripts.
 basePath <- getwd()
 Rcode <- file.path(dirname(basePath), "code") # All cascades code
 HIVcode <- file.path(basePath, "code") 
+notificationsFolder <- file.path(dirname(dirname(basePath)), "data", "HIV")
 dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
 figuresFolder <- file.path(basePath, "output", "figures")
@@ -173,8 +174,8 @@ source(file.path(HIVcode, "GetInterRegion.R"))
 # specified criteria in Script paramaters
 
 # Load cleaned notifications data
-origHivData <- read.csv(file.path(dataFolder, paste0("hivnotifications",
-  toString(analysisYear), ".csv"))) 
+origHivData <- read.csv(file.path(notificationsFolder,
+  paste0("hivnotifications_clean-", toString(analysisYear), ".csv"))) 
 
 # Read in country code data
 countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
@@ -454,14 +455,14 @@ hivAdjustments <- read.csv(file.path(dataFolder,
 #   paste0("HIVinterstateEstimates-",
 #     toString(analysisYear), ".csv")))
 
-# Load cleaned NOM data variable (cleanNom)
-load(file = file.path(dirname(basePath),
-  "data", "cleaned_ABS_nom_data.R"))
-
 mainDataFolder <- file.path(dirname(getwd()), "data")
 # absMigration <- read.csv(file.path(mainDataFolder,
 #   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")),
 #   as.is = 1)
+
+# Load cleaned NOM data variable (cleanNom)
+load(file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
+ 
 absInterstate <- read_csv(file.path(mainDataFolder, 
   paste0("ABS_interstate_age_sex_clean-", toString(analysisYear), ".csv")))
 
@@ -591,8 +592,9 @@ if (interState) {
       subsetRatesAll$deathrate,
       subsetRatesAll$mrate,
       subsetRatesAll$propstay) %>%
-      mutate(year = allYears) %>%
-      select(year, everything())
+      mutate(year = allYears) %>% 
+      select(year, everything()) %>%
+      as_tibble()
     
     pldhivOverallMin <- LivingDiagnosed(adjustDiags$all,
       subsetRates$annunique,  
@@ -600,7 +602,8 @@ if (interState) {
       subsetRatesAll$mrate_upper,
       subsetRatesAll$propstay_lower) %>%
       mutate(year = allYears) %>%
-      select(year, everything())
+      select(year, everything()) %>%
+      as_tibble()
     
     pldhivOverallMax <- LivingDiagnosed(adjustDiags$all,
       subsetRates$annunique,  
@@ -608,7 +611,8 @@ if (interState) {
       subsetRatesAll$mrate_lower,
       subsetRatesAll$propstay_upper) %>%
       mutate(year = allYears) %>%
-      select(year, everything())
+      select(year, everything()) %>%
+      as_tibble()
     
     # Now do regional migration
     pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
@@ -676,7 +680,8 @@ if (interState) {
       subsetRates$mrate_upper,
       subsetRates$propstay_lower) %>%
       mutate(year = allYears) %>%
-      select(year, everything())
+      select(year, everything()) %>%
+      as_tibble()
     
     pldhivOverallMax <- LivingDiagnosed(adjustDiags$adjusted_included,
       subsetRates$annunique,  
@@ -684,7 +689,8 @@ if (interState) {
       subsetRates$mrate_lower,
       subsetRates$propstay_upper) %>%
       mutate(year = allYears) %>%
-      select(year, everything())
+      select(year, everything()) %>%
+      as_tibble()
     
     # Calculate age group estimates 
     # NOTE: use base migration rate as mrate is calculated assuming people
@@ -724,7 +730,8 @@ if (interState) {
       subsetRates$mrate,
       subsetRates$propstay) %>%
       mutate(year = allYears) %>%
-      select(year, everything())
+      select(year, everything()) %>%
+      as_tibble()
     
     pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
       subsetRates$annunique,  
@@ -732,7 +739,8 @@ if (interState) {
       subsetRates$mrate_upper,
       subsetRates$propstay_lower) %>%
       mutate(year = allYears) %>%
-      select(year, everything())
+      select(year, everything()) %>%
+      as_tibble()
     
     pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
       subsetRates$annunique,  
@@ -740,7 +748,8 @@ if (interState) {
       subsetRates$mrate_lower,
       subsetRates$propstay_upper) %>%
       mutate(year = allYears) %>%
-      select(year, everything())
+      select(year, everything()) %>%
+      as_tibble()
   }
 }
 

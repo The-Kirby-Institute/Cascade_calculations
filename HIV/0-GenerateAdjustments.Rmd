@@ -24,6 +24,7 @@ basePath <- file.path(dirname(getwd()), "HIV")
 
 Rcode <- file.path(dirname(getwd()), "code") 
 HIVcode <- file.path(basePath, "code") 
+notificationsFolder <- file.path(dirname(dirname(basePath)), "data", "HIV")
 dataFolder <- file.path(basePath, "data")
 
 # Load standard libraries and options ------------------------------------
@@ -59,8 +60,8 @@ saveEstimates <- TRUE
 # weighting.
 
 # Load cleaned notifications data
-rawNotifications <- read.csv(file.path(dataFolder,
-  paste0("hivnotifications", toString(analysisYear), ".csv"))) 
+rawNotifications <- read.csv(file.path(notificationsFolder,
+  paste0("hivnotifications_clean-", toString(analysisYear), ".csv"))) 
 
 # Read in country code data
 countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
@@ -591,8 +592,7 @@ hivAdjustments$pstay_vic_upper <- propStayUpperVic /
 # Load all the data sets we use for this estimate - use the parameter 
 # column as row names for easier subsetting
 hivParams <- read.csv(file.path(dataFolder, 
-  "individualHIVparameters.csv"), 
-  as.is = 1)
+  "individualHIVparameters.csv"), as.is = 1)
 hivParams <- select(hivParams, parameter, value)
 
 for (ii in 1:nrow(hivParams)) {
@@ -1191,8 +1191,8 @@ relAgeMigrateFemale <- GetMigrateAge(analysisYear, cleanNom, "female",
 
 # Load deathrates data from ABS for 2014 - as we distribute unknown deaths
 # to age groups based on the ABS death rates for each group
-absDeathRates <- read.csv(file.path(dataFolder,
-  "ABS_Deathrate_Age_State_clean-2014.csv"), as.is = c(1,2))
+absDeathRates <- read.csv(file.path(dirname(basePath),
+  "data", "ABS_deathrate_age_state_clean-2014.csv"), as.is = c(1,2))
 
 # Use male deathrates for overall
 absDeathRatesAll <- filter(absDeathRates, gender == "males", 

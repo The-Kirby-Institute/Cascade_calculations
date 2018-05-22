@@ -65,6 +65,7 @@ estimates for each setting and scenario.
 basePath <- getwd()
 Rcode <- file.path(dirname(basePath), "code") # All cascades code
 HIVcode <- file.path(basePath, "code") 
+notificationsFolder <- file.path(dirname(dirname(basePath)), "data", "HIV")
 dataFolder <- file.path(basePath, "data")
 resultsFolder <- file.path(basePath, "output")
 figuresFolder <- file.path(basePath, "output", "figures")
@@ -100,8 +101,8 @@ tabs <- captioner(prefix = "Table")
 source(file.path(HIVcode, "TidyNotifications.R"))
 
 # Load cleaned notifications data
-origHivData <- read_csv(file.path(dataFolder, paste0("hivnotifications",
-  toString(analysisYear), ".csv"))) 
+origHivData <- read_csv(file.path(notificationsFolder,
+  paste0("hivnotifications_clean-", toString(analysisYear), ".csv"))) 
 
 # Read in country code data
 countryCodes <- read_csv(file.path(dataFolder, "countryRegionCodes.csv"))

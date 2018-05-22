@@ -68,7 +68,7 @@ artEstimates <- read.csv(file.path(outputFolder, paste0("ART_Estimates-2014-",
 
 # Reload Prospection PBS data to get gender and state estimates
 prospectionData <- read.csv(file.path(dataFolder,
-                                      paste0("pharmdash_HIVpatients",
+                                      paste0("pharmdash_HIVpatients_clean-",
                                              toString(analysisYear),
                                              ".csv")), as.is = c(1, 2))
 
@@ -162,7 +162,7 @@ hivTreated <- hivTreated %>%
 
 # Calculate uncertainty in Prospection data ------------------------------
 popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
-                                "ABS_population_sizes.xlsx"),
+                                "ABS_population_sizes_PharmDash.xlsx"),
                       sheet = 2)
 
 
