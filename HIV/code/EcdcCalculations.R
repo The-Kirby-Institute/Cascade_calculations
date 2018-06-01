@@ -127,7 +127,6 @@ typeDiag <- function(hivData, type, minYear = 1980,
         ungroup() %>%
         spread(expgroup, diags) %>%
         rename(year = yeardiagnosis)
-      
     } 
     
     diagType[is.na(diagType)] <- 0
@@ -137,7 +136,6 @@ typeDiag <- function(hivData, type, minYear = 1980,
     if (!("otherexp" %in% names(diagType))) diagType$otherexp <- 0
     if (!("pwid" %in% names(diagType))) diagType$pwid <- 0
     if (!("unknown" %in% names(diagType))) diagType$unknown <- 0
-    
     
     diagType <- diagType %>%
       mutate(known = hetero+msm+otherexp+pwid) %>%
@@ -150,22 +148,21 @@ typeDiag <- function(hivData, type, minYear = 1980,
              pwid = ifelse(is.nan(pwid), 0, pwid),
              otherexp = ifelse(is.nan(otherexp), 0, otherexp)) %>%
       select(-known, -unknown)
-    
+
     allYears <- minYear:max(hivData$yeardiagnosis)
-    requiredYears <- allYears[!(allYears %in% diagType$year)]
-    diagType <- FillDataFrame(requiredYears, diagType)
-    diagType <- arrange(diagType, year)
-    # }
+    # requiredYears <- allYears[!(allYears %in% diagType$year)]
+    diagType <- FillDataFrame(allYears, diagType)
+    # diagType <- arrange(diagType, year)
     
     if (!is.null(adjustUnique)) {
-      diagType$hetero <- AnnualUnique(diagType$hetero , adjustUnique)
-      diagType$msm <- AnnualUnique(diagType$msm , adjustUnique)
-      diagType$pwid <- AnnualUnique(diagType$pwid , adjustUnique)
-      diagType$otherexp <- AnnualUnique(diagType$otherexp , adjustUnique)
+      diagType$hetero <- AnnualUnique(diagType$hetero, adjustUnique)
+      diagType$msm <- AnnualUnique(diagType$msm, adjustUnique)
+      diagType$pwid <- AnnualUnique(diagType$pwid, adjustUnique)
+      diagType$otherexp <- AnnualUnique(diagType$otherexp, adjustUnique)
     } else {
       warning("Notifications not adjusted for duplicates")
     }
-    
+
     # Replace any negatives with zero
     diagType[diagType < 0] <- 0
     
@@ -214,9 +211,9 @@ typeDiag <- function(hivData, type, minYear = 1980,
     
     # Fill in missing years
     allYears <- minYear:max(hivData$yeardiagnosis)
-    requiredYears <- allYears[!(allYears %in% diagType$year)]
-    diagType <- FillDataFrame(requiredYears, diagType)
-    diagType <- arrange(diagType, year)
+    # requiredYears <- allYears[!(allYears %in% diagType$year)]
+    diagType <- FillDataFrame(allYears, diagType)
+    # diagType <- arrange(diagType, year)
     
     if (!is.null(adjustUnique)) {
       diagType$all <- AnnualUnique(diagType$all, adjustUnique)

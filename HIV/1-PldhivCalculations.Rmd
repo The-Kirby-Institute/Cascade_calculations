@@ -46,14 +46,14 @@ specified project folder and have a cascade file handle.
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
-saveResults <- FALSE
+saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-projectOutput <- "Test_Cascades" # "." for main output folder 
+projectOutput <- "CALD_Cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "All"
+cascadeName <- "Vic_All-2016"
 targetGender <- "all" # all, male, female (single)
 targetAge <- "all" # all or split
 
@@ -69,7 +69,7 @@ targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
 targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
 # Only used if country is Australia (single)
-targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
+targetState <- "vic" # nsw, sa, nt, qld, vic, wa, act, tas
 # (combination)
 targetLocalRegion <- "all" #tbd (combination)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
@@ -92,7 +92,7 @@ doAge <- ifelse(targetAge == "split", TRUE, FALSE) # TRUE for ageing
 
 excludeAborig <- FALSE
 
-doRetained <- FALSE # TRUE for appending retained in care
+doRetained <- TRUE # TRUE for appending retained in care
 doRetained <- ifelse(doAge, FALSE, doRetained) # Turn off for ageing
 if (doRetained) {
   # Need to specify years for reatined in care calculations
@@ -110,21 +110,23 @@ yearUnique <- ifelse(is.null(yearUnique), 2100, yearUnique) # Well past today
 saveUnique <- ifelse(!saveResults, FALSE, saveUnique)
   
 # Settings for generating ECDC model inputs ------------------------------
-ecdcData <- FALSE
+ecdcData <- TRUE
 ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
 
 ecdcVersion <- '1.2.2'
-excludeOS <- FALSE
+excludeOS <- TRUE
+excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
 
 ecdcModel <- cascadeName # name
 if (excludeOS) {
   # If excludeOS don't save the pldhiv estimates as we are only using this
   # for ECDC calculations
   saveResults <- FALSE
+  doRetained <- FALSE
 }
 
 # Leave projections chunk turned off so it is not called unless required. 
-# Simply run projections from within then chunk. 
+# Simply run projections from within the chunk. 
 projectPldhiv <- FALSE 
 
 # Store paramaters for saving
@@ -233,7 +235,7 @@ hivSetUnknown <- hivSetReturn[[3]]
 # Calculate unique notifications and duplicates for the known set.
 if (doUnique) {
   uniqueNotifications <- GetUnique(hivSet, allYears, 
-    yearUnique = yearUnique)
+    yearUnique = 2100)
 } 
 
 # Calculation cumulative proportion male. This is used for gender weighted
@@ -588,7 +590,7 @@ if (interState) {
   } else {
     # Calculate overall first for inter-regional migration
     pldhivOverall <- LivingDiagnosed(adjustDiags$all,
-      subsetRates$annunique, 
+      subsetRatesAll$annunique, 
       subsetRatesAll$deathrate,
       subsetRatesAll$mrate,
       subsetRatesAll$propstay) %>%
@@ -597,7 +599,7 @@ if (interState) {
       as_tibble()
     
     pldhivOverallMin <- LivingDiagnosed(adjustDiags$all,
-      subsetRates$annunique,  
+      subsetRatesAll$annunique,  
       subsetRatesAll$deathrate_upper,
       subsetRatesAll$mrate_upper,
       subsetRatesAll$propstay_lower) %>%
@@ -606,7 +608,7 @@ if (interState) {
       as_tibble()
     
     pldhivOverallMax <- LivingDiagnosed(adjustDiags$all,
-      subsetRates$annunique,  
+      subsetRatesAll$annunique,  
       subsetRatesAll$deathrate_lower,
       subsetRatesAll$mrate_lower,
       subsetRatesAll$propstay_upper) %>%
@@ -887,13 +889,13 @@ if (ecdcData) {
     rename(year = yeardiagnosis) 
   hivExpCum$msm[2] <- 1.0
   
-  expDeaths <- hivExpCum
+  expDeaths <- FillDataFrame(1980:analysisYear, hivExpCum)
   expDeaths[, 2:5] <- expDeaths[, 2:5] * 
     matrix(rep(pldhivAll$deaths, 4), ncol = 4)
   
   EcdcWrite(expDeaths, dataAll[[2]], "deaths")
   
-  expEmig <- hivExpCum
+  expEmig <- FillDataFrame(1980:analysisYear, hivExpCum)
   expEmig[, 2:5] <- expEmig[, 2:5] * 
     matrix(rep(emigrants$all, 4), ncol = 4)
   

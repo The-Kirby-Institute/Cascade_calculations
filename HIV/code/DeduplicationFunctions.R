@@ -232,13 +232,12 @@ AnnNotifications <- function(hivSet, years) {
   notifications <- hivSet %>% 
       group_by(yeardiagnosis) %>%
       summarise(notifications = n()) %>%
-      mutate(totalnotifications = cumsum(notifications)) %>%
       ungroup() %>%
       rename(year = yeardiagnosis) %>%
-      FillDataFrame(years, .)  
-  
-  notifications <- FillDataFrame(allYears, notifications)
-  
+      FillDataFrame(years, .) %>%
+      mutate(totalnotifications = cumsum(notifications)) %>%
+      ungroup()
+
   return(notifications)
   
 }
@@ -269,7 +268,7 @@ GetUnique <- function(hivSet, allYears, yearUnique = NULL) {
   uniqueNotifications$cumpropunique <- ProportionUnique(hivSet, 
     uniqueNotifications$totalnotifications, allYears)
   uniqueNotifications <- uniqueNotifications %>%
-    mutate(cumpropunique = ifelse(is.nan(cumpropunique), 0, 
+    mutate(cumpropunique = ifelse(is.nan(cumpropunique), 1, 
       cumpropunique))
   uniqueNotifications$cum_unique <- 
     uniqueNotifications$cumpropunique * uniqueNotifications$totalnotifications
@@ -286,13 +285,13 @@ GetUnique <- function(hivSet, allYears, yearUnique = NULL) {
     mutate(duplicates = notifications - unique,
       cumduplicates = totalnotifications - cum_unique) %>%
     # Add replce columns these will be the same as previous columns if yearUnique = NULL
-    mutate(propunique_replace = ifelse(year >= uniqueYear, 1, propunique)) %>%
+    mutate(propunique_replace = ifelse(year >= yearUnique, 1, propunique)) %>%
     mutate(unique_replace = propunique_replace * notifications) %>%
     mutate(duplicates_replace = notifications - unique_replace,
       cum_unique_replace = cumsum(unique_replace)) %>%
     mutate(cumpropunique_replace = cum_unique_replace / totalnotifications,
       cumduplicates_replace = totalnotifications - cum_unique_replace) %>%
-    mutate(cumpropunique_replace = ifelse(is.nan(cumpropunique_replace), 0, 
+    mutate(cumpropunique_replace = ifelse(is.nan(cumpropunique_replace), 0,
       cumpropunique_replace))
   
   # 

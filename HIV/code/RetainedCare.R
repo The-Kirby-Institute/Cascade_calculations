@@ -45,7 +45,7 @@ RetainedCare <- function(hivDiagnosed, retained, lower, upper, years) {
     filter(year %in% years) 
   
   hivRetained <- diagnosedYears %>%
-    select(stage, year, population)
+    select(stage, year)
     
   hivRetained$value <- diagnosedYears$value * retainedData
   hivRetained$lower <- diagnosedYears$lower * lowerData
