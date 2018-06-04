@@ -50,7 +50,7 @@ saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-projectOutput <- "CALD_Cascades" # "." for main output folder 
+projectOutput <- "Test_Cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
 cascadeName <- "Vic_All-2016"
@@ -82,7 +82,7 @@ if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
 }
 
 if (targetAtsi != "all" && targetCob[1] != "Australia" &&
-    length(targetCob) > 1) {
+    length(targetCob) != 1) {
   stop("Error: indigenous status only valid for Australian born")   
 }
 
@@ -114,7 +114,7 @@ ecdcData <- TRUE
 ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
 
 ecdcVersion <- '1.2.2'
-excludeOS <- TRUE
+excludeOS <- FALSE
 excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
 
 ecdcModel <- cascadeName # name
@@ -346,7 +346,7 @@ includeDiags <- hivSet %>%
 includeDiags <- FillDataFrame(allYears, includeDiags)
 
 # If excluded and unknown is empty replace with zeros
-if (length(hivSetExcluded) == 0) {
+if (nrow(hivSetExcluded) == 0) {
   excludedDiags <- data_frame(year = allYears,
     excluded = 0)
 } else {
@@ -358,7 +358,7 @@ if (length(hivSetExcluded) == 0) {
 }
 excludedDiags <- FillDataFrame(allYears, excludedDiags)
 
-if (length(hivSetUnknown) == 0) {
+if (nrow(hivSetUnknown) == 0) {
   unknownDiags <- data_frame(year = allYears,
     unknown = 0)
 } else {
@@ -889,13 +889,15 @@ if (ecdcData) {
     rename(year = yeardiagnosis) 
   hivExpCum$msm[2] <- 1.0
   
-  expDeaths <- FillDataFrame(1980:analysisYear, hivExpCum)
+  expDeaths <- FillDataFrame(1980:analysisYear, hivExpCum, 
+    cumulative = TRUE)
   expDeaths[, 2:5] <- expDeaths[, 2:5] * 
     matrix(rep(pldhivAll$deaths, 4), ncol = 4)
   
   EcdcWrite(expDeaths, dataAll[[2]], "deaths")
   
-  expEmig <- FillDataFrame(1980:analysisYear, hivExpCum)
+  expEmig <- FillDataFrame(1980:analysisYear, hivExpCum, 
+    cumulative = TRUE)
   expEmig[, 2:5] <- expEmig[, 2:5] * 
     matrix(rep(emigrants$all, 4), ncol = 4)
   

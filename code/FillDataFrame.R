@@ -2,7 +2,7 @@
 
 # R. T. Gray
 
-FillDataFrame <- function(years, df) {
+FillDataFrame <- function(years, df, cumulative = FALSE) {
   # Fill in missing years with zeros
   # Primarily used for cumulative diagnoses
   # Args:
@@ -30,10 +30,16 @@ FillDataFrame <- function(years, df) {
   # Loop through the years we want
   for (ii in seq(along = years)) {
     if (!(years[ii] %in% df$year)) {
-      # Missing so make the current value equal to zero
-      fillMissing <- insertRow(fillMissing, c(years[ii], 
-                                              rep(0, ncol(df) - 1)), ii)
-    }  
+      if (cumulative) {
+        # Missing so make the current value equal to previous value
+        fillMissing <- insertRow(fillMissing, c(years[ii], 
+          df[ii-1, 2:ncol(df)]), ii)
+      } else {
+        # Missing so make the current value equal to zero
+        fillMissing <- insertRow(fillMissing, c(years[ii], 
+          rep(0, ncol(df) - 1)), ii)
+      }  
+    }
   }
   
   # Return final data frame
