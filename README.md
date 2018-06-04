@@ -6,7 +6,7 @@ This project repository contains all the code and cleaned (publicly available) i
 
 This repository currently contains materials for two separate cascades: the Australian HIV cascade and the Australian Chlamydia cascade. This project also provides estimates for a viral hepatitis C (HCV) cascade but materials for this cascade are stored locally and not available in this online repository. Cascade estimates obtained from this project have been reported in the ASR since 2015. Additional calculations related to these cascades have also been used to produce a number of publications listed below. 
 
-All calculations are primarily conducted using R (currently version 3.3.2) with associated packages (stringr 1.1.0; captioner 2.2.3; cowplot 0.7.0; gridExtra 2.2.1; knitr 1.15.1; Hmisc 4.0.2; Formula 1.2.1; survival 2.40.1; lattice 0.20.34; RColorBrewer 1.1.2; scales 0.4.1; ggplot2 2.2.1; readxl 1.0.0; tidyr 0.6.1; dplyr 0.5.0; readr 1.1.1). Some simple calculations are conducted using Microsoft Excel. Many of the data files required to run the scripts are not publicly available and have been excluded from the repository (but can be available on Request). Please report an issue if you want to run the code or contact Rgray@kirby.unsw.edu.au. 
+All calculations are primarily conducted using R (currently version 3.4.3) with associated packages (forcats 0.3.0; stringr 1.3.0; dplyr 0.7.4; purrr 0.2.4; readr 1.1.1; readxl 1.0.0; tidyr 0.8.0; tibble 1.4.2; ggplot2 2.2.1; tidyverse 1.2.1; Hmisc 4.1.1; Formula 1.2.2; survival 2.41.3; lattice 0.20.35; gridExtra 2.3; RColorBrewer 1.1.2; scales 0.5.0; captioner 2.2.3; cowplot 0.9.2). Some simple calculations are conducted using Microsoft Excel. Many of the data files required to run the scripts are not publicly available and have been excluded from the repository (but can be available on Request). Please report an issue if you want to run the code or contact Rgray@kirby.unsw.edu.au. 
 
 **Repository owner:** Richard T. Gray 
 
@@ -84,8 +84,11 @@ The following publications are associated with this project and used code in thi
 - RT Gray et al. The Australia HIV cascade. _In preparation_ 
 	- Manuscript results generated using [version 3.0&#95;2017\_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR); doi:[10.5281/zenodo.998280](http://doi.org/10.5281/zenodo.998280)
 <br></br>
-- P keen et al. The 2016 HIV diagnosis and care cascade in New South Wales, Australia: meeting the UNAIDS 90-90-90 targets. _In preparation_ 
+- P keen et al. The 2016 HIV diagnosis and care cascade in New South Wales, Australia: meeting the UNAIDS 90-90-90 targets. Journal of the International AIDS Society 2018; 21:e25109.
 	- Manuscript results generated using [version 3.0&#95;2017\_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR); doi:[10.5281/zenodo.998280](http://doi.org/10.5281/zenodo.998280)
+<br></br>
+- N Bretana et al. An ageing population of people living with diagnosed HIV in Australia. _Submitted to JAIDS_
+    - Manuscript results generated using [v3.2_ageing_calculations](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.2_ageing_calculations); doi:[]()
 
 
 
