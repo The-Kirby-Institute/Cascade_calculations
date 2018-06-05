@@ -9,12 +9,12 @@ updating:
 - ~/project_care_cascades/data/ABS_population_sizes.xlsx
 
 ```{r initialization}
-# Clear workspace
-rm(list=ls()) 
+# Chunk to setup everything
+
+# Open as a project (setting working directory to source and restarting R) 
 
 # Setup directories
 basePath <- file.path(dirname(getwd()), "HIV")
-
 Rcode <- file.path(dirname(getwd()), "code") 
 dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
