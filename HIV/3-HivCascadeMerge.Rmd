@@ -4,12 +4,12 @@ Merge HIV Cascades
 Neil Arvin Bretana and Richard T. Gray
 
 ```{r Initialization}
-# Clear workspace
-rm(list=ls()) 
+# Chunk to setup everything
+
+# Open as a project (setting working directory to source and restarting R)
 
 # Setup directories
 basePath <- file.path(dirname(getwd()), "HIV")
-
 Rcode <- file.path(dirname(getwd()), "code") 
 dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
@@ -22,8 +22,9 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Primary script parameters ---------------------------------------------------
 analysisYear <- 2016
-projectName <- "Paper_2016"
-cascadeNames <- "All" # specify cascades with project
+projectName <- "CALD_Cascades"
+cascadeNames <- "Vic_All" # specify cascades with project
+artNames <- "VIC"
 
 # If this is an ASR project already have specific populations
 if (projectName %in% c("ASR_2016", "ASR_2016")) {
@@ -32,9 +33,13 @@ if (projectName %in% c("ASR_2016", "ASR_2016")) {
     "ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA")
 }
 
+if (is.null(artNames)) {
+  artNames <- cascadeNames
+}
+
 mergeAll <- TRUE
 saveResults <- TRUE
-artString <- "ATRAS" # "ATRAS", "PBS" - use NAPWHA for ASR_2017 and ATRAS
+artString <- "NAPWHA" # "ATRAS", "PBS" - use NAPWHA for ASR_2017 and ATRAS
                       # for Paper_2016
 
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
@@ -70,12 +75,14 @@ for (ii in 1:length(cascadeNames)) {
   pldhiv <- read_csv(pldhivFile)
   
   treatment <- artSuppression %>%
-    filter(population == tolower(cascadeNames[ii])) 
+    filter(population == tolower(artNames[ii])) %>%
+    select(-population)
   
   # Bind cascade
-  hivCascade <- bind_rows(living, pldhiv, treatment)
-  hivCascade$population <- tolower(cascadeNames[ii])
-  
+  hivCascade <- bind_rows(living, pldhiv, treatment) %>%
+    mutate(population = tolower(cascadeNames[ii])) %>%
+    select(stage, year, population, everything())
+
   # Save if required
   if (saveResults) {
     write_csv(hivCascade, paste0(cascadeFolder, 

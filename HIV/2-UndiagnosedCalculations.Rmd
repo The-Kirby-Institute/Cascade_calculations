@@ -12,12 +12,11 @@ calculation scripts to version 3.0.
 
 ```{r Initialization}
 # Chunk to setup everything
-# Clear workspace
-rm(list=ls()) 
+
+# Open as a project (setting working directory to source and restarting R)
 
 # Setup directories
 basePath <- file.path(dirname(getwd()), "HIV")
-
 Rcode <- file.path(dirname(getwd()), "code") 
 HIVcode <- file.path(basePath, "code") 
 dataFolder <- file.path(basePath, "data")
@@ -36,8 +35,8 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2016
 saveResults <- TRUE 
-projectFolder <- "ASR_2017"
-cascadeFlag <- "All"
+projectFolder <- "CALD_Cascades"
+cascadeFlag <- "Vic_All"
 # ecdcChart <- "Female" # ECDC group used for calculations
 ecdcResults <- "exposure"
 updateECDC <- FALSE
@@ -105,13 +104,13 @@ undiagnosed <- left_join(numberUndiagnosed, percentUndiagnosed,
 
 # Merge data into one data frame
 mergedData <- pldhiv %>%
-  select(-population, - stage) %>%
+  select(-stage) %>%
   rename(pldhiv = value,
     pldhiv_lower = lower,
     pldhiv_upper = upper) %>%
   left_join(., undiagnosed, by = "year")
 
-population <- as.character(pldhiv$population[1])
+# population <- cascadeFlag
 
 ```
 
@@ -145,9 +144,8 @@ if (cascadeFlag == "Otherexp") {
 
 # Extract cascade results
 plhivResults <- plhiv %>% 
-  mutate(stage = "infected",
-         population = population) %>%
-  select(stage, year, population, plhiv, plhiv_lower, plhiv_upper) %>%
+  mutate(stage = "infected") %>%
+  select(stage, year, plhiv, plhiv_lower, plhiv_upper) %>%
   rename(value = plhiv,
          lower = plhiv_lower,
          upper = plhiv_upper)
