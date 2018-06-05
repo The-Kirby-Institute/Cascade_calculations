@@ -17,18 +17,18 @@ treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),"Guy R, et al. The impac
 retested,urban,shc,males,0.381746032,0.354928933,0.409292616,ACCESS shc urban,
 retested,regional,shc,males,0.194,0.154,0.24,ACCESS shc regional+remote,
 retested,remote,shc,males,0.194,0.154,0.24,ACCESS shc regional+remote,
-retested,urban,gp,males,0.366,0.188,0.533,ACCESS gp urban (assumption),
+retested,urban,gp,males,0.1,0.056473475,0.168134349,ACCEPt 2014 (assumption) as ACCESS is biased,
 retested,regional,gp,males,0.1,0.056473475,0.168134349,ACCEPT,2014 data
 retested,remote,gp,males,0.1,0.056473475,0.168134349,ACCEPT,assumed same as regional
 retested,urban,shc,females,0.31,0.273499494,0.348972188,ACCESS shc urban,
 retested,regional,shc,females,0.289256198,0.212264752,0.379868064,ACCESS shc regional+remote,
 retested,remote,shc,females,0.289256198,0.212264752,0.379868064,ACCESS shc regional+remote,
-retested,urban,gp,females,0.283,0.194,0.372,ACCESS gp urban (assumption),
+retested,urban,gp,females,0.193548387,0.147410171,0.24941418,ACCEPt 2014 (assumption) as ACCESS is biased,
 retested,regional,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,2014 data
 retested,remote,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,assumed same as regional
 retested,urban,shc,all,0.358602151,0.336854182,0.380940154,ACCESS shc urban,
 retested,regional,shc,all,0.277108434,0.230313128,0.329161113,ACCESS shc regional+remote,
 retested,remote,shc,all,0.277108434,0.230313128,0.329161113,ACCESS shc regional+remote,
-retested,urban,gp,all,0.356,0.324,0.391,ACCESS gp urban (calculated from male and female diagnoses data and assumed proportions),
+retested,urban,gp,all,0.161375661,0.126538234,0.203267217,ACCEPt 2014 (assumption) as ACCESS is biased,
 retested,regional,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,2014 data
 retested,remote,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,assumed same as regional

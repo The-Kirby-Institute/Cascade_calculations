@@ -45,9 +45,9 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 resultsYear <- 2016 # year of cascade we will calculate and plot     
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
-fileType <- ".png" # ".png" for documents; .tiff for paper
+fileType <- ".tiff" # ".png" for documents; .tiff for paper
 retestRange <- TRUE # Calculate variations in retested
-msmSplit <- TRUE # For determining which retest variation file to use
+msmSplit <- FALSE # For determining which retest variation file to use
 
 ```
 
@@ -62,7 +62,7 @@ cat(fmStr)
 ```{r loadresults}
 # Load hiv cascade dataframe
 notificationsFile <- file.path(dataFolder,
-  paste("chlamnotifications", toString(tail(resultsYear, 1)), ".csv", 
+  paste("chlamnotifications_clean-", toString(tail(resultsYear, 1)), ".csv", 
     sep = ""))
 
 incidenceFile <- file.path(dataFolder, paste("chlamincidence",
@@ -79,17 +79,24 @@ treatment <- read.csv(treatFile)
 if (retestRange) {
   
   if (msmSplit) {
-    retestVarFile <- file.path(dataFolder, paste0("chlamRetestVariation",
-      toString(tail(resultsYear, 1)), "_MSM.csv"))
+    retestVarFile <- file.path(dataFolder, 
+      paste0("chlamRetestVariation_clean-",
+        toString(tail(resultsYear, 1)), "_MSM.csv"))
+    
+    retestPops <- c("all", "females", "msm", "non_msm")
+    
   } else {
-    retestVarFile <- file.path(dataFolder, paste0("chlamRetestVariation",
-      toString(tail(resultsYear, 1)), ".csv")) 
+    retestVarFile <- file.path(dataFolder, 
+      paste0("chlamRetestVariation_clean-",
+        toString(tail(resultsYear, 1)), ".csv")) 
+    
+    retestPops <- c("all", "females", "males")
   }
   
   retests <- read.csv(retestVarFile, stringsAsFactors = FALSE) %>%
-    filter(sex %in% c("all", "females", "males")) %>%
-    select(-diagnoses, -retested, -year) %>%
-    tbl_df()
+      filter(sex %in% retestPops) %>%
+      select(-diagnoses, -retested, -year) %>%
+      tbl_df()
   
   # Add GP retest estimates
   retests <- filter(treatment, stage == "retested", context == "gp") %>%
@@ -119,11 +126,11 @@ if (retestRange) {
     context == "shc")$prop_upper /
     filter(retests, period == "42-180", context == "shc")$prop_upper
   retest120upper[is.nan(retest120upper)] <- 0
-  
+
   retests120 <- data_frame(region = rep(c("regional", "remote", "urban"),
-    each = 3),
+    each = length(retestPops)),
     context = "gp",
-    sex = rep(c("males", "females", "all"), 3),
+    sex = rep(retestPops, 3),
     period = "42-120",
     prop_retested = filter(retests,
       context == "gp")$prop_retested * 
@@ -152,9 +159,9 @@ if (retestRange) {
   retest7upper[is.nan(retest7upper)] <- 0
   
   retests7 <- data_frame(region = rep(c("regional", "remote", "urban"),
-    each = 3),
+    each = length(retestPops)),
     context = "gp",
-    sex = rep(c("males", "females", "all"), 3),
+    sex = rep(retestPops, 3),
     period = "7-180",
     prop_retested = filter(retests,
       context == "gp")$prop_retested * 
@@ -754,7 +761,6 @@ if (resultsYear == 2014) {
   stages <- c(stages, "negative" = "Negative at re-test")
   stagesNeat <- c(stagesNeat, "negative" = "Negative \n at re-test")
 }
-
 
 # Plot the bar chart -----------------------------------------------------
 
