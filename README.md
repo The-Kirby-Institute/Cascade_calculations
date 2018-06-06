@@ -80,16 +80,16 @@ The following publications are associated with this project and used code in thi
 - B Hajarizadeh, J Grebely, H McManus, C Estes, H Razavi, RT Gray, et al. Chronic hepatitis C burden and care cascade in Australia in the era of interferon-based treatment. Journal of gastroenterology and hepatology 2017; 32:229–236.
 <br></br>
 - RT Gray, D Callander, S McGregor, J Hocking, H McManus, A Dyda, C Moreira, DP Wilson, B Donovan, J Kaldor, RJ Guy on behalf of the Australian STI Diagnosis and Care Cascade Reference Group. A population-level diagnosis and care cascade for curable STIs: The Australian Chlamydia Cascade. _In preparation_
-	- Manuscript results generated using [version 3.0&#95;2017\_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR); doi:[10.5281/zenodo.998280](http://doi.org/10.5281/zenodo.998280)
+	- Manuscript results generated using [version 3.4_sti_cascade_paper](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.4_sti_cascade_paper); doi:[10.5281/zenodo.1260377](http://doi.org/10.5281/zenodo.998280)
 <br></br>
 - RT Gray et al. The Australia HIV cascade. _In preparation_ 
-	- Manuscript results generated using [version 3.0&#95;2017\_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR); doi:[10.5281/zenodo.998280](http://doi.org/10.5281/zenodo.998280)
+	- Manuscript results generated using [version 3.0_2017_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR); doi:[10.5281/zenodo.998280](http://doi.org/10.5281/zenodo.998280)
 <br></br>
 - P keen et al. The 2016 HIV diagnosis and care cascade in New South Wales, Australia: meeting the UNAIDS 90-90-90 targets. Journal of the International AIDS Society 2018; 21:e25109.
-	- Manuscript results generated using [version 3.0&#95;2017\_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR); doi:[10.5281/zenodo.998280](http://doi.org/10.5281/zenodo.998280)
+	- Manuscript results generated using [version 3.0_2017_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR); doi:[10.5281/zenodo.998280](http://doi.org/10.5281/zenodo.998280)
 <br></br>
 - N Bretana et al. An ageing population of people living with diagnosed HIV in Australia. _Submitted to JAIDS_
-    - Manuscript results generated using [v3.2_ageing_calculations](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.2_ageing_calculations); doi:[10.5281/zenodo.1260377](http://doi.org/10.5281/zenodo.1260377)
+    - Manuscript results generated using [version 3.3_HIV_ageing_paper](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.3_HIV_ageing_paper); doi:[10.5281/zenodo.1260377](http://doi.org/10.5281/zenodo.1260377)
 
 
 
