@@ -22,9 +22,9 @@ source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 
 # Primary script parameters ---------------------------------------------------
 analysisYear <- 2016
-projectName <- "CALD_Cascades"
-cascadeNames <- "Vic_All" # specify cascades with project
-artNames <- "VIC"
+projectName <- "Paper_2016"
+cascadeNames <- "All" # specify cascades with project (without year)
+artNames <- NULL
 
 # If this is an ASR project already have specific populations
 if (projectName %in% c("ASR_2016", "ASR_2016")) {
@@ -39,7 +39,7 @@ if (is.null(artNames)) {
 
 mergeAll <- TRUE
 saveResults <- TRUE
-artString <- "NAPWHA" # "ATRAS", "PBS" - use NAPWHA for ASR_2017 and ATRAS
+artString <- "ATRAS" # "ATRAS", "PBS" - use NAPWHA for ASR_2017 and ATRAS
                       # for Paper_2016
 
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files

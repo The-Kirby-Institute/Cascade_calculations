@@ -20,14 +20,15 @@ knitr::opts_chunk$set(echo = FALSE,
 ```
 
 ```{r setup}
-# Clear workspace
-rm(list=ls()) 
-options(scipen=999)  # To get rid of scientific notation
+# Chunk to setup everything
+
+# Open as a project (setting working directory to source and restarting R)
 
 # Setup directories
 basePath <- getwd() #dirname(getwd())
 Rcode <- file.path(dirname(getwd()), "code")
 HIVcode <- file.path(basePath, "code") 
+notificationsFolder <- file.path(dirname(dirname(basePath)), "data", "HIV")
 dataFolder <- file.path(basePath, "data")
 resultsFolder <- file.path(basePath, "output")
 
@@ -36,8 +37,11 @@ resultsFolder <- file.path(basePath, "output")
 
 # Load standard libraries and options ----------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
-source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+source(file.path(Rcode, "PlotColors.R"), echo=TRUE)
+LoadLibrary(gridExtra)
+LoadLibrary(tidyverse)
+LoadLibrary(scales)
 LoadLibrary(cowplot) # Note this masks ggsave with save_plot
 LoadLibrary(captioner)
 LoadLibrary(stringr)
@@ -77,6 +81,9 @@ if (savePlots) {
 figs <- captioner()
 tabs <- captioner(prefix = "Table")
 
+# Plot colours
+asrcols <- PlotColors("hivcascade5")
+
 ```
 
 ```{r loadresults}
@@ -97,8 +104,8 @@ resultsAll <- filter(hivCascade,
 
 # Load cleaned notifications data and tidy up for diagnoses 
 # trend calculations
-origHivData <- read.csv(file.path(dataFolder,
-  paste0("hivnotifications", toString(resultsYear), ".csv"))) 
+origHivData <- read.csv(file.path(notificationsFolder,
+  paste0("hivnotifications_clean-", toString(resultsYear), ".csv"))) 
 countryCodes <- read.csv(file.path(dataFolder, 
   "countryRegionCodes.csv"))
 hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes)
@@ -158,7 +165,7 @@ diagsPlot <- ggplot(data = diagsData, aes(x = year, y = diags)) +
   expand_limits(y = 0) +
   scale_y_continuous(labels = comma) +
   ylab("Annual notifications") + xlab("Year") +
-  plotOpts +
+  PlotOptions() +
   geom_text(x = 2010, y = 200, label = paste("Pseudo-R^2:",
     toString(round(rsq(trendDiags, type = "kl"), digits = 4))), 
     size = 3)
@@ -246,7 +253,7 @@ PlotTrend <- function(data, models, indicator) {
       limits =  tempData$year) +
     ylab(paste0("Number of ", tempData$stage[1])) +
     expand_limits(y = 0) +
-    plotOpts 
+    PlotOptions() 
 }
 
 trendPlots <- lapply(steps, PlotTrend, data = trendData, 
@@ -303,7 +310,7 @@ for (ii in plotStages) {
       expand_limits(y = 0) +
       scale_y_continuous(labels = comma) + 
       ylab(yLabels[ii]) + xlab("Year") +  
-      plotOpts +
+      PlotOptions() +
       geom_text(x = 2010, y = 200, label = paste("Pseudo-R^2:",
         toString(round(filter(trendCascade,
           stage == ii)$pseudoR2, digits = 4))), size = 3)
@@ -499,7 +506,7 @@ plotProp <- function(proportion, lmmodel, logmodel, label) {
     scale_y_continuous(labels = percent) + 
     coord_cartesian(ylim = c(0,1)) +
     ylab(label) + xlab("Year") +  
-    plotOpts + 
+    PlotOptions() + 
     geom_text(x = 2010, y = 0.2, label = paste("Unadjusted R^2 (linear):",
       toString(round(rsq(lmmodel, type = "kl"), digits = 4))), size = 3) +
     geom_text(x = 2010, y = 0.1, label = paste("Pseudo-R^2 (logistic):",
@@ -864,7 +871,7 @@ for (ii in segmentStages) {
           "Segmented model")) +
       coord_cartesian(ylim = c(0, ymax[ii])) + 
       ylab(yLabels[ii]) + xlab("Year") +  
-      plotOpts +
+      PlotOptions() +
       geom_vline(xintercept = segModel$psi[2], linetype = "dashed",
         colour = "blue") + 
       geom_errorbarh(aes(y = 0.975 * ymax[ii],
@@ -1278,9 +1285,9 @@ artEstimates <- read.csv(file.path(resultsFolder,"..",
   paste0("ART_Estimates-2014-",
   trString, ".csv")))
 
-# First test - replace 2011 ART value with fitted 2011 value
+# First test - replace 2011 ART value with raw 2011 value
 artTest <- filter(resultsAll, stage == "numART")$value
-artTest[8] <- artEstimates$fitlog[12]
+artTest[8] <- artEstimates$ahod[12]
 
 artDiffs <- list()
 artDiffs[[1]] <- filter(resultsAll, stage == "pldhiv")$value -
@@ -1301,7 +1308,7 @@ artDiffs[[3]] <- fitted(trendModels[["pldhiv"]]) -
 # Loop across stages and save plots 
 segTestPlot <- list()
 testCaption <- c("Replace 2011 on ART value 
-  from AHOD with fitted estimate",
+  with AHOD raw estimate",
   "Replace AHOD estimates with 
   fitted estimates 2004-2012",
   "Use difference between fitted 
@@ -1344,7 +1351,7 @@ for (ii in 1:3) {
           "Segmented model")) +
       coord_cartesian(xlim = c(2004, 2016), ylim = c(0, plotMax)) + 
       ylab("Number diagnosed\nnot on ART") + xlab("Year") +  
-      plotOpts + theme(legend.position = "bottom") + 
+      PlotOptions() + theme(legend.position = "bottom") + 
       geom_vline(xintercept = segModeltest$psi[2], linetype = "dashed",
         colour = "blue") + 
       geom_errorbarh(aes(y = 0.975 * plotMax,
