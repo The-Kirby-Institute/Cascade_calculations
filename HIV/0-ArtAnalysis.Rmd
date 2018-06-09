@@ -8,8 +8,8 @@ output:
 ---
 
 This script explores the number of people taking antiretroviral terapy 
-(ART) in Australia over 2000-2014. It estimates the number taking ART during 
-each year by merging and fitting to two data sources. 
+(ART) in Australia over 2000-2014. It estimates the number taking ART 
+during each year by merging and fitting to two data sources. 
 
 1. Australian HIV Observational Database (AHOD) which provides estimates 
 for ART use up to 2012. The estimates over 2010-2012 are actually 
@@ -54,7 +54,7 @@ source(file.path(Rcode, "AgeCat.R"), echo=TRUE)
 
 # Script parameters
 analysisYear <- 2014
-saveResults <- FALSE
+saveResults <- TRUE
 
 # Captions setup
 figs <- captioner()
@@ -69,7 +69,7 @@ not counted in the PBS data.
 # Add temporary residents - we have two estimates one from the ATRAS study 
 # which has been published and one based on personal communication with 
 # Aaron Cogle who did a survey for NAPWHA. 
-addTempResidents <- FALSE
+addTempResidents <- TRUE
 atrasTRest <- TRUE # TRUE if using the ATRAS estimate, False if using the 
 # NAPWHA estimate. Use NAPWHA estimate for ASR and 
 # ATRAS estimate for the paper as it is citable.
@@ -289,7 +289,6 @@ goodRows <- apply(simMatrix, 1,
 
 simMatrix <- simMatrix[goodRows, ]
 
-
 # Use function to generate lower and upper bounds for ART numbers for best 
 # fitting function
 artEstimates$fitmin <- apply(simMatrix, 2, min)
@@ -299,13 +298,15 @@ artEstimates$fitupriqr <- apply(simMatrix, 2, quantile, probs = 0.75)
 artEstimates$fitupr95 <- apply(simMatrix, 2, quantile, probs = 0.975)
 artEstimates$fitmax <- apply(simMatrix, 2, max)
 
-# Add relative trends and adjusted values
+# Add relative trends and adjusted values 
 finalIndex <- nrow(artEstimates)
-index2012 <- nrow(filter(artEstimates, year <= 2012))
+# indexFit <- nrow(filter(artEstimates, year %in% c(2010:2012)))
 
-# Replace 2012 value with fitted value
+# Replace 2010:2012 values with fitted values as these were projected 
+# anyway and are not direct estimates
 artEstimates$alladjust <- artEstimates$all
-artEstimates[index2012, ]$alladjust <- artEstimates[index2012, ]$fitlog 
+artEstimates[artEstimates$year %in% c(2010:2012), ]$alladjust <- 
+  artEstimates[artEstimates$year %in% c(2010:2012), ]$fitlog 
 
 # Relative ART numbers
 artEstimates$rel <- artEstimates$alladjust / 
