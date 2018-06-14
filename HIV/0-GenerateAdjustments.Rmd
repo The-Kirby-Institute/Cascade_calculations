@@ -552,17 +552,47 @@ hivAdjustments$pstay_non_indigenous <- (1 - (1- hivBaseRates$propstay) *
 
 hivAdjustments$non_aborig_migration <- nonAborigMigrationFactor
 
-# Specific NSW estimates
+# Specific NSW estimates - NSW data from 6-month follow-up
 propAus <- hivCobCum$australia
-propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.1008)
-propStayLowerNSW <-  propAus * (1 - 2 * 0.0072) + (1 - propAus) * 
-  (1 - 2 * 0.1008)
+propLeaveNSWaus <- 0.0072 # Australian born
+propLeaveNSWos <- 0.1008 # Overseas born
+propStayNSW <- propAus * (1 - propLeaveNSWaus) + (1 - propAus) * 
+  (1 - propLeaveNSWos)
+propStayLowerNSW <-  propAus * (1 - 2 * propLeaveNSWaus) + (1 - propAus) *
+  (1 - 2 * propLeaveNSWos)
 propStayUpperNSW <- rep(1, length(allYears))
 
+# NSW estimates
 hivAdjustments$pstay_nsw <- propStayNSW / hivBaseRates$propstay
 hivAdjustments$pstay_nsw_lower <- propStayLowerNSW /
   hivBaseRates$propstay_lower
 hivAdjustments$pstay_nsw_upper <- hivBaseRates$propstay_upper /
+  hivBaseRates$propstay_upper
+
+hivAdjustments$pstay_nswaus <- rep(1 - propLeaveNSWaus, length(allYears)) / hivBaseRates$propstay
+hivAdjustments$pstay_nswaus_lower <- rep((1 - 2 * propLeaveNSWaus),
+  length(allYears)) / hivBaseRates$propstay
+hivAdjustments$pstay_nswaus_upper <- hivBaseRates$propstay_upper /
+  hivBaseRates$propstay_upper
+
+hivAdjustments$pstay_nswos <- rep(1 - propLeaveNSWos, length(allYears)) /
+  hivBaseRates$propstay
+hivAdjustments$pstay_nswos_lower <- rep((1 - 2 * propLeaveNSWos),
+  length(allYears)) / hivBaseRates$propstay
+hivAdjustments$pstay_nswos_upper <- hivBaseRates$propstay_upper /
+  hivBaseRates$propstay_upper
+
+# Australia COB adjustments - approximately half NSW
+hivAdjustments$pstay_aus <- rep(1 - 0.5 * propLeaveNSWaus, 
+  length(allYears)) / hivBaseRates$propstay
+hivAdjustments$pstay_aus_lower <- hivAdjustments$pstay_nswaus
+hivAdjustments$pstay_aus_upper <- hivBaseRates$propstay_upper /
+  hivBaseRates$propstay_upper
+
+hivAdjustments$pstay_os <- rep(1 - 0.5 * propLeaveNSWos, 
+  length(allYears)) / hivBaseRates$propstay
+hivAdjustments$pstay_os_lower <- hivAdjustments$pstay_nswos
+hivAdjustments$pstay_os_upper <- hivBaseRates$propstay_upper /
   hivBaseRates$propstay_upper
 
 # Specific Vic estimates
