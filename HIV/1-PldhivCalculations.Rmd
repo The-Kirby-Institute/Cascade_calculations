@@ -50,10 +50,10 @@ saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-projectOutput <- "Test_Cascades" # "." for main output folder 
+projectOutput <- "CALD_Cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "Vic_All-2016"
+cascadeName <- "All-2016"
 targetGender <- "all" # all, male, female (single)
 targetAge <- "all" # all or split
 
@@ -66,10 +66,11 @@ targetAge <- "all" # all or split
 # doAge below. 
 
 targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
+                         # "non-australia", "non-aus-nz"
 targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
 # Only used if country is Australia (single)
-targetState <- "vic" # nsw, sa, nt, qld, vic, wa, act, tas
+targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
 # (combination)
 targetLocalRegion <- "all" #tbd (combination)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
@@ -90,7 +91,14 @@ if (targetAtsi != "all" && targetCob[1] != "Australia" &&
 interState <- ifelse(targetState[1] != "all", TRUE, FALSE)
 doAge <- ifelse(targetAge == "split", TRUE, FALSE) # TRUE for ageing
 
-excludeAborig <- FALSE
+if (targetCob[1] != "all" || targetGlobalRegion[1] != "all") {
+  # Separate out  know indigenous notifications so they don't affect
+  # country of bith adjustement estimates as they are assumed to be all
+  #  known and 
+  separateAborig <- TRUE
+} else {
+  separateAborig <- FALSE
+}
 
 doRetained <- TRUE # TRUE for appending retained in care
 doRetained <- ifelse(doAge, FALSE, doRetained) # Turn off for ageing
@@ -132,7 +140,7 @@ projectPldhiv <- FALSE
 # Store paramaters for saving
 hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
   targetExposure, targetAtsi, targetState, targetLocalRegion,
-  targetGlobalRegion, interState, doAge, excludeAborig, doRetained,
+  targetGlobalRegion, interState, doAge, separateAborig, doRetained,
   doUnique, yearUnique, ecdcData, ecdcVersion, excludeOS)
 
 ```
@@ -217,10 +225,17 @@ annDiagsOrig <- hivSetAll %>%
   ungroup() 
 
 # May not need to do this anymore.
-if (excludeAborig) {
+if (separateAborig) {
   # Set indigenous aside separately to add on later if required
   hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
-  hivSetAll <- filter(hivSetAll, aboriggroup == 'non_indigenous')
+  hivSetNonIndigenous <- filter(hivSetAll, 
+    aboriggroup == 'non_indigenous')
+  
+  if (targetAtsi == "indigenous") {
+    hivSetAll <- hivSetIndigenous
+  } else {
+    hivSetAll <- hivSetNonIndigenous
+  }
 }
 
 # Extract subset of notifications we want
@@ -234,7 +249,11 @@ hivSetUnknown <- hivSetReturn[[3]]
 
 # Calculate unique notifications and duplicates for the known set.
 if (doUnique) {
-  uniqueNotifications <- GetUnique(hivSet, allYears, 
+  hivSetUnique <- SubHivSet(hivSetAll, "all", targetGender,
+    targetExposure, "all", "all",
+    targetState, "all")
+  
+  uniqueNotifications <- GetUnique(hivSetUnique[[1]], allYears, 
     yearUnique = 2100)
 } 
 
@@ -370,7 +389,7 @@ if (nrow(hivSetUnknown) == 0) {
 unknownDiags <- FillDataFrame(allYears, unknownDiags)
 
 # Adjust included and excluded annual diagnoses propotionally to replace
-# unknwons
+# unknowns
 adjustDiags <- includeDiags %>% 
   left_join(excludedDiags, by = "year") %>%
   left_join(unknownDiags, by = "year") %>%
@@ -385,6 +404,67 @@ adjustDiags <- includeDiags %>%
       prop_excluded)) %>%
   mutate(adjusted_included = included  + unknown * prop_included,
     adjusted_excluded = excluded + unknown * prop_excluded)
+
+if (interState) {
+  # Have to do the same thing to get the overall national estimate for 
+  # these populations
+  hivSetReturnNat <- SubHivSet(hivSetAll, "all", targetGender,
+    targetExposure, targetCob, targetAtsi,
+    "all", "all")
+  
+  hivSetNat <- hivSetReturnNat[[1]]
+  hivSetExcludedNat <- hivSetReturnNat[[2]]
+  hivSetUnknownNat <- hivSetReturnNat[[3]]
+  
+  includeDiagsNat <- hivSetNat %>% 
+    group_by(yeardiagnosis) %>%
+    summarise(included = n()) %>%
+    ungroup() %>%
+    rename(year = yeardiagnosis)
+  includeDiagsNat <- FillDataFrame(allYears, includeDiagsNat)
+  
+  # If excluded and unknown is empty replace with zeros
+  if (nrow(hivSetExcludedNat) == 0) {
+    excludedDiagsNat <- data_frame(year = allYears,
+      excluded = 0)
+  } else {
+    excludedDiagsNat <- hivSetExcludedNat %>%
+      group_by(yeardiagnosis) %>% 
+      summarise(excluded = n()) %>%
+      rename(year = yeardiagnosis)
+    
+  }
+  excludedDiagsNat <- FillDataFrame(allYears, excludedDiagsNat)
+  
+  if (nrow(hivSetUnknown) == 0) {
+    unknownDiagsNat <- data_frame(year = allYears,
+      unknown = 0)
+  } else {
+    unknownDiagsNat <- hivSetUnknownNat %>%
+      group_by(yeardiagnosis) %>% 
+      summarise(unknown = n()) %>%
+      rename(year = yeardiagnosis)
+  }
+  unknownDiagsNat <- FillDataFrame(allYears, unknownDiagsNat)
+  
+  # Adjust included and excluded annual diagnoses propotionally to replace
+  # unknowns
+  adjustDiagsNat <- includeDiagsNat %>% 
+    left_join(excludedDiagsNat, by = "year") %>%
+    left_join(unknownDiagsNat, by = "year") %>%
+    mutate(all = included + excluded + unknown) %>%
+    mutate(included = ifelse(is.na(included), 0, included),
+      excluded = ifelse(is.na(excluded), 0, excluded),
+      unknown = ifelse(is.na(unknown), 0, unknown)) %>%
+    mutate(prop_included = included / (included + excluded),
+      prop_excluded = excluded / (included + excluded)) %>%
+    mutate(prop_included = ifelse(is.nan(prop_included), 0, 
+      prop_included), 
+      prop_excluded = ifelse(is.nan(prop_excluded), 0, 
+        prop_excluded)) %>%
+    mutate(adjusted_included = included  + unknown * prop_included,
+      adjusted_excluded = excluded + unknown * prop_excluded)
+}
 
 hivResults <- data_frame(year = adjustDiags$year,
   notifications = adjustDiags$adjusted_included,
@@ -589,7 +669,7 @@ if (interState) {
     
   } else {
     # Calculate overall first for inter-regional migration
-    pldhivOverall <- LivingDiagnosed(adjustDiags$all,
+    pldhivOverall <- LivingDiagnosed(adjustDiagsNat$adjusted_included,
       subsetRatesAll$annunique, 
       subsetRatesAll$deathrate,
       subsetRatesAll$mrate,
@@ -598,7 +678,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivOverallMin <- LivingDiagnosed(adjustDiags$all,
+    pldhivOverallMin <- LivingDiagnosed(adjustDiagsNat$adjusted_included,
       subsetRatesAll$annunique,  
       subsetRatesAll$deathrate_upper,
       subsetRatesAll$mrate_upper,
@@ -607,7 +687,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivOverallMax <- LivingDiagnosed(adjustDiags$all,
+    pldhivOverallMax <- LivingDiagnosed(adjustDiagsNat$adjusted_included,
       subsetRatesAll$annunique,  
       subsetRatesAll$deathrate_lower,
       subsetRatesAll$mrate_lower,
