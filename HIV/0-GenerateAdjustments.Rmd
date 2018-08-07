@@ -232,28 +232,6 @@ hivCobAnn <- hivSet %>%
   spread(countrygroup, propnotifications) %>%
   rename(year = yeardiagnosis)  
 
-hivCobCum <- hivSet %>% 
-  group_by(countrygroup, yeardiagnosis) %>% 
-  summarise(notifications = n()) %>% 
-  ungroup() %>% 
-  group_by(countrygroup) %>% 
-  mutate(cumnotifications = cumsum(notifications)) %>%
-  ungroup() %>% 
-  select(-notifications) %>%
-  spread(countrygroup, cumnotifications) %>%
-  select(-`<NA>`) %>%
-  gather("countrygroup", "cumnotifications", 2:5) %>%
-  mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
-    cumnotifications)) %>%
-  group_by(yeardiagnosis) %>% 
-  mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
-  mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
-    propnotifications)) %>%
-  select(-cumnotifications) %>%
-  ungroup() %>% 
-  spread(countrygroup, propnotifications) %>%
-  rename(year = yeardiagnosis) 
-
 ```
 
 ```{r Annual proportion unique}
@@ -553,6 +531,29 @@ hivAdjustments$pstay_non_indigenous <- (1 - (1- hivBaseRates$propstay) *
 hivAdjustments$non_aborig_migration <- nonAborigMigrationFactor
 
 # Specific NSW estimates - NSW data from 6-month follow-up
+hivCobCum <- hivSet %>% 
+  filter(state == "nsw") %>%
+  group_by(countrygroup, yeardiagnosis) %>% 
+  summarise(notifications = n()) %>% 
+  ungroup() %>% 
+  group_by(countrygroup) %>% 
+  mutate(cumnotifications = cumsum(notifications)) %>%
+  ungroup() %>% 
+  select(-notifications) %>%
+  spread(countrygroup, cumnotifications) %>%
+  select(-`<NA>`) %>%
+  gather("countrygroup", "cumnotifications", 2:5) %>%
+  mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
+    cumnotifications)) %>%
+  group_by(yeardiagnosis) %>% 
+  mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
+  mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
+    propnotifications)) %>%
+  select(-cumnotifications) %>%
+  ungroup() %>% 
+  spread(countrygroup, propnotifications) %>%
+  rename(year = yeardiagnosis) 
+
 propAus <- hivCobCum$australia
 propLeaveNSWaus <- 0.0072 # Australian born
 propLeaveNSWos <- 0.1008 # Overseas born
@@ -569,14 +570,18 @@ hivAdjustments$pstay_nsw_lower <- propStayLowerNSW /
 hivAdjustments$pstay_nsw_upper <- hivBaseRates$propstay_upper /
   hivBaseRates$propstay_upper
 
-hivAdjustments$pstay_nswaus <- rep(1 - propLeaveNSWaus, length(allYears)) / hivBaseRates$propstay
+# hivAdjustments$pstay_nswaus <- rep(1 - propLeaveNSWaus, length(allYears)) / hivBaseRates$propstay
+hivAdjustments$pstay_nswaus <- ((1 - propLeaveNSWaus) / 
+  tail(propStayNSW, 1)) * propStayNSW / hivBaseRates$propstay
 hivAdjustments$pstay_nswaus_lower <- rep((1 - 2 * propLeaveNSWaus),
   length(allYears)) / hivBaseRates$propstay
 hivAdjustments$pstay_nswaus_upper <- hivBaseRates$propstay_upper /
   hivBaseRates$propstay_upper
 
-hivAdjustments$pstay_nswos <- rep(1 - propLeaveNSWos, length(allYears)) /
-  hivBaseRates$propstay
+# hivAdjustments$pstay_nswos <- rep(1 - propLeaveNSWos, length(allYears)) /
+#   hivBaseRates$propstay
+hivAdjustments$pstay_nswos <- ((1 - propLeaveNSWos) / 
+  tail(propStayNSW, 1)) * propStayNSW / hivBaseRates$propstay
 hivAdjustments$pstay_nswos_lower <- rep((1 - 2 * propLeaveNSWos),
   length(allYears)) / hivBaseRates$propstay
 hivAdjustments$pstay_nswos_upper <- hivBaseRates$propstay_upper /
