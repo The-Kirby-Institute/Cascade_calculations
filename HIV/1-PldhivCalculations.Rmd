@@ -53,7 +53,7 @@ saveResults <- TRUE
 projectOutput <- "CALD_Cascades" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "All-2016"
+cascadeName <- "Nsw_All-2016"
 targetGender <- "all" # all, male, female (single)
 targetAge <- "all" # all or split
 
@@ -70,7 +70,7 @@ targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
 targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
 # Only used if country is Australia (single)
-targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
+targetState <- "nsw" # nsw, sa, nt, qld, vic, wa, act, tas
 # (combination)
 targetLocalRegion <- "all" #tbd (combination)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
@@ -100,7 +100,7 @@ if (targetCob[1] != "all" || targetGlobalRegion[1] != "all") {
   separateAborig <- FALSE
 }
 
-doRetained <- TRUE # TRUE for appending retained in care
+doRetained <- FALSE # TRUE for appending retained in care
 doRetained <- ifelse(doAge, FALSE, doRetained) # Turn off for ageing
 if (doRetained) {
   # Need to specify years for reatined in care calculations
@@ -246,6 +246,10 @@ hivSetReturn <- SubHivSet(hivSetAll, "all", targetGender,
 hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
+
+# MAJOR HACK for state cascades to fix subsetting issues for 
+# multiple selections
+hivSetExcluded <- filter(hivSetExcluded, state == targetState)
 
 # Calculate unique notifications and duplicates for the known set.
 if (doUnique) {
@@ -553,6 +557,10 @@ absInterstate <- read_csv(file.path(mainDataFolder,
 subsetRates <- GetAdjustments(hivBase, hivAdjustments, 
   "all", targetGender, targetExposure, targetCob, targetAtsi, 
   targetLocalRegion, targetState, targetGlobalRegion) 
+
+# subsetRatesTest <- GetAdjustments(hivBase, hivAdjustments, 
+#   "all", targetGender, targetExposure, "non-australia", targetAtsi, 
+#   targetLocalRegion, targetState, targetGlobalRegion)
 
 # Get the annual proportion unique
 if (doUnique) {
