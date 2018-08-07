@@ -79,7 +79,7 @@ LoadLibrary(scales)
 source(file.path(Rcode, "FormatData.R"))
 
 # Script options
-savePlots <- FALSE
+savePlots <- TRUE
 analysisYear <- 2016
 
 # It can take a while to generate the results so create the option to just
@@ -586,7 +586,7 @@ overall male and national populations.
 figure5
 ```
 
-## Discussion
+## Dicsussion
 
 * Using the overall proportion unique by applying the deduplication to all
 notifications for males and the NSW population seems reasonable but 
@@ -603,7 +603,7 @@ on the HIV cascade estimates.
 particularly in MSM and males in the unknown exposure category (which makes
 sense I think). 
 
-## Appendix 1 - Annual duplicates and proportion unique
+## Appendix - Annual duplicates and proportion unique
 
 As stated previously when we estimated the number and proportion of 
 duplicates annually we sometimes get a proportion > 1 and a negative number
@@ -613,9 +613,8 @@ duplicate numbers. Table 1 illustrates this using the national
 results from the last 10 years.
 
 ```{r Annual duplicates}
-# This chunk produces plots for annual duplicates. This is primarily used 
-# for illustration purposes so uses the national results from the last 10 
-# years. 
+# This chunk produces plots for annual duplicates. This is primarily used for
+# illustration purposes so uses the national results from the last 10 years. 
 
 LoadLibrary(knitr)
 
@@ -679,6 +678,7 @@ if (savePlots) {
     height = 15, width = 10, units = "cm")
 }
 
+
 ```
 
 Even though proportions > 1 and negative number of duplicates don't make 
@@ -704,218 +704,4 @@ kable(table1Str, row.names = FALSE)
 
 ```{r Figure 6, include = TRUE, fig.width = 6, fig.height = 6}
 figure6
-```
-
-## Appendix 2 - Cumulative duplicates analysis
-
-To see if there is a natural time point from where we could assume all
-notifications are unique I analysis the cumulative number of duplicates 
-over 1980-2016 (shown in `r figs("figure7", display = "cite")`. This figure
-suggests a rapid increase in duplicates until 1990 before a slow and steady 
-increase since 1996. There has potentially been a stabilisation in 
-duplicates since around 2005. In fact there is a fluctuation in cumulative 
-diagnoses since 2007 which is unrealistic since cumulative duplicates 
-should only increase.
-
-```{r Analysis cumulative duplicates}
-# Have a look at cumulative duplicates overtime to see if there is a point
-# were we can assume duplicates no longer occur. We do this via
-# visual inspection and by searching for breakpoints. 
-
-# Overall cumulative duplicates in overall notifications
-natResults <- filter(duplicateResults, population == "all", 
-  replace == "2022")
-natDuplicates <- natResults %>%
-  select(year, cumduplicates)
-
-# Look for breakpoints ---------------------------------------------------
-
-# Load key libraries
-LoadLibrary(tseries)
-LoadLibrary(forecast)
-LoadLibrary(strucchange)
-LoadLibrary(ggfortify) # enable timeseries in autoplot
-LoadLibrary(changepoint) # Not really used
-LoadLibrary(segmented)
-LoadLibrary(rsq) # load the rsq package for pseudo-R^2 calculation
-
-# Covert everything into a time series which is more useful in the
-# strucchange package functions. This means results are rounded to the
-# nearest year
-duplicatests <- ts(natDuplicates$cumduplicates,
-  start = c(1980, 1), end = c(2016, 1),
-  frequency = 1)
-data <- cbind(duplicatests)
-data <- window(data, start = c(1980, 1), end = c(2016, 1))
-years <- 1980:2016
-
-# Using the changepoint package. 
-autoplot(cpt.mean(duplicatests))
-
-# The following code looks for breakpoints in each indicator using the 
-# breakpoints() function in the strucchange package.  
-
-# Look for breakpoints - diagnoses
-bpDuplicates <-breakpoints(duplicatests ~ years, data = data, h = 3)
-summary(bpDuplicates)
-
-autoplot(bpDuplicates)
-plot(bpDuplicates)
-plot(duplicatests)
-lines(bpDuplicates)
-# lines(confint(bpDuplicates)) # Produces an error
-lines(fitted(bpDuplicates, breaks = 1), col = 4)
-lines(fitted(bpDuplicates, breaks = 2), col = 2)
-lines(fitted(bpDuplicates, breaks = 3), col = 3)
-
-# Segmented changepoint analysis -----------------------------------------
-
-# Specify initial breakpoints - use trial and error based on breakpoints()
-# results and to test for sensitivity. 
-minYear <- 1990 # 1980 for all
-natDuplicatesZoom <- filter(natDuplicates, year >= minYear)
-breakPoints <- c(1985, 1990, 2000)
-breakPointsZoom <- breakPoints[breakPoints > minYear]
-
-# Create a base model
-trendDuplicates <- glm(round(cumduplicates) ~ year, data = natDuplicates, 
-  family = "poisson")
-trendDuplicatesZoom <- glm(round(cumduplicates) ~ year, 
-  data = natDuplicatesZoom, 
-  family = "poisson")
-
-# Now run segmented to produce a segmented Poisson model. 
-segDuplicates <- segmented(trendDuplicates, seg.Z = ~year, 
-  psi = list(year = breakPoints))
-segDuplicatesZoom <- segmented(trendDuplicatesZoom, seg.Z = ~year, 
-  psi = list(year = breakPointsZoom))
-
-segDuplicatesData <- data.frame(year = natDuplicates$year, 
-  segdups = fitted(segDuplicates))
-segDuplicatesDataZoom <- data.frame(year = natDuplicatesZoom$year, 
-  segdups = fitted(segDuplicatesZoom))
-
-# Plots of segmented changepoints -----------------------------------------
-
-segCI <- function(est, stdErr) {
-  return(c(est - 1.96 * stdErr, est + 1.96 * stdErr))
-}
-
-dupmax <- 3500
-
-# Duplicates base plot
-segDuplicatesPlotBase <- ggplot(data = natDuplicates, 
-  aes(x = year, y = cumduplicates)) + 
-  geom_line(aes(color = "estimates")) + 
-  geom_point(color = cols["Red"]) +
-  scale_x_continuous(breaks = seq(minYear,                        
-    2016, by = 6)) +
-  scale_y_continuous(labels = comma) + 
-  coord_cartesian(xlim = c(1980, 2016), ylim = c(0, dupmax)) + 
-  ylab("Cumulative duplicates") + xlab("Year") +  
-  plotOpts 
-
-# Duplicates only plot
-duplicatesPlot <- segDuplicatesPlotBase + 
-  theme(legend.position = "none")
-
-# Overall duplicates plot
-fullDuplicatesPlot <- segDuplicatesPlotBase + 
-  geom_line(aes(y = fitted(trendDuplicates),
-    colour = "overall")) +
-  geom_line(data = segDuplicatesData, aes(y = segdups, 
-    colour = "segment")) + 
-  scale_colour_manual("", values = c(unname(cols["Red"]), "black", "blue"),
-    limits = c("estimates", "overall", "segment"),
-    labels = c("Estimates", "Overall model",
-      "Segmented model")) +
-  coord_cartesian(xlim = c(1980, 2016), ylim = c(0, dupmax)) + 
-  ylab("Cumulative duplicates") + xlab("Year") +  
-  plotOpts
-
-# Zoomed duplicates plot
-zoomDuplicatesPlot <- ggplot(data = natDuplicatesZoom, 
-  aes(x = year, y = cumduplicates)) + 
-  geom_line(aes(color = "estimates")) + 
-  geom_point(color = cols["Red"]) +
-  scale_x_continuous(breaks = seq(minYear,                        
-    2016, by = 6)) +
-  scale_y_continuous(labels = comma) + 
-  coord_cartesian(xlim = c(1980, 2016), ylim = c(0, dupmax)) + 
-  ylab("Cumulative duplicates") + xlab("Year") +  
-  plotOpts  + 
-  geom_line(aes(y = fitted(trendDuplicatesZoom),
-    colour = "overall")) +
-  geom_line(data = segDuplicatesDataZoom, aes(y = segdups, 
-    colour = "segment")) + 
-  scale_colour_manual("", values = c(unname(cols["Red"]), "black", "blue"),
-    limits = c("estimates", "overall", "segment"),
-    labels = c("Estimates", "Overall model",
-      "Segmented model")) +
-  coord_cartesian(xlim = c(minYear, 2016), ylim = c(0, dupmax)) + 
-  ylab("Cumulative duplicates") + xlab("Year") +  
-  plotOpts +
-  geom_vline(xintercept = segDuplicatesZoom$psi[2], linetype = "dashed",
-    colour = "blue") +
-  geom_errorbarh(aes(y = 0.975 * dupmax,
-    xmin = segCI(segDuplicatesZoom$psi[2],
-      segDuplicatesZoom$psi[3])[1],
-    xmax = segCI(segDuplicatesZoom$psi[2],
-      segDuplicatesZoom$psi[3])[2]),
-    colour = "blue",
-    height = 0.025 * dupmax) +
-  geom_text(x = 2007.5, y = 0.2 * dupmax,
-    label = paste("Overall pseudo-R^2:",
-      toString(round(rsq(trendDuplicatesZoom, type = "kl"), 
-        digits = 4))), size = 3) +
-  geom_text(x = 2007.5, y = 0.1 * dupmax,
-    label = paste("Segmented pseudo-R^2:",
-      toString(round(rsq(segDuplicates, type = "kl"), digits = 4))),
-    size = 3)
-
-# Summary: break points and slopes (zoom)
-summary(segDuplicatesZoom)
-segDuplicatesZoom$psi
-segCI(segDuplicatesZoom$psi[2], segDuplicatesZoom$psi[3])
-slope(segDuplicatesZoom)
-
-# Combined plot ----------------------------------------------------------
-
-# Create a combined figure
-figure7 <- duplicatesPlot
-  
-figure8 <- plot_grid(fullDuplicatesPlot, zoomDuplicatesPlot, 
-  labels = c("A", "B"), ncol = 1, nrow = 2)
-
-# Figure captions 
-figs("figure7", "Cumulative number of duplicate notifications over 
-  time.")
-
-figs("figure8", "(B) Trends in cumulative duplicates since 1980 with 
-  segmented analysis. (C) Trend and segmented trend analysis since 1990 
-  (trends recalculated from the truncated data set).")
-
-```
-
-`r figs("figure7")`
-
-```{r Figure 7, include = TRUE, fig.width = 5, fig.height = 5}
-figure7
-```
-
-To explore this further I performed a trend analysis including an 
-exploration of change points. `r figs("figure8", display = "cite")` shows 
-the results when the analysis is done on cumulative duplicates since
-1980 and when cumulative duplicates are truncated from 1990. The trend in 
-cumulative duplicates is well fitted by a segmented Poisson regression with 
-a single change point in 1998. Since 1998 there is a steady increase in
-cumulative duplicates at around 1% per year. This suggests there is no 
-clear time where we can assume all duplicates are unique. However, given 
-the fluctuation in cumulative diagnoses since 2007, potentially the 
-de-duplication algorithm could be stopped at this point. 
-
-`r figs("figure8")`
-
-```{r Figure 8, include = TRUE, fig.width = 5, fig.height = 6}
-figure8
 ```
