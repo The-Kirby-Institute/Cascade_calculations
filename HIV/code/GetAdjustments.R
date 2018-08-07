@@ -233,14 +233,65 @@ GetAdjustments <- function(hivBase, hivAdjustments,
   # }
   
   # Further adjust propstay and deathrate by location
-  # Now adjust for location only have this for nsw and vic
+  # Now adjust for location only have this for nsw and assume non
+  # for other states. 
+  if (targetState[1] == "all" && length(targetState) == 1) {
+    if ((!targetCob[1] %in% c("all", "Australia") || 
+        targetGlobalRegion != "all") &&
+        length(targetCob) == 1) {
+      # Overseas born
+      adjustments$propstay <- adjustments$propstay * 
+        hivAdjustments$pstay_os
+      adjustments$propstay_lower <- adjustments$propstay_lower * 
+        hivAdjustments$pstay_os_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper * 
+        hivAdjustments$pstay_os_upper
+      
+    } else if (targetCob[1] == "Australia" && length(targetCob) == 1) {
+      # Australian born
+      adjustments$propstay <- adjustments$propstay * 
+        hivAdjustments$pstay_aus
+      adjustments$propstay_lower <- adjustments$propstay_lower * 
+        hivAdjustments$pstay_aus_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper * 
+        hivAdjustments$pstay_aus_upper
+      
+    } else {
+      # Overall - no need to change
+    }
+  }
+  
+  
   if (targetState[1] == "nsw" && length(targetState) == 1) {
-    adjustments$propstay <- adjustments$propstay * 
-      hivAdjustments$pstay_nsw
-    adjustments$propstay_lower <- adjustments$propstay_lower * 
-      hivAdjustments$pstay_nsw_lower
-    adjustments$propstay_upper <- adjustments$propstay_upper * 
-      hivAdjustments$pstay_nsw_upper
+    if ((!targetCob[1] %in% c("all", "Australia") || 
+        targetGlobalRegion != "all") && length(targetCob) == 1) {
+      # Overseas born
+      adjustments$propstay <- adjustments$propstay * 
+        hivAdjustments$pstay_nswos
+      adjustments$propstay_lower <- adjustments$propstay_lower * 
+        hivAdjustments$pstay_nswos_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper * 
+        hivAdjustments$pstay_nswos_upper
+
+    } else if (targetCob[1] == "Australia" && length(targetCob) == 1) {
+      # Australian born
+      adjustments$propstay <- adjustments$propstay * 
+        hivAdjustments$pstay_nswaus
+      adjustments$propstay_lower <- adjustments$propstay_lower * 
+        hivAdjustments$pstay_nswaus_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper * 
+        hivAdjustments$pstay_nswaus_upper
+
+    } else {
+      # Overall NSW
+      adjustments$propstay <- adjustments$propstay * 
+        hivAdjustments$pstay_nsw
+      adjustments$propstay_lower <- adjustments$propstay_lower * 
+        hivAdjustments$pstay_nsw_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper * 
+        hivAdjustments$pstay_nsw_upper
+      
+    }
     
     adjustments$deathrate <- adjustments$deathrate * 
       hivAdjustments$drate_nsw
@@ -251,7 +302,8 @@ GetAdjustments <- function(hivBase, hivAdjustments,
     
   } 
   
-  if (targetState[1] == "vic" && length(targetState) == 1) {
+  if (!targetState[1] %in% c("nsw", "all") && length(targetState) == 1) {
+    # Assume no post-diagnosis movement unless specified by states
     adjustments$propstay <- adjustments$propstay *
       hivAdjustments$pstay_vic
     adjustments$propstay_lower <- adjustments$propstay_lower *

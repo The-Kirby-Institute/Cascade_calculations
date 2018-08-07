@@ -51,8 +51,8 @@ source(file.path(HIVcode, "ReplaceEstimates.R"), echo=TRUE)
 # the  national overall estimates we use previously generated estimates
 # produced by the script 0-ArtAnalysis.Rmd. 
 
-# Note values are all data estimates except for the year 2012 for the 
-# national data which is replaced by a fitted value
+# Note values are all data estimates except for the years 2010:2012 for the 
+# national data which are replaced by fitted values.
 
 # Load up to 2000-2014 ART estimates -- we will use other data for
 # >= 2013

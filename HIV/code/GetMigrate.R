@@ -7,14 +7,49 @@
 
 # Define local functions --------------------------------------------------
 extractData <- function(data, fcob, fage, fstate, fgender) {
-  subData <- data %>% 
-    filter(year %in% 2004:2014) %>%
-    filter(cob %in% fcob, age %in% fage, 
-      state %in% fstate, gender %in% fgender) %>% 
-    group_by(year) %>%
-    summarise(departures = sum(nom),
-      erp = sum(erp)) %>%
-    mutate(migrate = departures / erp)
+  if (fcob == "non-australia" ) {
+    subDataAus <- data %>%
+      filter(year %in% 2004:2014) %>%
+      filter(cob == "Australia", age %in% fage,
+        state %in% fstate, gender %in% fgender) %>%
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp))
+
+    subDataAll <- data %>%
+      filter(year %in% 2004:2014) %>%
+      filter(cob == "all", age %in% fage,
+        state %in% fstate, gender %in% fgender) %>%
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp))
+
+    subData <- data_frame(departures = subDataAll$departures -
+        subDataAus$departures,
+      erp = subDataAll$erp - subDataAus$erp) %>%
+      mutate(migrate = departures / erp)
+    
+  } else if (fcob == "non-aus-nz") {
+    subData <- data %>% 
+      filter(year %in% 2004:2014) %>%
+      filter(!cob %in% c("Australia", "New Zealand", "all"), 
+        age %in% fage, 
+        state %in% fstate, gender %in% fgender) %>% 
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp)) %>%
+      mutate(migrate = departures / erp)
+  } else {
+    subData <- data %>% 
+      filter(year %in% 2004:2014) %>%
+      filter(cob %in% fcob, age %in% fage, 
+        state %in% fstate, gender %in% fgender) %>% 
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp)) %>%
+      mutate(migrate = departures / erp)
+  } 
+  
   return(subData)
 }
 

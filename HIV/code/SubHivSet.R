@@ -155,15 +155,18 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe, 
       is.na(state))), keep_all = TRUE)
     
+    
     # Remove missing so not double countered in excluded and included -
     # need so excluded so excluded doesn't pick up "Not Reported"
-    includeframe <- filter(includeframe, state != 'Not Reported') 
-    includeframe <- filter(includeframe, !is.na(state))
+    includeframe <- filter(includeframe, state != 'Not Reported',
+      !is.na(state)) 
     
     # Exclude ones we don't want and keep ones we want
     excludeframe <- distinct(bind_rows(excludeframe, 
-      filter(includeframe, !(state %in% fState))), keep_all = TRUE)
+      filter(includeframe, !(state %in% fState)),
+      filter(unknownframe, !(state %in% fState))), keep_all = TRUE)
     includeframe <- filter(includeframe, state %in% fState)
+    unknownframe <- filter(unknownframe, state %in% fState)
   }
   
   if(fGlobalRegion[1] != 'all'){
