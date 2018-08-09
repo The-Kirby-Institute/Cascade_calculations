@@ -37,6 +37,7 @@ source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 LoadLibrary(readxl)
 LoadLibrary(scales)
+LoadLibrary(cowplot)
 source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 
 # Current time for appending to outputs
@@ -854,6 +855,11 @@ allCascadeAll <- ggplot(data = filter(plotcascade, sex == "all"),
   ylab("Number of people") + xlab("") +  
   PlotOptions() 
 
+# Combine figures into one file - allCascade and allCascadeAll
+combinePlot <- ggdraw() +
+  draw_plot(allCascade, 0, 0, 0.5, 1) +
+  draw_plot(allCascadeAll, 0.5, 0, 0.5, 0.869) + # Set to make top align
+  draw_plot_label(c("A", "B"), c(0, 0.5), c(1, 1), size = 8)
 
 # Print plot in separate window and save
 if (saveplots) {
@@ -880,6 +886,11 @@ if (saveplots) {
   ggsave(file.path(figFolder, paste0("chlamcascade-overall-", 
     toString(resultsYear), fileType)), 
     plot = allCascadeAll, 
+    width = 4, height = 4, dpi = 300)
+  
+  ggsave(file.path(figFolder, paste0("chlamcascade-combined-", 
+    toString(resultsYear), fileType)), 
+    plot = combinePlot, 
     width = 4, height = 4, dpi = 300)
 }
 
