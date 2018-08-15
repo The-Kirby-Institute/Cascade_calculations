@@ -891,7 +891,7 @@ if (saveplots) {
   ggsave(file.path(figFolder, paste0("chlamcascade-combined-", 
     toString(resultsYear), fileType)), 
     plot = combinePlot, 
-    width = 4, height = 4, dpi = 300)
+    width = 8, height = 4, dpi = 300)
 }
 
 ```
