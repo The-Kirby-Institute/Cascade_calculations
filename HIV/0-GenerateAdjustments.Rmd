@@ -31,6 +31,7 @@ dataFolder <- file.path(basePath, "data")
 # Load standard libraries and options ------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 LoadLibrary(tidyverse)
+LoadLibrary(readxl)
 # source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 source(file.path(Rcode, "FillDataFrame.R"), echo=TRUE)
@@ -331,16 +332,34 @@ mainDataFolder <- file.path(dirname(getwd()), "data")
 absMigration <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
-absDeparts <- read.csv(file.path(mainDataFolder, 
-  paste0("ABS_departures_clean-", toString(analysisYear), ".csv")),
-  as.is = 1)
+if (analysisYear >= 2017) {
+  # Given issues with 2017 data for permanent removals use 2016 data
+  absDeparts <- read.csv(file.path(mainDataFolder, 
+    paste0("ABS_departures_clean-2016.csv")),
+    as.is = 1)
+} else {
+  absDeparts <- read.csv(file.path(mainDataFolder, 
+    paste0("ABS_departures_clean-", toString(analysisYear), ".csv")),
+    as.is = 1)
+}
 absInterstate <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_interstate_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
 
 # Base migration rate ----------------------------------------------------
-absDeparts <- mutate(absDeparts, migrate = permanent / erp)
-mrate <- absDeparts$migrate
+
+if (analysisYear >= 2017) {
+  # Use 2016 data and then extrapolate
+  absDeparts <- mutate(absDeparts, migrate = permanent / erp)
+  mrate <- absDeparts$migrate
+  
+  # At this stage use last years migration rate for 2017
+  mrate <- c(mrate, tail(mrate, 1))
+
+} else {
+  absDeparts <- mutate(absDeparts, migrate = permanent / erp)
+  mrate <- absDeparts$migrate
+}
 
 # mrate is missing a value for 1980 assume same value as 1981
 mrate <- c(mrate[1], mrate)
