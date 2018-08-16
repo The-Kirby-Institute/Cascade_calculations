@@ -22,15 +22,17 @@ HIVcode <- file.path(basePath, "code")
 
 # Load standard libraries and options ----------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
-source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+# source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+LoadLibrary(tidyverse)
+LoadLibrary(readxl)
 
 # Primary script parameters
-analysisYear <- 2016
+analysisYear <- 2017
 replaceValues <- TRUE
 saveResults <- TRUE
 addTempRes <- TRUE # Add estimates for temporary residents on ART
-atrasTRest <- TRUE # Use ATRAS estimates, FALSE = NAPWHA estimates
+atrasTRest <- FALSE # Use ATRAS estimates, FALSE = NAPWHA estimates
                    # See 0-ArtAnalysis.Rmd for details
                    # FALSE for ASR and TRUE for paper
                    
@@ -167,7 +169,7 @@ popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
 
 
 # Loop through years and regions appending lower and upper
-prospectionYears <- c(2013, 2014, 2015, 2016)
+prospectionYears <- 2013:analysisYear #c(2013, 2014, 2015, 2016, 2017)
 regions <- c(populations, "all")
 
 for (nyear in prospectionYears) {
@@ -316,7 +318,13 @@ hivSuppressed <- data.frame(stage = character(),
 
 # Load all the data we need
 ahodData <- read.csv(file.path(dataFolder, 
-  paste0("ahod", toString(analysisYear), ".csv")))
+  paste0("ahod", toString(analysisYear), ".csv"))) 
+
+if (analysisYear >= 2017) {
+  ahodData <- ahodData %>%
+    mutate(state = tolower(state), 
+      population = tolower(population))
+}
 
 # Extract the viral suppression data
 propSuppressedState <- ahodData %>%
@@ -340,7 +348,7 @@ propSuppressedState <- ahodData %>%
 propSuppressedGender <- ahodData %>%
   select(one_of(c("year", "state", "population", "n_id")), 
          starts_with("n_rx"), -n_rx) %>% 
-  filter(population %in% c("MALE", "FEMALE"), state == "all") %>%
+  filter(population %in% c("male", "female"), state == "all") %>%
   mutate(population = tolower(population)) %>%
   select(-state) %>%
   group_by(year, population) %>%
