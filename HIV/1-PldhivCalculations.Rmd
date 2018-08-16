@@ -19,10 +19,13 @@ calculation scripts.
 basePath <- getwd()
 Rcode <- file.path(dirname(basePath), "code") # All cascades code
 HIVcode <- file.path(basePath, "code") 
-notificationsFolder <- file.path(dirname(dirname(basePath)), "data", "HIV")
 dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
 figuresFolder <- file.path(basePath, "output", "figures")
+
+# Notifications folder is a private secure folder 
+notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data", 
+  "National HIV Registry", "2017", "National", "Hamish & Richard")
 
 # Load standard libraries and options ------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"))
@@ -42,18 +45,17 @@ specified project folder and have a cascade file handle.
 - Paper_2016 (national cascade for paper)
 - Aging_Estimates (todo)
 
-
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2016
+analysisYear <- 2017
 saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-projectOutput <- "CALD_Cascades" # "." for main output folder 
+projectOutput <- "ASR_2018" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "Nsw_All-2016"
+cascadeName <- "All"
 targetGender <- "all" # all, male, female (single)
 targetAge <- "all" # all or split
 
@@ -70,7 +72,7 @@ targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
 targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
 # Only used if country is Australia (single)
-targetState <- "nsw" # nsw, sa, nt, qld, vic, wa, act, tas
+targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
 # (combination)
 targetLocalRegion <- "all" #tbd (combination)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
@@ -100,7 +102,7 @@ if (targetCob[1] != "all" || targetGlobalRegion[1] != "all") {
   separateAborig <- FALSE
 }
 
-doRetained <- FALSE # TRUE for appending retained in care
+doRetained <- TRUE # TRUE for appending retained in care
 doRetained <- ifelse(doAge, FALSE, doRetained) # Turn off for ageing
 if (doRetained) {
   # Need to specify years for reatined in care calculations
@@ -183,9 +185,10 @@ source(file.path(HIVcode, "GetInterRegion.R"))
 # This chunk loads the national notifications and subsets based on the
 # specified criteria in Script paramaters
 
-# Load cleaned notifications data
-origHivData <- read.csv(file.path(notificationsFolder,
-  paste0("hivnotifications_clean-", toString(analysisYear), ".csv"))) 
+# Load cleaned notifications data from storage
+origHivData <- read.csv(file.path(notificationsFolder, 
+  paste0("cascadeHIVnotifications-clean-", toString(analysisYear), 
+    ".csv"))) 
 
 # Read in country code data
 countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
@@ -249,7 +252,7 @@ hivSetUnknown <- hivSetReturn[[3]]
 
 # MAJOR HACK for state cascades to fix subsetting issues for 
 # multiple selections
-hivSetExcluded <- filter(hivSetExcluded, state == targetState)
+# hivSetExcluded <- filter(hivSetExcluded, state == targetState)
 
 # Calculate unique notifications and duplicates for the known set.
 if (doUnique) {
