@@ -17,17 +17,18 @@ HIVcode <- file.path(basePath, "code")
 
 # Load standard libraries and options -----------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
-source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
-source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+# source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+# source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
-analysisYear <- 2016
-projectName <- "Paper_2016"
+analysisYear <- 2017
+projectName <- "ASR_2018"
 cascadeNames <- "All" # specify cascades with project (without year)
 artNames <- NULL
 
 # If this is an ASR project already have specific populations
-if (projectName %in% c("ASR_2016", "ASR_2016")) {
+if (projectName %in% c("ASR_2016", "ASR_2017")) {
   cascadeNames <- c("All", "Male", "Female", "Atsi", "AusNonAtsi", "SSA",
     "SEA", "Othercob", "CALD", "MSM", "Hetero", "PWID", "Otherexp",
     "ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA")
@@ -39,7 +40,7 @@ if (is.null(artNames)) {
 
 mergeAll <- TRUE
 saveResults <- TRUE
-artString <- "ATRAS" # "ATRAS", "PBS" - use NAPWHA for ASR_2017 and ATRAS
+artString <- "NAPWHA" # "ATRAS", "PBS" - use NAPWHA for ASR_2017 and ATRAS
                       # for Paper_2016
 
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
@@ -70,9 +71,12 @@ for (ii in 1:length(cascadeNames)) {
   livingFile <- file.path(cascadeFolder, 
     paste0("HIVpositiveEstimates-", yearStr, ".csv"))
   
-  # Read in cascade results for this cascade
-  living <- read_csv(livingFile)
-  pldhiv <- read_csv(pldhivFile)
+  # Read in cascade results for this cascade - force lower and upper to be
+  # double in case they are all NA
+  living <- read_csv(livingFile, 
+    col_types = cols(lower = "d", upper = "d"))
+  pldhiv <- read_csv(pldhivFile, 
+    col_types = cols(lower = "d", upper = "d"))
   
   treatment <- artSuppression %>%
     filter(population == tolower(artNames[ii])) %>%
