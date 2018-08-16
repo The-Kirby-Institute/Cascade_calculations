@@ -24,12 +24,15 @@ basePath <- file.path(dirname(getwd()), "HIV")
 
 Rcode <- file.path(dirname(getwd()), "code") 
 HIVcode <- file.path(basePath, "code") 
-notificationsFolder <- file.path(dirname(dirname(basePath)), "data", "HIV")
+notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data", 
+  "National HIV Registry", "2017", "National", "Hamish & Richard")
 dataFolder <- file.path(basePath, "data")
 
 # Load standard libraries and options ------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
-source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
+LoadLibrary(tidyverse)
+LoadLibrary(readxl)
+# source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 source(file.path(Rcode, "FillDataFrame.R"), echo=TRUE)
 
@@ -41,7 +44,7 @@ source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2016
+analysisYear <- 2017
 startYear <- 1980 # First year in HIV registry is 1980
 
 allYears <- startYear:analysisYear 
@@ -61,7 +64,7 @@ saveEstimates <- TRUE
 
 # Load cleaned notifications data
 rawNotifications <- read.csv(file.path(notificationsFolder,
-  paste0("hivnotifications_clean-", toString(analysisYear), ".csv"))) 
+  paste0("cascadeHIVnotifications-clean-", toString(analysisYear), ".csv"))) 
 
 # Read in country code data
 countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
@@ -351,16 +354,34 @@ mainDataFolder <- file.path(dirname(getwd()), "data")
 absMigration <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
-absDeparts <- read.csv(file.path(mainDataFolder, 
-  paste0("ABS_departures_clean-", toString(analysisYear), ".csv")),
-  as.is = 1)
+if (analysisYear >= 2017) {
+  # Given issues with 2017 data for permanent removals use 2016 data
+  absDeparts <- read.csv(file.path(mainDataFolder, 
+    paste0("ABS_departures_clean-2016.csv")),
+    as.is = 1)
+} else {
+  absDeparts <- read.csv(file.path(mainDataFolder, 
+    paste0("ABS_departures_clean-", toString(analysisYear), ".csv")),
+    as.is = 1)
+}
 absInterstate <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_interstate_clean-", toString(analysisYear), ".csv")), 
   as.is = 1)
 
 # Base migration rate ----------------------------------------------------
-absDeparts <- mutate(absDeparts, migrate = permanent / erp)
-mrate <- absDeparts$migrate
+
+if (analysisYear >= 2017) {
+  # Use 2016 data and then extrapolate
+  absDeparts <- mutate(absDeparts, migrate = permanent / erp)
+  mrate <- absDeparts$migrate
+  
+  # At this stage use last years migration rate for 2017
+  mrate <- c(mrate, tail(mrate, 1))
+
+} else {
+  absDeparts <- mutate(absDeparts, migrate = permanent / erp)
+  mrate <- absDeparts$migrate
+}
 
 # mrate is missing a value for 1980 assume same value as 1981
 mrate <- c(mrate[1], mrate)
@@ -608,8 +629,9 @@ ahodData <- read.csv(file.path(dataFolder,
 sexDrates <- read_excel(file.path(dataFolder,
   "HIV_Gender_Deathrates.xlsx"),
   sheet = 2) %>%
-  select(1,4,5) %>%
-  rename(year = Year)
+  select(1, 4, 5) %>%
+  rename(year = Year) %>%
+  filter(year <= analysisYear)
 colnames(sexDrates)[2:3] <- c("males", "females")
 
 
@@ -741,6 +763,7 @@ linkageMortalityMax <- deaths_max / numLiving_min
 #  upper and lower bound
 ahodDeaths <- ahodData %>% 
   filter(population == "ALL") %>%
+  mutate(state = tolower(state), population = tolower(population)) %>%
   group_by(year, state, population) %>%
   summarise(n = sum(n_id), 
     deaths = sum(n_death), 
@@ -875,7 +898,6 @@ hivAdjustments$drate_qld_upper[(indexLinkage+1):length(deathRate)] <-
   filter(ahodDeaths, state == "qld")$upper
 hivAdjustments$drate_qld <- hivAdjustments$drate_qld_upper /
   deathrateDiv_upper
-
 
 ```
 
@@ -1499,6 +1521,5 @@ if (saveEstimates) {
   write.csv(ageData, file = paste0(saveAge, ".csv"), 
     row.names = FALSE)
 }
-
 
 ```
