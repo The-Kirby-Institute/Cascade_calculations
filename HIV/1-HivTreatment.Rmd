@@ -32,7 +32,7 @@ analysisYear <- 2017
 replaceValues <- TRUE
 saveResults <- TRUE
 addTempRes <- TRUE # Add estimates for temporary residents on ART
-atrasTRest <- FALSE # Use ATRAS estimates, FALSE = NAPWHA estimates
+atrasTRest <- TRUE # Use ATRAS estimates, FALSE = NAPWHA estimates
                    # See 0-ArtAnalysis.Rmd for details
                    # FALSE for ASR and TRUE for paper
                    
@@ -319,12 +319,6 @@ hivSuppressed <- data.frame(stage = character(),
 # Load all the data we need
 ahodData <- read.csv(file.path(dataFolder, 
   paste0("ahod", toString(analysisYear), ".csv"))) 
-
-if (analysisYear >= 2017) {
-  ahodData <- ahodData %>%
-    mutate(state = tolower(state), 
-      population = tolower(population))
-}
 
 # Extract the viral suppression data
 propSuppressedState <- ahodData %>%
