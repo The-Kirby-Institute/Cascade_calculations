@@ -47,9 +47,9 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   if (fAge[1] != 'all') {
     # Store unkowns
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe,
-      agebin == 'not_reported')), keep_all = TRUE)
+      agebin == 'not_reported')), .keep_all = TRUE)
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe,
-      is.na(agebin))), keep_all = TRUE)
+      is.na(agebin))), .keep_all = TRUE)
 
     # Remove missing so not double countered in excluded and included -
     # need so excluded so excluded doesn't pick up "not_reported"
@@ -58,16 +58,16 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
     
     # Exclude ones we don't want and keep ones we want
     excludeframe <- distinct(bind_rows(excludeframe,
-      filter(includeframe, !(agebin %in% fAge))), keep_all = TRUE)
+      filter(includeframe, !(agebin %in% fAge))), .keep_all = TRUE)
     includeframe <- filter(includeframe, agebin %in% fAge) 
   }
   
   if (fGender[1] != 'all') {
     # Store unkowns
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe, 
-      sex == 'unknown')), keep_all = TRUE)
+      sex == 'unknown')), .keep_all = TRUE)
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe, 
-      is.na(sex))), keep_all = TRUE)
+      is.na(sex))), .keep_all = TRUE)
     
     # Remove missing so not double countered in excluded and included -
     # need so excluded so excluded doesn't pick up "unknown"
@@ -76,16 +76,16 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
     
     # Exclude ones we don't want and keep ones we want
     excludeframe <- distinct(bind_rows(excludeframe, 
-      filter(includeframe, !(sex %in% fGender))), keep_all = TRUE)
+      filter(includeframe, !(sex %in% fGender))), .keep_all = TRUE)
     includeframe <- filter(includeframe, sex %in% fGender)     
   }
   
   if (fExposure[1] != 'all') {
     # Store unkowns
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe, 
-      expgroup == 'unknown')), keep_all = TRUE)
+      expgroup == 'unknown')), .keep_all = TRUE)
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe, 
-      is.na(expgroup))), keep_all = TRUE)
+      is.na(expgroup))), .keep_all = TRUE)
     
     # Remove missing so not double countered in excluded and included -
     # need so excluded so excluded doesn't pick up "unknown"
@@ -94,16 +94,16 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
     
     # Exclude ones we don't want and keep ones we want
     excludeframe <- distinct(bind_rows(excludeframe, 
-      filter(includeframe, !(expgroup %in% fExposure))), keep_all = TRUE)
+      filter(includeframe, !(expgroup %in% fExposure))), .keep_all = TRUE)
     includeframe <- filter(includeframe, expgroup %in% fExposure) 
   }
   
   if (fCob[1] != 'all') {
     # Store unkowns
     unknownframe <- distinct(bind_rows(unknownframe, 
-      filter(includeframe, cob == 'Not Reported')), keep_all = TRUE)
+      filter(includeframe, cob == 'Not Reported')), .keep_all = TRUE)
     unknownframe <- distinct(bind_rows(unknownframe, 
-      filter(includeframe, is.na(cob))), keep_all = TRUE)
+      filter(includeframe, is.na(cob))), .keep_all = TRUE)
     
     # Remove missing so not double countered in excluded and included -
     # need so excluded so excluded doesn't pick up "Not Reported"
@@ -115,17 +115,17 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
     if (fCob[1] == 'non-australia') {
       # Special case - not born in Australia/born overseas
       excludeframe <- distinct(bind_rows(excludeframe,
-        filter(includeframe, cob == 'Australia')), keep_all = TRUE)
+        filter(includeframe, cob == 'Australia')), .keep_all = TRUE)
       includeframe <- filter(includeframe, cob != 'Australia') 
     } else if (fCob[1] =='non-aus-nz') {
       # Special case - not born in Australia or NZ
       excludeframe <- distinct(bind_rows(excludeframe, filter(includeframe, 
-        cob %in% c('Australia', 'New Zealand'))), keep_all = TRUE)
+        cob %in% c('Australia', 'New Zealand'))), .keep_all = TRUE)
       includeframe <- filter(includeframe, 
         !(cob %in% c('Australia', 'New Zealand')))
     } else {
       excludeframe <- distinct(bind_rows(excludeframe,
-        filter(includeframe, !(cob %in% fCob))), keep_all = TRUE)
+        filter(includeframe, !(cob %in% fCob))), .keep_all = TRUE)
       includeframe <- filter(includeframe, cob %in% fCob)
     }
   }
@@ -133,9 +133,9 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   if(fAtsi[1] != 'all' && fCob[1] == "Australia" && length(fCob) == 1){
     # Store unkowns
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe, 
-      aboriggroup == 'Not Reported')), keep_all = TRUE)
+      aboriggroup == 'Not Reported')), .keep_all = TRUE)
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe, 
-      is.na(aboriggroup))), keep_all = TRUE)
+      is.na(aboriggroup))), .keep_all = TRUE)
     
     # Remove missing so not double countered in excluded and included -
     # need so excluded so excluded doesn't pick up "Not Reported"
@@ -144,16 +144,16 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
     
     # Exclude ones we don't want and keep ones we want
     excludeframe <- distinct(bind_rows(excludeframe, 
-      filter(includeframe, !(aboriggroup %in% fAtsi))), keep_all = TRUE)
+      filter(includeframe, !(aboriggroup %in% fAtsi))), .keep_all = TRUE)
     includeframe <- filter(includeframe, aboriggroup %in% fAtsi)  
   }
   
   if(fState[1] != 'all'){
     # Store unkowns
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe, 
-      state == 'Not Reported')), keep_all = TRUE)
+      state == 'Not Reported')), .keep_all = TRUE)
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe, 
-      is.na(state))), keep_all = TRUE)
+      is.na(state))), .keep_all = TRUE)
     
     
     # Remove missing so not double countered in excluded and included -
@@ -164,7 +164,7 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
     # Exclude ones we don't want and keep ones we want
     excludeframe <- distinct(bind_rows(excludeframe, 
       filter(includeframe, !(state %in% fState)),
-      filter(unknownframe, !(state %in% fState))), keep_all = TRUE)
+      filter(unknownframe, !(state %in% fState))), .keep_all = TRUE)
     includeframe <- filter(includeframe, state %in% fState)
     unknownframe <- filter(unknownframe, state %in% fState)
   }
@@ -172,9 +172,9 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   if(fGlobalRegion[1] != 'all'){
     # Store unkowns
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe, 
-      globalregion %in% c('Not Reported', 'Not Known'))), keep_all = TRUE)
+      globalregion %in% c('Not Reported', 'Not Known'))), .keep_all = TRUE)
     unknownframe <- distinct(bind_rows(unknownframe, filter(includeframe, 
-      is.na(globalregion))), keep_all = TRUE)
+      is.na(globalregion))), .keep_all = TRUE)
     
     # Remove missing so not double countered in excluded and included -
     # need so excluded so excluded doesn't pick up "Not Reported"
@@ -189,9 +189,9 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
       # or Sub-Saharan Africa born 
       excludeframe <- distinct(bind_rows(excludeframe, 
         filter(includeframe, globalregion %in% c("South-East Asia", 
-          "Sub-Saharan Africa"))), keep_all = TRUE)
+          "Sub-Saharan Africa"))), .keep_all = TRUE)
       excludeframe <- distinct(bind_rows(excludeframe, 
-        filter(includeframe, cob != "Australia")), keep_all = TRUE)
+        filter(includeframe, cob != "Australia")), .keep_all = TRUE)
           
       includeframe <- filter(includeframe, 
         globalregion != "South-East Asia")
@@ -201,7 +201,7 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
 
     }else{
       excludeframe <- distinct(bind_rows(excludeframe, filter(includeframe, 
-        !(globalregion %in% fGlobalRegion))), keep_all = TRUE)
+        !(globalregion %in% fGlobalRegion))), .keep_all = TRUE)
       includeframe <- filter(includeframe, globalregion %in% fGlobalRegion)
     }
   }
