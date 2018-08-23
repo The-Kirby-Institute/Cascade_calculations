@@ -53,7 +53,77 @@ AverageAge <- function(pldhivage, resultsyear, agebins = NULL,
   
   # Return average age
   return(average)
-   
+}
+
+#' Merge number of diagnosed people living with HIV in age groups
+#'
+#' This function produces a data frame combining the number of PLDHIV in 
+#' by age into merged age groups. 
+#'
+#' @details The idea of this function is to calculate the number of people 
+#' across multiple HIV cascade agebins (5 year bins: 0-4, 5-9, ...., 
+#' 80-84, 85+). This function requires the tidyverse library  to be 
+#' sourced. 
+#'
+#' @param pldhiv Dataframe in long format showing estimated number of 
+#' people living with diagnosed HIV by agebin and year. Column names must 
+#' include year, agebin, value (for the estimates), lower and upper.
+#' @param agebins List containing vectors of strings specifiy the age bins 
+#' to be merged. Must be combnations of the standard list: c("a0_4", 
+#' "a5_9","a10_14", "a15_19", "a20_24", "a25_29", "a30_34", "a35_39", 
+#' "a40_44", "a45_49", "a50_54", "a55_59", "a60_64", "a65_69", "a70_74", 
+#' "a75_79", "a80_84", "a85+")
+#' @param agenames Vector of strings specifying the names of the new
+#' merged age bins. Number of labels must equal the number of vectors of 
+#' age bins in the parameter agebins.
+#'
+#' @return Data frame in long format with the column names year, agebin and
+#' value (for the estimates).
+#' 
+#' @author Richard T. Gray, \email{Rgray@kirby.unsw.edu.au}
+#' 
+MergeAgeCascade <- function(pldhivage, agebins, agenames) {
+  
+  # Do some error checking
+  if (length(agebins) != length(agenames)) {
+    stop("NUmber of age names is different to number of age groups")
+  }
+    
+  # Sort out results
+  results <- pldhivage %>% 
+    select(year, agebin, value, lower, upper)
+  
+  # Initialize return data frame
+  mergedAges <- data_frame(year = integer(), 
+    agebin = character(),
+    value = numeric(),
+    lower = numeric(),
+    upper = numeric())
+  
+  # Loop through agebin list extract estimates and merge
+  for (ii in 1:length(agebins)) {
+    # Extract numbers and sum
+    tempResults <- results %>%
+      filter(agebin %in% agebins[[ii]]) %>%
+      group_by(year) %>%
+      summarise(value = sum(value),
+        lower = sum(lower),
+        upper = sum(upper))
+    
+    # Add name of age bin
+    tempResults$agebin <- agenames[[ii]]
+    
+    # Re-order
+    tempResults <- tempResults %>%
+      select(year, agebin, value, lower, upper)
+    
+    # Bind into mergedAges
+    mergedAges <- bind_rows(mergedAges, tempResults)
+  }
+  
+  # Return final data frame
+  return(mergedAges)
+  
 }
 
 # Plotting functions ------------------------------------------------------
