@@ -128,7 +128,158 @@ MergeAgeCascade <- function(pldhivage, agebins, agenames) {
 
 # Plotting functions ------------------------------------------------------
 
-#' Plot number of PLDHIV over time
+
+
+PlotCascade <- function(cascade, year = NULL, ymax = NULL, 
+  retained = FALSE, plotcolours = NULL, steplabels = NULL, ranges = TRUE, 
+  percentages = FALSE, targetlines = c("90", "95", NULL), 
+  targetlabels = NULL) {
+  
+  # Argument checking and setup defaults if not specified
+  if (is.null(year)) {
+    cascadeYear <- max(cascade$year) # default to latest year 
+  } else {
+    cascadeYear <- year
+  } 
+
+  if (is.null(ymax)) {
+    ymax <- NA
+  } else {
+    yBreaks <- seq(0, ymax, by = ymax/4)
+  }
+  
+  if (retained == FALSE) {
+    steps <- c("infected", "pldhiv","numART", "suppressed")
+  } else {
+    steps <- c("infected", "pldhiv", "retained", "numART", "suppressed")
+  }
+  
+  if (is.null(plotcolours)) {
+    plotcolours <- "grey75" # default is gray scale
+  } 
+  
+  if (is.null(steplabels)) {
+     steplabels <- steps
+  }
+  
+  if (!is.null(targetlines)) {
+    hlines <- match.arg(targetlines)
+  }
+  
+  if (!is.null(targetlabels)) {
+    barWidth <- 0.6
+  } else {
+    barWidth <- 0.8
+  }
+  
+  # Set up results we want to plot
+  estimates <- cascade %>%
+    filter(year == cascadeYear, stage %in% steps)
+  
+  # Basic plot
+  plotBar <- ggplot(data = estimates, aes(x = stage, y = value)) + 
+    scale_x_discrete(limits = steps, labels = steplabels) + 
+
+    ylab("Number of people") + xlab("") +  
+    PlotOptions() + theme_classic() + 
+    theme(
+      axis.title.y = element_text(size=12, face = "bold"),
+      axis.text.x = element_text(size=9),
+      axis.text.y = element_text(size=11))
+  
+  # Sort out y-axis labels
+  if (is.na(ymax)) {
+    plotBar <- plotBar +
+      scale_y_continuous(expand = c(0,0), limits = c(0, ymax), 
+        labels = comma)
+  } else {
+    plotBar <- plotBar +
+      scale_y_continuous(expand = c(0,0), limits = c(0, ymax), 
+        labels = comma, breaks = yBreaks)
+  }
+  
+  # Add bar chart
+  if (plotcolours[1] == "grey75"){
+    plotBar <- plotBar +
+      geom_bar(stat = "identity", color = "black", 
+        fill = plotcolours, width = barWidth)
+  } else { 
+    plotBar <- plotBar +
+      geom_bar(stat = "identity", color = plotcolours, 
+        fill = plotcolours, width = barWidth)
+  } 
+  
+  # Add ranges
+  if (ranges) {
+    plotBar <- plotBar + 
+      geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1,
+        color = "black", size = 1.1) 
+  }
+
+  ########
+  
+  # Add percents
+  if (percentages) {
+    
+    
+    
+    plotBar <-  plotBar + 
+      geom_text(x = c(1:4), y = rep(yPercent,4),
+        label = percent(nswEstimates$estimate /
+            nswEstimates$estimate[1]),
+        size = 3, colour = "black")
+    }
+  
+  # Add target lines
+  
+  if(!is.null(targetlabels)) {
+    LoadLibrary(grid)
+    plotBar <-  plotBar +
+      theme(plot.margin = unit(c(0.5, 5, 0, 0), "cm")) + 
+      +
+      geom_hline(yintercept = 0.9 * nswEstimates$estimate[1],
+        linetype = 2) + 
+      geom_hline(yintercept = 0.9 * nswEstimates$estimate[2],
+        linetype = 2) +
+      geom_hline(yintercept = 0.9 * nswEstimates$estimate[3],
+        linetype = 2)
+    
+    
+    annotation_custom(
+      grob = textGrob(label = "90% PLHIV diagnosed", hjust = -0.1, 
+        gp = gpar(cex = 0.85, fontface = "bold")),
+      ymin = 0.9 * nswEstimates$estimate[1],
+      ymax = 0.9 * nswEstimates$estimate[1],
+      xmin = 4.5,
+      xmax = 4.5) +
+      annotation_custom(
+        grob = textGrob(label = "90% diagnosed on ART", hjust = -0.1, 
+          gp = gpar(cex = 0.85, fontface = "bold")),
+        ymin = 0.9 * nswEstimates$estimate[2],
+        ymax = 0.9 * nswEstimates$estimate[2],
+        xmin = 4.5,
+        xmax = 4.5) +
+      annotation_custom(
+        grob = textGrob(label = "90% on ART suppressed", hjust = -0.1, 
+          gp = gpar(cex = 0.85, fontface = "bold")),
+        ymin = 0.9 * nswEstimates$estimate[3],
+        ymax = 0.9 * nswEstimates$estimate[3],
+        xmin = 4.5,
+        xmax = 4.5)
+    plotbarPaper <- ggplot_gtable(ggplot_build(plotbarPaper))
+    plotbarPaper$layout$clip[plotbarPaper$layout$name == "panel"] <- "off"
+    grid.draw(plotbarPaper)
+  }
+  
+  # Return final bar chart
+  return(plotBar)
+  
+}
+
+
+
+
+#' Plot number of PLDHIV over time for multiple projections
 #' 
 #' This function produces a plot of the number of people living with 
 #' diagnosed HIV over time for an inputed set of scenarios.
@@ -137,7 +288,7 @@ MergeAgeCascade <- function(pldhivage, agebins, agenames) {
 #' 
 #' @param pldhiv Dataframe in long format showing estimated number of 
 #' people living with diagnosed HIV each year for each set. Column names
-#'  must include year, agebin, set and pldhiv (for the estimates).
+#' must include year, set and pldhiv (for the estimates).
 #' 
 #' @return 
 #' 
