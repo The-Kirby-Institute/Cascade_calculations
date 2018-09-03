@@ -52,11 +52,11 @@ source(file.path(HIVcode, "ResultsFunctions.R"))
 savePlots <- TRUE
 
 # Set up project and cascade to analyse
-projectName <- "ASR_2018_Ageing"  
+projectName <- "Ageing_Paper" #"ASR_2018_Ageing"  
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadeNames <- c("All", "Male", "Female")
 
-asr <- TRUE # TRUE = numbers for ASR report otherwise for paper
+asr <- FALSE # TRUE = numbers for ASR report; FALSE = paper
 
 # Create output directory
 if (savePlots) {
@@ -96,9 +96,17 @@ if (!asr) {
 sqResults <- read_csv(file.path(resultsFolder, "All-2017",
   paste0(baseFile, "-future_sq.csv"))) %>%
   mutate(set = "sq")
+
 linearResults <- read_csv(file.path(resultsFolder, "All-2017",
   paste0(baseFile, "-future_linear.csv"))) %>%
   mutate(set = "linear")
+linearResultsMale <- read_csv(file.path(resultsFolder, "Male-2017",
+  paste0(baseFile, "-future_linear.csv"))) %>%
+  mutate(set = "linear")
+linearResultsFemale <- read_csv(file.path(resultsFolder, "Female-2017",
+  paste0(baseFile, "-future_linear.csv"))) %>%
+  mutate(set = "linear")
+
 reduce35Results <- read_csv(file.path(resultsFolder, "All-2017",
   paste0(baseFile, "-future_reduce35.csv"))) %>%
   mutate(set = "reduce35")
@@ -132,6 +140,11 @@ AverageAge(femaleMain, 2017)
 if (!asr) {
   pldhivLinear <- linearResults %>%
     rename(value = pldhiv) 
+  pldhivLinearMale <- linearResultsMale %>%
+    rename(value = pldhiv) 
+  pldhivLinearFemale <- linearResultsFemale %>%
+    rename(value = pldhiv) 
+  
   AverageAge(pldhivLinear, 2017)
   AverageAge(pldhivLinear, 2027)
   
@@ -161,6 +174,16 @@ allPlots <- PlotAgeCascade(allMain, agebins = ageBins)
 malePlots <- PlotAgeCascade(maleMain, agebins = ageBins)
 femalePlots <- PlotAgeCascade(femaleMain, agebins = ageBins)
 
+# Plot up to 2017 for males and females
+if (!asr) {
+  all2027plots <- PlotAgeCascade(pldhivLinear, agebins = ageBins, 
+    startyear = 1987)
+  male2027plots <-PlotAgeCascade(pldhivLinearMale, agebins = ageBins, 
+    startyear = 1987)
+  female2027plots <-PlotAgeCascade(pldhivLinearFemale, agebins = ageBins, 
+    startyear = 1987)
+}
+
 # Save plots
 if (savePlots) {
   
@@ -182,6 +205,13 @@ if (savePlots) {
     format = saveFormat, width = width, height = height, units = units)
   SaveFigure(figFolder, "Female-2017_proportion", femalePlots[[2]],
     format = saveFormat, width = width, height = height, units = units)
+  
+  if (!asr) {
+    SaveFigure(figFolder, "Male-2027_number", male2027plots[[1]],
+      format = saveFormat, width = width, height = height, units = units)
+    SaveFigure(figFolder, "Female-2027_number", female2027plots[[1]],
+      format = saveFormat, width = width, height = height, units = units)
+  }
   
 }
 ```
@@ -233,15 +263,13 @@ if (asr) {
 }
 ```
 
-
-
 ```{r Paper plot}
 # Create a combined plot for paper
 if (!asr) {
-  legend <- GetLegend(malePlots[[1]])
-  paperFigureA <- malePlots[[1]] + labs(title = "Males") +
+  legend <- GetLegend(male2027plots[[1]])
+  paperFigureA <- male2027plots[[1]] + labs(title = "Males") +
     theme(legend.position = "none")
-  paperFigureB <- femalePlots[[1]] + labs(title = "Females") +
+  paperFigureB <- female2027plots[[1]] + labs(title = "Females") +
     theme(legend.position = "none")
   
   paperFigure <- ggdraw() +
@@ -252,11 +280,12 @@ if (!asr) {
       c(1, 1), size = 12)
   
   figs("paperfig", "Estimated number of diagnosed males (A) and females (B)
-  in Australia over 1986-2026 by 5-year age bin.")
+    in Australia over 1987-2027 by 5-year age bin (under projection 
+    scenario).")
   
   if (savePlots) {
-    SaveFigure(figFolder, "Combined_paper_figure-2017", paperFigure,
-      format = saveFormat, width = 25, height = 10, units = units)
+    SaveFigure(figFolder, "Combined_paper_figure-2027", paperFigure,
+      format = saveFormat, width = 27, height = 10, units = units)
   }
 }
 ```

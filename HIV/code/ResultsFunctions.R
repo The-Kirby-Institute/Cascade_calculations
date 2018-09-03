@@ -137,7 +137,7 @@ MergeAgeCascade <- function(pldhivage, agebins, agenames) {
 #' 
 #' @param pldhiv Dataframe in long format showing estimated number of 
 #' people living with diagnosed HIV each year for each set. Column names
-#'  must include year agebin, set and pldhiv (for the estimates).
+#'  must include year, agebin, set and pldhiv (for the estimates).
 #' 
 #' @return 
 #' 
