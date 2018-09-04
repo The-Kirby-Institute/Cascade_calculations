@@ -132,8 +132,8 @@ MergeAgeCascade <- function(pldhivage, agebins, agenames) {
 
 PlotCascade <- function(cascade, year = NULL, ymax = NULL, 
   retained = FALSE, plotcolours = NULL, steplabels = NULL, ranges = TRUE, 
-  percentages = FALSE, targetlines = c("90", "95", NULL), 
-  targetlabels = NULL) {
+  percentages = FALSE, pheight = NULL, targetlines = c("none", "90", "95"), 
+  targetlabels = FALSE) {
   
   # Argument checking and setup defaults if not specified
   if (is.null(year)) {
@@ -150,8 +150,12 @@ PlotCascade <- function(cascade, year = NULL, ymax = NULL,
   
   if (retained == FALSE) {
     steps <- c("infected", "pldhiv","numART", "suppressed")
+    nsteps <- 4
+    artIndex <- 3
   } else {
     steps <- c("infected", "pldhiv", "retained", "numART", "suppressed")
+    nsteps <- 5
+    artIndex <- 4
   }
   
   if (is.null(plotcolours)) {
@@ -162,12 +166,17 @@ PlotCascade <- function(cascade, year = NULL, ymax = NULL,
      steplabels <- steps
   }
   
-  if (!is.null(targetlines)) {
-    hlines <- match.arg(targetlines)
-  }
+  if (targetlines[1] != "none") {
+    targetlines <- match.arg(targetlines)
+    targetValue <- as.numeric(targetlines) / 100
+  } 
   
-  if (!is.null(targetlabels)) {
-    barWidth <- 0.6
+  if (targetlabels) {
+    if (targetlines[1] == "none") {
+      warning("targetlines not set to plot so targetlabels not displayed")
+      targetlabels <- FALSE
+    } 
+      barWidth <- 0.6
   } else {
     barWidth <- 0.8
   }
@@ -215,69 +224,80 @@ PlotCascade <- function(cascade, year = NULL, ymax = NULL,
       geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1,
         color = "black", size = 1.1) 
   }
-
-  ########
   
   # Add percents
   if (percentages) {
     
-    
+    if (is.null(pheight)) {
+      yPercent <- 0.05 * max(estimates$value)
+    } else {
+      yPercent <- pheight
+    }
     
     plotBar <-  plotBar + 
-      geom_text(x = c(1:4), y = rep(yPercent,4),
-        label = percent(nswEstimates$estimate /
-            nswEstimates$estimate[1]),
+      geom_text(x = c(1:nsteps), y = rep(yPercent,nsteps),
+        label = percent(estimates$value /
+            estimates$value[1]),
         size = 3, colour = "black")
     }
   
   # Add target lines
+  if(targetlines[1] != "none") {
+    plotBar <-  plotBar +
+      geom_hline(yintercept = targetValue * estimates$value[1],
+        linetype = 2) + 
+      geom_hline(yintercept = targetValue * estimates$value[2],
+        linetype = 2) +
+      geom_hline(yintercept = targetValue * estimates$value[artIndex],
+        linetype = 2)
+  } 
   
-  if(!is.null(targetlabels)) {
+  # Add labels for target lines
+  if(targetlabels) {
+    # Need some extra libraries to do this
     LoadLibrary(grid)
+    LoadLibrary(ggplotify)
+    
+    # Create annotated plot 
     plotBar <-  plotBar +
       theme(plot.margin = unit(c(0.5, 5, 0, 0), "cm")) + 
-      +
-      geom_hline(yintercept = 0.9 * nswEstimates$estimate[1],
-        linetype = 2) + 
-      geom_hline(yintercept = 0.9 * nswEstimates$estimate[2],
-        linetype = 2) +
-      geom_hline(yintercept = 0.9 * nswEstimates$estimate[3],
-        linetype = 2)
-    
-    
-    annotation_custom(
-      grob = textGrob(label = "90% PLHIV diagnosed", hjust = -0.1, 
-        gp = gpar(cex = 0.85, fontface = "bold")),
-      ymin = 0.9 * nswEstimates$estimate[1],
-      ymax = 0.9 * nswEstimates$estimate[1],
-      xmin = 4.5,
-      xmax = 4.5) +
       annotation_custom(
-        grob = textGrob(label = "90% diagnosed on ART", hjust = -0.1, 
+        grob = textGrob(
+          label = paste0(100 * targetValue, "% PLHIV diagnosed"), 
+          hjust = -0.1, 
           gp = gpar(cex = 0.85, fontface = "bold")),
-        ymin = 0.9 * nswEstimates$estimate[2],
-        ymax = 0.9 * nswEstimates$estimate[2],
-        xmin = 4.5,
-        xmax = 4.5) +
+        ymin = targetValue * estimates$value[1],
+        ymax = targetValue * estimates$value[1],
+        xmin = nsteps + 0.5,
+        xmax = nsteps + 0.5) +
       annotation_custom(
-        grob = textGrob(label = "90% on ART suppressed", hjust = -0.1, 
+        grob = textGrob(
+          label = paste0(100 * targetValue, "% diagnosed on ART"), 
+          hjust = -0.1, 
           gp = gpar(cex = 0.85, fontface = "bold")),
-        ymin = 0.9 * nswEstimates$estimate[3],
-        ymax = 0.9 * nswEstimates$estimate[3],
-        xmin = 4.5,
-        xmax = 4.5)
-    plotbarPaper <- ggplot_gtable(ggplot_build(plotbarPaper))
-    plotbarPaper$layout$clip[plotbarPaper$layout$name == "panel"] <- "off"
-    grid.draw(plotbarPaper)
+        ymin = targetValue * estimates$value[2],
+        ymax = targetValue * estimates$value[2],
+        xmin = nsteps + 0.5,
+        xmax = nsteps + 0.5) +
+      annotation_custom(
+        grob = textGrob(
+          label = paste0(100 * targetValue, "% on ART suppressed"), 
+          hjust = -0.1, 
+          gp = gpar(cex = 0.85, fontface = "bold")),
+        ymin = targetValue * estimates$value[artIndex],
+        ymax = targetValue * estimates$value[artIndex],
+        xmin = nsteps + 0.5,
+        xmax = nsteps + 0.5)
+    plotBar <- ggplot_gtable(ggplot_build(plotBar))
+    plotBar$layout$clip[plotBar$layout$name == "panel"] <- "off"
+    
+    # Convert back to a ggplot
+    plotBar <- as.ggplot(plotBar)
   }
   
   # Return final bar chart
   return(plotBar)
-  
 }
-
-
-
 
 #' Plot number of PLDHIV over time for multiple projections
 #' 
