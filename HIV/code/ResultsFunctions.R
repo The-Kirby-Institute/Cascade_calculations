@@ -128,8 +128,60 @@ MergeAgeCascade <- function(pldhivage, agebins, agenames) {
 
 # Plotting functions ------------------------------------------------------
 
-
-
+#' Plot an HIV cascade bar chart
+#' 
+#' This function produces a ggplot of a HIV cascade bar chart for reporting 
+#' and publication purposes. 
+#' 
+#' @details The idea of this function is to be able to produce a quick plot
+#' from an inputed HIV cascade data frame with the ability to add various
+#' options. It has been designed to replicate previously published and 
+#' reported cascade figures. This function requires the PlotOptions 
+#' function to be sourced. 
+#' 
+#' @param cascade Dataframe containing HIV cascade estimates. The dataframe
+#'  must have column names year, stage, value, lower and upper. 
+#' @param year Integer specifying the specific year of cascade estimates to 
+#' be plotted. Optional and NULL by default. If NULL the latest year 
+#' estimates will be plotted.  
+#' @param ymax Numeric specifying the maximum value for the x-axis limits. 
+#' Optional and NULL by default. If NUll the default range producedby 
+#' ggplot will be used. If a value is entered then the y-axis breaks will 
+#' be given by seq(0, ymax, by = ymax/4). 
+#' @param retained Logcal specifiying whether the retianed step will be 
+#' included in tghe plot. Optional and default is FALSE.
+#' @param plotcolours Vector of color strings for plots. Number of colors 
+#' must equal the number of steps in the cascade. Optional and NULL by 
+#' default. If NUll the cascade will be plotted in grey. 
+#' @param steplabels A vector of strings specifying the labels describing 
+#' each step of the cascade. The number of strings must equal the number of
+#' steps. Optional and NULL by default. If NUll the labels will just be the 
+#' stage names in the cascade dataframe. 
+#' @param ranges Logical specifiying if error bars for the estimated range 
+#' are plotted. Optinal and TRUE by default. 
+#' @param percentages Logical specifying if the percentage for the value of
+#' each step relative to the first step is displayed on the plot. Optinal 
+#' and FALSE by default. If TRUE the percentage will be plotted at a height
+#' specified by pheight.
+#' @param pheight A numeric specifying where the percentage values will be
+#' displayed. Optional and NULL by default. If NUll then percentages will
+#' be displayed at a height of y = 0.05 * max(cascade$value). 
+#' @param targetlines A string specifying whether horizontal lines 
+#' for UNAIDS cascade targets are plotted and at what height. Must be one
+#' of "none" (no lines plotted), "90" (lines at 90%), or "95" (lines at 
+#' 95%). Optinal and set to "none" by default. #' 
+#' @param targetlables Logical specifying if labels for the associated 
+#' targets are displayed next to the target lines. The targetlines 
+#' variable must be set to "90" or "95". Optional and FALSE by deafult. If
+#' TRUE the plot is adjusted to accommodate the targets and requires the
+#' grid and ggplotify packages. 
+#' 
+#' @return A ggplot of the resulting HIV cascade
+#' 
+#' @author Richard T. Gray, \email{Rgray@kirby.unsw.edu.au}
+#' 
+#' @import tidyverse, scales
+#' 
 PlotCascade <- function(cascade, year = NULL, ymax = NULL, 
   retained = FALSE, plotcolours = NULL, steplabels = NULL, ranges = TRUE, 
   percentages = FALSE, pheight = NULL, targetlines = c("none", "90", "95"), 
@@ -393,9 +445,8 @@ PlotPldhivProjection <- function(pldhiv, startyear, endyear,
 #' @param plotcolors Vector of color strings for plots. Number of colors 
 #' must equal the number of age bins. Optional and NULL by default. 
 #' @param grayscale Logical sepcifying if grayscale should be used in the 
-#' plots.
-#' Overwrites the plotcolors argument if TRUE. Optional and set to FALSE by
-#' default
+#' plots. Overwrites the plotcolors argument if TRUE. Optional and set to FALSE by
+#' default.
 #' @param agenames Vector of strings specifying the legend values. Number 
 #' of labels must equal the number of age bins. Optional and NULL by 
 #' default.
