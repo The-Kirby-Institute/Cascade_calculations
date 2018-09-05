@@ -144,7 +144,7 @@ MergeAgeCascade <- function(pldhivage, agebins, agenames) {
 #' @param year Integer specifying the specific year of cascade estimates to 
 #' be plotted. Optional and NULL by default. If NULL the latest year 
 #' estimates will be plotted.  
-#' @param ymax Numeric specifying the maximum value for the x-axis limits. 
+#' @param ymax Numeric specifying the maximum value for the y-axis limits. 
 #' Optional and NULL by default. If NUll the default range producedby 
 #' ggplot will be used. If a value is entered then the y-axis breaks will 
 #' be given by seq(0, ymax, by = ymax/4). 
@@ -158,7 +158,7 @@ MergeAgeCascade <- function(pldhivage, agebins, agenames) {
 #' steps. Optional and NULL by default. If NUll the labels will just be the 
 #' stage names in the cascade dataframe. 
 #' @param ranges Logical specifiying if error bars for the estimated range 
-#' are plotted. Optinal and TRUE by default. 
+#' are plotted. Optional and TRUE by default. 
 #' @param percentages Logical specifying if the percentage for the value of
 #' each step relative to the first step is displayed on the plot. Optinal 
 #' and FALSE by default. If TRUE the percentage will be plotted at a height
@@ -218,8 +218,8 @@ PlotCascade <- function(cascade, year = NULL, ymax = NULL,
      steplabels <- steps
   }
   
+  targetlines <- match.arg(targetlines)
   if (targetlines[1] != "none") {
-    targetlines <- match.arg(targetlines)
     targetValue <- as.numeric(targetlines) / 100
   } 
   
@@ -240,7 +240,6 @@ PlotCascade <- function(cascade, year = NULL, ymax = NULL,
   # Basic plot
   plotBar <- ggplot(data = estimates, aes(x = stage, y = value)) + 
     scale_x_discrete(limits = steps, labels = steplabels) + 
-
     ylab("Number of people") + xlab("") +  
     PlotOptions() + theme_classic() + 
     theme(
@@ -350,6 +349,194 @@ PlotCascade <- function(cascade, year = NULL, ymax = NULL,
   # Return final bar chart
   return(plotBar)
 }
+
+#' Plot trends in cascade estimates
+#' 
+#' This function produces a stack plot showing the HIV cascade estimates 
+#' over time. 
+#' 
+#' @details The idea of this function is to produce a stacked area plot 
+#' showing the change in each cascade step over time from an inputed HIV 
+#' cascade data frame. This plot only shows the best estimates. This 
+#' function requires the PlotOptions function to be sourced. Note this plot 
+#' does not include retained in care. 
+#' 
+#' @param cascade Dataframe containing HIV cascade estimates for multiple 
+#' years. The dataframe must have column names year, stage, value and have 
+#' more than one year of estimates for each stage. 
+#' @param years Interger of vector specifying the start and end years for 
+#' plotting. If a single year is entered this represents the start year 
+#' with the end year being the latest year. Otherwise a two element vector 
+#' can be entered to provide start and end years; e.g. c(208, 2017).
+#' Optional and NULL by default. If NULL the start = 10 years prior 
+#' to latest year and end = latest year.  
+#' @param percentage Logcal specifiying whether the plot will show the 
+#' number in each step or the percentage of all PLHIV. Optional and default 
+#' is FALSE.
+#' @param ymax Numeric specifying the maximum value for the y-axis limits. 
+#' Optional and NULL by default. Not used if percentage = TRUE. If NUll the 
+#' default range produced by ggplot will be used. If a value is entered 
+#' then the y-axis breaks will be given by seq(0, ymax, by = ymax/4). 
+#' @param xvalues 
+#' @param plotcolours Vector of color strings for plots. Number of colors 
+#' must equal the number of steps in the cascade. Optional and NULL by 
+#' default. If NUll the cascade will be plotted in grey scale. 
+#' @param steplabels A vector of strings specifying the legend labels 
+#' describing area of the cascade plotted. The number of strings must equal 
+#' the number of steps. Optional and NULL by default. If NUll the legend 
+#' labels will just take the following values c(Undiagnosed", 
+#' "Diagnosed untreated", "On ART:  VL > 400 last test", 
+#' "On ART: VL < 400 last test").
+#'  
+#' @return A ggplot of the resulting HIV cascade trends
+#' 
+#' @author Richard T. Gray, \email{Rgray@kirby.unsw.edu.au}
+#' 
+#' @import tidyverse, scales
+
+PlotCascadeStack <- function(cascade, years = NULL, percentage = FALSE,
+  ymax = NULL, xvalues = NULL, plotcolours = NULL, steplabels = NULL) {
+  
+  # Argument checking and setup defaults if not specified
+  if (is.null(years)) {
+    resultsYear <- max(cascade$year)  # default to latest year 
+    startYear <- resultsYear - 10 + 1  # default to 10 year trends
+  } else if (length(years) == 1) {
+    resultsYear <- max(cascade$year)
+    startYear <- years
+  } else {
+    resultsYear <- years[1]
+    startYear <- years[2]
+  }
+  
+  if (is.null(ymax)) {
+    ymax <- NA
+  } else {
+    yBreaks <- seq(0, ymax, by = ymax/4)
+  }
+ 
+  if (is.null(xvalues)) {
+    xvalues <- seq(startYear, resultsYear, by = 3)
+  }
+
+  if (!is.null(plotcolours) && length(plotcolours) != 4) {
+    stop("Incorrect number of colours specified")  
+  }
+  
+  if (is.null(steplabels)) {
+     steplabels <- c("Undiagnosed", 
+                  "Diagnosed untreated", 
+                  "On ART:  VL > 200 last test", 
+                  "On ART: VL < 200 last test")
+  }
+
+  # Set up data for plotting
+  stackResults <- cascade %>%
+    filter(stage != "retained", year >= startYear, year <= resultsYear) %>%
+    select(year, stage, value) %>%
+    spread(stage, value) %>%
+    mutate(undiagnosed = infected - pldhiv,
+      diagnosed = pldhiv - numART,
+      unsuppressed = numART - suppressed) %>%
+    select(year, undiagnosed, diagnosed, unsuppressed, suppressed) %>%
+    gather("stage", "value", 2:5) %>%
+    mutate(stage = factor(stage, levels = c("undiagnosed", "diagnosed", 
+      "unsuppressed", "suppressed"))) %>%
+    arrange(stage)
+  
+  # Create base for plots
+  stackPlot <- ggplot(data = stackResults, aes(x = year, y = value, 
+    fill = stage)) + xlab("Year") +
+    scale_x_continuous(breaks = xvalues) + 
+    PlotOptions() + 
+    theme(legend.text = element_text(size = 8))
+  
+  # Add colours
+  if (is.null(plotcolours)) {
+    stackPlot <- stackPlot + 
+      scale_fill_grey(name = "", labels = steplabels, 
+      guide = guide_legend(nrow = 2))
+  } else {
+    stackPlot <- stackPlot + 
+      scale_fill_manual(values = plotcolours, name = "", labels = steplabels, 
+      guide = guide_legend(nrow = 2))
+  }
+  
+  # Percentages or number
+  if (percentage) {
+    stackPlot <- stackPlot + 
+      geom_area(stat="identity", position= "fill") + 
+      ylab("Percentage of PLHIV") + 
+      scale_y_continuous(labels = percent) 
+    
+  } else {
+    stackPlot <- stackPlot + 
+      geom_area(stat="identity") + 
+      ylab("Number of PLHIV")
+    
+    if (is.na(ymax)) {
+      stackPlot <- stackPlot +
+        scale_y_continuous(expand = c(0,0), limits = c(0, ymax), 
+          labels = comma)
+    } else {
+      stackPlot <- stackPlot +
+        scale_y_continuous(expand = c(0,0), limits = c(0, ymax), 
+          labels = comma, breaks = yBreaks)
+    }
+  }
+  
+  # Return final stacked chart
+  return(stackPlot)
+  
+}
+
+#' Plot of individual trends in cascade steps
+#' 
+#' This function is used to produce plots of trends in individual steps of 
+#' the cascade. 
+#' 
+#' @details
+#' 
+#' @param cascade Dataframe containing HIV cascade estimates for multiple 
+#' years. The dataframe must have column names year, stage, value, lower and 
+#' upper and have more than one year of estimates for each stage. 
+#' @param step String specify the cascade step to be plotted. Can't be
+#' retained. Deafults to overall number living with HIV
+#' @param years Interger of vector specifying the start and end years for 
+#' plotting. If a single year is entered this represents the start year 
+#' with the end year being the latest year. Otherwise a two element vector 
+#' can be entered to provide start and end years; e.g. c(208, 2017).
+#' Optional and NULL by default. If NULL the start = 10 years prior 
+#' to latest year and end = latest year.  
+#' @param ranges Logical specifiying if error bars for the estimated range 
+#' are plotted. Optional and TRUE by default.
+#' @param ymax Numeric specifying the maximum value for the y-axis limits. 
+#' Optional and NULL by default. Not used if percentage = TRUE. If NUll the 
+#' default range produced by ggplot will be used. If a value is entered 
+#' then the y-axis breaks will be given by seq(0, ymax, by = ymax/4).
+#' @param plotcolour 
+#' @param steplabel 
+#' 
+#' @return A ggplot of the resulting trend in the cascade step. 
+#' 
+#' @author Richard T. Gray, \email{Rgray@kirby.unsw.edu.au}
+#' 
+#' @import tidyverse, scales
+#' 
+PlotStepTrend <- function(cascade, 
+  step = c("infected", "pldhiv", "numART", "suppressed"), years = NULL, 
+  range = TRUE, fit = c("none", "linear", "poisson"), ymax = NULL, 
+  plotcolour = NULL, 
+  steplabel = NULL) {}
+
+#' Plot of PLDHIV indicator
+
+PlotDiagTrend <- function(estimate, lower = NULL, upper = NULL)
+
+
+
+
+
 
 #' Plot number of PLDHIV over time for multiple projections
 #' 
