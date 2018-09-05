@@ -48,14 +48,14 @@ specified project folder and have a cascade file handle.
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2017
-saveResults <- TRUE
+saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
 
 projectOutput <- "ASR_2018" # "." for main output folder 
 
 # cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "SSA-2017"
+cascadeName <- "All-2017"
 targetGender <- "all" # all, male, female (single)
 targetAge <- "all" # all or split
 
@@ -75,7 +75,7 @@ targetAtsi <- "all" # all, indigenous or non_indigenous.
 targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
 # (combination)
 targetLocalRegion <- "all" #tbd (combination)
-targetGlobalRegion <- "Sub-Saharan Africa" # South-East Asia, Sub-Saharan Africa, 
+targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
 # Oceania, South American, Other cob, etc
 # (combination)
 
@@ -124,7 +124,7 @@ ecdcData <- TRUE
 ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
 
 ecdcVersion <- "1.3.0"
-excludeOS <- TRUE
+excludeOS <- FALSE
 excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
 
 ecdcModel <- cascadeName # name
@@ -1115,12 +1115,13 @@ if (projectPldhiv) {
   
   # Manually set final year for projections and projection name
   projectYear <- analysisYear + 10  
-  projectName <- "future_linear"
+  projectName <- "future_sq"
   
   # Specifiy projection option for future diagnoses
-  projectOption <- "linear" #status-quo, linear, reduce 
-  projectDecrease <- 0.65 # 0, 0.65 (35% reduction), 0.5 (50% 
-                          # reduction) relative reduction!
+  projectOption <- "status-quo" #status-quo, linear, reduce 
+  projectDecrease <- 0 # 0, 0.65 (35% reduction), 0.5 (50% 
+                          # reduction), 0.35 (65% reduction) 
+                          # relative reduction!
   
   saveProjResults <- TRUE 
   # Reset if saving things overall
@@ -1234,7 +1235,7 @@ if (projectPldhiv) {
         trendDiags[trendDiags < 0] <- 0
         
         # Store final age trends
-        hivResultsAgeFuture[age, ] <-c(ageDiagnoses, trendDiags)
+        hivResultsAgeFuture[age, ] <- c(ageDiagnoses, trendDiags)
       } 
     } else if(projectOption == "reduce") {
       # Assume same reduction across all age groups
