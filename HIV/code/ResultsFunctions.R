@@ -145,7 +145,7 @@ MergeAgeCascade <- function(pldhivage, agebins, agenames) {
 #' be plotted. Optional and NULL by default. If NULL the latest year 
 #' estimates will be plotted.  
 #' @param ymax Numeric specifying the maximum value for the y-axis limits. 
-#' Optional and NULL by default. If NUll the default range producedby 
+#' Optional and NULL by default. If NUll the default range produced by 
 #' ggplot will be used. If a value is entered then the y-axis breaks will 
 #' be given by seq(0, ymax, by = ymax/4). 
 #' @param retained Logcal specifiying whether the retianed step will be 
@@ -364,7 +364,7 @@ PlotCascade <- function(cascade, year = NULL, ymax = NULL,
 #' @param cascade Dataframe containing HIV cascade estimates for multiple 
 #' years. The dataframe must have column names year, stage, value and have 
 #' more than one year of estimates for each stage. 
-#' @param years Interger of vector specifying the start and end years for 
+#' @param years Vector of intergers specifying the start and end years for 
 #' plotting. If a single year is entered this represents the start year 
 #' with the end year being the latest year. Otherwise a two element vector 
 #' can be entered to provide start and end years; e.g. c(208, 2017).
@@ -432,7 +432,7 @@ PlotCascadeStack <- function(cascade, years = NULL, percentage = FALSE,
 
   # Set up data for plotting
   stackResults <- cascade %>%
-    filter(stage != "retained", year >= startYear, year <= resultsYear) %>%
+    filter(stage != "retained") %>%
     select(year, stage, value) %>%
     spread(stage, value) %>%
     mutate(undiagnosed = infected - pldhiv,
@@ -447,7 +447,8 @@ PlotCascadeStack <- function(cascade, years = NULL, percentage = FALSE,
   # Create base for plots
   stackPlot <- ggplot(data = stackResults, aes(x = year, y = value, 
     fill = stage)) + xlab("Year") +
-    scale_x_continuous(breaks = xvalues) + 
+    scale_x_continuous(breaks = xvalues, 
+      limits = c(startYear, resultsYear)) +
     PlotOptions() + 
     theme(legend.text = element_text(size = 8))
   
@@ -505,24 +506,24 @@ PlotCascadeStack <- function(cascade, years = NULL, percentage = FALSE,
 #' upper and have more than one year of estimates for each stage. 
 #' @param step String specify the cascade step to be plotted. Can't be
 #' retained. Deafults to overall number living with HIV
-#' @param years Interger of vector specifying the start and end years for 
+#' @param years Vector of integers specifying the start and end years for 
 #' plotting. If a single year is entered this represents the start year 
 #' with the end year being the latest year. Otherwise a two element vector 
 #' can be entered to provide start and end years; e.g. c(2008, 2017).
 #' Optional and NULL by default. If NULL the start = 10 years prior 
 #' to latest year and end = latest year.  
-#' @param ranges Logical specifiying if error bars for the estimated range 
-#' are plotted. Optional and TRUE by default.
+#' @param range Logical specifiying if the estimated range is plotted. 
+#' Optional and TRUE by default.
 #' @param fit String specifying if a fit should be added to the plot. 
 #' Must be one of "none" (no fit plotted), "linear" (linear fit), or 
 #' "poisson" (exponential fit). Optional and set to "none" by default.
 #' @param stats Logical specifying whether pseudo-R^2 is calcualted for the 
 #' fit and added to plot. Optional and FALSE by default. Set to FALSE if 
-#' fit = "none". Requires the rsqpackage. 
+#' fit = "none". Requires the rsq package. 
 #' @param ymax Numeric specifying the maximum value for the y-axis limits. 
-#' Optional and NULL by default. Not used if percentage = TRUE. If NUll the 
-#' default range produced by ggplot will be used. If a value is entered 
-#' then the y-axis breaks will be given by seq(0, ymax, by = ymax/4).
+#' Optional and NULL by default. If NUll the default range produced by 
+#' ggplot will be used. If a value is entered then the y-axis breaks will 
+#' be given by seq(0, ymax, by = ymax/4).
 #' @param plotcolour String specify a colour for the plot. Optional and 
 #' NULL by default. If NUll the plot colour will be "grey20". 
 #' @param steplabel A string specify the y-axis label for the plot.
@@ -585,7 +586,7 @@ PlotStepTrend <- function(cascade,
   
   # Set up results we want to plot
   stepData <- cascade %>%
-    filter(stage == step, year >= startYear, year <= resultsYear)
+    filter(stage == step)
   
   # Basic plot
   if (range) {
@@ -598,7 +599,8 @@ PlotStepTrend <- function(cascade,
       geom_line(color = plotcolour)
   } 
   trendPlot <- trendPlot +
-    scale_x_continuous(breaks = xvalues) +
+    scale_x_continuous(breaks = xvalues, 
+      limits = c(startYear, resultsYear)) +
     ylab(steplabel) + xlab("Year") + PlotOptions()
   
   # Sort out y-axis
@@ -642,13 +644,198 @@ PlotStepTrend <- function(cascade,
 
 }
 
-#' Plot of PLDHIV indicator
+#' Plot of PLDHIV indicators
+#' 
+#' This function is used to plot key indictors related to the PLDHIV 
+#' cascade calculations.
+#' 
+#' @details This function produces a trend plot for a specific indictor 
+#' related to the PLDHIV estimates from the HIV cascade calculations. 
+#' This function requires the PlotOptions function to be sourced.  
+#' 
+#' @param pldhiv Dataframe in long format showing estimated number of 
+#' people living with diagnosed HIV each year. Column names
+#' must include year,pldhiv, duplicates, deaths, emigrants, diag_departs,
+#' inter_departs, inter_arrivals.
+#' @param lower Dataframe in the same format as pldhiv prviding the lower
+#' estimates for pldhiv$pldhiv. Optional and NULL by default. If not NULL
+#' then upper must also be not NULL. 
+#' @param upper Dataframe in the same format as pldhiv prviding the upper
+#' estimates for pldhiv$pldhiv. Optional and NULL by default. If not NULL
+#' then upper must also be not NULL. 
+#' @param indicator String specifiying the PLDHIV indicator to plot. Must
+#' be one of "pldhiv", "duplicates" (annual duplicate notifications), 
+#' "cumduplicates", "deaths", "emigrants", "diag_departs" 
+#' (post-diagnosis emigration), "inter_departs" 
+#' (inter-regional departures), "inter_arrivals" (inter-regional arrivals). 
+#' Optional and set to NULL by default (meaning pldhiv will be plotted). 
+#' @param cumulative Logical specifying whether the annual or cumulative
+#' value of the indicator is plotted. Optional and set to TRUE which means
+#' cumulative plots are produced. If indicator = "pldhiv" then set to 
+#' FALSE (as already cumulative).   
+#' @param years Vector of integers specifying the start and end years for 
+#' plotting. If a single year is entered this represents the start year 
+#' with the end year being the latest year. Otherwise a two element vector 
+#' can be entered to provide start and end years; e.g. c(2008, 2017).
+#' Optional and NULL by default. If NULL the start = 10 years prior 
+#' to latest year and end = latest year.  
+#' @param range Logical specifiying if the estimated range is plotted. 
+#' Optional and FALSE by default. Requires the lower and upper variables
+#' to be entered. 
+#' @param ymax Numeric specifying the maximum value for the y-axis limits. 
+#' Optional and NULL by default. If NUll the default range produced by 
+#' ggplot will be used. If a value is entered then the y-axis breaks will 
+#' be given by seq(0, ymax, by = ymax/4).
+#' @param plotcolour String specify a colour for the plot. Optional and 
+#' NULL by default. If NUll the plot colour will be "grey20". 
+#' @param label A string specify the y-axis label for the plot.
+#' Optional and NULL by default. If NUll the label will be obtained from
+#' the yLabels variable defined below.
+#' 
+#' @return A ggplot of the resulting trend in the PLDHIV indicator. 
+#' 
+#' @author Richard T. Gray, \email{Rgray@kirby.unsw.edu.au}
+#' 
+#' @import tidyverse, scales 
+#' 
+PlotPldhivTrend <- function(pldhiv, lower = NULL, upper = NULL,
+  indicator = c("pldhiv", "duplicates", "deaths", "emigrants", 
+    "diag_departs", "inter_departs", "inter_arrivals"),
+  cumulative = TRUE, years = NULL, range = FALSE, ymax = NULL, 
+  plotcolour = NULL, xvalues = NULL, label = NULL) {
+  
+  # Argument checking and setup defaults if not specified
+  if ((is.null(lower) && !is.null(upper)) || 
+      (!is.null(lower) && is.null(upper))) {
+    stop("lower and upper must be both NULL or both not NULL")
+  }
+  
+  if (is.null(lower) && is.null(upper)) {
+    if (range) {
+      warning("Cannot plot range as lower and upper not entered")
+    } 
+    range <- FALSE 
+  }
+  
+  indicator <- match.arg(indicator)
+  if (indicator == "pldhiv") {
+    cumulative <- FALSE 
+  }
+  
+  if (is.null(years)) {
+    resultsYear <- max(pldhiv$year)  # default to latest year 
+    startYear <- resultsYear - 10 + 1  # default to 10 year trends
+  } else if (length(years) == 1) {
+    resultsYear <- max(pldhiv$year)
+    startYear <- years
+  } else {
+    resultsYear <- years[2]
+    startYear <- years[1]
+  }
+  
+  if (is.null(ymax)) {
+    ymax <- NA
+  } else {
+    yBreaks <- seq(0, ymax, by = ymax/4)
+  }
+ 
+  if (is.null(plotcolour)) {
+    plotcolour <- "grey20" # default is gray scale
+  } 
+  
+  if (is.null(xvalues)) {
+    xvalues <- seq(startYear, resultsYear, by = 3)
+  }
+  
+  if (is.null(label)) {
+    # Default labels
+    yLabels <- c("pldhiv" = "Number diagnosed",
+      "duplicates" = "Unique cases",
+      "deaths" = "Number of deaths",
+      "diag_departs" = "Number post-diagnosis departures",
+      "inter_departs" = "Inter-regional departures",
+      "inter_arrivals" = "Inter-regional arrivals")
+    
+    label <- yLabels[indicator]
+    if (!cumulative && indicator != "pldhiv") {
+      label <- paste0(label, " (annual)")  
+    }
+  }
+  
+  # Set up results we want to plot
+  estimates <- pldhiv %>%
+    select_("year", indicator) %>%
+    rename_("value" = indicator)
+  
+  if (cumulative) {
+    estimates <- estimates %>%
+      mutate(value = cumsum(value))
+  }
+  
+  if (range) {
+    estimatesLower <- lower %>%
+    select_("year", indicator) %>%
+    rename_("value" = indicator)
+    
+    estimatesUpper <- upper %>%
+    select_("year", indicator) %>%
+    rename_("value" = indicator)
+    
+    if (cumulative) {
+      estimates$lower <- cumsum(estimatesLower$value)
+      estimates$upper <- cumsum(estimatesUpper$value)
+    } else {
+      estimates$lower <- estimatesLower$value 
+      estimates$upper <- estimatesUpper$value
+    }
+  }
 
-PlotDiagTrend <- function(estimate, lower = NULL, upper = NULL)
-
-
-
-
+  # Basic plot
+  if (range) {
+    indPlot <- ggplot(data = estimates, aes(x = year, y = value)) + 
+      geom_ribbon(aes(ymin = lower, ymax = upper), 
+        fill = plotcolour, alpha = 0.4) +
+      geom_line(color = plotcolour)
+  } else {
+    indPlot <- ggplot(data = estimates, 
+      aes(x = year, y = value)) + 
+      geom_line(color = plotcolour)
+  } 
+  indPlot <- indPlot +
+    scale_x_continuous(breaks = xvalues, 
+      limits = c(startYear, resultsYear)) +
+    ylab(label) + xlab("Year") + 
+    PlotOptions()
+  
+  # Sort out y-axis
+  if (is.na(ymax)) {
+    if (indicator == "duplicates" && cumulative == FALSE) {
+      # As annual duplicates can be negative plot from -ymax to ymax
+      indPlot <- indPlot + 
+        scale_y_continuous(labels = comma)
+    } else {
+      indPlot <- indPlot +
+        scale_y_continuous(expand = c(0,0), limits = c(0, ymax),
+          labels = comma)
+    }
+  } else {
+    if (indicator == "duplicates" && cumulative == FALSE) {
+      # As annual duplicates can be negative plot from -ymax to ymax
+      yBreaks2 <- seq(-ymax, ymax , by = ymax/4)
+      indPlot <- indPlot +
+        scale_y_continuous(limits = c(-ymax, ymax),
+          labels = comma, breaks = yBreaks2)
+    } else {
+      indPlot <- indPlot +
+        scale_y_continuous(expand = c(0,0), limits = c(0, ymax),
+          labels = comma, breaks = yBreaks)
+    }
+  }
+  
+  # Return final plot
+  return(indPlot)
+    
+}
 
 
 #' Plot number of PLDHIV over time for multiple projections
