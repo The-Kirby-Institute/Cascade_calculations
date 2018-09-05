@@ -136,8 +136,8 @@ MergeAgeCascade <- function(pldhivage, agebins, agenames) {
 #' @details The idea of this function is to be able to produce a quick plot
 #' from an inputed HIV cascade data frame with the ability to add various
 #' options. It has been designed to replicate previously published and 
-#' reported cascade figures. This function requires the PlotOptions 
-#' function to be sourced. 
+#' reported cascade figures. This function requires the PlotOptions and 
+#' LoadLibrary functions to be sourced. 
 #' 
 #' @param cascade Dataframe containing HIV cascade estimates. The dataframe
 #'  must have column names year, stage, value, lower and upper. 
@@ -169,7 +169,7 @@ MergeAgeCascade <- function(pldhivage, agebins, agenames) {
 #' @param targetlines A string specifying whether horizontal lines 
 #' for UNAIDS cascade targets are plotted and at what height. Must be one
 #' of "none" (no lines plotted), "90" (lines at 90%), or "95" (lines at 
-#' 95%). Optinal and set to "none" by default. #' 
+#' 95%). Optional and set to "none" by default.
 #' @param targetlables Logical specifying if labels for the associated 
 #' targets are displayed next to the target lines. The targetlines 
 #' variable must be set to "90" or "95". Optional and FALSE by deafult. If
@@ -247,7 +247,7 @@ PlotCascade <- function(cascade, year = NULL, ymax = NULL,
       axis.text.x = element_text(size=9),
       axis.text.y = element_text(size=11))
   
-  # Sort out y-axis labels
+  # Sort out y-axis
   if (is.na(ymax)) {
     plotBar <- plotBar +
       scale_y_continuous(expand = c(0,0), limits = c(0, ymax), 
@@ -405,8 +405,8 @@ PlotCascadeStack <- function(cascade, years = NULL, percentage = FALSE,
     resultsYear <- max(cascade$year)
     startYear <- years
   } else {
-    resultsYear <- years[1]
-    startYear <- years[2]
+    resultsYear <- years[2]
+    startYear <- years[1]
   }
   
   if (is.null(ymax)) {
@@ -474,6 +474,7 @@ PlotCascadeStack <- function(cascade, years = NULL, percentage = FALSE,
       geom_area(stat="identity") + 
       ylab("Number of PLHIV")
     
+    # Sort out y-axis
     if (is.na(ymax)) {
       stackPlot <- stackPlot +
         scale_y_continuous(expand = c(0,0), limits = c(0, ymax), 
@@ -495,7 +496,9 @@ PlotCascadeStack <- function(cascade, years = NULL, percentage = FALSE,
 #' This function is used to produce plots of trends in individual steps of 
 #' the cascade. 
 #' 
-#' @details
+#' @details This function produces a trend plot for a specific step of HIV 
+#' the cascade. This function requires the PlotOptions and LoadLibrary 
+#' functions to be sourced. Note retained in care can not be plotted. 
 #' 
 #' @param cascade Dataframe containing HIV cascade estimates for multiple 
 #' years. The dataframe must have column names year, stage, value, lower and 
@@ -505,29 +508,139 @@ PlotCascadeStack <- function(cascade, years = NULL, percentage = FALSE,
 #' @param years Interger of vector specifying the start and end years for 
 #' plotting. If a single year is entered this represents the start year 
 #' with the end year being the latest year. Otherwise a two element vector 
-#' can be entered to provide start and end years; e.g. c(208, 2017).
+#' can be entered to provide start and end years; e.g. c(2008, 2017).
 #' Optional and NULL by default. If NULL the start = 10 years prior 
 #' to latest year and end = latest year.  
 #' @param ranges Logical specifiying if error bars for the estimated range 
 #' are plotted. Optional and TRUE by default.
+#' @param fit String specifying if a fit should be added to the plot. 
+#' Must be one of "none" (no fit plotted), "linear" (linear fit), or 
+#' "poisson" (exponential fit). Optional and set to "none" by default.
+#' @param stats Logical specifying whether pseudo-R^2 is calcualted for the 
+#' fit and added to plot. Optional and FALSE by default. Set to FALSE if 
+#' fit = "none". Requires the rsqpackage. 
 #' @param ymax Numeric specifying the maximum value for the y-axis limits. 
 #' Optional and NULL by default. Not used if percentage = TRUE. If NUll the 
 #' default range produced by ggplot will be used. If a value is entered 
 #' then the y-axis breaks will be given by seq(0, ymax, by = ymax/4).
-#' @param plotcolour 
-#' @param steplabel 
+#' @param plotcolour String specify a colour for the plot. Optional and 
+#' NULL by default. If NUll the plot colour will be "grey20". 
+#' @param steplabel A string specify the y-axis label for the plot.
+#' Optional and NULL by default. If NUll the label will be obtained from
+#' the yLabels variable defined below.
 #' 
 #' @return A ggplot of the resulting trend in the cascade step. 
 #' 
 #' @author Richard T. Gray, \email{Rgray@kirby.unsw.edu.au}
 #' 
-#' @import tidyverse, scales
+#' @import tidyverse, scales, rsq
 #' 
 PlotStepTrend <- function(cascade, 
   step = c("infected", "pldhiv", "numART", "suppressed"), years = NULL, 
-  range = TRUE, fit = c("none", "linear", "poisson"), ymax = NULL, 
-  plotcolour = NULL, 
-  steplabel = NULL) {}
+  range = TRUE, fit = c("none", "linear", "poisson"), stats = FALSE,
+  ymax = NULL, plotcolour = NULL, xvalues = NULL, steplabel = NULL) {
+  
+  # Argument checking and setup defaults if not specified
+  step <- match.arg(step)
+  
+  if (is.null(years)) {
+    resultsYear <- max(cascade$year)  # default to latest year 
+    startYear <- resultsYear - 10 + 1  # default to 10 year trends
+  } else if (length(years) == 1) {
+    resultsYear <- max(cascade$year)
+    startYear <- years
+  } else {
+    resultsYear <- years[2]
+    startYear <- years[1]
+  }
+  
+  fit <- match.arg(fit)
+  
+  if (fit == "none") {
+   stats <- FALSE 
+  }
+  
+  if (is.null(ymax)) {
+    ymax <- NA
+  } else {
+    yBreaks <- seq(0, ymax, by = ymax/4)
+  }
+ 
+  if (is.null(plotcolour)) {
+    plotcolour <- "grey20" # default is gray scale
+  } 
+  
+  if (is.null(xvalues)) {
+    xvalues <- seq(startYear, resultsYear, by = 3)
+  }
+  
+  if (is.null(steplabel)) {
+    # Default labels
+    yLabels <- c("infected" = "Number of PLHIV",
+      "pldhiv" = "Number diagnosed",
+      "numART" = "Number on ART",
+      "suppressed" = "Number suppressed\n(VL < 200 copies/ml)")
+    steplabel <- yLabels[step]
+  }
+  
+  # Set up results we want to plot
+  stepData <- cascade %>%
+    filter(stage == step, year >= startYear, year <= resultsYear)
+  
+  # Basic plot
+  if (range) {
+    trendPlot <- ggplot(data = stepData, aes(x = year, y = value)) + 
+      geom_ribbon(aes(ymin = lower, ymax = upper), 
+        fill = plotcolour, alpha = 0.4) +
+      geom_line(color = plotcolour)
+  } else {
+    trendPlot <- ggplot(data = stepData, aes(x = year, y = value)) + 
+      geom_line(color = plotcolour)
+  } 
+  trendPlot <- trendPlot +
+    scale_x_continuous(breaks = xvalues) +
+    ylab(steplabel) + xlab("Year") + PlotOptions()
+  
+  # Sort out y-axis
+  if (is.na(ymax)) {
+    trendPlot <- trendPlot +
+      scale_y_continuous(expand = c(0,0), limits = c(0, ymax), 
+        labels = comma)
+  } else {
+    trendPlot <- trendPlot +
+      scale_y_continuous(expand = c(0,0), limits = c(0, ymax), 
+        labels = comma, breaks = yBreaks)
+  }
+  
+  # Add fit 
+  if (fit == "linear") {
+    model <- lm(round(value) ~ year, data = stepData)
+    trendPlot <- trendPlot +
+      geom_line(aes(y = predict(model)),
+        colour = "black")
+  } else if (fit == "poisson") {
+    model <- glm(round(value) ~ year, data = stepData, family = "poisson")
+    trendPlot <- trendPlot +
+      geom_line(aes(y = predict(model, type = "response")),
+        colour = "black")
+  }
+  
+  # Stats
+  if (stats) {
+    LoadLibrary(rsq) # load the rsq package for pseudo-R^2 calculation
+    
+    pseudoR2 <- rsq(model, type = "kl")
+    
+    trendPlot <- trendPlot +
+      geom_text(x = (startYear + resultsYear) / 2, y = 0.05 * max(stepData$value), 
+        label = paste("Pseudo-R^2:",
+        toString(round(pseudoR2, digits = 4))), size = 3)  
+  }
+  
+  # Return final plot
+  return(trendPlot)
+
+}
 
 #' Plot of PLDHIV indicator
 
