@@ -227,27 +227,40 @@ fitFunc<- function(x, a, b, c, d) {
   return((b-a) / (1 + exp(-d * (x - c))) + a)
 }
 
-# Do the fitting - Note: nls seems to have lots of problems fitting to
-# the full four parameter logistic function but works if we force one of 
-# of the parameters to a specific value. Here we set the inflection point.
+# Do the fitting 
 if (analysisYear == 2014) {
+  # Note for 2014 data: nls seems to have lots of problems fitting to
+  # the full four parameter logistic function but works if we force one of 
+  # of the parameters to a specific value. Here we set the inflection point.
   # For 2014 data it appears to be insensitive to a value greater than 2015. 
   inflectionYear <- 2020
+  fitLog <- nls(ydata ~ fitFunc(xdata, a, b, inflectionYear, d),
+  start = list(a = 5000, b = 30000, d = 0.1),
+  weights = weights)
+  
+  # Note: best fit from Matlab for comparison for AnalysisYear = 2014. 
+  # a = 5270, b = 30200, c = 2014.7 d = 0.207) 
+  
 } else if (analysisYear == 2017) {
-  # For 2017 data the fit is sensitive to the inflection point. The best 
-  # fit looks to occur at 2013. 
-  inflectionYear <- 2013
-} else {
-  inflectionYear <- 2015
-  warning("inflectionYear needs to be tested for Fit")
-}
-
-fitLog <- nls(ydata ~ fitFunc(xdata, a, b, inflectionYear, d),
+  # For 2017 data a four paramater fit can be done but confident 
+  # intervals are problematic and messes up code below
+  # Do a 4 parameter fit first and then fix inflectionYear value and
+  # refit
+  fitLog4 <- nls(ydata ~ fitFunc(xdata, a, b, c, d),
+    start = list(a = 5000, b = 30000, c = 2015, d = 0.1),
+    weights = weights)
+  
+  inflectionYear <- coef(fitLog4)["c"]
+  fitLog <- nls(ydata ~ fitFunc(xdata, a, b, inflectionYear, d),
   start = list(a = 5000, b = 30000, d = 0.1),
   weights = weights)
 
-# Note: best fit from Matlab for comparison for AnalysisYear = 2014. 
-# a = 5270, b = 30200, c = 2014.7 d = 0.207) 
+} else {
+  fitLog <- nls(ydata ~ fitFunc(xdata, a, b, c, d),
+    start = list(a = 5000, b = 30000, c = 2015, d = 0.1),
+    weights = weights)
+  warning("fitLog needs to beasssessed for Fit")
+}
 
 # Compare to an exponential
 fitFuncExp <- function(x, a, b, c) {
@@ -313,7 +326,7 @@ artEstimates$fitmax <- apply(simMatrix, 2, max)
 finalIndex <- nrow(artEstimates)
 # indexFit <- nrow(filter(artEstimates, year %in% c(2010:2012)))
 
-# Replace 2010:2012 values with fitted values as these were projected 
+# Replace 2011:2012 values with fitted values as these were projected 
 # anyway and are not direct estimates
 artEstimates$alladjust <- artEstimates$all
 artEstimates[artEstimates$year %in% c(2011:2012), ]$alladjust <- 
