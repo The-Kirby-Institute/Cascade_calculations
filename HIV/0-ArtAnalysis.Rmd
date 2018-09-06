@@ -233,17 +233,20 @@ fitFunc<- function(x, a, b, c, d) {
 if (analysisYear == 2014) {
   # For 2014 data it appears to be insensitive to a value greater than 2015. 
   inflectionYear <- 2020
-} else {
+} else if (analysisYear == 2017) {
   # For 2017 data the fit is sensitive to the inflection point. The best 
   # fit looks to occur at 2013. 
   inflectionYear <- 2013
+} else {
+  inflectionYear <- 2015
+  warning("inflectionYear needs to be tested for Fit")
 }
 
 fitLog <- nls(ydata ~ fitFunc(xdata, a, b, inflectionYear, d),
   start = list(a = 5000, b = 30000, d = 0.1),
   weights = weights)
 
-# Note: best fit from Matlab for comparison. 
+# Note: best fit from Matlab for comparison for AnalysisYear = 2014. 
 # a = 5270, b = 30200, c = 2014.7 d = 0.207) 
 
 # Compare to an exponential

@@ -837,7 +837,6 @@ PlotPldhivTrend <- function(pldhiv, lower = NULL, upper = NULL,
     
 }
 
-
 #' Plot number of PLDHIV over time for multiple projections
 #' 
 #' This function produces a plot of the number of people living with 

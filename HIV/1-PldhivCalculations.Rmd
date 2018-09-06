@@ -48,13 +48,13 @@ specified project folder and have a cascade file handle.
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2017
-saveResults <- FALSE
+saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
 projectOutput <- "ASR_2018" # "." for main output folder 
-
-# cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
+                            # "HIV_Cascade_Paper" for paper
+                            
 cascadeName <- "All-2017"
 targetGender <- "all" # all, male, female (single)
 targetAge <- "all" # all or split

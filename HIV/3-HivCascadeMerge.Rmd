@@ -23,7 +23,7 @@ LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
 analysisYear <- 2017
-projectName <- "ASR_2018"
+projectName <- "ASR_2018" #HIV_Cascade_Paper
 cascadeNames <- "All" # specify cascades with project (without year)
 artNames <- NULL
 
@@ -42,8 +42,17 @@ if (is.null(artNames)) {
 
 mergeAll <- TRUE
 saveResults <- TRUE
-artString <- "NAPWHA" # "ATRAS", "PBS" - use NAPWHA for ASR_2017 and ATRAS
-                      # for Paper_2016
+
+# Set ART string - "ATRAS", "NAPWAH", or  "PBS"
+# Use NAPWHA for ASR and ATRAS for HIV_Cascade_Paper
+if (projectName %in% c("ASR_2016", "ASR_2017", "ASR_2018")) {
+  artString <- "NAPWHA" 
+} else if (projectName == "HIV_Cascade_Paper") {
+  artString <- "ATRAS"
+} else {
+  artString <- "NAPWHA"
+  warning("Non-standard project make sure artString is set correctly")
+}
 
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
