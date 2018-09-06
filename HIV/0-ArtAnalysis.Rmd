@@ -53,7 +53,7 @@ source(file.path(Rcode, "TidyLongitudinal.R"), echo=TRUE)
 source(file.path(Rcode, "AgeCat.R"), echo=TRUE)
 
 # Script parameters
-analysisYear <- 2014
+analysisYear <- 2017
 saveResults <- TRUE
 
 # Captions setup
@@ -129,7 +129,7 @@ tempPbs$year <- unlist(lapply(tempPbs$year, function(x)
   as.numeric(strsplit(as.vector(x), 'X')[[1]][2])))
 
 # Add the PBS data to artEstimates
-artEstimates <- left_join(artEstimates, tempPbs, by = "year")
+artEstimates <- full_join(artEstimates, tempPbs, by = "year")
 
 # Add upper and lower bounds for the PBS data
 popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
@@ -137,7 +137,7 @@ popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
 source(file.path(HIVcode, "pharmDashError.R"), echo=TRUE)
 
 # Loop through years appending lower and upper pbs estimates
-prospectionYears <- c(2013, 2014)
+prospectionYears <- 2013:analysisYear #c(2013, 2014)
 
 for (nyear in prospectionYears) {
   
@@ -166,11 +166,11 @@ artEstimates$pbsupper[artEstimates$year %in% prospectionYears] <-
 # Add some variables for specific data
 artEstimates$ahodraw <- NA
 artEstimates$all <- NA
-artEstimates$ahodraw[1:10] <- artEstimates$ahod[1:10]
+artEstimates$ahodraw[1:11] <- artEstimates$ahod[1:11] # trust AHOD up to 2010
 artEstimates$all[1:13] <- artEstimates$ahod[1:13]
-artEstimates$all[14:15] <- artEstimates$pbs[14:15]
+artEstimates$all[14:nrow(artEstimates)] <- 
+  artEstimates$pbs[14:nrow(artEstimates)]
 ```
-
 
 ## Fitting 
 
@@ -184,7 +184,9 @@ ydata <- artEstimates$all
 xdata <- artEstimates$year
 
 # Set weights to reflect PBS data is likely to be more accurate
-weights <- c(rep(0.66, 10), rep(0.33, 3), 1, 1)
+# With first 11 AHOD estimates accurate, the next two (2011-2012) AHOD 
+# estimates inaccurate.  
+weights <- c(rep(0.66, 11), rep(0.33, 2), rep(1, length(prospectionYears)))
 
 # Weighted logistic regression -------------------------------------------
 
@@ -227,9 +229,15 @@ fitFunc<- function(x, a, b, c, d) {
 
 # Do the fitting - Note: nls seems to have lots of problems fitting to
 # the full four parameter logistic function but works if we force one of 
-# of the parameters to a specific value. Here we set the inflection point,
-# it appears to be insensitive to a value greater than 2015. 
-inflectionYear <- 2020
+# of the parameters to a specific value. Here we set the inflection point.
+if (analysisYear == 2014) {
+  # For 2014 data it appears to be insensitive to a value greater than 2015. 
+  inflectionYear <- 2020
+} else {
+  # For 2017 data the fit is sensitive to the inflection point. The best 
+  # fit looks to occur at 2013. 
+  inflectionYear <- 2013
+}
 
 fitLog <- nls(ydata ~ fitFunc(xdata, a, b, inflectionYear, d),
   start = list(a = 5000, b = 30000, d = 0.1),
@@ -305,8 +313,8 @@ finalIndex <- nrow(artEstimates)
 # Replace 2010:2012 values with fitted values as these were projected 
 # anyway and are not direct estimates
 artEstimates$alladjust <- artEstimates$all
-artEstimates[artEstimates$year %in% c(2010:2012), ]$alladjust <- 
-  artEstimates[artEstimates$year %in% c(2010:2012), ]$fitlog 
+artEstimates[artEstimates$year %in% c(2011:2012), ]$alladjust <- 
+  artEstimates[artEstimates$year %in% c(2011:2012), ]$fitlog 
 
 # Relative ART numbers
 artEstimates$rel <- artEstimates$alladjust / 
@@ -464,14 +472,13 @@ if (saveResults) {
   
   # Save plots
   ggsave(file.path(figFolder, paste0("Regression_Comparision-", 
-    trString, ".png")), 
-    plot = regressionPlot,
+    toString(analysisYear), "-", trString, ".png")), plot = regressionPlot,
     width = plotWidth, height = plotHeight, units = plotUnits)
-  ggsave(file.path(figFolder, paste0("Fit_Comparison-", trString, ".png")), 
-    plot = fitPlot, 
+  ggsave(file.path(figFolder, paste0("Fit_Comparison-", 
+    toString(analysisYear), "-", trString, ".png")), plot = fitPlot, 
     width = plotWidth, height = plotHeight, units = plotUnits)
-  ggsave(file.path(figFolder, paste0("Logistic_Fit-", trString, ".png")), 
-    plot = logPlot,
+  ggsave(file.path(figFolder, paste0("Logistic_Fit-", 
+    toString(analysisYear), "-", trString, ".png")), plot = logPlot,
     width = plotWidth, height = plotHeight, units = plotUnits)
   
   # File directory and file name
