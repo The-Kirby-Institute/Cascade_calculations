@@ -70,12 +70,12 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters ------------------------------------------------------
 resultsYear <- 2017  # year of cascade we will plot
-minYear <- 13        # how long ago do we plot things
+minYear <- 14        # how long ago do we plot things (from 2004)
 startYear <- resultsYear - minYear + 1 
 
 # Set up project - If ASR_2017 plot all populations otherwise just plot 
 # specified cascade
-projectName <- "ASR_2018" # "Paper_2016"
+projectName <- "ASR_2018" # "ASR_2018" "HIV_Cascade_Paper"
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadePop <- "all"
 
@@ -171,9 +171,8 @@ if (pubPlots) {
     paste0("HIVinterstateEstimates-", toString(resultsYear), ".csv")))
   
   # Now get the death rates, migration rates, and proportion stay rates
-  subsetRates <- GetAdjustments(hivBase, hivAdjustments, hivInterstate, 
-    "all", "all", "all", "all", "all", "all",
-    "all", "all")
+  subsetRates <- GetAdjustments(hivBase, hivAdjustments, "all", "all", 
+    "all", "all", "all", "all", "all", "all")
   
   hivResults$propunique <- subsetRates$cumunique
   hivResults$deathrate <- subsetRates$deathrate
@@ -704,7 +703,8 @@ if (newInfectsPlots) {
 ```
 
 ```{r linkageplots}
-# Create  a series of plot related to linkag to care for publication
+# Create  a series of plot related to linkage to care for publication
+
 if (asrCascades && pubPlots) {
   
   # Proportion linked -----------------------------------------------------
