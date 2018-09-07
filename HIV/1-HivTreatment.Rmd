@@ -36,6 +36,13 @@ atrasTRest <- TRUE # Use ATRAS estimates, FALSE = NAPWHA estimates
                    # See 0-ArtAnalysis.Rmd for details
                    # FALSE for ASR and TRUE for paper
                    
+# ART Estimates analysis year 2014 or 2017
+if (analysisYear < 2017) {
+  fitYear <- 2017   
+} else {  
+  fitYear <- 2017    
+}
+
 usePercent <- TRUE # To add temporary residents for subpopulations
 
 ```
@@ -65,8 +72,8 @@ if (addTempRes) {
   trString <- "PBS"
 }
 
-artEstimates <- read.csv(file.path(outputFolder, paste0("ART_Estimates-2014-",
-  trString, ".csv")))
+artEstimates <- read.csv(file.path(outputFolder, 
+  paste0("ART_Estimates-", toString(fitYear), "-", trString, ".csv")))
 
 # Reload Prospection PBS data to get gender and state estimates
 prospectionData <- read.csv(file.path(dataFolder,
@@ -133,19 +140,22 @@ populations <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act",
 # Estimate state values for 2000-2012 using artEstimate trends (up to 
 # 2014)
 for (pop in populations) {
+  
+  # index positions
+  index2013 <- nrow(filter(artEstimates, year <= 2013))
+  indexFinal <- index2013 + 1
+  
+  
   # Extract final year data 
   treatFinal <- filter(hivTreated, population == pop,
                        year %in% c(2013:2014))
-  
-  # index positions
-  indexFinal <- nrow(artEstimates)
-  index2013 <- nrow(filter(artEstimates, year <= 2013))
-  
+
   # Calculate estimates and ranges
-  tempFit <- treatFinal$value[nrow(treatFinal)] * artEstimates$trend
+  tempFit <- treatFinal$value[nrow(treatFinal)] * 
+    artEstimates$trend[1:indexFinal]
   tempFit[index2013:indexFinal] <- treatFinal$value
-  tempLwr <- tempFit * artEstimates$trendlwr
-  tempUpr <- tempFit * artEstimates$trendupr
+  tempLwr <- tempFit * artEstimates$trendlwr[1:indexFinal]
+  tempUpr <- tempFit * artEstimates$trendupr[1:indexFinal]
   
   # Create a data frame 
   tempDf <- data_frame(population = pop, year = 2000:2014,
