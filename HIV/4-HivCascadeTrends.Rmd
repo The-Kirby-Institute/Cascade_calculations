@@ -32,6 +32,10 @@ notificationsFolder <- file.path(dirname(dirname(basePath)), "data", "HIV")
 dataFolder <- file.path(basePath, "data")
 resultsFolder <- file.path(basePath, "output")
 
+# Notifications folder is a private secure folder 
+notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data", 
+  "National HIV Registry", "2017", "National", "Hamish & Richard")
+
 # Set working directory to current directory
 #setwd(basePath)
 
@@ -50,15 +54,15 @@ LoadLibrary(stringr)
 source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
 
 # Script parameters
-resultsYear <- 2016  # year of cascade we will plot
-minYear <- 13        # how long ago do we plot things
+resultsYear <- 2017  # year of cascade we will plot
+minYear <- 14        # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE
 
 # Set up project and cascade to analyse
-projectName <- "Paper_2016"  
+projectName <- "HIV_Cascade_Paper"  
 resultsFolder <- file.path(resultsFolder, projectName)
-cascadeName <- "All-2016"
+cascadeName <- "All-2017" #"ASR-2016"
 cascadePop <- "all"
 
 # Plot specs
@@ -104,8 +108,9 @@ resultsAll <- filter(hivCascade,
 
 # Load cleaned notifications data and tidy up for diagnoses 
 # trend calculations
-origHivData <- read.csv(file.path(notificationsFolder,
-  paste0("hivnotifications_clean-", toString(resultsYear), ".csv"))) 
+origHivData <- read.csv(file.path(notificationsFolder, 
+  paste0("cascadeHIVnotifications-clean-", toString(resultsYear), 
+    ".csv")))  
 countryCodes <- read.csv(file.path(dataFolder, 
   "countryRegionCodes.csv"))
 hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes)
@@ -399,7 +404,7 @@ supProp <- filter(trendData, stage == "suppressed")$value /
 overallProp <- filter(trendData, stage == "suppressed")$value / 
   filter(trendData, stage == "infected")$value
 
-year <- 2004:2016
+year <- 2004:resultsYear
 
 # Add to trend data and save
 trendData <- bind_rows(trendData, data_frame(year = year,
@@ -810,8 +815,10 @@ curve.
 
 ```{r Segmented trends}
 # This chuck is used to explore the trend in diagnosed not on ART which 
-# seems to have a change point. We use the segmented package and with 
-# Poisson models 
+# seems to have a change point. Howvere, we try to find a change point for 
+# each stage. We use the segmented package and with Poisson models. Note
+# if one change point is not found using the segmented package then the 
+# poisson model is plotted instead (suggests it is a better model). 
 
 LoadLibrary(segmented)
 
@@ -823,7 +830,13 @@ segCI <- function(est, stdErr) {
 
 # Initial break point estimates - use trial and error based on 
 # breakpoints() results and to test for sensitivity. 
-breakPoints <- 2010
+# Varying the initial guess of the breakpoint from 2007 to 2013 seems to 
+# produce no change in the fitted curve. 
+# 
+# Unsuppressed doesn't appear to have a single chnage point. 
+breakPoints <- c("undiagnosed" = 2010,
+  "noART" = 2010, 
+  "unsuppressed" = 2010)
 
 # Estimates for plots for each stage---------------------------------------
 segPlots <- list()
@@ -843,18 +856,24 @@ for (ii in segmentStages) {
     pmodel <- glm(round(value) ~ year, data = tempData, 
       family = "poisson")
     
-    # Now run segmented to produce a segmented Poisson model. Varying the
-    # initial guess of the breakpoint from 2007 to 2013 seems to produce 
-    # no change in the fitted curve. 
-    segModel <- segmented(pmodel, seg.Z = ~year, 
-      psi = list(year = breakPoints))
-    segModels[[ii]] <<- segModel
+    # Now run segmented to produce a segmented Poisson model. Use try in
+    # case single change point is not found (which occurs for unsuppressed). 
+    plotModel <- TRUE
+    segModel <- try(segmented(pmodel, seg.Z = ~year, 
+      psi = list(year = breakPoints[[ii]])))
     
+    if ("try-error" %in% class(segModel)) {
+      segModel <- trendModels[[ii]]
+      plotModel <- FALSE
+    } 
+    
+    segModels[[ii]] <<- segModel
+  
     # Plot on top of trend plot
     segModelData <- data.frame(year = tempData$year, 
       segvalue = fitted(segModel))
     
-    segPlots[[ii]] <<- ggplot(data = tempData, 
+    segPlot <- ggplot(data = tempData, 
       aes(x = year, y = value)) + 
       geom_line(aes(color = "estimates")) + 
       geom_point(color = asrcols[2]) +
@@ -871,24 +890,29 @@ for (ii in segmentStages) {
           "Segmented model")) +
       coord_cartesian(ylim = c(0, ymax[ii])) + 
       ylab(yLabels[ii]) + xlab("Year") +  
-      PlotOptions() +
-      geom_vline(xintercept = segModel$psi[2], linetype = "dashed",
-        colour = "blue") + 
-      geom_errorbarh(aes(y = 0.975 * ymax[ii],
-        xmin = segCI(segModel$psi[2],
-          segModel$psi[3])[1],
-        xmax = segCI(segModel$psi[2],
-          segModel$psi[3])[2]),
-        colour = "blue",
-        height = 0.025 * ymax[ii])+
+      PlotOptions() + 
       geom_text(x = 2010, y = 0.2 * ymax[ii], 
         label = paste("Overall pseudo-R^2:",
           toString(round(filter(trendCascade, stage == ii)$pseudoR2, 
-            digits = 4))), size = 3) + 
+            digits = 4))), size = 3) +
       geom_text(x = 2010, y = 0.1 * ymax[ii], 
         label = paste("Segmented pseudo-R^2:",
           toString(round(rsq(segModel, type = "kl"), digits = 4))), 
-        size = 3)
+        size = 3) 
+    if (plotModel) {
+      segPlot <- segPlot +
+        geom_vline(xintercept = segModel$psi[2], linetype = "dashed",
+          colour = "blue") + 
+        geom_errorbarh(aes(y = 0.975 * ymax[ii],
+          xmin = segCI(segModel$psi[2],
+            segModel$psi[3])[1],
+          xmax = segCI(segModel$psi[2],
+            segModel$psi[3])[2]),
+          colour = "blue",
+          height = 0.025 * ymax[ii]) 
+    }
+    
+    segPlots[[ii]] <<- segPlot
     
     if (savePlots) {
       # Save the current plot
@@ -989,7 +1013,7 @@ segDiagsPlot <- ggplot(data = diagsData,
       "Segmented model")) +
   coord_cartesian(xlim = c(2004, 2016), ylim = c(0, diagsmax)) + 
   ylab("Annual notifications") + xlab("Year") +  
-  plotOpts +
+  PlotOptions() +
   geom_vline(xintercept = segDiags$psi[2], linetype = "dashed",
     colour = "blue") + 
   geom_errorbarh(aes(y = 0.975 * diagsmax,
@@ -1281,8 +1305,10 @@ if (addTempRes) {
   trString <- "PBS"
 }
 
+
+
 artEstimates <- read.csv(file.path(resultsFolder,"..",
-  paste0("ART_Estimates-2014-",
+  paste0("ART_Estimates-2017-",
   trString, ".csv")))
 
 # First test - replace 2011 ART value with raw 2011 value
@@ -1318,7 +1344,7 @@ for (ii in 1:3) {
   # Need to use local to prevent scope issues with predicted values
   local({
     ii <- ii
-    artTrial <- data.frame(value = artDiffs[[ii]], year = 2004:2016)
+    artTrial <- data.frame(value = artDiffs[[ii]], year = 2004:resultsYear)
     
     # Regenerate original model in case of scope issues
     artmodel <- glm(round(value) ~ year, data = artTrial, 
@@ -1349,7 +1375,7 @@ for (ii in 1:3) {
         limits = c("estimates", "overall", "segment"),
         labels = c("Estimates", "Overall model",
           "Segmented model")) +
-      coord_cartesian(xlim = c(2004, 2016), ylim = c(0, plotMax)) + 
+      coord_cartesian(xlim = c(2004, resultsYear), ylim = c(0, plotMax)) + 
       ylab("Number diagnosed\nnot on ART") + xlab("Year") +  
       PlotOptions() + theme(legend.position = "bottom") + 
       geom_vline(xintercept = segModeltest$psi[2], linetype = "dashed",
