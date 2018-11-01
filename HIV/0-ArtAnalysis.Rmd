@@ -1,5 +1,5 @@
 ---
-title: "Merging and Analysis of Australian ART data"
+title: "Merging and Analysis of Australian ART Data"
 author: "Richard T. Gray"
 date: '`r format(Sys.Date(), format="%d %B %Y")`'
 output: 
@@ -8,7 +8,7 @@ output:
 ---
 
 This script explores the number of people taking antiretroviral terapy 
-(ART) in Australia over 2000-2014. It estimates the number taking ART 
+(ART) in Australia over 2000-2017. It estimates the number taking ART 
 during each year by merging and fitting to two data sources. 
 
 1. Australian HIV Observational Database (AHOD) which provides estimates 
@@ -304,7 +304,7 @@ for (ii in 1:nsamples) {
   
 }
 
-# Filter samples which go outside the PBS error bounds for 2013 
+# Filter samples which go outside the PBS error bounds for 2017 
 goodRows <- apply(simMatrix, 1, 
   function(x) any(x[length(xdata)] <
       artEstimates$pbsupper[length(xdata)]
@@ -460,8 +460,12 @@ plotHeight <- 7
 plotUnits <- "cm"
 
 # Create a combined figure
-fitsFigure <- plot_grid(regressionPlot, fitPlot, logPlot,
-  labels = c("A", "B", "C"), ncol = 1, nrow = 3)
+fitsFigure <- ggdraw() +
+    draw_plot(regressionPlot, 0, 0.5, 0.5, 0.5) +
+    draw_plot(fitPlot, 0.5, 0.5, 0.5, 0.5) +
+    draw_plot(logPlot, 0.2, 0, 0.6, 0.5) +
+    draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0.2), c(1, 1, 0.5),
+      size = 12)
 
 figs("fitsFigure", "(A) Linear regression fits to ART data. (B) Comparison 
 of exponential and logistic curve fits to ART data. (C) Logistic function
@@ -471,8 +475,7 @@ fit with uncertainty.")
 ```
 
 `r figs("fitsFigure")`
-
-```{r Insert figure, include = TRUE, fig.width = 5, fig.height = 9}
+```{r Insert figure, include = TRUE, fig.width = 8, fig.height = 6}
 fitsFigure
 ```
 
@@ -496,6 +499,10 @@ if (saveResults) {
   ggsave(file.path(figFolder, paste0("Logistic_Fit-", 
     toString(analysisYear), "-", trString, ".png")), plot = logPlot,
     width = plotWidth, height = plotHeight, units = plotUnits)
+  
+  ggsave(file.path(figFolder, paste0("ART_Fitting_Figure-", 
+    toString(analysisYear), "-", trString, ".png")), plot = fitsFigure,
+    width = 8, height = 6, units = "in")
   
   # File directory and file name
   saveString <- file.path(resultsFolder, paste0("ART_Estimates-", 
