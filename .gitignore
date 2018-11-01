@@ -39,7 +39,8 @@ HIV/output/
 HIV/trend_analysis/
 HIV/output.dta
 
-HIV/docs/
+HIV/docs/*
+!HIV/docs/ART_analysis.docx
 HIV/subprojects/
 
 HIV/hivageing.Rmd
