@@ -58,6 +58,7 @@ Chlamydia/data/retestsNSWgp_clean-2015.csv
 # Chlamydia/output/figures/
 Chlamydia/output/*
 !Chlamydia/output/2016
+!Chlamydia/output/2017
 Chlamydia/output/2016/figures/*.tiff
 Chlamydia/output/2016/figures/2016_ASR_paper_v2/
 Chlamydia/ChlamydiaCascade.nb.html
