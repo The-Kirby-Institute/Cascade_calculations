@@ -29,10 +29,7 @@ notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data",
 
 # Load standard libraries and options ------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"))
-# source(file.path(Rcode, "DataLibraries.R"))
-# source(file.path(Rcode, "PlotOptions.R"))
 LoadLibrary(tidyverse)
-# LoadLibrary(tibble)
 ```
 
 The following chunck specifies all the parameters for producing the
@@ -40,10 +37,12 @@ estimates of PLHIV previously diagnosed. Result files are saved to the
 specified project folder and have a cascade file handle. 
 
 *Current projects*
-- ASR_2017 (2017 ASR cascades for year 2016)
+- ASR_2016, ASR_2017, ASR_2018 (cascades for the Annual Surveillance 
+Report(ASR))
+- ASR_2018_Ageing (age estimates of PLDHIV for ASR)
 - CALD_Cascades
-- Paper_2016 (national cascade for paper)
-- Aging_Estimates (todo)
+- HIV_Cascade_Paper
+- Ageing_Paper
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
@@ -52,11 +51,20 @@ saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
+##***********************************************************************##
+## WARNING -- Selecting multile selections for subsetting notififcations 
+## needs care when categories with lots of missing data are included. 
+## To subset notifications with these categories will likely need 
+## imputation which has yet to be implemented. In the mean time care
+## is required to ensure the number of notfications included in the 
+## calculations is accurate. 
+##***********************************************************************##
+
 projectOutput <- "ASR_2018" # "." for main output folder 
                             # "HIV_Cascade_Paper" for paper
                             
 cascadeName <- "All-2017"
-targetGender <- "all" # all, male, female (single)
+targetGender <- "male" # all, male, female (single)
 targetAge <- "all" # all or split
 
 # Note regarding ageing: The calculations don't specifically target 
@@ -78,6 +86,13 @@ targetLocalRegion <- "all" #tbd (combination)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
 # Oceania, South American, Other cob, etc
 # (combination)
+
+if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi, 
+  targetState, targetLocalRegion, targetGlobalRegion) != "all") > 1) {
+  warning("Multiple selections for subsetting: SubHivSet() and reallocation 
+    may not work correctly if selections with lots of missing data are 
+    included")
+}
 
 # Some error checking 
 if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
@@ -242,6 +257,17 @@ if (separateAborig) {
 }
 
 # Extract subset of notifications we want
+
+##*********************************************************************##
+## WARNING -- The following function can produce incorrect estimates for the 
+## number unknown and the num ber excluded when it uses a combination of 
+## selections that includes selection with lots of missing data.  
+## To subset notifications with these categories will likely need 
+## imputation which has yet to be implemented. In the mean time care
+## is required and temporary hardcoded hacks might be required to ensure 
+## the number of notfications included in the calculations is accurate.
+##*********************************************************************## 
+
 hivSetReturn <- SubHivSet(hivSetAll, "all", targetGender,
   targetExposure, targetCob, targetAtsi,
   targetState, targetGlobalRegion)
@@ -250,8 +276,8 @@ hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
 
-# MAJOR HACK for state cascades to fix subsetting issues for 
-# multiple selections
+# TEMPORARY HACK for state cascades to fix subsetting issues for 
+# multiple selections with country of birth
 # hivSetExcluded <- filter(hivSetExcluded, state == targetState)
 
 # Calculate unique notifications and duplicates for the known set.
@@ -416,6 +442,14 @@ unknownDiags <- FillDataFrame(allYears, unknownDiags)
 
 # Adjust included and excluded annual diagnoses propotionally to replace
 # unknowns
+
+##*********************************************************************##
+## WARNING -- The following calculation to adjust included notifications 
+## can be incorrect if multiple selections are used which include 
+## selections with lots of missing data unless appropriate adjustments are
+## made. 
+##*********************************************************************##
+
 adjustDiags <- includeDiags %>% 
   left_join(excludedDiags, by = "year") %>%
   left_join(unknownDiags, by = "year") %>%
