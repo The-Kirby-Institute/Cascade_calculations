@@ -1,13 +1,33 @@
-Analysis of patients taking ART
-===============================
+---
+title: "Merging and Analysis of Australian ART Data"
+author: "Richard T. Gray"
+date: '`r format(Sys.Date(), format="%d %B %Y")`'
+output: 
+  word_document:
+    pandoc_args: --output="docs/ART_analysis.docx"
+---
 
-Richard T. Gray
+This script explores the number of people taking antiretroviral terapy 
+(ART) in Australia over 2000-2017. It estimates the number taking ART 
+during each year by merging and fitting to two data sources. 
 
-This script explores the number of people taking ART in Australia. It 
-estimates the number taking ART during the year. This uses a mixture of 
-data sets as Prospection Pharmaceutical Benefits Scheme (PBS) data is only 
-available for 2013-2014. We only estimate the number on treatment since
-2000. 
+1. Australian HIV Observational Database (AHOD) which provides estimates 
+for ART use up to 2012. The estimates over 2010-2012 are actually 
+projections rather than estimates from raw data.
+2. The Pharmaceutical Benefits Scheme (PBS) 10% longitudinal sample 
+provided by the company Prospection. This data is only avaliable since
+2013. It is considered a more reliable as it is a more direct estimate. 
+
+The primary purpose of this analysis is to explore how to cover the 
+change over period from the AHOD estimates to the PBS data. The results
+are reported in the Australian HIV Cascade manuscript. 
+
+```{r knitr_options, include=FALSE} 
+knitr::opts_chunk$set(echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  include = FALSE) 
+```
 
 
 ```{r initialization} 
@@ -30,7 +50,7 @@ source(file.path(Rcode, "TidyLongitudinal.R"), echo=TRUE)
 source(file.path(Rcode, "AgeCat.R"), echo=TRUE)
 
 # Script parameters
-analysisYear <- 2014
+analysisYear <- 2017
 saveResults <- TRUE
 
 # Add temporary residents - we have two estimates one from the ATRAS study 
@@ -96,7 +116,7 @@ tempPbs$year <- unlist(lapply(tempPbs$year, function(x)
   as.numeric(strsplit(as.vector(x), 'X')[[1]][2])))
 
 # Add the PBS data to artEstimates
-artEstimates <- left_join(artEstimates, tempPbs, by = "year")
+artEstimates <- full_join(artEstimates, tempPbs, by = "year")
 
 # Add upper and lower bounds for the PBS data
 popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
@@ -105,7 +125,7 @@ popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
 source(file.path(HIVcode, "pharmDashError.R"), echo=TRUE)
 
 # Loop through years appending lower and upper pbs estimates
-prospectionYears <- c(2013, 2014)
+prospectionYears <- 2013:analysisYear #c(2013, 2014)
 
 for (nyear in prospectionYears) {
  
@@ -134,12 +154,15 @@ artEstimates$pbsupper[artEstimates$year %in% prospectionYears] <-
 # Add some variables for specific data
 artEstimates$ahodraw <- NA
 artEstimates$all <- NA
-artEstimates$ahodraw[1:10] <- artEstimates$ahod[1:10]
+artEstimates$ahodraw[1:11] <- artEstimates$ahod[1:11] # trust AHOD up to 2010
 artEstimates$all[1:13] <- artEstimates$ahod[1:13]
-artEstimates$all[14:15] <- artEstimates$pbs[14:15]
+artEstimates$all[14:nrow(artEstimates)] <- 
+  artEstimates$pbs[14:nrow(artEstimates)]
 ```
 
-```{r fitcurves}
+## Fitting 
+
+```{r Fit curves}
 # Explore fitting a function to the data. Don't need to do the various
 # logistic regressions because these can be done using ggplot with 
 # geom_smooth. Rather we explore different fitting functions
@@ -155,7 +178,9 @@ ydata <- artEstimates$all
 xdata <- artEstimates$year
 
 # Set weights to reflect PBS data is likely to be more accurate
-weights <- c(rep(0.66, 10), rep(0.33, 3), 1, 1)
+# With first 11 AHOD estimates accurate, the next two (2011-2012) AHOD 
+# estimates inaccurate.  
+weights <- c(rep(0.66, 11), rep(0.33, 2), rep(1, length(prospectionYears)))
 
 # Weighted logistic regression -------------------------------------------
 
@@ -190,18 +215,46 @@ artEstimates <- select(artEstimates, -diffbin)
 
 # Fit a specific function ------------------------------------------------
 
-# Do the fitting - Note: nls seems to have lots of problems fitting to
-# the full four parameter logistic function but works if we force one of 
-# of the parameters to a specific value. Here we set the infection point,
-# it appears to be insentivie to a value greater than 2015
-inflectionYear <- 2020
+# Functions to fit (logistic)
+fitFunc<- function(x, a, b, c, d) {
+  # A four parameter logistic function
+  return((b-a) / (1 + exp(-d * (x - c))) + a)
+}
 
-fitLog <- nls(ydata ~ fitFunc(xdata, a, b, inflectionYear, d),
-           start = list(a = 5000, b = 30000, d = 0.1),
-           weights = weights)
+# Do the fitting 
+if (analysisYear == 2014) {
+  # Note for 2014 data: nls seems to have lots of problems fitting to
+  # the full four parameter logistic function but works if we force one of 
+  # of the parameters to a specific value. Here we set the inflection point.
+  # For 2014 data it appears to be insensitive to a value greater than 2015. 
+  inflectionYear <- 2020
+  fitLog <- nls(ydata ~ fitFunc(xdata, a, b, inflectionYear, d),
+  start = list(a = 5000, b = 30000, d = 0.1),
+  weights = weights)
+  
+  # Note: best fit from Matlab for comparison for AnalysisYear = 2014. 
+  # a = 5270, b = 30200, c = 2014.7 d = 0.207) 
+  
+} else if (analysisYear == 2017) {
+  # For 2017 data a four paramater fit can be done but confident 
+  # intervals are problematic and messes up code below
+  # Do a 4 parameter fit first and then fix inflectionYear value and
+  # refit
+  fitLog4 <- nls(ydata ~ fitFunc(xdata, a, b, c, d),
+    start = list(a = 5000, b = 30000, c = 2015, d = 0.1),
+    weights = weights)
+  
+  inflectionYear <- coef(fitLog4)["c"]
+  fitLog <- nls(ydata ~ fitFunc(xdata, a, b, inflectionYear, d),
+  start = list(a = 5000, b = 30000, d = 0.1),
+  weights = weights)
 
-# Note: best fit from Matlab
-# a = 5270, b = 30200, c = 2014.7 d = 0.207) 
+} else {
+  fitLog <- nls(ydata ~ fitFunc(xdata, a, b, c, d),
+    start = list(a = 5000, b = 30000, c = 2015, d = 0.1),
+    weights = weights)
+  warning("fitLog needs to beasssessed for Fit")
+}
 
 # Compare to an exponential
 fitFuncExp <- function(x, a, b, c) {
@@ -245,7 +298,7 @@ for (ii in 1:nsamples) {
   
 }
 
-# Filter samples which go outside the PBS error bounds for 2013 
+# Filter samples which go outside the PBS error bounds for 2017 
 goodRows <- apply(simMatrix, 1, 
       function(x) any(x[length(xdata)] <
                         artEstimates$pbsupper[length(xdata)]
@@ -268,9 +321,11 @@ artEstimates$fitmax <- apply(simMatrix, 2, max)
 finalIndex <- nrow(artEstimates)
 index2012 <- nrow(filter(artEstimates, year <= 2012))
 
-# Replace 2012 value with fitted value
+# Replace 2011:2012 values with fitted values as these were projected 
+# anyway and are not direct estimates
 artEstimates$alladjust <- artEstimates$all
-artEstimates[index2012, ]$alladjust <- artEstimates[index2012, ]$fitlog 
+artEstimates[artEstimates$year %in% c(2011:2012), ]$alladjust <- 
+  artEstimates[artEstimates$year %in% c(2011:2012), ]$fitlog 
 
 # Relative ART numbers
 artEstimates$rel <- artEstimates$alladjust / 
@@ -392,9 +447,27 @@ plotWidth <- 12
 plotHeight <- 7
 plotUnits <- "cm"
 
+# Create a combined figure
+fitsFigure <- ggdraw() +
+    draw_plot(regressionPlot, 0, 0.5, 0.5, 0.5) +
+    draw_plot(fitPlot, 0.5, 0.5, 0.5, 0.5) +
+    draw_plot(logPlot, 0.2, 0, 0.6, 0.5) +
+    draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0.2), c(1, 1, 0.5),
+      size = 12)
+
+figs("fitsFigure", "(A) Linear regression fits to ART data. (B) Comparison 
+of exponential and logistic curve fits to ART data. (C) Logistic function
+fit with uncertainty.")
+
+
 ```
 
-```{r saveresults}
+`r figs("fitsFigure")`
+```{r Insert figure, include = TRUE, fig.width = 8, fig.height = 6}
+fitsFigure
+```
+
+```{r Save results}
 if (saveResults) {
  
   # String tag
@@ -406,15 +479,18 @@ if (saveResults) {
   
   # Save plots
   ggsave(file.path(figFolder, paste0("Regression_Comparision-", 
-                                     trString, ".png")), 
-         plot = regressionPlot,
-         width = plotWidth, height = plotHeight, units = plotUnits)
-  ggsave(file.path(figFolder, paste0("Fit_Comparison-", trString, ".png")), 
-         plot = fitPlot, 
-         width = plotWidth, height = plotHeight, units = plotUnits)
-  ggsave(file.path(figFolder, paste0("Logistic_Fit-", trString, ".png")), 
-         plot = logPlot,
-         width = plotWidth, height = plotHeight, units = plotUnits)
+    toString(analysisYear), "-", trString, ".png")), plot = regressionPlot,
+    width = plotWidth, height = plotHeight, units = plotUnits)
+  ggsave(file.path(figFolder, paste0("Fit_Comparison-", 
+    toString(analysisYear), "-", trString, ".png")), plot = fitPlot, 
+    width = plotWidth, height = plotHeight, units = plotUnits)
+  ggsave(file.path(figFolder, paste0("Logistic_Fit-", 
+    toString(analysisYear), "-", trString, ".png")), plot = logPlot,
+    width = plotWidth, height = plotHeight, units = plotUnits)
+  
+  ggsave(file.path(figFolder, paste0("ART_Fitting_Figure-", 
+    toString(analysisYear), "-", trString, ".png")), plot = fitsFigure,
+    width = 8, height = 6, units = "in")
   
   # File directory and file name
   saveString <- file.path(resultsFolder, paste0("ART_Estimates-", 

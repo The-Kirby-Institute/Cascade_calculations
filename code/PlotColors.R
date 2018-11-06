@@ -25,11 +25,11 @@
 #' @export
 #'
 PlotColors <- function(set = c("main", "lines", "cbPalette", "hivcascade4",
-  "hivcascade5", "sticascade", "crayons")) {
+  "hivcascade5", "crayons")) {
 
   set <- match.arg(set)
 
-  # Generate all the colour vector options --------------------------------
+  # Generate all the colour vector options -------------------------------------
 
 
   # Palette with black and grey (colour blind friendly)
@@ -39,7 +39,7 @@ PlotColors <- function(set = c("main", "lines", "cbPalette", "hivcascade4",
   # Colour scheme used in ASR
   hivcascade4 <- c("#621C20", "#AB2322", "#D95728", "#E97164")
   hivcascade5 <- c("#621C20", "#AB2322", "#A63603", "#D95728", "#E97164")
-  sticascade <- c("#2C4452", "#2B97B0") # c(males, females)
+  #sticasade <-
 
   # Setup crayon colours which are used for most of my main plots
   crayons <- c("Almond"="#efdecd",
@@ -176,25 +176,25 @@ PlotColors <- function(set = c("main", "lines", "cbPalette", "hivcascade4",
     "Yellow Green"="#c5e384",
     "Yellow Orange"="#ffae42")
 
-  # Main/general colours I use -------------------------------------------------
+  # Main/general colours I use --------------------------------------------
 
   # The 10 main colours I like using
-  main <- crayons[c("Black", "Blue", "Red", "Green", "Orange", "Yellow",
-    "Violet (Purple)", "Raw Umber", "Pine Green", "Hot Magenta")]
+  main <- crayons[c("Black", "Blue", "Red", "Green", "Orange",
+    "Violet (Purple)", "Cerulean", "Raw Umber", "Pine Green", 
+    "Hot Magenta")]
 
-  # Five main colours for line plots. I don't think you should have more than
-  # 5 lines in a line plot. Preferably less.
+  # Five main colours for line plots. I don't think you should have more 
+  # than 5 lines in a line plot. Preferably less.
   lines <- crayons[c("Black", "Blue", "Red", "Green", "Orange")]
 
 
-  # Generate and return final set of colours -----------------------------------
+  # Generate and return final set of colours ------------------------------
   colours <- switch(match.arg(set),
     main=main,
     lines=lines,
     cbPalette=cbPalette,
     hivcascade4=hivcascade4,
     hivcascade5=hivcascade5,
-    sticascade=sticascade,
     crayons=crayons)
 
   # Return final vector

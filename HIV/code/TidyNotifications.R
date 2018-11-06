@@ -45,7 +45,7 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
   # Aboriginal group
   if (analysisYear < 2015) {
     hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
-    hivData$aboriggroup[hivData$cob==0] <- NA
+    hivData$aboriggroup[hivData$cob == 0] <- NA
     hivData$aboriggroup[hivData$cob == 1100 & 
       hivData$indigenous == "Aboriginal"] <- "indigenous"
     hivData$aboriggroup[hivData$cob == 1100 & 
@@ -86,13 +86,21 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
 
   # Change NAs to not reported (only 22 missing cobs in the data set)
   hivData$cob[is.na(hivData$cob)] <- "Not Reported" 
+  hivData$cob[hivData$cob == "Not Known"] <- "Not Reported" 
   hivData$globalregion[is.na(hivData$globalregion)] <- "Not Reported" 
 
   # Convert some of the not reporteds to "overseas" if country of birth is
   # missing but region of birth is available.
   hivData$cob <- as.character(hivData$cob)
-  hivData$cob[hivData$cob == "Not Reported"  &
-                !(hivData$rob %in%  c(0,7))] <- "Overseas"
+  
+  if (analysisYear >= 2017) {
+    hivData$cob[hivData$cob == "Not Reported"  &&
+        !(hivData$rob %in%  c("NR", "Oceania/Anatartica"))] <- "Overseas"
+  } else {
+    hivData$globalregion[hivData$globalregion == "Not Reported"] <- "NR"
+    hivData$cob[hivData$cob == "Not Reported"  &&
+        !(hivData$rob %in%  c(0, 7))] <- "Overseas"
+  }
   
   # Additional variables---------------------------------------------------
   if (appendExtra) {

@@ -19,17 +19,17 @@ calculation scripts.
 basePath <- getwd()
 Rcode <- file.path(dirname(basePath), "code") # All cascades code
 HIVcode <- file.path(basePath, "code") 
-notificationsFolder <- file.path(dirname(dirname(basePath)), "data", "HIV")
 dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
 figuresFolder <- file.path(basePath, "output", "figures")
 
+# Notifications folder is a private secure folder 
+notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data", 
+  "National HIV Registry", "2017", "National", "Hamish & Richard")
+
 # Load standard libraries and options ------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"))
-# source(file.path(Rcode, "DataLibraries.R"))
-# source(file.path(Rcode, "PlotOptions.R"))
 LoadLibrary(tidyverse)
-# LoadLibrary(tibble)
 ```
 
 The following chunck specifies all the parameters for producing the
@@ -37,24 +37,34 @@ estimates of PLHIV previously diagnosed. Result files are saved to the
 specified project folder and have a cascade file handle. 
 
 *Current projects*
-- ASR_2017 (2017 ASR cascades for year 2016)
+- ASR_2016, ASR_2017, ASR_2018 (cascades for the Annual Surveillance 
+Report(ASR))
+- ASR_2018_Ageing (age estimates of PLDHIV for ASR)
 - CALD_Cascades
-- Paper_2016 (national cascade for paper)
-- Aging_Estimates (todo)
-
+- HIV_Cascade_Paper
+- Ageing_Paper
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2016
+analysisYear <- 2017
 saveResults <- TRUE
 
 # Set HIV subsetting function parameters----------------------------------
 
-projectOutput <- "Test_Cascades" # "." for main output folder 
+##***********************************************************************##
+## WARNING -- Selecting multile selections for subsetting notififcations 
+## needs care when categories with lots of missing data are included. 
+## To subset notifications with these categories will likely need 
+## imputation which has yet to be implemented. In the mean time care
+## is required to ensure the number of notfications included in the 
+## calculations is accurate. 
+##***********************************************************************##
 
-# cascadeName <- paste0("NSW_Vic_All-", toString(analysisYear))
-cascadeName <- "Vic_All-2016"
-targetGender <- "all" # all, male, female (single)
+projectOutput <- "ASR_2018" # "." for main output folder 
+                            # "HIV_Cascade_Paper" for paper
+                            
+cascadeName <- "All-2017"
+targetGender <- "male" # all, male, female (single)
 targetAge <- "all" # all or split
 
 # Note regarding ageing: The calculations don't specifically target 
@@ -69,12 +79,20 @@ targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
 targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
 # Only used if country is Australia (single)
-targetState <- "vic" # nsw, sa, nt, qld, vic, wa, act, tas
+
+targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
 # (combination)
 targetLocalRegion <- "all" #tbd (combination)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
 # Oceania, South American, Other cob, etc
 # (combination)
+
+if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi, 
+  targetState, targetLocalRegion, targetGlobalRegion) != "all") > 1) {
+  warning("Multiple selections for subsetting: SubHivSet() and reallocation 
+    may not work correctly if selections with lots of missing data are 
+    included")
+}
 
 # Some error checking 
 if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
@@ -102,7 +120,7 @@ if (doRetained) {
 }
 
 doUnique <- TRUE
-yearUnique <- NULL
+yearUnique <- 2017 #2100 to turn off
 saveUnique <- FALSE
 
 doUnique <- ifelse(targetAtsi == "indigenous", FALSE, doUnique)
@@ -113,7 +131,7 @@ saveUnique <- ifelse(!saveResults, FALSE, saveUnique)
 ecdcData <- TRUE
 ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
 
-ecdcVersion <- '1.2.2'
+ecdcVersion <- "1.3.0"
 excludeOS <- FALSE
 excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
 
@@ -175,9 +193,10 @@ source(file.path(HIVcode, "GetInterRegion.R"))
 # This chunk loads the national notifications and subsets based on the
 # specified criteria in Script paramaters
 
-# Load cleaned notifications data
-origHivData <- read.csv(file.path(notificationsFolder,
-  paste0("hivnotifications_clean-", toString(analysisYear), ".csv"))) 
+# Load cleaned notifications data from storage
+origHivData <- read.csv(file.path(notificationsFolder, 
+  paste0("cascadeHIVnotifications-clean-", toString(analysisYear), 
+    ".csv"))) 
 
 # Read in country code data
 countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
@@ -224,6 +243,17 @@ if (excludeAborig) {
 }
 
 # Extract subset of notifications we want
+
+##*********************************************************************##
+## WARNING -- The following function can produce incorrect estimates for the 
+## number unknown and the num ber excluded when it uses a combination of 
+## selections that includes selection with lots of missing data.  
+## To subset notifications with these categories will likely need 
+## imputation which has yet to be implemented. In the mean time care
+## is required and temporary hardcoded hacks might be required to ensure 
+## the number of notfications included in the calculations is accurate.
+##*********************************************************************## 
+
 hivSetReturn <- SubHivSet(hivSetAll, "all", targetGender,
   targetExposure, targetCob, targetAtsi,
   targetState, targetGlobalRegion)
@@ -232,10 +262,18 @@ hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
 
+# TEMPORARY HACK for state cascades to fix subsetting issues for 
+# multiple selections with country of birth
+# hivSetExcluded <- filter(hivSetExcluded, state == targetState)
+
 # Calculate unique notifications and duplicates for the known set.
 if (doUnique) {
-  uniqueNotifications <- GetUnique(hivSet, allYears, 
-    yearUnique = 2100)
+  hivSetUnique <- SubHivSet(hivSetAll, "all", targetGender,
+    targetExposure, "all", "all",
+    targetState, "all")
+  
+  uniqueNotifications <- GetUnique(hivSetUnique[[1]], allYears, 
+    yearUnique = yearUnique)
 } 
 
 # Calculation cumulative proportion male. This is used for gender weighted
@@ -255,24 +293,43 @@ hivSetGender <- FillDataFrame(1980:analysisYear, hivSetGender) %>%
   arrange(year)
 
 if (targetGender == "all") {
-  hivGenderCum <- hivSetGender %>% 
-    group_by(sex) %>% 
-    mutate(cumnotifications = cumsum(notifications)) %>%
-    ungroup() %>%
-    select(-notifications) %>%
-    spread(sex, cumnotifications) %>%
-    select(-starts_with("unknown")) %>%
-    gather("sex", "cumnotifications", 2:ncol(.)) %>%
-    mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
-      cumnotifications)) %>%
-    group_by(year) %>% 
-    mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
-    select(-cumnotifications) %>%
-    spread(sex, propnotifications) %>%
-    mutate(female = ifelse(is.na(female), 0, female),
-      male = ifelse(is.na(male), 0, male),
-      transgender = ifelse(is.na(transgender), 0, transgender)) 
   
+  if ("transgender" %in% unique(hivSetGender$sex)) {
+    hivGenderCum <- hivSetGender %>% 
+      group_by(sex) %>% 
+      mutate(cumnotifications = cumsum(notifications)) %>%
+      ungroup() %>%
+      select(-notifications) %>%
+      spread(sex, cumnotifications) %>%
+      select(-starts_with("unknown")) %>%
+      gather("sex", "cumnotifications", 2:ncol(.)) %>%
+      mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
+        cumnotifications)) %>%
+      group_by(year) %>% 
+      mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
+      select(-cumnotifications) %>%
+      spread(sex, propnotifications) %>%
+      mutate(female = ifelse(is.na(female), 0, female),
+        male = ifelse(is.na(male), 0, male),
+        transgender = ifelse(is.na(transgender), 0, transgender)) 
+  } else {
+    hivGenderCum <- hivSetGender %>% 
+      group_by(sex) %>% 
+      mutate(cumnotifications = cumsum(notifications)) %>%
+      ungroup() %>%
+      select(-notifications) %>%
+      spread(sex, cumnotifications) %>%
+      select(-starts_with("unknown")) %>%
+      gather("sex", "cumnotifications", 2:ncol(.)) %>%
+      mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
+        cumnotifications)) %>%
+      group_by(year) %>% 
+      mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
+      select(-cumnotifications) %>%
+      spread(sex, propnotifications) %>%
+      mutate(female = ifelse(is.na(female), 0, female),
+        male = ifelse(is.na(male), 0, male))
+  }
   propDiagsMale <- hivGenderCum$male
 } else {
   propDiagsMale <- NULL
@@ -370,7 +427,15 @@ if (nrow(hivSetUnknown) == 0) {
 unknownDiags <- FillDataFrame(allYears, unknownDiags)
 
 # Adjust included and excluded annual diagnoses propotionally to replace
-# unknwons
+# unknowns
+
+##*********************************************************************##
+## WARNING -- The following calculation to adjust included notifications 
+## can be incorrect if multiple selections are used which include 
+## selections with lots of missing data unless appropriate adjustments are
+## made. 
+##*********************************************************************##
+
 adjustDiags <- includeDiags %>% 
   left_join(excludedDiags, by = "year") %>%
   left_join(unknownDiags, by = "year") %>%
@@ -1005,12 +1070,13 @@ if (projectPldhiv) {
   
   # Manually set final year for projections and projection name
   projectYear <- analysisYear + 10  
-  projectName <- "future_linear"
+  projectName <- "future_sq"
   
   # Specifiy projection option for future diagnoses
-  projectOption <- "linear" #status-quo, linear, reduce 
-  projectDecrease <- 0.65 # 0, 0.65 (35% reduction), 0.5 (50% 
-                          # reduction) relative reduction!
+  projectOption <- "status-quo" #status-quo, linear, reduce 
+  projectDecrease <- 0 # 0, 0.65 (35% reduction), 0.5 (50% 
+                          # reduction), 0.35 (65% reduction) 
+                          # relative reduction!
   
   saveProjResults <- TRUE 
   # Reset if saving things overall
@@ -1124,7 +1190,7 @@ if (projectPldhiv) {
         trendDiags[trendDiags < 0] <- 0
         
         # Store final age trends
-        hivResultsAgeFuture[age, ] <-c(ageDiagnoses, trendDiags)
+        hivResultsAgeFuture[age, ] <- c(ageDiagnoses, trendDiags)
       } 
     } else if(projectOption == "reduce") {
       # Assume same reduction across all age groups

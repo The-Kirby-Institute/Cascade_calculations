@@ -44,7 +44,7 @@ source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2016 # year of cascade we will calculate and plot     
+resultsYear <- 2017 # year of cascade we will calculate and plot     
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
 fileType <- ".tiff" # ".png" for documents; .tiff for paper
@@ -235,7 +235,7 @@ chlamcascade <- rbind(chlamcascade,
 maleDiags <- rowSums(currentDiags[, 2:4])
 femaleDiags <- rowSums(currentDiags[, 5:7])
 
-if (resultsYear >= 2015) {
+if (resultsYear %in% 2015:2016) {
   # Estimate uncertainty using estimates for the Victorian 
   # 15-29 year old population due to missing data in 2015-2016 (from 
   # CT notifications_YEAR_National_Estimate.xlsx)
@@ -736,13 +736,10 @@ if (saveCascade) {
 # Default plot specifications
 graphics.off()
 
-# Baseline theme for plot variables
-source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
-source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 # Setup colours for ASR - not used in the current code
+source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 source(file.path(Rcode, "PlotColors.R"), echo=TRUE)
-cols <- PlotColors("sticascade")
-asrcols <- c("males" = cols[1], "females" = cols[2]) 
+# cols <- c("males" = "grey31", "females" = "grey71") 
 ```
 
 ```{r barchart}

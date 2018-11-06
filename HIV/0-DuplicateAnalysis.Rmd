@@ -65,10 +65,13 @@ estimates for each setting and scenario.
 basePath <- getwd()
 Rcode <- file.path(dirname(basePath), "code") # All cascades code
 HIVcode <- file.path(basePath, "code") 
-notificationsFolder <- file.path(dirname(dirname(basePath)), "data", "HIV")
 dataFolder <- file.path(basePath, "data")
 resultsFolder <- file.path(basePath, "output")
 figuresFolder <- file.path(basePath, "output", "figures")
+
+# Notifications folder is a private secure folder 
+notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data", 
+  "National HIV Registry", "2017", "National", "Hamish & Richard")
 
 # Load libraries and standard functions
 source(file.path(Rcode, "LoadLibrary.R"))
@@ -79,7 +82,8 @@ LoadLibrary(scales)
 source(file.path(Rcode, "FormatData.R"))
 
 # Script options
-savePlots <- TRUE
+savePlots <- FALSE
+dataYear <- 2017
 analysisYear <- 2016
 
 # It can take a while to generate the results so create the option to just
@@ -102,13 +106,15 @@ source(file.path(HIVcode, "TidyNotifications.R"))
 
 # Load cleaned notifications data
 origHivData <- read_csv(file.path(notificationsFolder,
-  paste0("hivnotifications_clean-", toString(analysisYear), ".csv"))) 
+  paste0("cascadeHIVnotifications-clean-", toString(dataYear), ".csv"))) 
 
 # Read in country code data
-countryCodes <- read_csv(file.path(dataFolder, "countryRegionCodes.csv"))
+countryCodes <- read_csv(file.path(dataFolder, "countryRegionCodes.csv")) 
 
 # Tidy up notifications for calculations
-hivData <- TidyNotifications(origHivData, analysisYear, countryCodes)
+hivData <- TidyNotifications(origHivData, analysisYear, countryCodes) %>%
+  filter(yearhiv <= analysisYear)
+
 
 # Data checks-------------------------------------------------------------
 
@@ -528,7 +534,6 @@ algorithm output and the assumption all notifications are unique since
 2002 (though the difference is a bit larger for NSW).   
 
 `r figs("figure1")`
-
 ```{r Figure 1, include = TRUE, fig.width = 5, fig.height = 6}
 figure1
 ```
@@ -536,7 +541,6 @@ figure1
 \pagebreak
 
 `r figs("figure2")`
-
 ```{r Figure 2, include = TRUE, fig.width = 6, fig.height = 7}
 figure2
 ```
@@ -549,7 +553,6 @@ are very similar according to the algorithm.
 \pagebreak
 
 `r figs("figure3")`
-
 ```{r Figure 3, include = TRUE, fig.width = 6, fig.height = 6}
 figure3
 ```
@@ -563,7 +566,6 @@ duplicates). This figure suggests the majority of duplicates occurred in
 NSW males.  
 
 `r figs("figure4")`
-
 ```{r Figure 4, include = TRUE, fig.width = 6, fig.height = 3}
 figure4
 ```
@@ -581,7 +583,6 @@ notifications produces a cumulative proportion unique that aligns with the
 overall male and national populations. 
 
 `r figs("figure5")`
-
 ```{r Figure 5, include = TRUE, fig.width = 6, fig.height = 6}
 figure5
 ```

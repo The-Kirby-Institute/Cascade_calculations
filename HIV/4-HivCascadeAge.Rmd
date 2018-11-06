@@ -11,7 +11,8 @@ csl: docs/plos.csl
 
 This document is used to generate and explore the Australian HIV cascade
 by age and trends in the age distribution of people living with diagnosed
-HIV over time. It produces all the results and figures for the manuscript
+HIV over time. It produces the age distribution results for the Annual 
+Surveillance Report and all the results and figures for the manuscript
 Bretana et al, "An ageing population of people living with diagnosed HIV in 
 Australia".
 
@@ -51,9 +52,11 @@ source(file.path(HIVcode, "ResultsFunctions.R"))
 savePlots <- TRUE
 
 # Set up project and cascade to analyse
-projectName <- "Ageing_paper"  
+projectName <- "Ageing_Paper" #"ASR_2018_Ageing"  
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadeNames <- c("All", "Male", "Female")
+
+asr <- FALSE # TRUE = numbers for ASR report; FALSE = paper
 
 # Create output directory
 if (savePlots) {
@@ -72,16 +75,16 @@ figs <- captioner()
 # This chunk loads all the results we need and stores them in long form 
 # data frames
 
-baseFile <- "HIVpldhivEstimates-2016-age"
+baseFile <- "HIVpldhivEstimates-2017-age"
 
-# Load main results up to 2016
-allMain <- read_csv(file.path(resultsFolder, "All",
+# Load main results up to 2017
+allMain <- read_csv(file.path(resultsFolder, "All-2017",
   paste0(baseFile, ".csv"))) %>%
   mutate(set = "all")
-maleMain <- read_csv(file.path(resultsFolder, "Male",
+maleMain <- read_csv(file.path(resultsFolder, "Male-2017",
   paste0(baseFile, ".csv"))) %>%
   mutate(set = "male")
-femaleMain <- read_csv(file.path(resultsFolder, "Female",
+femaleMain <- read_csv(file.path(resultsFolder, "Female-2017",
   paste0(baseFile, ".csv"))) %>%
   mutate(set = "female")
 
@@ -89,22 +92,35 @@ mainResults <- bind_rows(allMain, maleMain, femaleMain) %>%
   select(set, everything())
 
 # Load future projection results for main HIV cascade
-sqResults <- read_csv(file.path(resultsFolder, "All",
+if (!asr) {
+sqResults <- read_csv(file.path(resultsFolder, "All-2017",
   paste0(baseFile, "-future_sq.csv"))) %>%
   mutate(set = "sq")
-linearResults <- read_csv(file.path(resultsFolder, "All",
+
+linearResults <- read_csv(file.path(resultsFolder, "All-2017",
   paste0(baseFile, "-future_linear.csv"))) %>%
   mutate(set = "linear")
-reduce35Results <- read_csv(file.path(resultsFolder, "All",
+linearResultsMale <- read_csv(file.path(resultsFolder, "Male-2017",
+  paste0(baseFile, "-future_linear.csv"))) %>%
+  mutate(set = "linear")
+linearResultsFemale <- read_csv(file.path(resultsFolder, "Female-2017",
+  paste0(baseFile, "-future_linear.csv"))) %>%
+  mutate(set = "linear")
+
+reduce35Results <- read_csv(file.path(resultsFolder, "All-2017",
   paste0(baseFile, "-future_reduce35.csv"))) %>%
   mutate(set = "reduce35")
-reduce50Results <- read_csv(file.path(resultsFolder, "All",
+reduce50Results <- read_csv(file.path(resultsFolder, "All-2017",
   paste0(baseFile, "-future_reduce50.csv"))) %>%
   mutate(set = "reduce50")
+reduce65Results <- read_csv(file.path(resultsFolder, "All-2017",
+  paste0(baseFile, "-future_reduce65.csv"))) %>%
+  mutate(set = "reduce65")
 
 futureResults <- bind_rows(sqResults, linearResults, reduce35Results,
-  reduce50Results) %>%
+  reduce50Results, reduce65Results) %>%
   select(set, everything())
+}
 
 ```
 
@@ -113,29 +129,35 @@ futureResults <- bind_rows(sqResults, linearResults, reduce35Results,
 # specific years
 
 # Main results
-AverageAge(allMain, 2006)
-AverageAge(allMain, 2016)
-AverageAge(maleMain, 2006)
-AverageAge(maleMain, 2016)
-AverageAge(femaleMain, 2006)
-AverageAge(femaleMain, 2016)
+AverageAge(allMain, 2007)
+AverageAge(allMain, 2017)
+AverageAge(maleMain, 2007)
+AverageAge(maleMain, 2017)
+AverageAge(femaleMain, 2007)
+AverageAge(femaleMain, 2017)
 
 # Projection results
-pldhivLinear <- linearResults %>%
-  rename(value = pldhiv) 
-AverageAge(pldhivLinear, 2016)
-AverageAge(pldhivLinear, 2026)
-
-pldhivReduce35 <- reduce35Results %>%
-  rename(value = pldhiv) 
-AverageAge(pldhivReduce35, 2016)
-AverageAge(pldhivReduce35, 2026)
-
-pldhivReduce50 <- reduce50Results %>%
-  rename(value = pldhiv) 
-AverageAge(pldhivReduce50, 2016)
-AverageAge(pldhivReduce50, 2026)
-
+if (!asr) {
+  pldhivLinear <- linearResults %>%
+    rename(value = pldhiv) 
+  pldhivLinearMale <- linearResultsMale %>%
+    rename(value = pldhiv) 
+  pldhivLinearFemale <- linearResultsFemale %>%
+    rename(value = pldhiv) 
+  
+  AverageAge(pldhivLinear, 2017)
+  AverageAge(pldhivLinear, 2027)
+  
+  pldhivReduce35 <- reduce35Results %>%
+    rename(value = pldhiv) 
+  AverageAge(pldhivReduce35, 2017)
+  AverageAge(pldhivReduce35, 2027)
+  
+  pldhivReduce50 <- reduce50Results %>%
+    rename(value = pldhiv) 
+  AverageAge(pldhivReduce50, 2017)
+  AverageAge(pldhivReduce50, 2027)
+} 
 ```
 
 
@@ -152,6 +174,16 @@ allPlots <- PlotAgeCascade(allMain, agebins = ageBins)
 malePlots <- PlotAgeCascade(maleMain, agebins = ageBins)
 femalePlots <- PlotAgeCascade(femaleMain, agebins = ageBins)
 
+# Plot up to 2017 for males and females
+if (!asr) {
+  all2027plots <- PlotAgeCascade(pldhivLinear, agebins = ageBins, 
+    startyear = 1987)
+  male2027plots <-PlotAgeCascade(pldhivLinearMale, agebins = ageBins, 
+    startyear = 1987)
+  female2027plots <-PlotAgeCascade(pldhivLinearFemale, agebins = ageBins, 
+    startyear = 1987)
+}
+
 # Save plots
 if (savePlots) {
   
@@ -161,17 +193,71 @@ if (savePlots) {
   units <- "cm"
   
   # Save all plots
-  SaveFigure(figFolder, "All-2016_number", allPlots[[1]],
+  SaveFigure(figFolder, "All-2017_number", allPlots[[1]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "All-2016_proportion", allPlots[[2]],
+  SaveFigure(figFolder, "All-2017_proportion", allPlots[[2]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Male-2016_number", malePlots[[1]],
+  SaveFigure(figFolder, "Male-2017_number", malePlots[[1]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Male-2016_proportion", malePlots[[2]],
+  SaveFigure(figFolder, "Male-2017_proportion", malePlots[[2]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Female-2016_number", femalePlots[[1]],
+  SaveFigure(figFolder, "Female-2017_number", femalePlots[[1]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Female-2016_proportion", femalePlots[[2]],
+  SaveFigure(figFolder, "Female-2017_proportion", femalePlots[[2]],
+    format = saveFormat, width = width, height = height, units = units)
+  
+  if (!asr) {
+    SaveFigure(figFolder, "Male-2027_number", male2027plots[[1]],
+      format = saveFormat, width = width, height = height, units = units)
+    SaveFigure(figFolder, "Female-2027_number", female2027plots[[1]],
+      format = saveFormat, width = width, height = height, units = units)
+  }
+  
+}
+```
+
+```{r ASR results and plots}
+# For the ASR we produce PLDHIV estimates for < 50 and 50+ age groups.
+if (asr) {
+  asrAges <- list(c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29",
+    "a30_34", "a35_39", "a40_44", "a45_49"), c("a50_54", "a55_59", "a60_64",
+      "a65_69", "a70_74", "a75_79", "a80_84", "a85+"))
+  asrNames <- c("< 50", "50 +")
+  
+  # ASR estimates
+  allAsr <- MergeAgeCascade(allMain, asrAges, asrNames)
+  maleAsr <- MergeAgeCascade(maleMain, asrAges, asrNames)
+  femaleAsr <- MergeAgeCascade(femaleMain, asrAges, asrNames)
+  
+  # ASR plots
+  allAsrPlots <- PlotAgeCascade(allAsr, startyear = 1986, 
+    agebins = asrNames, plotcolors = PlotColors("hivcascade4")[1:2], 
+    grayscale = FALSE, agenames = asrNames)
+  maleAsrPlots <- PlotAgeCascade(maleAsr, startyear = 1986, 
+    agebins = asrNames, plotcolors = PlotColors("hivcascade4")[1:2], 
+    grayscale = FALSE, agenames = asrNames)
+  femaleAsrPlots <- PlotAgeCascade(femaleAsr, startyear = 1986, 
+    agebins = asrNames, plotcolors = PlotColors("hivcascade4")[1:2], 
+    grayscale = FALSE, agenames = asrNames)
+  
+  # Save the ASR estimates in he figures folder
+  write_csv(allAsr, file.path(figFolder, "pldhiv-2017-ASR-age-all.csv"))
+  write_csv(maleAsr, file.path(figFolder, "pldhiv-2017-ASR-age-males.csv"))
+  write_csv(femaleAsr, file.path(figFolder, 
+    "pldhiv-2017-ASR-age-female.csv"))
+  
+  # Save the ASR plots
+  SaveFigure(figFolder, "All-2017_ASR_number", allAsrPlots[[1]],
+    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, "All-2017_ASR_proportion", allAsrPlots[[2]],
+    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, "Male-2017_ASR_number", maleAsrPlots[[1]],
+    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, "Male-2017_ASR_proportion", maleAsrPlots[[2]],
+    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, "Female-2017_ASR_number", femaleAsrPlots[[1]],
+    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, "Female-2017_ASR_proportion", femaleAsrPlots[[2]],
     format = saveFormat, width = width, height = height, units = units)
   
 }
@@ -179,25 +265,28 @@ if (savePlots) {
 
 ```{r Paper plot}
 # Create a combined plot for paper
-legend <- GetLegend(malePlots[[1]])
-paperFigureA <- malePlots[[1]] + labs(title = "Males") +
-  theme(legend.position = "none")
-paperFigureB <- femalePlots[[1]] + labs(title = "Females") +
-  theme(legend.position = "none")
-
-paperFigure <- ggdraw() +
-  draw_plot(paperFigureA, 0, 0, 0.455, 1) +
-  draw_plot(paperFigureB, 0.455, 0, 0.455, 1) +
-  draw_plot(legend, 0.91, 0, 0.09, 1) +
-  draw_plot_label(c("A", "B"), c(0, 0.5),
-    c(1, 1), size = 12)
-
-figs("paperfig", "Estimated number of diagnosed males (A) and females (B)
-  in Australia over 1986-2026 by 5-year age bin.")
-
-if (savePlots) {
-  SaveFigure(figFolder, "Combined_paper_figure", paperFigure,
-    format = saveFormat, width = 25, height = 10, units = units)
+if (!asr) {
+  legend <- GetLegend(male2027plots[[1]])
+  paperFigureA <- male2027plots[[1]] + labs(title = "Males") +
+    theme(legend.position = "none")
+  paperFigureB <- female2027plots[[1]] + labs(title = "Females") +
+    theme(legend.position = "none")
+  
+  paperFigure <- ggdraw() +
+    draw_plot(paperFigureA, 0, 0, 0.455, 1) +
+    draw_plot(paperFigureB, 0.455, 0, 0.455, 1) +
+    draw_plot(legend, 0.91, 0, 0.09, 1) +
+    draw_plot_label(c("A", "B"), c(0, 0.5),
+      c(1, 1), size = 12)
+  
+  figs("paperfig", "Estimated number of diagnosed males (A) and females (B)
+    in Australia over 1987-2027 by 5-year age bin (under projection 
+    scenario).")
+  
+  if (savePlots) {
+    SaveFigure(figFolder, "Combined_paper_figure-2027", paperFigure,
+      format = saveFormat, width = 27, height = 10, units = units)
+  }
 }
 ```
 
@@ -206,60 +295,61 @@ if (savePlots) {
 # This chunk produces a simple age distrubtion for the number of people
 # diagnosed with HIV in 2016 overall and by sex and overall at the end
 # of the projections in 2016. 
-
-resultsYear <- 2016
-currentSets <- c("all", "male", "female")
-currentSetNames <- c("Overall", "Males", "Females")
-ageDist2016 <- PlotAgeDist(mainResults, resultsYear, sets = currentSets,
-  setnames = currentSetNames)
-
-futureYear <- 2026
-futureDists <- futureResults %>%
-  rename(value = pldhiv)
-futureSets <- unique(futureResults$set)
-futureSetNames <- c("Status-quo", "Linear", "Reduce by 35%", 
-  "Reduce by 50%")
-ageDist2026 <-PlotAgeDist(futureDists, futureYear, sets = futureSets,
-  setnames = futureSetNames)
-
-if (savePlots) {
+if (!asr) {
+  resultsYear <- 2017
+  currentSets <- c("all", "male", "female")
+  currentSetNames <- c("Overall", "Males", "Females")
+  ageDist2016 <- PlotAgeDist(mainResults, resultsYear, sets = currentSets,
+    setnames = currentSetNames)
   
-  # Standard dimensions
-  width <- 12
-  height <- 9
-  units <- "cm"
+  futureYear <- 2027
+  futureDists <- futureResults %>%
+    rename(value = pldhiv)
+  futureSets <- unique(futureResults$set)
+  futureSetNames <- c("Status-quo", "Linear", "Reduce by 35%", 
+    "Reduce by 50%", "Reduce by 65%")
+  ageDist2026 <-PlotAgeDist(futureDists, futureYear, sets = futureSets,
+    setnames = futureSetNames)
   
-  # Save plots
-  SaveFigure(figFolder, "Distribution-2016", ageDist2016,
-    format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "All-Distribution-2026", ageDist2026,
-    format = saveFormat, width = width, height = height, units = units)
-  
-}
+  if (savePlots) {
+    
+    # Standard dimensions
+    width <- 12
+    height <- 9
+    units <- "cm"
+    
+    # Save plots
+    SaveFigure(figFolder, "Distribution-2017", ageDist2016,
+      format = saveFormat, width = width, height = height, units = units)
+    SaveFigure(figFolder, "All-Distribution-2027", ageDist2026,
+      format = saveFormat, width = width, height = height, units = units)
+    
+  }
+} 
 ```
 
 ```{r Plot future projections}
 # This chunk produces simple plots of the overall number of people
 # living with diagnosed HIV. 
-
-startYear <- 2011
-endYear <- 2026
-futureSets <- unique(futureResults$set)
-futureSetNames <- c("Status-quo", "Linear", "Reduce by 35%", 
-  "Reduce by 50%")
-futurePldhiv <- futureResults %>% 
-  group_by(year, set) %>%
-  summarise(pldhiv = sum(pldhiv))
-
-projectPlot <- PlotPldhivProjection(futurePldhiv, startYear, endYear, 
-  sets = futureSets, setnames = futureSetNames)
-
-if (savePlots) {
+if (!asr) {
+  startYear <- 2012
+  endYear <- 2027
+  futureSets <- unique(futureResults$set)
+  futureSetNames <- c("Status-quo", "Linear", "Reduce by 35%", 
+    "Reduce by 50%", "Reduce by 65%")
+  futurePldhiv <- futureResults %>% 
+    group_by(year, set) %>%
+    summarise(pldhiv = sum(pldhiv))
   
-  # Save plots
-  SaveFigure(figFolder, "Pldhiv_projections", projectPlot,
-    format = saveFormat, width = 12, height = 8)
+  projectPlot <- PlotPldhivProjection(futurePldhiv, startYear, endYear, 
+    sets = futureSets, setnames = futureSetNames)
   
+  if (savePlots) {
+    
+    # Save plots
+    SaveFigure(figFolder, "Pldhiv_projections-2017", projectPlot,
+      format = saveFormat, width = 12, height = 8)
+  }
 }
 ```
 
