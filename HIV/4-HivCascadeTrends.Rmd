@@ -147,7 +147,11 @@ So dropped these tests and just stuck with the pseudo-R^2.
 # Notifications ----------------------------------------------------------
 LoadLibrary(rsq) # load the rsq package for pseudo-R^2 calculation
 
-# Notifications excluding people previouly diagnosed overseas
+# Notifications excluding people previouly diagnosed overseas -
+# also explored including those diagnosed overseas and from 1999 the 
+# bottom of the epidemic but it didn't really illuminate much other than 
+# the growing number of notifications in those previoulsy diagnosed 
+# overseas. 
 diagsData <- hivSet %>%
   filter(is.na(previ_diag_overseas)) %>%
   group_by(yeardiagnosis) %>%
@@ -656,7 +660,7 @@ autoplot(cpt.mean(unsuppressedts))
 # breakpoints() function in the strucchange package.  
 
 # Look for breakpoints - diagnoses
-bpDiagnoses <-breakpoints(diagnoses ~ years, data = data, h = 3)
+bpDiagnoses <- breakpoints(diagnoses ~ years, data = data, h = 3)
 summary(bpDiagnoses)
 
 autoplot(bpDiagnoses)
