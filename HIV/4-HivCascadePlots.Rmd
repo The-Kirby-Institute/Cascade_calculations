@@ -52,6 +52,7 @@ LoadLibrary(scales)
 LoadLibrary(cowplot) # Note this masks ggsave with save_plot
 LoadLibrary(captioner)
 LoadLibrary(stringr)
+LoadLibrary(gridExtra)
 
 # Function to format data and range into thousands
 source(file.path(Rcode, "FormatData.R"))
@@ -80,12 +81,13 @@ resultsFolder <- file.path(resultsFolder, projectName)
 cascadePop <- "all"
 
 savePlots <- TRUE # save plots as separate files
-pubPlots <- FALSE   # create additional plots for publications
+pubPlots <- TRUE   # create additional plots for publications
 newInfectsPlots <- FALSE
 saveFormat <- ".png" # file extension for saved plots 
 excludeCare <- FALSE # Include linked and retained in care?
 
 # Setup based on specs
+asrcols <- PlotColors("hivcascade5")
 if (projectName %in% c("ASR_2018", "ASR_2017", "ASR_2016")) {
   # ASR do many populations otherwise do the specified one
   cascadePop <- "all" 
@@ -519,6 +521,20 @@ if (pubPlots) {
     toString(startYear), "-", toString(resultsYear), 
     saveFormat, sep = "")),
     plot = plotDeathRate, width = 7.5, height = 6, units = "cm")
+  
+  # Create a combined plot
+  HIVdiagnosedPlot <- ggdraw() +
+    draw_plot(plots[[2]], 0, 0.5, 0.5, 0.5) + #Number PLDHIV
+    draw_plot(casesPlot, 0.5, 0.5, 0.5, 0.5) +
+    draw_plot(plotDeaths, 0, 0, 0.5, 0.5) +
+    draw_plot(plotDeathRate, 0.5, 0, 0.5, 0.5) +
+    draw_plot_label(c("A", "B", "C", "D"), c(0, 0.5, 0, 0.5), 
+      c(1, 1, 0.5, 0.5), size = 12)
+  
+  ggsave(file.path(figFolder, paste("HIVdiagnosed_indicators_", 
+    toString(startYear), "-", toString(resultsYear), 
+    saveFormat, sep = "")),
+    plot = HIVdiagnosedPlot, width = 20, height = 16, units = "cm")
   
   # Treatment coverage plot ----------------------------------------------
   
