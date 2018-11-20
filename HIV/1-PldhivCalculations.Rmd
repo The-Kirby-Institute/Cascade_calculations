@@ -47,7 +47,7 @@ Report(ASR))
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2017
-saveResults <- TRUE
+saveResults <- FALSE
 
 # Set HIV subsetting function parameters----------------------------------
 
@@ -60,12 +60,12 @@ saveResults <- TRUE
 ## calculations is accurate. 
 ##***********************************************************************##
 
-projectOutput <- "ASR_2018" # "." for main output folder 
+projectOutput <- "Test_Cascades" # "." for main output folder 
                             # "HIV_Cascade_Paper" for paper
                             
-cascadeName <- "All-2017"
-targetGender <- "male" # all, male, female (single)
-targetAge <- "all" # all or split
+cascadeName <- "NSW-2017-Age"
+targetGender <- "all" # all, male, female (single)
+targetAge <- "split" # all or split
 
 # Note regarding ageing: The calculations don't specifically target 
 # specific ages.  Rather this simply chooses whether age is considered or 
@@ -80,7 +80,7 @@ targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
 # Only used if country is Australia (single)
 
-targetState <- "all" # nsw, sa, nt, qld, vic, wa, act, tas
+targetState <- "nsw" # nsw, sa, nt, qld, vic, wa, act, tas
 # (combination)
 targetLocalRegion <- "all" #tbd (combination)
 targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
@@ -266,9 +266,15 @@ hivSetUnknown <- hivSetReturn[[3]]
 # multiple selections with country of birth
 # hivSetExcluded <- filter(hivSetExcluded, state == targetState)
 
+
+
+
+
+
+
 # Calculate unique notifications and duplicates for the known set.
 if (doUnique) {
-  hivSetUnique <- SubHivSet(hivSetAll, "all", targetGender,
+  hivSetUnique <- SubHivSet(hivSet, "all", targetGender,
     targetExposure, "all", "all",
     targetState, "all")
   
@@ -654,7 +660,7 @@ if (interState) {
     
   } else {
     # Calculate overall first for inter-regional migration
-    pldhivOverall <- LivingDiagnosed(adjustDiags$all,
+    pldhivOverall <- LivingDiagnosed(hivResults$all_notifications,
       subsetRatesAll$annunique, 
       subsetRatesAll$deathrate,
       subsetRatesAll$mrate,
@@ -663,7 +669,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivOverallMin <- LivingDiagnosed(adjustDiags$all,
+    pldhivOverallMin <- LivingDiagnosed(hivResults$all_notifications,
       subsetRatesAll$annunique,  
       subsetRatesAll$deathrate_upper,
       subsetRatesAll$mrate_upper,
@@ -672,7 +678,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivOverallMax <- LivingDiagnosed(adjustDiags$all,
+    pldhivOverallMax <- LivingDiagnosed(hivResults$all_notifications,
       subsetRatesAll$annunique,  
       subsetRatesAll$deathrate_lower,
       subsetRatesAll$mrate_lower,
@@ -682,7 +688,7 @@ if (interState) {
       as_tibble()
     
     # Now do regional migration
-    pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
+    pldhivAll <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique, 
       subsetRates$deathrate, 
       subsetRates$mrate,
@@ -695,7 +701,7 @@ if (interState) {
       as_tibble()
     
     # Use best estimate overall for min and max
-    pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
+    pldhivAllMin <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique,  
       subsetRates$deathrate_upper,
       subsetRates$mrate_upper,
@@ -707,7 +713,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
+    pldhivAllMax <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique,  
       subsetRates$deathrate_lower,
       subsetRates$mrate_lower,
@@ -732,7 +738,7 @@ if (interState) {
     # pldhivOverall$pldhiv vs colSums(pldhivAll). 
     
     # Calculate overall (non-age) PLDHIV estimates for normalization
-    pldhivOverall <- LivingDiagnosed(adjustDiags$adjusted_included,
+    pldhivOverall <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique, 
       subsetRates$deathrate,
       subsetRates$mrate,
@@ -741,7 +747,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivOveralllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
+    pldhivOveralllMin <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique,  
       subsetRates$deathrate_upper,
       subsetRates$mrate_upper,
@@ -750,7 +756,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivOverallMax <- LivingDiagnosed(adjustDiags$adjusted_included,
+    pldhivOverallMax <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique,  
       subsetRates$deathrate_lower,
       subsetRates$mrate_lower,
@@ -791,7 +797,7 @@ if (interState) {
     
     
   } else {
-    pldhivAll <- LivingDiagnosed(adjustDiags$adjusted_included,
+    pldhivAll <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique, 
       subsetRates$deathrate,
       subsetRates$mrate,
@@ -800,7 +806,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivAllMin <- LivingDiagnosed(adjustDiags$adjusted_included,
+    pldhivAllMin <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique,  
       subsetRates$deathrate_upper,
       subsetRates$mrate_upper,
@@ -809,7 +815,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivAllMax <- LivingDiagnosed(adjustDiags$adjusted_included,
+    pldhivAllMax <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique,  
       subsetRates$deathrate_lower,
       subsetRates$mrate_lower,
