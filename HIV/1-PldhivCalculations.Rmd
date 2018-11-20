@@ -266,12 +266,6 @@ hivSetUnknown <- hivSetReturn[[3]]
 # multiple selections with country of birth
 # hivSetExcluded <- filter(hivSetExcluded, state == targetState)
 
-
-
-
-
-
-
 # Calculate unique notifications and duplicates for the known set.
 if (doUnique) {
   hivSetUnique <- SubHivSet(hivSet, "all", targetGender,
@@ -280,7 +274,22 @@ if (doUnique) {
   
   uniqueNotifications <- GetUnique(hivSetUnique[[1]], allYears, 
     yearUnique = yearUnique)
+  
+  # For Interstate Calculations we need overall national estimates
+  if (interState) {
+    hivSetUniqueAll <- SubHivSet(hivSet, "all", targetGender,
+      targetExposure, "all", "all",
+      "all", "all")
+    
+    uniqueNotificationsAll <- GetUnique(hivSetUniqueAll[[1]], allYears, 
+      yearUnique = yearUnique)
+  }
 } 
+
+# propDiagsAgeMale <- ProportionMale(hivSet, analysisYear, doAge)
+# propDiagsAgeMaleAll <- ProportionMale(hivSetAll, analysisYear, doAge)
+
+# ProportionMale function
 
 # Calculation cumulative proportion male. This is used for gender weighted
 # migration rates
