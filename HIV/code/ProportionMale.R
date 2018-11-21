@@ -82,10 +82,10 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
         select(-cummale, -cumother) %>%
         spread(agebin, propmale)
       
-      propDiagsAgeMale <- as.matrix(hivGenderAgeCum)
+      propDiagsMale <- as.matrix(hivGenderAgeCum)
       
     } else {
-      propDiagsAgeMale <- NULL
+      propDiagsMale <- NULL
     } 
   } else {
     # Not doing age calculations
@@ -134,5 +134,5 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
   }
   
   # Return final value
-  return(propDiagsAgeMale)
+  return(propDiagsMale)
 } 
