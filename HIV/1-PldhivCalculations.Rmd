@@ -245,6 +245,21 @@ load(file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
 absInterstate <- read_csv(file.path(mainDataFolder, 
   paste0("ABS_interstate_age_sex_clean-", toString(analysisYear), ".csv")))
 
+if (doAge) {
+  # Specifications and deaths data by age
+  
+  # Set-up age matrix names
+  ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
+    "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
+    "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
+  
+  yearList <- paste0("y", as.character(allYears))
+  
+  # Load age based relative deathrates 
+  hivAgeDeath <- read.csv(file.path(dataFolder, paste0("HIVageEstimates-",
+      toString(analysisYear), ".csv")))
+}
+
 ```
 
 ```{r Subset notifications}
@@ -366,6 +381,11 @@ subsetRates <- GetAdjustments(hivBase, hivAdjustments,
 if (doUnique) {
   subsetRates$cumunique <- uniqueNotifications$cumunique 
   subsetRates$ annunique <- uniqueNotifications$annunique
+  
+  if (interState) {
+     subsetRatesAll$cumunique <- uniqueNotificationsAll$cumunique 
+     subsetRatesAll$ annunique <- uniqueNotificationsAll$annunique
+  }
 } 
 
 # Get migration rate adjustments 
@@ -390,11 +410,20 @@ subsetRates$mrate <- relMigration * hivBase$migrationrate
 subsetRates$mrate_lower <- relMigration * hivBase$migrationrate_lower
 subsetRates$mrate_upper <- relMigration * hivBase$migrationrate_upper
 
+# Initialize interstate movement rates
+subsetRates$inter_arriverate <- 0
+subsetRates$inter_departrate <- 0
+
 if (interState) {
   # For interstate calculations also need overall population estimates
   subsetRatesAll <- GetAdjustments(hivBase, hivAdjustments,
     "all", targetGender, targetExposure, targetCob, targetAtsi, 
     targetLocalRegion, "all", targetGlobalRegion)  
+  
+  if (doUnique) {
+      subsetRatesAll$cumunique <- uniqueNotificationsAll$cumunique 
+      subsetRatesAll$ annunique <- uniqueNotificationsAll$annunique
+    }
   
   # Get migration rate adjustments 
   relMigrationAll <- GetMigrate(analysisYear, cleanNom, "all",
@@ -420,35 +449,23 @@ if (interState) {
     hivBase$migrationrate_lower
   subsetRatesAll$mrate_upper <- relMigrationAll *
     hivBase$migrationrate_upper
-}
-
-# Get interregion rates - only have date since 1982 assume zero rate for
-# 1980-81. 
-if (interState) {
+  
+  # Get interregion rates - only have date since 1982 assume zero rate for
+  # 1980-81. 
   interRegionRates <- GetInterRegion(analysisYear, cleanNom, 
     absInterstate, NULL, "all", "all", targetState, targetLocalRegion,
     assumeAdult = TRUE)
   
   subsetRates$inter_arriverate <- interRegionRates$arriverate
   subsetRates$inter_departrate <- interRegionRates$departrate
-} else {
-  subsetRates$inter_arriverate <- 0
-  subsetRates$inter_departrate <- 0
 }
 
 if (doAge) {
-  ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
-      "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
-      "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
-    
-    yearList <- paste0("y", as.character(allYears))
-  
-  # Load age based relative deathrates and migration rates.
+  # No get relative migration and death rates by age. 
+  # Death rates are assumed to be the same for overall and 
+  # interstate/interegion
   
   # Relative death rates - based on overall data
-  hivAgeDeath <- read.csv(file.path(dataFolder,
-    paste0("HIVageEstimates-",
-      toString(analysisYear), ".csv")))
   relAgeDeath <- hivAgeDeath %>%
     filter(population == targetGender, year <= analysisYear) %>%
     select(year, age, reldeathrate) %>%
@@ -466,6 +483,11 @@ if (doAge) {
   rownames(relAgeMigrate) <- ageList
   
   if (interState) {
+    # Need overall relative migration rates as well
+    relAgeMigrateAll <- GetMigrateAge(analysisYear, cleanNom, targetGender, 
+    targetExposure, targetCob, targetAtsi, targetLocalRegion, "all", 
+    targetGlobalRegion, propMale = propDiagsAgeMaleAll)
+    
     # Get interregion rates by age
     interRegionAge <- GetInterRegionAge(analysisYear, cleanNom, 
       absInterstate, NULL, "all", targetState, targetLocalRegion)
