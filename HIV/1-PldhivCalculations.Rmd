@@ -511,8 +511,26 @@ if (interState) {
     pldhivOverallAll <- LivingDiagnosed(hivResultsAll$notifications,
       subsetRatesAll$annunique, 
       subsetRatesAll$deathrate,
-      subsetRates$mrate,
+      subsetRatesAll$mrate,
       subsetRatesAll$propstay) %>%
+      mutate(year = allYears) %>%
+      select(year, everything()) %>%
+      as_tibble()
+    
+    pldhivOverallAllMin <- LivingDiagnosed(hivResultsAll$notifications,
+      subsetRatesAll$annunique,  
+      subsetRatesAll$deathrate_upper,
+      subsetRatesAll$mrate_upper,
+      subsetRatesAll$propstay_lower) %>%
+      mutate(year = allYears) %>%
+      select(year, everything()) %>%
+      as_tibble()
+    
+    pldhivOverallAllMax <- LivingDiagnosed(hivResultsAll$notifications,
+      subsetRatesAll$annunique,  
+      subsetRatesAll$deathrate_lower,
+      subsetRatesAll$mrate_lower,
+      subsetRatesAll$propstay_upper) %>%
       mutate(year = allYears) %>%
       select(year, everything()) %>%
       as_tibble()
@@ -527,7 +545,25 @@ if (interState) {
       agemigrate = relAgeMigrateAll,
       normalize = pldhivOverallAll$pldhiv)
     
-    # Calculate overall (non-age) PLDHIV estimates for normalization
+     pldhivAgeAllMin <- LivingDiagnosedAge(hivResultsAgeAll,
+      subsetRatesAll$annunique, 
+      subsetRatesAll$deathrate_upper,
+      hivBase$migrationrate_upper, 
+      subsetRatesAll$propstay_lower,
+      agedeath = relAgeDeath,
+      agemigrate = relAgeMigrate,
+      normalize = pldhivOverallAllMin$pldhiv)
+    
+    pldhivAgeAllMax <- LivingDiagnosedAge(hivResultsAgeAll,
+      subsetRatesAll$annunique, 
+      subsetRatesAll$deathrate_lower,
+      hivBase$migrationrate_lower, 
+      subsetRatesAll$propstay_upper,
+      agedeath = relAgeDeath,
+      agemigrate = relAgeMigrate,
+      normalize = pldhivOverallAllMax$pldhiv)
+    
+    # Calculate overall (non-age) PLDHIV state stimates for normalization
     pldhivOverall <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique, 
       subsetRates$deathrate,
@@ -537,7 +573,27 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
+   pldhivOverallMin <- LivingDiagnosed(hivResults$notifications,
+      subsetRates$annunique,  
+      subsetRates$deathrate_upper,
+      subsetRates$mrate_upper,
+      subsetRates$propstay_lower) %>%
+      mutate(year = allYears) %>%
+      select(year, everything()) %>%
+      as_tibble()
+    
+    pldhivOverallMax <- LivingDiagnosed(hivResults$notifications,
+      subsetRates$annunique,  
+      subsetRates$deathrate_lower,
+      subsetRates$mrate_lower,
+      subsetRates$propstay_upper) %>%
+      mutate(year = allYears) %>%
+      select(year, everything()) %>%
+      as_tibble()
+    
     # Calculate state estimaets by age
+    # NOTE: use base migration rate as mrate is calculated assuming people
+    # are aged > 15 years
     pldhivAll <- LivingDiagnosedAge(hivResultsAge,
       subsetRates$annunique, 
       subsetRates$deathrate,
@@ -549,6 +605,30 @@ if (interState) {
       departs = interDepartrateAge,
       pldhiv =  pldhivAgeAll, 
       normalize = pldhivOverall$pldhiv)
+    
+    pldhivAllMin <- LivingDiagnosedAge(hivResultsAge,
+      subsetRates$annunique, 
+      subsetRates$deathrate_upper,
+      hivBase$migrationrate_upper, 
+      subsetRates$propstay_lower,
+      agedeath = relAgeDeath,
+      agemigrate = relAgeMigrate,
+      arrivals = interArriverateAge,
+      departs = interDepartrateAge,
+      pldhiv =  pldhivAgeAllMin,
+      normalize = pldhivOverallMin$pldhiv)
+    
+    pldhivAllMax <- LivingDiagnosedAge(hivResultsAge,
+      subsetRates$annunique, 
+      subsetRates$deathrate_lower,
+      hivBase$migrationrate_lower, 
+      subsetRates$propstay_upper,
+      agedeath = relAgeDeath,
+      agemigrate = relAgeMigrate,
+      arrivals = interArriverateAge,
+      departs = interDepartrateAge,
+      pldhiv =  pldhivAgeAllMax,
+      normalize = pldhivOverallMax$pldhiv)
     
   } else {
     # Calculate overall first for inter-regional migration
@@ -639,7 +719,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivOveralllMin <- LivingDiagnosed(hivResults$notifications,
+    pldhivOverallMin <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique,  
       subsetRates$deathrate_upper,
       subsetRates$mrate_upper,
@@ -676,7 +756,7 @@ if (interState) {
       subsetRates$propstay_lower,
       agedeath = relAgeDeath,
       agemigrate = relAgeMigrate,
-      normalize = pldhivOveralllMin$pldhiv)
+      normalize = pldhivOverallMin$pldhiv)
     
     pldhivAllMax <- LivingDiagnosedAge(hivResultsAge,
       subsetRates$annunique, 
@@ -686,7 +766,6 @@ if (interState) {
       agedeath = relAgeDeath,
       agemigrate = relAgeMigrate,
       normalize = pldhivOverallMax$pldhiv)
-    
     
   } else {
     pldhivAll <- LivingDiagnosed(hivResults$notifications,
