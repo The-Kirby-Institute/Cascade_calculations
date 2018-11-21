@@ -306,7 +306,7 @@ hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
 
-if (interstate && doAge) {
+if (interState && doAge) {
   hivSetReturnAll <- SubHivSet(hivSetAll, "all", targetGender,
   targetExposure, targetCob, targetAtsi,
   "all", targetGlobalRegion)
@@ -360,7 +360,7 @@ annualDiags <- AnnualDiagnoses(hivSet, hivSetExcluded,
 hivResults <- annualDiags[[1]]
 hivResultsAge <- annualDiags[[2]]
 
-if (interstate && doAge) {
+if (interState && doAge) {
   annualDiagsAll <- AnnualDiagnoses(hivSetAll, 
     hivSetExcludedAll, hivSetUnknownAll, allYears, doAge)
   
@@ -507,26 +507,35 @@ if (interState) {
   # A bit more work to do if we do inter-regional migration
   if (doAge) {
     # Do age based interstate calculations
-    
-    # Calculate overall (non-age) PLDHIV estimates for normalization
-    pldhivOverall <- LivingDiagnosed(hivResults$notifications,
-      subsetRatesNational$annunique, 
-      subsetRatesNational$deathrate,
+    # Calculate overall national PLDHIV estimates for interstate miogration
+    pldhivOverallAll <- LivingDiagnosed(hivResultsAll$notifications,
+      subsetRatesAll$annunique, 
+      subsetRatesAll$deathrate,
       subsetRates$mrate,
-      subsetRatesNational$propstay) %>%
+      subsetRatesAll$propstay) %>%
       mutate(year = allYears) %>%
       select(year, everything()) %>%
       as_tibble()
     
     # Calculate National pldhiv by age
-    pldhivOverallAge <- LivingDiagnosedAge(hivResultsNational,
-      subsetRatesNational$annunique, 
-      subsetRatesNational$deathrate,
+    pldhivAgeAll <- LivingDiagnosedAge(hivResultsAgeAll,
+      subsetRatesAll$annunique, 
+      subsetRatesAll$deathrate,
       hivBase$migrationrate, 
-      subsetRatesNational$propstay,
-      agedeath = relAgeDeathNational,
-      agemigrate = relAgeMigrateNational,
-      normalize = pldhivOverall$pldhiv)
+      subsetRatesAll$propstay,
+      agedeath = relAgeDeath,
+      agemigrate = relAgeMigrateAll,
+      normalize = pldhivOverallAll$pldhiv)
+    
+    # Calculate overall (non-age) PLDHIV estimates for normalization
+    pldhivOverall <- LivingDiagnosed(hivResults$notifications,
+      subsetRates$annunique, 
+      subsetRates$deathrate,
+      subsetRates$mrate,
+      subsetRates$propstay) %>%
+      mutate(year = allYears) %>%
+      select(year, everything()) %>%
+      as_tibble()
     
     # Calculate state estimaets by age
     pldhivAll <- LivingDiagnosedAge(hivResultsAge,
@@ -538,7 +547,7 @@ if (interState) {
       agemigrate = relAgeMigrate,
       arrivals = interArriverateAge,
       departs = interDepartrateAge,
-      pldhiv =  pldhivOverallAge, 
+      pldhiv =  pldhivAgeAll, 
       normalize = pldhivOverall$pldhiv)
     
   } else {

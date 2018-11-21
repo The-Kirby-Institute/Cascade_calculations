@@ -57,11 +57,11 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
   }
   
   if (is.null(arrivals)) {
-    arrivals <- rep(0, nyears)
+    arrivals <- matrix(0, nages, nyears)
   }
   
   if (is.null(departs)) {
-    departs <- rep(0, nyears)
+    departs <- matrix(0, nages, nyears)
   }
   
   if (is.null(pldhiv)) {
@@ -83,7 +83,7 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
   # number of agebins (should be 18)
   
   vectorLengths <- c(nyears, ncol(annualdiags), length(deathrate),
-    length(migration), length(arrivals), length(departs), ncol(pldhiv), 
+    length(migration), ncol(arrivals), ncol(departs), ncol(pldhiv), 
     ncol(agedeath), ncol(agemigrate), length(normalize))
   
   if (length(unique(vectorLengths)) != 1) {
