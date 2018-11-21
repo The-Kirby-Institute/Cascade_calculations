@@ -7,6 +7,14 @@
 
 # Define local functions --------------------------------------------------
 extractInterData <- function(interData, nomData, fage, fregion, fsex) {
+  
+  # Fix up age band for nomData
+  if (fage == "a75+") {
+    nomAge <- "a75_79"
+  } else {
+    nomAge <- fage
+  }
+  
   subInterData <- interData %>% 
     filter(year %in% 2004:2014) %>% # only have erp data to 2014
     filter(age %in% fage, 
@@ -19,7 +27,7 @@ extractInterData <- function(interData, nomData, fage, fregion, fsex) {
   
   subErpData <- nomData %>% 
     filter(year %in% 2004:2014) %>%
-    filter(age %in% fage, cob == "all",
+    filter(age %in% nomAge, cob == "all",
       state %in% fregion, gender %in% fsex) %>% 
     group_by(year) %>%
     summarise(erp = sum(erp)) %>%
@@ -27,7 +35,7 @@ extractInterData <- function(interData, nomData, fage, fregion, fsex) {
   
   allErpData <- nomData %>% 
     filter(year %in% 2004:2014) %>%
-    filter(age %in% fage, cob == "all",
+    filter(age %in% nomAge, cob == "all",
       state %in% "all", gender %in% fsex) %>% 
     group_by(year) %>%
     summarise(erp = sum(erp)) %>%
@@ -48,7 +56,7 @@ predictInterRates <- function(interRate, year) {
 
 # Overall rate for a specified population ------------------------
 GetInterRegion <- function(finalYear, nomData, interstateData, 
-  interRegionData, targetGender, targetState, targetRegion, 
+  interRegionData, targetGender, targetAge, targetState, targetRegion, 
   assumeAdult = TRUE, propMale = NULL) {
   
   # First need to sort out if it is regional or state estimate
@@ -78,20 +86,20 @@ GetInterRegion <- function(finalYear, nomData, interstateData,
       if (assumeAdult) {
         adjustAges <- c("a15_19", "a20_24", "a25_29", "a30_34", "a35_39", 
           "a40_44", "a45_49", "a50_54", "a55_59", "a60_64", 
-          "a65_69", "a70_74", "a75_79")
+          "a65_69", "a70_74", "a75+")
       } else {
         adjustAges <- "all"
       }
     } else {
       # This seems too complicated but I think it works. 
-      if (any(c("a80_84", "a85+") %in% targetAge)) {
-        if(all(targetAge %in% c("a80_84", "a85+"))) {
-          # ftargetAge = "a80_84", "a85+", or c("a80_84", "a85+"). 
-          # Replace with rate for "a75_79"
-          adjustAges <- "a75_79"
+      if (any(c("a75_79", "a80_84", "a85+") %in% targetAge)) {
+        if(all(targetAge %in% c("a75_79", "a80_84", "a85+"))) {
+          # ftargetAge = "a75_79", "a80_84", "a85+", or 
+          # c("a75_79", "a80_84", "a85+"). Replace with rate for "a75+"
+          adjustAges <- "a75+"
         } else {
-          # Contains other ages Remove "a80_84" and "a85+"
-          adjustAges <- targetAge[!(targetAge %in% c("a80_84", "a85+"))]
+          # Contains other ages remove "a75_79", "a80_84" and "a85+"
+          adjustAges <- targetAge[!(targetAge %in% c("a75_79", "a80_84", "a85+"))]
         }
       } else {
         # Use the specified age
@@ -113,8 +121,6 @@ GetInterRegion <- function(finalYear, nomData, interstateData,
         finalYear)
       arriverate <- predictInterRates(maleData$arrivals / 
           (maleData$allerp - maleData$erp), finalYear)
-      
-      
       
     } else if (targetGender == "female") {
       
@@ -177,4 +183,42 @@ GetInterRegion <- function(finalYear, nomData, interstateData,
   }
   
   return(hivInterRegion)
+}
+
+# Function for all age groups ---------------------------------------------
+GetInterRegionAge <- function(finalYear, nomData, interstateData, 
+  interRegionData, targetGender, targetState, targetRegion,
+  propMale = NULL) {
+  
+  # Specify age bins
+  ages <- c("a0_4", "a5_9", "a10_14", "a15_19", "a20_24", "a25_29",
+    "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", "a60_64", 
+    "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
+  
+  # Initialize outputs
+  hivInterAgeDepart <- matrix(0, nrow = length(ages), 
+    ncol = length(1980:finalYear))
+  rownames(hivInterAgeDepart) <- ages
+  hivInterAgeArrive <- hivInterAgeDepart
+  
+  # Loop over ages 
+  for (age in ages) {
+    
+    if (!is.null(propMale)) {
+      propMaleAge <- as.vector(propMale[, age])
+    } else {
+      propMaleAge <- NULL
+    }
+    
+    tempInterRegion <- GetInterRegion(finalYear, nomData, interstateData, 
+      interRegionData, targetGender, age, targetState, targetRegion, 
+      assumeAdult = FALSE, propMale = propMaleAge)
+    
+    # Fill output matrices
+    hivInterAgeDepart[age, ] <- tempInterRegion$departrate
+    hivInterAgeArrive[age, ] <- tempInterRegion$arriverate
+  }
+  
+  # Return results
+  return(list(hivInterAgeDepart, hivInterAgeArrive))
 }

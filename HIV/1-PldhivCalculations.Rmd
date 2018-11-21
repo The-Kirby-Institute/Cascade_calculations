@@ -222,6 +222,31 @@ allYears <- min(hivData$yeardiagnosis):analysisYear # all years of data
 
 ```
 
+```{r Load base and adjustment data}
+# This loads the adjustment files for adjusting the death rates and
+# migration rates  
+hivBase <- read.csv(file.path(dataFolder, paste0("HIVbaseEstimates-",
+  toString(analysisYear), ".csv")))
+hivAdjustments <- read.csv(file.path(dataFolder,
+  paste0("HIVadjustments-",
+    toString(analysisYear), ".csv")))
+# hivInterstate <- read.csv(file.path(dataFolder,
+#   paste0("HIVinterstateEstimates-",
+#     toString(analysisYear), ".csv")))
+
+mainDataFolder <- file.path(dirname(getwd()), "data")
+# absMigration <- read.csv(file.path(mainDataFolder,
+#   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")),
+#   as.is = 1)
+
+# Load cleaned NOM data variable (cleanNom)
+load(file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
+ 
+absInterstate <- read_csv(file.path(mainDataFolder, 
+  paste0("ABS_interstate_age_sex_clean-", toString(analysisYear), ".csv")))
+
+```
+
 ```{r Subset notifications}
 # Create subsetted notifications dataframe. May have to do this multiple
 # times to get the extact number of specific category and those excluded
@@ -537,29 +562,7 @@ hivResultsAge <- annualDiags[[2]]
 
 ```
 
-```{r Load base and adjustment estimates}
-# This loads the adjustment files for adjusting the death rates and
-# migration rates  
-hivBase <- read.csv(file.path(dataFolder, paste0("HIVbaseEstimates-",
-  toString(analysisYear), ".csv")))
-hivAdjustments <- read.csv(file.path(dataFolder,
-  paste0("HIVadjustments-",
-    toString(analysisYear), ".csv")))
-# hivInterstate <- read.csv(file.path(dataFolder,
-#   paste0("HIVinterstateEstimates-",
-#     toString(analysisYear), ".csv")))
-
-mainDataFolder <- file.path(dirname(getwd()), "data")
-# absMigration <- read.csv(file.path(mainDataFolder,
-#   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")),
-#   as.is = 1)
-
-# Load cleaned NOM data variable (cleanNom)
-load(file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
- 
-absInterstate <- read_csv(file.path(mainDataFolder, 
-  paste0("ABS_interstate_age_sex_clean-", toString(analysisYear), ".csv")))
-
+```{r Generate base and adjustment estimates}
 # Now get the death rates, base migration rates, and proportion stay rates
 # Migration rates are now calculated using GetMigrate
 subsetRates <- GetAdjustments(hivBase, hivAdjustments, 
@@ -630,7 +633,7 @@ if (interState) {
 # 1980-81. 
 if (interState) {
   interRegionRates <- GetInterRegion(analysisYear, cleanNom, 
-    absInterstate, NULL, "all", targetState, targetLocalRegion,
+    absInterstate, NULL, "all", "all", targetState, targetLocalRegion,
     assumeAdult = TRUE)
   
   subsetRates$inter_arriverate <- interRegionRates$arriverate
@@ -664,7 +667,12 @@ if (doAge) {
   rownames(relAgeMigrate) <- ageList
   
   if (interState) {
+    # Get interregion rates by age
+    interRegionAge <- GetInterRegionAge(analysisYear, cleanNom, 
+      absInterstate, NULL, "all", targetState, targetLocalRegion)
     
+    interDepartrateAge <- interRegionAge[[1]]
+    interArriverateAge <- interRegionAge[[2]]
   }
 }
 
