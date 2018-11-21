@@ -146,8 +146,8 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
         (1 - propstay[ii-1]) * propunique[ii-1] * annualdiags[jj, ii-1] - 
         deathrate[ii-1] * agedeath[jj, ii-1] * nliving[jj, ii-1] -
         migration[ii-1] * agemigrate[jj, ii-1] * nliving[jj, ii-1] -
-        departs[ii-1] * nliving[jj, ii-1] +
-        arrivals[ii-1] * (pldhiv[jj, ii-1] - nliving[jj, ii-1]) -
+        departs[jj, ii-1] * nliving[jj, ii-1] +
+        arrivals[jj, ii-1] * (pldhiv[jj, ii-1] - nliving[jj, ii-1]) -
         nliving[jj, ii - 1] * ageRate[jj] + ageUp
       
       # For low numbers the previous calculation could give number less
