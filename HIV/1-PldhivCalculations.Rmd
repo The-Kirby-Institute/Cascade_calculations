@@ -291,6 +291,16 @@ hivSet <- hivSetReturn[[1]]
 hivSetExcluded <- hivSetReturn[[2]]
 hivSetUnknown <- hivSetReturn[[3]]
 
+if (interstate && doAge) {
+  hivSetReturnAll <- SubHivSet(hivSetAll, "all", targetGender,
+  targetExposure, targetCob, targetAtsi,
+  "all", targetGlobalRegion)
+
+  hivSetAll <- hivSetReturnAll[[1]]
+  hivSetExcludedAll <- hivSetReturnAll[[2]]
+  hivSetUnknownAll <- hivSetReturnAll[[3]]
+}
+
 # TEMPORARY HACK for state cascades to fix subsetting issues for 
 # multiple selections with country of birth
 # hivSetExcluded <- filter(hivSetExcluded, state == targetState)
@@ -310,130 +320,20 @@ if (doUnique) {
       targetExposure, "all", "all",
       "all", "all")
     
-    uniqueNotificationsNational <- GetUnique(hivSetUniqueAll[[1]], 
+    uniqueNotificationsAll <- GetUnique(hivSetUniqueAll[[1]], 
       allYears, yearUnique = yearUnique)
   }
 } 
 
 # Calculation cumulative proportion male. This is used for gender weighted
 # migration rates
-propDiagsAgeMale <- ProportionMale(hivSet, analysisYear, doAge)
-propDiagsAgeMaleNational <- ProportionMale(hivSetAll, analysisYear, doAge)
+propDiagsMale <- ProportionMale(hivSet, analysisYear, FALSE)
+propDiagsMaleAll <- ProportionMale(hivSetAll, analysisYear, FALSE)
 
-# ProportionMale function
-
-# Calculation cumulative proportion male. This is used for gender weighted
-# migration rates
-
-# hivSetGender <- hivSet %>% 
-#   group_by(yeardiagnosis, sex) %>% 
-#   summarise(notifications = n()) %>% 
-#   ungroup() %>%
-#   spread(sex, notifications) %>%
-#   rename(year = yeardiagnosis)
-# hivSetGender[is.na(hivSetGender)] <- 0
-# 
-# # Fill in missing years with zeros
-# hivSetGender <- FillDataFrame(1980:analysisYear, hivSetGender) %>%
-#   gather("sex", "notifications", 2:ncol(.)) %>%
-#   arrange(year)
-# 
-# if (targetGender == "all") {
-#   
-#   if ("transgender" %in% unique(hivSetGender$sex)) {
-#     hivGenderCum <- hivSetGender %>% 
-#       group_by(sex) %>% 
-#       mutate(cumnotifications = cumsum(notifications)) %>%
-#       ungroup() %>%
-#       select(-notifications) %>%
-#       spread(sex, cumnotifications) %>%
-#       select(-starts_with("unknown")) %>%
-#       gather("sex", "cumnotifications", 2:ncol(.)) %>%
-#       mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
-#         cumnotifications)) %>%
-#       group_by(year) %>% 
-#       mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
-#       select(-cumnotifications) %>%
-#       spread(sex, propnotifications) %>%
-#       mutate(female = ifelse(is.na(female), 0, female),
-#         male = ifelse(is.na(male), 0, male),
-#         transgender = ifelse(is.na(transgender), 0, transgender)) 
-#   } else {
-#     hivGenderCum <- hivSetGender %>% 
-#       group_by(sex) %>% 
-#       mutate(cumnotifications = cumsum(notifications)) %>%
-#       ungroup() %>%
-#       select(-notifications) %>%
-#       spread(sex, cumnotifications) %>%
-#       select(-starts_with("unknown")) %>%
-#       gather("sex", "cumnotifications", 2:ncol(.)) %>%
-#       mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
-#         cumnotifications)) %>%
-#       group_by(year) %>% 
-#       mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
-#       select(-cumnotifications) %>%
-#       spread(sex, propnotifications) %>%
-#       mutate(female = ifelse(is.na(female), 0, female),
-#         male = ifelse(is.na(male), 0, male))
-#   }
-#   propDiagsMale <- hivGenderCum$male
-# } else {
-#   propDiagsMale <- NULL
-# } 
-# 
-# if (doAge) {
-#   
-#   # Calculation cumulative proportion male for each age group.
-#   if (targetGender == "all") {
-#     hivSetGenderAge <- hivSet %>%
-#       group_by(yeardiagnosis, sex, agebin) %>%
-#       summarise(notifications = n()) %>%
-#       ungroup() %>%
-#       spread(sex, notifications)
-#     hivSetGenderAge[is.na(hivSetGenderAge)] <- 0
-#     hivSetGenderAge <- hivSetGenderAge %>%
-#       mutate(other = female+transgender+unknown) %>%
-#       rename(year = yeardiagnosis) %>%
-#       select(year, agebin, male, other)
-#     hivSetGenderAge[is.na(hivSetGenderAge)] <- 0
-#     
-#     # Fill in missing years with zeros - have to do males and others and
-#     # then rebind seperately
-#     hivSetMaleAge <- hivSetGenderAge %>%
-#       select(-other) %>%
-#       spread(agebin, male)
-#     hivSetMaleAge[is.na(hivSetMaleAge)] <- 0
-#     hivSetMaleAge <- FillDataFrame(1980:analysisYear, hivSetMaleAge) %>%
-#       gather("agebin", "male", 2:20) %>%
-#       arrange(year)
-#     
-#     hivSetOtherAge <- hivSetGenderAge %>%
-#       select(-male) %>%
-#       spread(agebin, other)
-#     hivSetOtherAge[is.na(hivSetOtherAge)] <- 0
-#     hivSetOtherAge <- FillDataFrame(1980:analysisYear, hivSetOtherAge) %>%
-#       gather("agebin", "other", 2:20) %>%
-#       arrange(year)
-#     
-#     hivGenderAgeCum <- hivSetMaleAge %>%
-#       mutate(other = hivSetOtherAge$other) %>%
-#       group_by(agebin) %>%
-#       mutate(cummale = cumsum(male),
-#         cumother = cumsum(other)) %>%
-#       ungroup() %>%
-#       select(-male, -other) %>%
-#       group_by(year, agebin) %>%
-#       mutate(propmale = cummale / (cummale + cumother)) %>%
-#       mutate(propmale = ifelse(is.nan(propmale), 1, propmale)) %>%
-#       select(-cummale, -cumother) %>%
-#       spread(agebin, propmale)
-#     
-#     propDiagsAgeMale <- as.matrix(hivGenderAgeCum)
-#     
-#   } else {
-#     propDiagsAgeMale <- NULL
-#   } 
-# }
+if (doAge) {
+  propDiagsAgeMale <- ProportionMale(hivSet, analysisYear, TRUE)
+  propDiagsAgeMaleAll <- ProportionMale(hivSetAll, analysisYear, TRUE)
+}
 
 ```
 
@@ -445,120 +345,13 @@ annualDiags <- AnnualDiagnoses(hivSet, hivSetExcluded,
 hivResults <- annualDiags[[1]]
 hivResultsAge <- annualDiags[[2]]
 
-# This chunk creates a dataframe of the annual notifications for the
-# specified criteria.
-# includeDiags <- hivSet %>% 
-#   group_by(yeardiagnosis) %>%
-#   summarise(included = n()) %>%
-#   ungroup() %>%
-#   rename(year = yeardiagnosis)
-# includeDiags <- FillDataFrame(allYears, includeDiags)
-# 
-# # If excluded and unknown is empty replace with zeros
-# if (nrow(hivSetExcluded) == 0) {
-#   excludedDiags <- data_frame(year = allYears,
-#     excluded = 0)
-# } else {
-#   excludedDiags <- hivSetExcluded %>%
-#     group_by(yeardiagnosis) %>% 
-#     summarise(excluded = n()) %>%
-#     rename(year = yeardiagnosis)
-#   
-# }
-# excludedDiags <- FillDataFrame(allYears, excludedDiags)
-# 
-# if (nrow(hivSetUnknown) == 0) {
-#   unknownDiags <- data_frame(year = allYears,
-#     unknown = 0)
-# } else {
-#   unknownDiags <- hivSetUnknown %>%
-#     group_by(yeardiagnosis) %>% 
-#     summarise(unknown = n()) %>%
-#     rename(year = yeardiagnosis)
-# }
-# unknownDiags <- FillDataFrame(allYears, unknownDiags)
-
-# Adjust included and excluded annual diagnoses propotionally to replace
-# unknowns
-
-##*********************************************************************##
-## WARNING -- The following calculation to adjust included notifications 
-## can be incorrect if multiple selections are used which include 
-## selections with lots of missing data unless appropriate adjustments are
-## made. 
-##*********************************************************************##
-
-# adjustDiags <- includeDiags %>% 
-#   left_join(excludedDiags, by = "year") %>%
-#   left_join(unknownDiags, by = "year") %>%
-#   mutate(all = included + excluded + unknown) %>%
-#   mutate(included = ifelse(is.na(included), 0, included),
-#     excluded = ifelse(is.na(excluded), 0, excluded),
-#     unknown = ifelse(is.na(unknown), 0, unknown)) %>%
-#   mutate(prop_included = included / (included + excluded),
-#     prop_excluded = excluded / (included + excluded)) %>%
-#   mutate(prop_included = ifelse(is.nan(prop_included), 0, prop_included), 
-#     prop_excluded = ifelse(is.nan(prop_excluded), 0, 
-#       prop_excluded)) %>%
-#   mutate(adjusted_included = included  + unknown * prop_included,
-#     adjusted_excluded = excluded + unknown * prop_excluded)
-# 
-# hivResults <- data_frame(year = adjustDiags$year,
-#   notifications = adjustDiags$adjusted_included,
-#   cumnotifications = cumsum(adjustDiags$adjusted_included),
-#   all_notifications = adjustDiags$all,
-#   all_cumnotifications = cumsum(adjustDiags$all))
-
-# Proportion in each age group--------------------------------------------
-# For the known diagnoses calculate proportion by age bin, exposure group,
-# cd4 count category and diagnosis type. This will be used to distribute 
-# annual notifications for aging PLDHIV.  
-# if (doAge) {
-#   agedDiags <- hivSet %>%
-#     group_by(yeardiagnosis, agebin) %>%
-#     summarise(diags = n()) %>%
-#     ungroup() %>%
-#     spread(agebin, diags) %>%
-#     rename(year = yeardiagnosis)
-#   agedDiags[is.na(agedDiags)] <- 0
-#   
-#   #fill missing years
-#   agedDiags <- FillDataFrame(1980:analysisYear, agedDiags) %>%
-#     gather("agebin", "diagnoses", 2:20) %>%
-#     arrange(year) %>%
-#     filter(agebin != "not_reported") %>%
-#     group_by(year) %>%
-#     mutate(propdiags = diagnoses / sum(diagnoses)) %>%
-#     mutate(propdiags = ifelse(is.nan(propdiags), 0 , propdiags)) %>%
-#     ungroup()
-#   
-#   nyears <- analysisYear - 1980 + 1
-#   nages <- 18
-#   
-#   ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
-#     "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
-#     "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
-#   
-#   yearList <- paste0("y", as.character(1980:analysisYear))
-#   
-#   # Adjust_included notifications by age and year and convert to matrix
-#   hivResultsAge <- agedDiags %>% 
-#     left_join(., hivResults, by = "year") %>% 
-#     select(-diagnoses, -cumnotifications, -all_notifications,
-#       -all_cumnotifications) %>%
-#     group_by(year, agebin) %>%
-#     mutate(diags = propdiags * notifications) %>%
-#     select(-propdiags, -notifications) %>%
-#     spread(year, diags) %>%
-#     ungroup() %>%
-#     slice(c(1,10,2:9,11:18)) %>%
-#     select(-agebin) %>%
-#     as.matrix()
-#   
-#   colnames(hivResultsAge) <- yearList
-#   rownames(hivResultsAge) <- ageList
-#   
-# }
+if (interstate && doAge) {
+  annualDiagsAll <- AnnualDiagnoses(hivSetAll, 
+    hivSetExcludedAll, hivSetUnknownAll, allYears, doAge)
+  
+  hivResultsAll <- annualDiagsAll[[1]]
+  hivResultsAgeAll <- annualDiagsAll[[2]]
+}
 
 ```
 
@@ -644,6 +437,12 @@ if (interState) {
 }
 
 if (doAge) {
+  ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
+      "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
+      "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
+    
+    yearList <- paste0("y", as.character(allYears))
+  
   # Load age based relative deathrates and migration rates.
   
   # Relative death rates - based on overall data
@@ -685,7 +484,40 @@ if (doAge) {
 if (interState) {
   # A bit more work to do if we do inter-regional migration
   if (doAge) {
-    # Do age based calculations
+    # Do age based interstate calculations
+    
+    # Calculate overall (non-age) PLDHIV estimates for normalization
+    pldhivOverall <- LivingDiagnosed(hivResults$notifications,
+      subsetRatesNational$annunique, 
+      subsetRatesNational$deathrate,
+      subsetRates$mrate,
+      subsetRatesNational$propstay) %>%
+      mutate(year = allYears) %>%
+      select(year, everything()) %>%
+      as_tibble()
+    
+    # Calculate National pldhiv by age
+    pldhivOverallAge <- LivingDiagnosedAge(hivResultsNational,
+      subsetRatesNational$annunique, 
+      subsetRatesNational$deathrate,
+      hivBase$migrationrate, 
+      subsetRatesNational$propstay,
+      agedeath = relAgeDeathNational,
+      agemigrate = relAgeMigrateNational,
+      normalize = pldhivOverall$pldhiv)
+    
+    # Calculate state estimaets by age
+    pldhivAll <- LivingDiagnosedAge(hivResultsAge,
+      subsetRates$annunique, 
+      subsetRates$deathrate,
+      hivBase$migrationrate, 
+      subsetRates$propstay,
+      agedeath = relAgeDeath,
+      agemigrate = relAgeMigrate,
+      arrivals = interArriverateAge,
+      departs = interDepartrateAge,
+      pldhiv =  pldhivOverallAge, 
+      normalize = pldhivOverall$pldhiv)
     
   } else {
     # Calculate overall first for inter-regional migration
