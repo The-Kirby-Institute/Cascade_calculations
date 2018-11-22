@@ -49,8 +49,16 @@ Report(ASR))
 analysisYear <- 2017
 saveResults <- FALSE
 
-# Set HIV subsetting function parameters----------------------------------
-
+# Set HIV cascade parameters----------------------------------
+# Overarching project where all cascades will be stored
+projectOutput <- "Test_Cascades" # "." for main output folder 
+                            # "HIV_Cascade_Paper" for paper
+                            
+# Cascade options----------------------------------------------------------
+# The following variables specify the charactersitsics and hence the 
+# notifications that will be included in the cascade. For some variables a # combination of categories can used by specifying a vector. Other 
+# variables can only be specified as a single value. 
+# 
 ##***********************************************************************##
 ## WARNING -- Selecting multile selections for subsetting notififcations 
 ## needs care when categories with lots of missing data are included. 
@@ -60,13 +68,9 @@ saveResults <- FALSE
 ## calculations is accurate. 
 ##***********************************************************************##
 
-projectOutput <- "Test_Cascades" # "." for main output folder 
-                            # "HIV_Cascade_Paper" for paper
-                            
 cascadeName <- "NSW-2017-Age"
 targetGender <- "all" # all, male, female (single)
-targetAge <- "split" # all or split
-
+targetAge <- "split" # all or split (single)
 # Note regarding ageing: The calculations don't specifically target 
 # specific ages.  Rather this simply chooses whether age is considered or 
 # not."all" means there is no division by age whereas "split" means teh 
@@ -74,12 +78,10 @@ targetAge <- "split" # all or split
 # a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
 # split and then filter out age estimates as required essentially turns on 
 # doAge below. 
-
 targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
 targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
 targetAtsi <- "all" # all, indigenous or non_indigenous.
 # Only used if country is Australia (single)
-
 targetState <- "nsw" # nsw, sa, nt, qld, vic, wa, act, tas
 # (combination)
 targetLocalRegion <- "all" #tbd (combination)
@@ -87,9 +89,37 @@ targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa,
 # Oceania, South American, Other cob, etc
 # (combination)
 
+
+# Script options-----------------------------------------------------------
+# The following variables specify the various calculation options
+# 
+excludeAborig <- FALSE
+doRetained <- TRUE # TRUE for appending retained in care
+
+# Settings for doing deduplication analysis
+doUnique <- TRUE
+yearUnique <- 2017 #Use NULL or year like 2100 to turn off
+saveUnique <- FALSE
+
+# Settings for generating ECDC model inputs
+ecdcData <- TRUE
+ecdcVersion <- "1.3.0"
+excludeOS <- FALSE
+
+# Leave projections chunk turned off so it is not called unless required. 
+# Simply run projections from within the chunk. 
+projectPldhiv <- FALSE 
+
+```
+
+
+
+```{r Error and option checking}
+# Error checking and changes in options based on cascade parameters
+# Check lengths of all cascade variables and options
 if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi, 
   targetState, targetLocalRegion, targetGlobalRegion) != "all") > 1) {
-  warning("Multiple selections for subsetting: SubHivSet() and reallocation 
+  warning("Multiple selections for subsetting: SubHivSet() and reallocation
     may not work correctly if selections with lots of missing data are 
     included")
 }
@@ -104,13 +134,9 @@ if (targetAtsi != "all" && targetCob[1] != "Australia" &&
   stop("Error: indigenous status only valid for Australian born")   
 }
 
-# Script options for calculations
+# Change script options based on cascade parameters and other options------
 interState <- ifelse(targetState[1] != "all", TRUE, FALSE)
 doAge <- ifelse(targetAge == "split", TRUE, FALSE) # TRUE for ageing
-
-excludeAborig <- FALSE
-
-doRetained <- TRUE # TRUE for appending retained in care
 doRetained <- ifelse(doAge, FALSE, doRetained) # Turn off for ageing
 if (doRetained) {
   # Need to specify years for reatined in care calculations
@@ -119,22 +145,14 @@ if (doRetained) {
   retainedYears <- 2013:analysisYear
 }
 
-doUnique <- TRUE
-yearUnique <- 2017 #2100 to turn off
-saveUnique <- FALSE
-
+# Settings for doing deduplication analysis--------------------------------
 doUnique <- ifelse(targetAtsi == "indigenous", FALSE, doUnique)
-yearUnique <- ifelse(is.null(yearUnique), 2100, yearUnique) # Well past today
+yearUnique <- ifelse(is.null(yearUnique), 2100, yearUnique) # Well past now
 saveUnique <- ifelse(!saveResults, FALSE, saveUnique)
   
-# Settings for generating ECDC model inputs ------------------------------
-ecdcData <- TRUE
+# Settings for generating ECDC model inputs--------------------------------
 ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
-
-ecdcVersion <- "1.3.0"
-excludeOS <- FALSE
 excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
-
 ecdcModel <- cascadeName # name
 if (excludeOS) {
   # If excludeOS don't save the pldhiv estimates as we are only using this
@@ -143,15 +161,11 @@ if (excludeOS) {
   doRetained <- FALSE
 }
 
-# Leave projections chunk turned off so it is not called unless required. 
-# Simply run projections from within the chunk. 
-projectPldhiv <- FALSE 
-
-# Store paramaters for saving
+# Store paramaters for saving----------------------------------------------
 hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
   targetExposure, targetAtsi, targetState, targetLocalRegion,
   targetGlobalRegion, interState, doAge, excludeAborig, doRetained,
-  doUnique, yearUnique, ecdcData, ecdcVersion, excludeOS)
+  doUnique, yearUnique, ecdcData, ecdcVersion, excludeOS, projectPldhiv)
 
 ```
 
@@ -1056,6 +1070,8 @@ if (projectPldhiv) {
                           # relative reduction!
   
   saveProjResults <- TRUE 
+  
+  
   # Reset if saving things overall
   saveProjResults <- ifelse(saveResults, TRUE, saveProjResults) 
   
