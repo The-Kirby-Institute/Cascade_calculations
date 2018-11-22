@@ -53,11 +53,21 @@ saveResults <- FALSE
 # Overarching project where all cascades will be stored
 projectOutput <- "Test_Cascades" # "." for main output folder 
                             # "HIV_Cascade_Paper" for paper
+numCascades <- 1
                             
 # Cascade options----------------------------------------------------------
 # The following variables specify the charactersitsics and hence the 
 # notifications that will be included in the cascade. For some variables a # combination of categories can used by specifying a vector. Other 
-# variables can only be specified as a single value. 
+# variables can only be specified as a single value.
+# 
+# When calculating multiple cascades these are entered as a list (of 
+# vectors) for variables that can be combined or as vectors for single
+# variables. All lists and vectors need to be the same length (equal to
+# numCascades).
+# 
+# # Note: These often have same value across all cascades in 
+# a project so use rep() by default. These can then be manually changed as 
+# required. 
 # 
 ##***********************************************************************##
 ## WARNING -- Selecting multile selections for subsetting notififcations 
@@ -68,9 +78,9 @@ projectOutput <- "Test_Cascades" # "." for main output folder
 ## calculations is accurate. 
 ##***********************************************************************##
 
-cascadeName <- "NSW-2017-Age"
-targetGender <- "all" # all, male, female (single)
-targetAge <- "split" # all or split (single)
+cascadeName <- "NSW-2017-Age" # (single)
+targetGender <- rep("all", numCascades) # all, male, female (single)
+targetAge <- rep("split", numCascades) # all or split (single)
 # Note regarding ageing: The calculations don't specifically target 
 # specific ages.  Rather this simply chooses whether age is considered or 
 # not."all" means there is no division by age whereas "split" means teh 
@@ -78,37 +88,46 @@ targetAge <- "split" # all or split (single)
 # a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
 # split and then filter out age estimates as required essentially turns on 
 # doAge below. 
-targetCob <- "all" # all=including n/a, Thailand, etc. (combination)
-targetExposure <- "all" #msm, hetero, pwid, otherexp (combination)
-targetAtsi <- "all" # all, indigenous or non_indigenous.
-# Only used if country is Australia (single)
-targetState <- "nsw" # nsw, sa, nt, qld, vic, wa, act, tas
-# (combination)
-targetLocalRegion <- "all" #tbd (combination)
-targetGlobalRegion <- "all" # South-East Asia, Sub-Saharan Africa, 
-# Oceania, South American, Other cob, etc
-# (combination)
+targetCob <- rep("all", numCascades) # all=including n/a, Thailand, etc.
+  # (combination)
+targetExposure <- rep("all", numCascades) #msm, hetero, pwid, otherexp 
+  # (combination)
+targetAtsi <- rep("all", numCascades) # all, indigenous or non_indigenous. 
+  # Only used if country is Australia (single)
 
+# TODO: Merge these variables into one. 
+targetState <- rep("nsw", numCascades) # nsw, sa, nt, qld, vic, wa, act
+  # tas (combination)
+targetLocalRegion <- rep("all", numCascades) #tbd (combination)
+
+targetGlobalRegion <- rep("all", numCascades) # South-East Asia, 
+  # Sub-Saharan Africa, Oceania, South American, Other cob, etc 
+  # (combination)
 
 # Script options-----------------------------------------------------------
-# The following variables specify the various calculation options
+# The following variables specify the various calculation options. 
+# When calculating multiple cascades these are entered as a vector. All
+# vectors need to be the same length (equal to numCascades).
 # 
-excludeAborig <- FALSE
-doRetained <- TRUE # TRUE for appending retained in care
+# Note: These are generally given the same value across all cascades in 
+# a project so use rep() by default. These can then be manually changed as 
+# required. 
+excludeAborig <- rep(FALSE, numCascades)
+doRetained <- rep(TRUE, numCascades) # TRUE for appending retained in care
 
 # Settings for doing deduplication analysis
-doUnique <- TRUE
-yearUnique <- 2017 #Use NULL or year like 2100 to turn off
-saveUnique <- FALSE
+doUnique <- rep(TRUE, numCascades)
+yearUnique <- rep(2017, numCascades) #Use NULL or year 2100 to turn off
+saveUnique <- rep(FALSE, numCascades)
 
 # Settings for generating ECDC model inputs
-ecdcData <- TRUE
-ecdcVersion <- "1.3.0"
-excludeOS <- FALSE
+ecdcData <- rep(TRUE, numCascades)
+ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
+excludeOS <- rep(FALSE, numCascades)
 
 # Leave projections chunk turned off so it is not called unless required. 
 # Simply run projections from within the chunk. 
-projectPldhiv <- FALSE 
+projectPldhiv <- rep(FALSE, numCascades) 
 
 ```
 
@@ -125,6 +144,10 @@ if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi,
 }
 
 # Some error checking 
+
+# TODO: check lengths of all the variables and make sure they equal 
+# numCascades
+
 if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
   stop("Error: targetGender or targetAtsi not a single value") 
 }
