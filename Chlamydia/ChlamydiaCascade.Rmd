@@ -44,12 +44,14 @@ source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2017 # year of cascade we will calculate and plot     
+resultsYear <- 2016 # year of cascade we will calculate and plot     
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
 fileType <- ".tiff" # ".png" for documents; .tiff for paper
 retestRange <- TRUE # Calculate variations in retested
 msmSplit <- FALSE # For determining which retest variation file to use
+paper <- TRUE # Use results for paper 
+paper <- ifelse(resultsYear != 2016, FALSE, paper)
 
 ```
 
@@ -63,12 +65,22 @@ cat(fmStr)
 
 ```{r loadresults}
 # Load hiv cascade dataframe
-notificationsFile <- file.path(dataFolder,
-  paste("chlamnotifications_clean-", toString(tail(resultsYear, 1)), ".csv", 
-    sep = ""))
+if (paper) {
+  notificationsFile <- file.path(dataFolder,
+    "chlamnotifications_clean-2016-paper.csv")
+} else {
+  notificationsFile <- file.path(dataFolder,
+    paste("chlamnotifications_clean-", toString(tail(resultsYear, 1)),
+      ".csv", sep = ""))
+} 
 
-incidenceFile <- file.path(dataFolder, paste("chlamincidence",
-  toString(tail(resultsYear, 1)), ".csv", sep = ""))
+if (paper) {
+  incidenceFile <- file.path(dataFolder, 
+    "chlamincidence-2016-paper.csv")
+} else {
+  incidenceFile <- file.path(dataFolder, paste("chlamincidence",
+    toString(tail(resultsYear, 1)), ".csv", sep = ""))
+}
 
 treatFile <- file.path(dataFolder, paste("chlamtreatment", 
   toString(tail(resultsYear, 1)), ".csv", sep = ""))
@@ -697,9 +709,16 @@ if (resultsYear <= 2014) {
 if (saveCascade) {
   
   # Create output figures folder
-  dir.create(file.path(basePath, "output", toString(resultsYear)), 
-    showWarnings = FALSE)
-  resultsFolder <- file.path(basePath, "output", toString(resultsYear))
+  if (paper) {
+    dir.create(file.path(basePath, "output", paste0(toString(resultsYear),
+      "-paper")), showWarnings = FALSE)
+    resultsFolder <- file.path(basePath, "output",
+      paste0(toString(resultsYear), "-paper"))
+  } else {
+    dir.create(file.path(basePath, "output", toString(resultsYear)), 
+      showWarnings = FALSE)
+    resultsFolder <- file.path(basePath, "output", toString(resultsYear))
+  }
   
   # Cascade
   saveString <- paste0("chlamydia_cascade-", 
@@ -833,7 +852,11 @@ femaleCascade <- ggplot(data = filter(cascadeAll, sex == "female"),
 
 textyAll <- filter(plotcascade, sex == "all")$upper
 textyAll[3:4] <- filter(plotcascade, sex == "all")$estimate[3:4]
+textyTotal <- filter(plotcascade, sex == "all")$estimate[1]
 
+totalPercent <- 100 * c(NA, filter(plotcascade, 
+  sex == "all")$estimate[2:4]/ filter(plotcascade, 
+    sex == "all")$estimate[1])
 
 allCascadeAll <- ggplot(data = filter(plotcascade, sex == "all"),
   aes(x = stage, y = estimate)) + 
@@ -844,6 +867,13 @@ allCascadeAll <- ggplot(data = filter(plotcascade, sex == "all"),
   geom_text(aes(label = ifelse(is.na(percentprevious), "",
     paste0(format(percentprevious, digits = 3), "%")),
     y = textyAll + 20000),
+    position = position_dodge(width = 0.9),
+    fontface = "bold",
+    size = 3.5) +
+  geom_hline(yintercept = textyTotal, linetype = "dashed") + 
+  geom_text(aes(label = ifelse(is.na(totalPercent), "",
+    paste0(format(totalPercent, digits = 2), "%")),
+    y = textyTotal + 20000),
     position = position_dodge(width = 0.9),
     fontface = "bold",
     size = 3.5) +
