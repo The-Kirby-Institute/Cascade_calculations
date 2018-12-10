@@ -247,7 +247,7 @@ chlamcascade <- rbind(chlamcascade,
 maleDiags <- rowSums(currentDiags[, 2:4])
 femaleDiags <- rowSums(currentDiags[, 5:7])
 
-if (resultsYear %in% 2015:2016) {
+if (!paper && resultsYear %in% 2015:2016) {
   # Estimate uncertainty using estimates for the Victorian 
   # 15-29 year old population due to missing data in 2015-2016 (from 
   # CT notifications_YEAR_National_Estimate.xlsx)
@@ -294,15 +294,14 @@ if (resultsYear %in% 2015:2016) {
   allPropEst <-predict(lm(all ~ year, data = propData), 
     newdata = data.frame(year = 2015), 
     interval = "conf")
-  
-  
+
 } else {
   # Assume no error in diagnoses
-  lowerMaleDiags <- NA
-  upperMaleDiags <- NA
+  lowerMaleDiags <- maleDiags
+  upperMaleDiags <- maleDiags
   
-  lowerFemaleDiags <- NA
-  upperFemaleDiags <- NA
+  lowerFemaleDiags <- femaleDiags
+  upperFemaleDiags <- femaleDiags
 }
 
 # Generate cascade
