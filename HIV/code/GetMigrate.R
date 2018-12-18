@@ -33,10 +33,7 @@ GetMigrate <- function(finalYear, nomData, targetAge, targetGender
   targetGlobalRegion, assumeAdult = TRUE, propMale = NULL) {
   
   
-  
-  
-  
-  # Sort out age categories - a bit complicated because we generally assume 
+  # Sort out age categories - a bit complicated because we generally assume
   # HIV-positive are adults and ERP data unavailable in 5 year bins for 
   # > 75 years old "a75-79" contains all people older than > 75. Older bins 
   # contain the same > 75 ERP value. As there are not many departures in 
