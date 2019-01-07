@@ -242,6 +242,9 @@ origHivData <- read.csv(file.path(notificationsFolder,
 # Read in country code data
 countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
 
+# Read in location of diagnosis coding
+regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
+
 # Tidy up notifications for calculations
 hivData <- TidyNotifications(origHivData, analysisYear, countryCodes)
 
