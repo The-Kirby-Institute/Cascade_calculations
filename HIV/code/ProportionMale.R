@@ -58,7 +58,7 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
         spread(agebin, male)
       hivSetMaleAge[is.na(hivSetMaleAge)] <- 0
       hivSetMaleAge <- FillDataFrame(1980:analysisYear, hivSetMaleAge) %>%
-        gather("agebin", "male", 2:20) %>%
+        gather("agebin", "male", 2:ncol(.)) %>%
         arrange(year)
       
       hivSetOtherAge <- hivSetGenderAge %>%
@@ -66,7 +66,7 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
         spread(agebin, other)
       hivSetOtherAge[is.na(hivSetOtherAge)] <- 0
       hivSetOtherAge <- FillDataFrame(1980:analysisYear, hivSetOtherAge) %>%
-        gather("agebin", "other", 2:20) %>%
+        gather("agebin", "other", 2:ncol(.)) %>%
         arrange(year)
       
       hivGenderAgeCum <- hivSetMaleAge %>%

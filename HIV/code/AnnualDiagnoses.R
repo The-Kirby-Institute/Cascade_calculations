@@ -104,7 +104,7 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
     
     #fill missing years
     agedDiags <- FillDataFrame(allYears, agedDiags) %>%
-      gather("agebin", "diagnoses", 2:20) %>%
+      gather("agebin", "diagnoses", 2:ncol(.)) %>%
       arrange(year) %>%
       filter(agebin != "not_reported") %>%
       group_by(year) %>%
