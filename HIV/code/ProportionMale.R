@@ -37,6 +37,10 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
   
   if (doAge) {
     
+    ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
+      "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
+      "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
+    
     # Calculation cumulative proportion male for each age group.
     if (targetGender == "all") {
       hivSetGenderAge <- hivSet %>%
@@ -58,6 +62,8 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
         spread(agebin, male)
       hivSetMaleAge[is.na(hivSetMaleAge)] <- 0
       hivSetMaleAge <- FillDataFrame(1980:analysisYear, hivSetMaleAge) %>%
+        FillMissingAge(ageList, .) %>%
+        select(c("year", ageList)) %>%
         gather("agebin", "male", 2:ncol(.)) %>%
         arrange(year)
       
@@ -66,6 +72,8 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
         spread(agebin, other)
       hivSetOtherAge[is.na(hivSetOtherAge)] <- 0
       hivSetOtherAge <- FillDataFrame(1980:analysisYear, hivSetOtherAge) %>%
+        FillMissingAge(ageList, .) %>%
+        select(c("year", ageList)) %>%
         gather("agebin", "other", 2:ncol(.)) %>%
         arrange(year)
       
