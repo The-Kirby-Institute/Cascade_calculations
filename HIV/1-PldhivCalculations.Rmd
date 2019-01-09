@@ -80,7 +80,7 @@ numCascades <- 1
 
 cascadeName <- "NSW-2017-Age" # (single)
 targetGender <- rep("all", numCascades) # all, male, female (single)
-targetAge <- rep("split", numCascades) # all or split (single)
+targetAge <- rep("all", numCascades) # all or split (single)
 # Note regarding ageing: The calculations don't specifically target 
 # specific ages.  Rather this simply chooses whether age is considered or 
 # not."all" means there is no division by age whereas "split" means teh 
@@ -883,8 +883,8 @@ if (doAge) {
 ```{r ECDC Outputs}
 # ECDC calculations-------------------------------------------------------
 if (ecdcData) {
-  normalizeFactor <- adjustDiags$included / 
-    adjustDiags$adjusted_included
+  normalizeFactor <- hivResults$includeNotifications / 
+    hivResults$notifcations
   normalizeFactor[is.nan(normalizeFactor)] <- 1
   
   # Folder for ECDC output
@@ -1124,17 +1124,17 @@ if (projectPldhiv) {
   
   # Diagnoses options
   if (projectOption == "status-quo") {
-    diagnosesFuture <- ProjVec(adjustDiags$adjusted_included, nprojYears)
+    diagnosesFuture <- ProjVec(hivResults$notifcations, nprojYears)
   } else if (projectOption == "linear") {
     # Trend diagnoses (using trend over last 5 years)
     trendlm <- lm(diagnoses ~ year, 
       data.frame(year = (analysisYear - 4):analysisYear, 
-        diagnoses = tail(adjustDiags$adjusted_included, 5)))
+        diagnoses = tail(hivResults$notifcations, 5)))
     trendDiags <- predict(trendlm, data.frame(year = projectYears))
-    diagnosesFuture <- c(adjustDiags$adjusted_included, trendDiags)
+    diagnosesFuture <- c(hivResults$notifcations, trendDiags)
   } else if(projectOption == "reduce") {
     diagnosesFuture <- projectDecreaseAll * 
-      ProjVec(adjustDiags$adjusted_included, nprojYears)
+      ProjVec(hivResults$notifcations, nprojYears)
   } else {
     # MANUALLY CHANGE HERE TO RUN ALTERNATE SCENARIOS
   }

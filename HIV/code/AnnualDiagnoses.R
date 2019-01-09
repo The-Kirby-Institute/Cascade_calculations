@@ -82,6 +82,7 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
       adjusted_excluded = excluded + unknown * prop_excluded)
   
   hivResults <- data_frame(year = adjustDiags$year,
+    includeNotifications = adjustDiags$included,
     notifications = adjustDiags$adjusted_included,
     cumnotifications = cumsum(adjustDiags$adjusted_included),
     all_notifications = adjustDiags$all,
