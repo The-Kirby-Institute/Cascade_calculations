@@ -198,6 +198,7 @@ hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
 # Source functions for filling in missing data
 source(file.path(Rcode, "FillMissing.R"))
 source(file.path(Rcode, "FillDataFrame.R"))
+source(file.path(Rcode, "FillMissingAge.R"))
 
 # Load function to calculate number living with diagnosed HIV
 source(file.path(HIVcode,"LivingDiagnosed.R"))
@@ -382,12 +383,16 @@ if (doUnique) {
 
 # Calculation cumulative proportion male. This is used for gender weighted
 # migration rates
-propDiagsMale <- ProportionMale(hivSet, analysisYear, FALSE)
-propDiagsMaleAll <- ProportionMale(hivSetAll, analysisYear, FALSE)
+propDiagsMale <- ProportionMale(hivSet, analysisYear, FALSE,
+  targetGender = targetGender)
+propDiagsMaleAll <- ProportionMale(hivSetAll, analysisYear, FALSE,
+  targetGender = targetGender)
 
 if (doAge) {
-  propDiagsAgeMale <- ProportionMale(hivSet, analysisYear, TRUE)
-  propDiagsAgeMaleAll <- ProportionMale(hivSetAll, analysisYear, TRUE)
+  propDiagsAgeMale <- ProportionMale(hivSet, analysisYear, TRUE,
+    targetGender = targetGender)
+  propDiagsAgeMaleAll <- ProportionMale(hivSetAll, analysisYear, TRUE,
+    targetGender = targetGender)
 }
 
 ```
@@ -524,9 +529,9 @@ if (doAge) {
   
   if (interState) {
     # Need overall relative migration rates as well
-    relAgeMigrateAll <- GetMigrateAge(analysisYear, cleanNom, targetGender, 
-    targetExposure, targetCob, targetAtsi, targetLocalRegion, "all", 
-    targetGlobalRegion, propMale = propDiagsAgeMaleAll)
+    relAgeMigrateAll <- GetMigrateAge(analysisYear, cleanNom, targetGender,
+      targetExposure, targetCob, targetAtsi, targetLocalRegion, "all", 
+      targetGlobalRegion, propMale = propDiagsAgeMaleAll)
     
     # Get interregion rates by age
     interRegionAge <- GetInterRegionAge(analysisYear, cleanNom, 
@@ -603,12 +608,16 @@ if (interState) {
       agemigrate = relAgeMigrate,
       normalize = pldhivOverallAllMax$pldhiv)
     
-    # Calculate overall (non-age) PLDHIV state stimates for normalization
+    # Calculate overall (non-age) PLDHIV state estimates for normalization
+    #  Use best estimate nationally (pldhivOverallAll) for min and max
     pldhivOverall <- LivingDiagnosed(hivResults$notifications,
       subsetRates$annunique, 
       subsetRates$deathrate,
       subsetRates$mrate,
-      subsetRates$propstay) %>%
+      subsetRates$propstay,
+      arrivals = subsetRates$inter_arriverate, 
+      departs = subsetRates$inter_departrate,
+      pldhiv = pldhivOverallAll$pldhiv) %>%
       mutate(year = allYears) %>%
       select(year, everything()) %>%
       as_tibble()
@@ -617,7 +626,10 @@ if (interState) {
       subsetRates$annunique,  
       subsetRates$deathrate_upper,
       subsetRates$mrate_upper,
-      subsetRates$propstay_lower) %>%
+      subsetRates$propstay_lower,
+      arrivals = subsetRates$inter_arriverate, 
+      departs = subsetRates$inter_departrate,
+      pldhiv = pldhivOverallAll$pldhiv) %>%
       mutate(year = allYears) %>%
       select(year, everything()) %>%
       as_tibble()
@@ -626,12 +638,15 @@ if (interState) {
       subsetRates$annunique,  
       subsetRates$deathrate_lower,
       subsetRates$mrate_lower,
-      subsetRates$propstay_upper) %>%
+      subsetRates$propstay_upper,
+      arrivals = subsetRates$inter_arriverate, 
+      departs = subsetRates$inter_departrate,
+      pldhiv = pldhivOverallAll$pldhiv) %>%
       mutate(year = allYears) %>%
       select(year, everything()) %>%
       as_tibble()
     
-    # Calculate state estimaets by age
+    # Calculate state estimates by age
     # NOTE: use base migration rate as mrate is calculated assuming people
     # are aged > 15 years
     pldhivAll <- LivingDiagnosedAge(hivResultsAge,
@@ -883,7 +898,7 @@ if (doAge) {
 ```{r ECDC Outputs}
 # ECDC calculations-------------------------------------------------------
 if (ecdcData) {
-  normalizeFactor <- hivResults$includeNotifications / 
+  normalizeFactor <- hivResults$include_notifications / 
     hivResults$notifcations
   normalizeFactor[is.nan(normalizeFactor)] <- 1
   
