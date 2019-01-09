@@ -51,7 +51,7 @@ saveResults <- FALSE
 
 # Set HIV cascade parameters----------------------------------
 # Overarching project where all cascades will be stored
-projectOutput <-"GBM_State_Age" # "." for main output folder 
+projectOutput <- "Test_Cascades" # "." for main output folder 
                             # "HIV_Cascade_Paper" for paper
 numCascades <- 1
                             
@@ -78,9 +78,9 @@ numCascades <- 1
 ## calculations is accurate. 
 ##***********************************************************************##
 
-cascadeName <- "NSW-2017-All-Test" # (single)
+cascadeName <- "NSW-2017-Age" # (single)
 targetGender <- rep("all", numCascades) # all, male, female (single)
-targetAge <- rep("all", numCascades) # all or split (single)
+targetAge <- rep("split", numCascades) # all or split (single)
 # Note regarding ageing: The calculations don't specifically target 
 # specific ages.  Rather this simply chooses whether age is considered or 
 # not."all" means there is no division by age whereas "split" means teh 
@@ -95,12 +95,10 @@ targetExposure <- rep("all", numCascades) #msm, hetero, pwid, otherexp
 targetAtsi <- rep("all", numCascades) # all, indigenous or non_indigenous. 
   # Only used if country is Australia (single)
 
-# Geographic specifications
+# TODO: Merge these variables into one. 
 targetState <- rep("nsw", numCascades) # nsw, sa, nt, qld, vic, wa, act
   # tas (combination)
-targetLocalRegion <- rep("all", numCascades) # SA3 level region within 
-  # Australia. Note if targetLocalRegion != "all" then targetState is 
-  # changed to state of targetLocalRegion.
+targetLocalRegion <- rep("all", numCascades) #tbd (combination)
 
 targetGlobalRegion <- rep("all", numCascades) # South-East Asia, 
   # Sub-Saharan Africa, Oceania, South American, Other cob, etc 
@@ -115,7 +113,7 @@ targetGlobalRegion <- rep("all", numCascades) # South-East Asia,
 # a project so use rep() by default. These can then be manually changed as 
 # required. 
 excludeAborig <- rep(FALSE, numCascades)
-doRetained <- rep(FALSE, numCascades) # TRUE for appending retained in care
+doRetained <- rep(TRUE, numCascades) # TRUE for appending retained in care
 
 # Settings for doing deduplication analysis
 doUnique <- rep(TRUE, numCascades)
@@ -123,7 +121,7 @@ yearUnique <- rep(2017, numCascades) #Use NULL or year 2100 to turn off
 saveUnique <- rep(FALSE, numCascades)
 
 # Settings for generating ECDC model inputs
-ecdcData <- rep(FALSE, numCascades)
+ecdcData <- rep(TRUE, numCascades)
 ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
 excludeOS <- rep(FALSE, numCascades)
 
@@ -131,9 +129,66 @@ excludeOS <- rep(FALSE, numCascades)
 # Simply run projections from within the chunk. 
 projectPldhiv <- rep(FALSE, numCascades) 
 
-# TODO: check lengths of all the variables and options and make sure they
-# equal numCascades. Do all overall error checking here or move into a
-# separate chunk. 
+```
+
+
+
+```{r Error and option checking}
+# Error checking and changes in options based on cascade parameters
+# Check lengths of all cascade variables and options
+if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi, 
+  targetState, targetLocalRegion, targetGlobalRegion) != "all") > 1) {
+  warning("Multiple selections for subsetting: SubHivSet() and reallocation
+    may not work correctly if selections with lots of missing data are 
+    included")
+}
+
+# Some error checking 
+
+# TODO: check lengths of all the variables and make sure they equal 
+# numCascades
+
+if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
+  stop("Error: targetGender or targetAtsi not a single value") 
+}
+
+if (targetAtsi != "all" && targetCob[1] != "Australia" &&
+    length(targetCob) != 1) {
+  stop("Error: indigenous status only valid for Australian born")   
+}
+
+# Change script options based on cascade parameters and other options------
+interState <- ifelse(targetState[1] != "all", TRUE, FALSE)
+doAge <- ifelse(targetAge == "split", TRUE, FALSE) # TRUE for ageing
+doRetained <- ifelse(doAge, FALSE, doRetained) # Turn off for ageing
+if (doRetained) {
+  # Need to specify years for reatined in care calculations
+  # This is simply a proportion based on James McMahon's paper
+  # which suggested 92-98% of PLDHIV were retained in care. 
+  retainedYears <- 2013:analysisYear
+}
+
+# Settings for doing deduplication analysis--------------------------------
+doUnique <- ifelse(targetAtsi == "indigenous", FALSE, doUnique)
+yearUnique <- ifelse(is.null(yearUnique), 2100, yearUnique) # Well past now
+saveUnique <- ifelse(!saveResults, FALSE, saveUnique)
+  
+# Settings for generating ECDC model inputs--------------------------------
+ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
+excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
+ecdcModel <- cascadeName # name
+if (excludeOS) {
+  # If excludeOS don't save the pldhiv estimates as we are only using this
+  # for ECDC calculations
+  saveResults <- FALSE
+  doRetained <- FALSE
+}
+
+# Store paramaters for saving----------------------------------------------
+hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
+  targetExposure, targetAtsi, targetState, targetLocalRegion,
+  targetGlobalRegion, interState, doAge, excludeAborig, doRetained,
+  doUnique, yearUnique, ecdcData, ecdcVersion, excludeOS, projectPldhiv)
 
 ```
 
@@ -143,7 +198,6 @@ projectPldhiv <- rep(FALSE, numCascades)
 # Source functions for filling in missing data
 source(file.path(Rcode, "FillMissing.R"))
 source(file.path(Rcode, "FillDataFrame.R"))
-source(file.path(Rcode, "FillMissingAge.R"))
 
 # Load function to calculate number living with diagnosed HIV
 source(file.path(HIVcode,"LivingDiagnosed.R"))
@@ -188,9 +242,11 @@ origHivData <- read.csv(file.path(notificationsFolder,
 # Read in country code data
 countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
 
+# Read in location of diagnosis coding
+regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
+
 # Tidy up notifications for calculations
-hivData <- TidyNotifications(origHivData, analysisYear, countryCodes,
-  regionCodes)
+hivData <- TidyNotifications(origHivData, analysisYear, countryCodes)
 
 # Data checks-------------------------------------------------------------
 
@@ -229,59 +285,6 @@ load(file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
 absInterstate <- read_csv(file.path(mainDataFolder, 
   paste0("ABS_interstate_age_sex_clean-", toString(analysisYear), ".csv")))
 
-```
-
-### Function for calculations begins around here
-
-```{r Error and option checking}
-# Error checking and changes in options based on cascade parameters for 
-# specific cascade
-if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi, 
-  targetState, targetLocalRegion, targetGlobalRegion) != "all") > 1) {
-  warning("Multiple selections for subsetting: SubHivSet() and reallocation
-    may not work correctly if selections with lots of missing data are 
-    included")
-}
-
-if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
-  stop("Error: targetGender or targetAtsi not a single value") 
-}
-if (targetAtsi != "all" && targetCob[1] != "Australia" &&
-    length(targetCob) != 1) {
-  stop("Error: indigenous status only valid for Australian born")   
-}
-
-# Change target state to match targetLocal Region
-
-
-# Change script options based on cascade parameters and other options------
-interState <- ifelse(targetState[1] != "all", TRUE, FALSE)
-doAge <- ifelse(targetAge == "split", TRUE, FALSE) # TRUE for ageing
-doRetained <- ifelse(doAge, FALSE, doRetained) # Turn off for ageing
-if (doRetained) {
-  # Need to specify years for reatined in care calculations
-  # This is simply a proportion based on James McMahon's paper
-  # which suggested 92-98% of PLDHIV were retained in care. 
-  retainedYears <- 2013:analysisYear
-}
-
-# Settings for doing deduplication analysis--------------------------------
-doUnique <- ifelse(targetAtsi == "indigenous", FALSE, doUnique)
-yearUnique <- ifelse(is.null(yearUnique), 2100, yearUnique) # Well past now
-saveUnique <- ifelse(!saveResults, FALSE, saveUnique)
-  
-# Settings for generating ECDC model inputs--------------------------------
-ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
-excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
-ecdcModel <- cascadeName # name
-if (excludeOS) {
-  # If excludeOS don't save the pldhiv estimates as we are only using this
-  # for ECDC calculations
-  saveResults <- FALSE
-  doRetained <- FALSE
-}
-
-# Specifications for aged cascades-----------------------------------------
 if (doAge) {
   # Specifications and deaths data by age
   
@@ -296,12 +299,6 @@ if (doAge) {
   hivAgeDeath <- read.csv(file.path(dataFolder, paste0("HIVageEstimates-",
       toString(analysisYear), ".csv")))
 }
-
-# Store paramaters for saving----------------------------------------------
-hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
-  targetExposure, targetAtsi, targetState, targetLocalRegion,
-  targetGlobalRegion, interState, doAge, excludeAborig, doRetained,
-  doUnique, yearUnique, ecdcData, ecdcVersion, excludeOS, projectPldhiv)
 
 ```
 
@@ -366,15 +363,17 @@ if (interState && doAge) {
 # Calculate unique notifications and duplicates for the known set.
 if (doUnique) {
   hivSetUnique <- SubHivSet(hivSet, "all", targetGender,
-    targetExposure, "all", "all", targetState, "all")
+    targetExposure, "all", "all",
+    targetState, "all")
   
   uniqueNotifications <- GetUnique(hivSetUnique[[1]], allYears, 
     yearUnique = yearUnique)
   
   # For Interstate Calculations we need overall national estimates
   if (interState) {
-    hivSetUniqueAll <- SubHivSet(hivSetAll, "all", targetGender,
-      targetExposure, "all", "all", "all", "all")
+    hivSetUniqueAll <- SubHivSet(hivSet, "all", targetGender,
+      targetExposure, "all", "all",
+      "all", "all")
     
     uniqueNotificationsAll <- GetUnique(hivSetUniqueAll[[1]], 
       allYears, yearUnique = yearUnique)
@@ -383,16 +382,12 @@ if (doUnique) {
 
 # Calculation cumulative proportion male. This is used for gender weighted
 # migration rates
-propDiagsMale <- ProportionMale(hivSet, analysisYear, FALSE,
-  targetGender = targetGender)
-propDiagsMaleAll <- ProportionMale(hivSetAll, analysisYear, FALSE,
-  targetGender = targetGender)
+propDiagsMale <- ProportionMale(hivSet, analysisYear, FALSE)
+propDiagsMaleAll <- ProportionMale(hivSetAll, analysisYear, FALSE)
 
 if (doAge) {
-  propDiagsAgeMale <- ProportionMale(hivSet, analysisYear, TRUE,
-    targetGender = targetGender)
-  propDiagsAgeMaleAll <- ProportionMale(hivSetAll, analysisYear, TRUE,
-    targetGender = targetGender)
+  propDiagsAgeMale <- ProportionMale(hivSet, analysisYear, TRUE)
+  propDiagsAgeMaleAll <- ProportionMale(hivSetAll, analysisYear, TRUE)
 }
 
 ```
@@ -425,7 +420,12 @@ subsetRates <- GetAdjustments(hivBase, hivAdjustments,
 # Get the annual proportion unique
 if (doUnique) {
   subsetRates$cumunique <- uniqueNotifications$cumunique 
-  subsetRates$annunique <- uniqueNotifications$annunique
+  subsetRates$ annunique <- uniqueNotifications$annunique
+  
+  if (interState) {
+     subsetRatesAll$cumunique <- uniqueNotificationsAll$cumunique 
+     subsetRatesAll$ annunique <- uniqueNotificationsAll$annunique
+  }
 } 
 
 # Get migration rate adjustments 
@@ -462,7 +462,7 @@ if (interState) {
   
   if (doUnique) {
       subsetRatesAll$cumunique <- uniqueNotificationsAll$cumunique 
-      subsetRatesAll$annunique <- uniqueNotificationsAll$annunique
+      subsetRatesAll$ annunique <- uniqueNotificationsAll$annunique
     }
   
   # Get migration rate adjustments 
@@ -493,8 +493,7 @@ if (interState) {
   # Get interregion rates - only have date since 1982 assume zero rate for
   # 1980-81. 
   interRegionRates <- GetInterRegion(analysisYear, cleanNom, 
-    absInterstate, NULL, "all", "all", targetState[1],
-    targetLocalRegion[1],
+    absInterstate, NULL, "all", "all", targetState, targetLocalRegion,
     assumeAdult = TRUE)
   
   subsetRates$inter_arriverate <- interRegionRates$arriverate
@@ -525,9 +524,9 @@ if (doAge) {
   
   if (interState) {
     # Need overall relative migration rates as well
-    relAgeMigrateAll <- GetMigrateAge(analysisYear, cleanNom, targetGender,
-      targetExposure, targetCob, targetAtsi, targetLocalRegion, "all", 
-      targetGlobalRegion, propMale = propDiagsAgeMaleAll)
+    relAgeMigrateAll <- GetMigrateAge(analysisYear, cleanNom, targetGender, 
+    targetExposure, targetCob, targetAtsi, targetLocalRegion, "all", 
+    targetGlobalRegion, propMale = propDiagsAgeMaleAll)
     
     # Get interregion rates by age
     interRegionAge <- GetInterRegionAge(analysisYear, cleanNom, 
