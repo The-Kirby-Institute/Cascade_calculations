@@ -766,13 +766,13 @@ source(file.path(Rcode, "PlotColors.R"), echo=TRUE)
 # Create bar chart plot for Chlamydia cascade
 stages <- c("infections" = "New infections", 
   "notifications" = "Diagnoses", 
-  "treated" = "Received treatment following diagnosis", 
-  "retested" = "Re-testing following diagnosis")
+  "treated" = "Diagnoses treated", 
+  "retested" = "Diagnoses followed by re-test")
 
 stagesNeat <- c("infections" = "New \n infections", 
   "notifications" = "Diagnoses", 
-  "treated" = "Received \n treatment \n after \n diagnosis",
-  "retested" = "Re-testing \n after \n diagnosis")
+  "treated" = "Diagnoses \n treated",
+  "retested" = "Diagnoses \n followed \n by re-test")
 
 if (resultsYear == 2014) {
   stages <- c(stages, "negative" = "Negative at re-test")
