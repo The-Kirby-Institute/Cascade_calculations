@@ -193,8 +193,66 @@ if (savePlots) {
     plot = diagsPlot, width = 7.5, height = 6, units = "cm")
 }
 
-# Diagnostics-------------------------------------------------------------
+# Diagnostics
 pseudoR2 <- rsq(trendDiags, type = "kl")
+
+# Trends in new infections------------------------------------------------
+
+newInfects <- hivNewInfections %>%
+  filter(year >= startYear) %>%
+  mutate(infections = round(infections),
+    infections_lower = round(infections_lower),
+    infections_upper = round(infections_upper))
+
+trendInfects <- glm(round(infections) ~ year, data = newInfects, 
+  family = "poisson")
+coeffInfects <- coef(trendInfects)[2]
+p_valueInfects <- summary(trendInfects)$coefficients["year", "Pr(>|z|)"]
+intervalInfects <- confint(trendInfects, "year", type = "Wald")
+
+# Diagnostics
+pseudoR2infects <- rsq(trendDiags, type = "kl")
+
+# Infectiosn plot with diagnoses added
+infectsPlot <- ggplot(data = newInfects, aes(x = year, 
+  y = infections)) +
+  geom_ribbon(aes(ymin = infections_lower, ymax = infections_upper), 
+        fill = asrcols[2], alpha = 0.4) +
+  geom_line(aes(color = "infects")) + 
+  geom_point(color = asrcols[2]) +
+  geom_line(aes(y = predict(trendInfects, type = "response"), 
+    colour = "infectsTrend")) +
+  geom_line(aes(y = diagsData$diags, colour ="diags")) +
+  geom_point(aes(y = diagsData$diags), colour = asrcols[5]) +
+  geom_line(aes(y = predict(trendDiags, type = "response"), 
+    colour = "diagsTrend")) +
+  coord_cartesian(ylim = c(0, 1500)) +
+  expand_limits(y = 0) +
+  scale_y_continuous(labels = comma) +
+  ylab("Annual number") + xlab("Year") +
+  scale_colour_manual("", 
+    labels = c("New infections", "Infections trend", 
+      "New diagnoses", "Diagnoses trend"),
+    values = c(asrcols[2], "black", asrcols[5], "blue"),
+    limits = c("infects", "infectsTrend","diags","diagsTrend"),
+    guide = guide_legend(nrow = 2)) +
+  PlotOptions() +
+  geom_text(x = 2010, y = 300, label = paste("Pseudo-R^2 infections:",
+    toString(round(rsq(trendInfects, type = "kl"), digits = 4))), 
+    size = 3) + 
+  geom_text(x = 2010, y = 150, label = paste("Pseudo-R^2 diagnoses:",
+    toString(round(rsq(trendDiags, type = "kl"), digits = 4))), 
+    size = 3) 
+
+if (savePlots) {
+  # Save the infects plot
+  ggsave(file.path(figFolder, paste0("HIVcascade-Infections-",
+    "_",
+    toString(startYear), "-",
+    toString(resultsYear),
+    saveFormat)),
+    plot = infectsPlot, width = 10, height = 8, units = "cm")
+}
 
 # Trends in between steps ------------------------------------------------
 diffsData <- data.frame(year = diagsData$year)
@@ -217,12 +275,12 @@ trendData <- bind_rows(dplyr::select(resultsAll, year, stage, value,
 
 # HIV cascade trends ----------------------------------------------------
 steps <- c(stages[stages != "retained"], diffSteps)
-trendCascade <- data_frame(stage = character(8), 
-  coeff = numeric(8),
-  pvalue = numeric(8),
-  lower = numeric(8),
-  upper = numeric(8),
-  pseudoR2 = numeric(8))
+trendCascade <- data_frame(stage = character(9), 
+  coeff = numeric(9),
+  pvalue = numeric(9),
+  lower = numeric(9),
+  upper = numeric(9),
+  pseudoR2 = numeric(9))
 
 # Set up to save all the models and plots
 trendModels <- list()
@@ -254,6 +312,13 @@ trendCascade$pseudoR2[8] <- pseudoR2
 
 trendModels[["diagnoses"]] <- trendDiags
 
+# Add new infections
+trendCascade$stage[9] <- "infections"
+trendCascade$pvalue[9] <- p_valueInfects
+trendCascade$lower[9] <- intervalInfects[1]
+trendCascade$upper[9] <- intervalInfects[2]
+trendCascade$pseudoR2[9] <- pseudoR2Infects
+
 # Store plots ------------------------------------------------------------
 PlotTrend <- function(data, models, indicator) {
   model <- models[[indicator]]
@@ -274,6 +339,7 @@ trendPlots <- lapply(steps, PlotTrend, data = trendData,
 names(trendPlots) <- steps
 
 trendPlots[["diagnoses"]] <- diagsPlot
+trendPlots[["infections"]] <- infectsPlot
 
 # Predictions for plotting -----------------------------------------------
 PredictTrend <- function(models, indicator){
