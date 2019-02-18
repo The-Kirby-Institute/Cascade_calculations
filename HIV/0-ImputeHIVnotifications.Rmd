@@ -1,0 +1,227 @@
+---
+title: "Imputing of missing notifications data"
+author: "Richard T. Gray"
+date: '`r format(Sys.Date(), format="%d %B %Y")`'
+output: 
+  word_document:
+    pandoc_args: --output="docs/Duplicate_analysis.docx"
+---
+
+This document contains the scripts for producing imputed data sets that 
+fill in missing data in HIV notifications for the Australian HIV cascade 
+calculations. The script produces 10 imputed sets containing the key 
+variables required for the calculations. 
+
+```{r knitr_options, include=FALSE} 
+knitr::opts_chunk$set(echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  include = FALSE) 
+```
+
+## Methodology 
+
+```{r Initilization}
+# Open as a project (setting working directory to source and restarting R)
+
+# Setup directories
+basePath <- getwd()
+Rcode <- file.path(dirname(basePath), "code") # All cascades code
+HIVcode <- file.path(basePath, "code") 
+dataFolder <- file.path(basePath, "data")
+
+# Notifications folder is a private secure folder 
+notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data", 
+  "National HIV Registry", "2017", "National", "Hamish & Richard")
+
+# Store imputed sets in the notifications folder
+outputFolder <- notificationsFolder
+
+# Load libraries and standard functions
+source(file.path(Rcode, "LoadLibrary.R"))
+LoadLibrary(tidyverse)
+LoadLibrary(cowplot)
+LoadLibrary(captioner)
+LoadLibrary(scales)
+source(file.path(Rcode, "FormatData.R"))
+
+# Script options
+dataYear <- 2017
+
+runImpute <- FALSE
+saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 
+                   # This file is loaded if runImpute <- FALSE
+
+```
+
+```{r Load and clean notifications}
+# This chunk loads the national notifications and does final cleaning 
+# of notifications in prepartion for imputing
+
+# Function to tidy notifications
+source(file.path(HIVcode, "TidyNotifications.R"))
+
+# Load cleaned notifications data
+origHivData <- read_csv(file.path(notificationsFolder,
+  paste0("cascadeHIVnotifications-clean-", toString(dataYear), ".csv"))) 
+
+# Read in country code data
+countryCodes <- read_csv(file.path(dataFolder, "countryRegionCodes.csv")) 
+
+# Read in location of diagnosis coding
+regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
+
+# Tidy up notifications for calculations
+hivData <- TidyNotifications(origHivData, dataYear, countryCodes,
+  regionCodes) %>% filter(yearhiv <= dataYear)
+
+# Data checks-------------------------------------------------------------
+
+# Quick check that we are not doing analysis outside of the data
+if (max(hivData$yeardiagnosis) < dataYear) {
+  stop("No data specified for final year of analysis.")
+}
+
+# HIV data variables------------------------------------------------------
+
+# Setup variables for overarching analysis                  
+allYears <- min(hivData$yeardiagnosis):dataYear # all years of data
+
+
+```
+
+```{r Set-up imputation}
+# This chunk sets-up the various things for the imputation
+
+# HIV notifications variable names for imputation and for other aspects of 
+# the cascade calculations. NOTE: globalregion, countrygroup, and agebin
+# need to be updated after imputation as they are based on imputed
+# variables 
+impVars <- c("yeardiagnosis", "state", "diag_region", "sex", "cob",
+  "agehiv", "expgroup")
+otherVars <- c("dob", "cd4bin", "cd4London", "yearaids", "typediagnosis",
+  "aboriggroup", "yeardeath", "globalregion",
+  "countrygroup", "agebin")
+
+# Create directory for storing imputed sets
+setsPath <- file.path(outputFolder,
+  paste0("cascadeImputedHIVnotifications-", toString(dataYear)))
+dir.create(setsPath, showWarnings = FALSE, recursive = TRUE)
+
+# Imputed sets file string
+saveStringDetails <- file.path(setsPath, "imputedHIVset")
+
+```
+
+```{r Create imputing data set}
+# This chunk creates the final data set for imputing. Selecting the 
+# variables, making sure impute character variables are factors, and 
+# replacing unknown/missing/not reported as NA. 
+cascadeData <- hivData %>%
+  select(c(impVars, otherVars)) %>%
+  mutate(sex = ifelse(sex == "unknown", NA, sex),
+    cob = ifelse(cob == "Not Reported", NA, cob),
+    expgroup = ifelse(expgroup == "unknown", NA, expgroup)) %>%
+  mutate(diag_region = ifelse(diag_region == "Not Reported", NA, 
+    diag_region)) %>% 
+  mutate(diag_region = ifelse(diag_region == "Unknown", NA, 
+    diag_region)) %>%
+  mutate(state = as.factor(state),
+    diag_region = as.factor(diag_region),
+    sex = as.factor(sex), 
+    cob = as.factor(cob), 
+    expgroup = as.factor(expgroup)) 
+
+# Separate data for imputing and other data
+imputeData <- cascadeData %>%
+  select(impVars)
+otherData <- cascadeData %>%
+  select(otherVars) %>%
+  rownames_to_column(var = "notification")
+
+# Save cascade data in impute folder
+write_csv(cascadeData, file.path(setsPath, "cascadeHIVdata.csv"))
+
+```
+
+```{r Run imputation} 
+# This chunk runs the imputation on the imputeData set using the MICE 
+# package
+
+if (runImpute) {
+# Load packages for imputing
+LoadLibrary(mice)
+
+# Let's look at what is missing in imputeData
+md.pattern(imputeData)
+
+# Multiple imputation using MICE
+numImputeSets <- 10
+maxIterations <- 5 # set to default
+impMethod <- "pmm"
+impSeed <- 500
+
+imputeSets <- mice(imputeData, m = numImputeSets, maxit = maxIterations, 
+  method = impMethod, seed = impSeed)
+
+# Imputed values are in the imp field stored as a matrix for each varaible.
+# Each Row is the row number of the missing value and each column is the 
+# imputed value (number of columns equals the number of imputed sets).  
+
+  if (saveImpute) {
+    #Save imputeSets to file for loading later
+    save(imputeSets, file = file.path(setsPath, "ImputeSets.R"))
+    # save(imputeSets, file = file.path(getwd(), "data", "ImputeSets.R"))
+  }
+
+} else {
+  #Load already run imputeSets 
+  load(file.path(setsPath, "ImputeSets.R"))
+  # load(file.path(getwd(), data, "ImputeSets.R"))
+
+}
+
+
+```
+
+```{r Check imputation}
+# This chunk produces a number of plots and tables to assess the imputation
+# 
+impVars
+
+# yeardiagnosis is complete
+
+# state - only one missing so don't need to check
+
+# diag_region - biggy
+
+# sex
+table(imputeData$sex, useNA = "ifany")
+table(imputeData$sex) / sum(table(imputeData$sex)) # data
+table(test$imp$sex) / sum(table(test$imp$sex)) # imputed
+
+# cob - biggy
+
+# agehiv
+densityplot(test, ~agehiv)
+
+# expgroup
+table(imputeData$expgroup, useNA = "ifany")
+table(imputeData$expgroup) / sum(table(imputeData$expgroup)) # data
+table(test$imp$expgroup) / sum(table(test$imp$expgroup)) # imputed
+
+```
+
+```{r Complete imputation}
+# Fill in all the missing values
+cascadeDataImpute <- as_tibble(complete(imputeSets, action = "long")) %>%
+  rename(impute_set = .imp, notification = .id)
+  
+# Add the additional data variables
+cascadeDataImpute <- left_join(cascadeDataImpute, otherData, 
+  by = "notification")
+
+# Save as a large data frame or as separate data frames????
+```
+
+
