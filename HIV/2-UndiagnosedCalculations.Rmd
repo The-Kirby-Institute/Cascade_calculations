@@ -43,6 +43,8 @@ cascadeFlag <- "All"
 ecdcResults <- "exposure"
 updateECDC <- FALSE
 
+getNewInfections <- TRUE
+
 # Produce cascadeName from the flag and analysis year. 
 if (analysisYear <= 2016) {
   ecdcType <- ".xlsx" 
@@ -51,6 +53,10 @@ if (analysisYear <= 2016) {
 }
 cascadeName <- paste0(cascadeFlag, "-", toString(analysisYear))
 ecdcChart <- paste0(cascadeFlag, "_Charts", ecdcType)
+
+if (getNewInfections) {
+  ecdcChartExclude <- paste0(cascadeFlag, "_Charts", "_exclude", ecdcType)
+}
 
 ```
 
@@ -64,18 +70,38 @@ if (cascadeFlag == "Otherexp") {
   ecdcFile <- file.path(outputFolder, projectFolder, "ECDC_models",
     paste0("All-", toString(analysisYear)), ecdcResults,
     paste0("results/All_Charts", ecdcType))
+  if (getNewInfections) {
+    # Need excluded file as well
+    ecdcFileExclude <- file.path(outputFolder, projectFolder, "ECDC_models",
+      paste0("All-", toString(analysisYear)), 
+      paste0(ecdcResults, "_exclude"), 
+      paste0("results/All_Charts", ecdcType))
+  }
 } else {
   ecdcFile <- file.path(outputFolder, projectFolder, "ECDC_models",
     cascadeName, ecdcResults, paste0("results/All_Charts", ecdcType))
+  if (getNewInfections) {
+    # Need excluded file as well
+    ecdcFileExclude <- file.path(outputFolder, projectFolder, "ECDC_models",
+      cascadeName, paste0(ecdcResults, "_exclude"), 
+      paste0("results/All_Charts", ecdcType))
+  }
 }
 
 finalFile <- file.path(outputFolder, projectFolder, cascadeName,
   ecdcChart)
+if (getNewInfections) {
+  finalFileExclude <- file.path(outputFolder, projectFolder, cascadeName,
+    ecdcChartExclude)
+}
 
 fileFlag <- FALSE
 
 if (!file.exists(finalFile) || updateECDC) {
   file.copy(ecdcFile, finalFile, overwrite = TRUE)
+  if (getNewInfections) {
+    file.copy(ecdcFileExclude, finalFileExclude, overwrite = TRUE)
+  }
   fileFlag <- TRUE
   stop("You need to unhide hidden rows otherwise results are incorrect")
 } # else it exists so you can carry on
@@ -119,19 +145,42 @@ mergedData <- pldhiv %>%
 
 # population <- cascadeFlag
 
-# Also grab the new infections estimates
-newInfections <- read_excel(file.path(outputFolder, projectFolder, 
-  cascadeName, ecdcChart), sheet = 2, col_names = FALSE, skip = 3) %>%
-  select(X__2, X__3, X__4, X__5) %>%
-  rename(year = X__2, infections = X__3, infections_lower = X__4,
-    infections_upper = X__5) %>%
-  slice(1:length(1980:analysisYear)) %>%
-  mutate(year = as.numeric(year)) %>%
-  # Round to two decimal places (excessive I know)
-  mutate(infections = round(as.numeric(infections), digits = 2),
-    infections_lower = round(as.numeric(infections_lower), digits = 2),
-    infections_upper = round(as.numeric(infections_upper), digits = 2))
- 
+if (getNewInfections) {
+  # Also grab the new infections estimates
+  
+  # For all diagnoses
+  newInfections <- read_excel(file.path(outputFolder, projectFolder, 
+    cascadeName, ecdcChart), sheet = 2, col_names = FALSE, skip = 3) %>%
+    select(X__2, X__3, X__4, X__5) %>%
+    rename(year = X__2, infections = X__3, infections_lower = X__4,
+      infections_upper = X__5) %>%
+    slice(1:length(1980:analysisYear)) %>%
+    mutate(year = as.numeric(year)) %>%
+    # Round to two decimal places (excessive I know)
+    mutate(infections = round(as.numeric(infections), digits = 2),
+      infections_lower = round(as.numeric(infections_lower), digits = 2),
+      infections_upper = round(as.numeric(infections_upper), digits = 2)) %>%
+    mutate(exclude = "no")
+  
+  # For all diagnoses when overseas born excluded
+  newInfectionsExclude <- read_excel(file.path(outputFolder, projectFolder, 
+    cascadeName, ecdcChartExclude), sheet = 2, col_names = FALSE, 
+    skip = 3) %>%
+    select(X__2, X__3, X__4, X__5) %>%
+    rename(year = X__2, infections = X__3, infections_lower = X__4,
+      infections_upper = X__5) %>%
+    slice(1:length(1980:analysisYear)) %>%
+    mutate(year = as.numeric(year)) %>%
+    # Round to two decimal places (excessive I know)
+    mutate(infections = round(as.numeric(infections), digits = 2),
+      infections_lower = round(as.numeric(infections_lower), digits = 2),
+      infections_upper = round(as.numeric(infections_upper), digits = 2)) %>%
+    mutate(exclude = "yes")
+  
+  # Merge the two infections estimates
+  newInfections <- bind_rows(newInfections, newInfectionsExclude)
+  
+}
 ```
 
 
