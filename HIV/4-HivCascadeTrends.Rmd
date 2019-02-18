@@ -113,6 +113,12 @@ regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
 hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes,
   regionCodes)
 
+# Load new infections estimates
+inputFileInfections <- file.path(resultsFolder, cascadeName,
+  paste0("newInfectionsEstimates-", 
+  toString(resultsYear), ".csv"))
+hivNewInfections <- read.csv(inputFileInfections)
+
 ```
 
 # Simple trends of the cascade steps and gaps
