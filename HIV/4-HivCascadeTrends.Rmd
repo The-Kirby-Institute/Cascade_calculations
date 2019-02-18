@@ -45,6 +45,7 @@ LoadLibrary(scales)
 LoadLibrary(cowplot) # Note this masks ggsave with save_plot
 LoadLibrary(captioner)
 LoadLibrary(stringr)
+LoadLibrary(gridExtra)
 
 # Function to tidy notifications
 source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
@@ -703,6 +704,9 @@ LoadLibrary(changepoint) # Not really used
 diagsts <- ts(diagsData$diags,
   start = c(startYear, 1), end = c(resultsYear, 1),
   frequency = 1)
+infectsts <- ts(newInfects$infections,
+  start = c(startYear, 1), end = c(resultsYear, 1),
+  frequency = 1)
 undiagnosedts <- ts(filter(trendData, stage == "undiagnosed")$value,
   start = c(startYear, 1), end = c(resultsYear, 1),
   frequency = 1)
@@ -713,14 +717,16 @@ unsuppressedts <- ts(filter(trendData, stage == "unsuppressed")$value,
   start = c(startYear, 1), end = c(resultsYear, 1),
   frequency = 1)
 
-data <- cbind(diagsts, undiagnosedts, noartts, unsuppressedts)
-colnames(data) <- c("diagnoses", "undiagnosed", "noart", "unsuppressed")
+data <- cbind(diagsts, infectsts, undiagnosedts, noartts, unsuppressedts)
+colnames(data) <- c("diagnoses", "infections", "undiagnosed", "noart",
+  "unsuppressed")
 data <- window(data, start = c(startYear, 1), end = c(resultsYear, 1))
 years <- startYear:resultsYear
 
 # Search for changepoints -------------------------------------------------
 # Using the changepoint package. 
 autoplot(cpt.mean(diagsts))
+autoplot(cpt.mean(infectsts))
 autoplot(cpt.mean(undiagnosedts))
 autoplot(cpt.mean(noartts))
 autoplot(cpt.mean(unsuppressedts))
@@ -741,6 +747,19 @@ lines(confint(bpDiagnoses))
 lines(fitted(bpDiagnoses, breaks = 1), col = 4)
 lines(fitted(bpDiagnoses, breaks = 2), col = 2)
 lines(fitted(bpDiagnoses, breaks = 3), col = 3)
+
+# Look for breakpoints - infections
+bpInfections <- breakpoints(infections ~ years, data = data, h = 3)
+summary(bpInfections)
+
+autoplot(bpInfections)
+plot(bpInfections)
+plot(infectsts)
+lines(bpInfections)
+lines(confint(bpInfections))
+lines(fitted(bpInfections, breaks = 1), col = 4)
+lines(fitted(bpInfections, breaks = 2), col = 2)
+lines(fitted(bpInfections, breaks = 3), col = 3)
 
 # Look for breakpoints - undiagnosed
 bpUndiagnosed <-breakpoints(undiagnosed ~ years, data = data, h = 3)
@@ -784,9 +803,10 @@ lines(fitted(bpVl, breaks = 3), col = 3)
 # Create table of summary results ----------------------------------------
 breakTable <- NULL
 
-bpmodels <- list(bpDiagnoses, bpUndiagnosed, bpNoart, bpVl)
+bpmodels <- list(bpDiagnoses, bpInfections, bpUndiagnosed, bpNoart, bpVl)
 modelNames <- colnames(data)
 modelString <- c("Annual notifications",
+  "Annual new infections",
   "Number undiagnosed",
   "Diagnosed but untreated",
   "On ART but unsuppressed")
@@ -889,7 +909,7 @@ curve.
 
 ```{r Segmented trends}
 # This chuck is used to explore the trend in diagnosed not on ART which 
-# seems to have a change point. Howvere, we try to find a change point for 
+# seems to have a change point. However, we try to find a change point for 
 # each stage. We use the segmented package and with Poisson models. Note
 # if one change point is not found using the segmented package then the 
 # poisson model is plotted instead (suggests it is a better model). 
@@ -1049,9 +1069,11 @@ BIC(trendModels[[step]])
 
 ```
 
-```{r segmented diagnoses}
-# Do an independent segment analysis for diagnoses as it is a bit 
-# trickier. 
+```{r segmented diagnoses and infections}
+# Do an independent segment analysis for diagnoses (as it is a bit 
+# trickier) and infections. 
+
+# Diagnoses---------------------------------------------------------------
 
 # Specify initial breakpoints - use trial and error based on breakpoints()
 # results and to test for sensitivity. 
@@ -1107,13 +1129,79 @@ segDiagsPlot <- ggplot(data = diagsData,
       toString(round(rsq(segDiags, type = "kl"), digits = 4))),
     size = 3)
 
-# Summary: break points and slopes
+# Summary: break points and slopes for diagnoses
 summary(segDiags)
 segDiags$psi
 segCI(segDiags$psi[2], segDiags$psi[3])
 slope(segDiags)
 BIC(trendDiags)
 BIC(segDiags)
+
+# Infections -------------------------------------------------------------
+
+# Specify initial breakpoints - use trial and error based on breakpoints()
+# results and to test for sensitivity. 
+breakPointsInfects <- c(2008)
+
+# Recreate base model
+trendInfects <- glm(round(infections) ~ year, data = newInfects, 
+  family = "poisson")
+
+# Now run segmented to produce a segmented Poisson model. 
+segInfects <- segmented(trendInfects, seg.Z = ~year, 
+  psi = list(year = breakPointsInfects))
+
+segInfectsData <- data.frame(year = newInfects$year, 
+  segvalue = fitted(segInfects))
+
+infectsmax <- 1250
+
+segInfectsPlot <- ggplot(data = newInfects, 
+  aes(x = year, y = infections)) + 
+  geom_line(aes(color = "estimates")) + 
+  geom_point(color = asrcols[2]) +
+  geom_line(aes(y = fitted(trendInfects),
+    colour = "overall")) +
+  geom_line(data = segInfectsData, aes(y = segvalue, 
+    colour = "segment")) + 
+  scale_x_continuous(breaks = seq(startYear,                        
+    resultsYear, by = 3)) +
+  scale_y_continuous(labels = comma) + 
+  scale_colour_manual("", values = c(asrcols[2], "black", "blue"),
+    limits = c("estimates", "overall", "segment"),
+    labels = c("Estimates", "Overall model",
+      "Segmented model")) +
+  coord_cartesian(xlim = c(2004, 2016), ylim = c(0, infectsmax)) + 
+  ylab("Annual new infections") + xlab("Year") +  
+  PlotOptions() +
+  geom_vline(xintercept = segInfects$psi[2], linetype = "dashed",
+    colour = "blue") + 
+  geom_errorbarh(aes(y = 0.975 * infectsmax,
+    xmin = segCI(segInfects$psi[2],
+      segInfects$psi[3])[1],
+    xmax = segCI(segInfects$psi[2],
+      segInfects$psi[3])[2]),
+    colour = "blue",
+    height = 0.025 * diagsmax) +
+  geom_text(x = 2010, y = 0.2 * infectsmax, 
+    label = paste("Overall pseudo-R^2:",
+      toString(round(filter(trendCascade, 
+        stage == "infections")$pseudoR2,
+        digits = 4))), size = 3) +
+  geom_text(x = 2010, y = 0.1 * infectsmax, 
+    label = paste("Segmented pseudo-R^2:",
+      toString(round(rsq(segInfects, type = "kl"), digits = 4))),
+    size = 3)
+
+# Summary: break points and slopes for infections
+summary(segInfects)
+segInfects$psi
+segCI(segInfects$psi[2], segInfects$psi[3])
+slope(segInfects)
+BIC(trendInfects)
+BIC(segInfects)
+
+# Combined plot -----------------------------------------------------------
 
 # Figure caption
 figs("segmentedTrends", "Trends in each step of the Australian HIV cascade over 2004-2016 comparing the overall and segmented models. The red discs show the best estimates for the cascade. The black lines show the estimates from the overall fitted Poisson models. The blue lines show the estimates from the segmented fitted Poisson models.")
