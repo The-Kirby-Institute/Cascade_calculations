@@ -111,10 +111,13 @@ origHivData <- read_csv(file.path(notificationsFolder,
 # Read in country code data
 countryCodes <- read_csv(file.path(dataFolder, "countryRegionCodes.csv")) 
 
-# Tidy up notifications for calculations
-hivData <- TidyNotifications(origHivData, analysisYear, countryCodes) %>%
-  filter(yearhiv <= analysisYear)
+# Read in location of diagnosis coding
+regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
 
+
+# Tidy up notifications for calculations
+hivData <- TidyNotifications(origHivData, analysisYear, countryCodes, 
+  regionCodes) %>% filter(yearhiv <= analysisYear)
 
 # Data checks-------------------------------------------------------------
 
