@@ -1326,6 +1326,11 @@ selectModel <- function(step) {
     overallData <- diagsData %>% rename(value = diags) %>%
       select(-overseas)
     cutPoint <- round(segModel$psi[2])
+  } else if (step == "infections") {
+    overallModel <- trendInfects
+    segModel <- segInfects
+    overallData <- newInfects %>% rename(value = infections) %>%
+      select(-infections_lower, -infections_upper)
   } else {
     overallModel <- trendModels[[step]]
     segModel <- segModels[[step]]
@@ -1352,12 +1357,14 @@ prepostModels <- function(overalldata, cutpoint) {
 }
 
 # Loop over intermediate steps, perform steps and store overall results ---
-modelString <- c("diagnoses" = "Annual notifications",
+modelString <- c("diagnoses" = "Annual diagnoses",
+  "infections" = "Annual new infections",  
   "undiagnosed" = "Number undiagnosed",
   "noART" = "Diagnosed but untreated",
   "unsuppressed" = "On ART but unsuppressed")
 
-steps <- c("diagnoses", "undiagnosed", "noART", "unsuppressed")
+steps <- c("diagnoses", "infections", "undiagnosed", "noART",
+  "unsuppressed")
 modelTable <- data_frame()
 
 for (step in steps) {
