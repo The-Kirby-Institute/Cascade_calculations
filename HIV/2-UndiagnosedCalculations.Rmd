@@ -109,7 +109,7 @@ percentUndiagnosed <- read_excel(file.path(outputFolder, projectFolder,
 undiagnosed <- left_join(numberUndiagnosed, percentUndiagnosed, 
   by = "year")
 
-# Merge data into one data frame
+# Merge undiagnosed data into one data frame
 mergedData <- pldhiv %>%
   select(-stage) %>%
   rename(pldhiv = value,
@@ -119,6 +119,19 @@ mergedData <- pldhiv %>%
 
 # population <- cascadeFlag
 
+# Also grab the new infections estimates
+newInfections <- read_excel(file.path(outputFolder, projectFolder, 
+  cascadeName, ecdcChart), sheet = 2, col_names = FALSE, skip = 3) %>%
+  select(X__2, X__3, X__4, X__5) %>%
+  rename(year = X__2, infections = X__3, infections_lower = X__4,
+    infections_upper = X__5) %>%
+  slice(1:length(1980:analysisYear)) %>%
+  mutate(year = as.numeric(year)) %>%
+  # Round to two decimal places (excessive I know)
+  mutate(infections = round(as.numeric(infections), digits = 2),
+    infections_lower = round(as.numeric(infections_lower), digits = 2),
+    infections_upper = round(as.numeric(infections_upper), digits = 2))
+ 
 ```
 
 
@@ -173,6 +186,13 @@ if (saveResults) {
   
   # Write to csv
   write_csv(plhiv, paste0(saveStringUndiagnosed, ".csv"))
+  
+  # Save new infections
+  saveStringInfections <- file.path(outputFolder, projectFolder, 
+    cascadeName, paste0("newInfectionsEstimates-", toString(analysisYear)))
+  
+  # Write to csv
+  write_csv(newInfections, paste0(saveStringInfections, ".csv"))
   
 }
 
