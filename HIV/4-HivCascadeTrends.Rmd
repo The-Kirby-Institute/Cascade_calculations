@@ -62,6 +62,9 @@ resultsFolder <- file.path(resultsFolder, projectName)
 cascadeName <- "All-2017" #"ASR-2016"
 cascadePop <- "all"
 
+# New infections parameters
+infectsCalculation <- "middle" # "include", "exclude" or "middle"
+
 # Plot specs
 stages <- c("infected", "pldhiv",  
   "retained", "numART", "suppressed")
@@ -118,7 +121,31 @@ hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes,
 inputFileInfections <- file.path(resultsFolder, cascadeName,
   paste0("newInfectionsEstimates-", 
   toString(resultsYear), ".csv"))
-hivNewInfections <- read.csv(inputFileInfections)
+hivNewInfections <- read.csv(inputFileInfections) 
+if (infectsCalculation == "include") {
+  hivNewInfections <- hivNewInfections %>%
+    filter(exclude == "no") %>% 
+    select(-exclude)
+} else if (infectsCalculation == "include") {
+  hivNewInfections <- hivNewInfections %>%
+    filter(exclude == "yes") %>% 
+    select(-exclude)
+} else {
+  # Its "middle"
+  infectsInclude <- hivNewInfections %>%
+    filter(exclude == "no") %>% 
+    select(-exclude)
+  infectsExclude <- hivNewInfections %>%
+    filter(exclude == "yes") %>% 
+    select(-exclude)
+  
+  hivNewInfections <- data_frame(year = infectsInclude$year,
+    infections = (infectsInclude$infections + 
+        infectsExclude$infections) / 2,
+    infections_lower = infectsExclude$infections_lower,
+    infections_upper = infectsInclude$infections_upper)
+    
+}
 
 ```
 
@@ -212,7 +239,7 @@ p_valueInfects <- summary(trendInfects)$coefficients["year", "Pr(>|z|)"]
 intervalInfects <- confint(trendInfects, "year", type = "Wald")
 
 # Diagnostics
-pseudoR2infects <- rsq(trendDiags, type = "kl")
+pseudoR2Infects <- rsq(trendInfects, type = "kl")
 
 # Infectiosn plot with diagnoses added
 infectsPlot <- ggplot(data = newInfects, aes(x = year, 
