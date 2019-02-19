@@ -54,7 +54,7 @@ source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
 resultsYear <- 2017  # year of cascade we will plot
 minYear <- 14        # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
-savePlots <- FALSE
+savePlots <- TRUE
 
 # Set up project and cascade to analyse
 projectName <- "HIV_Cascade_Paper"  
@@ -260,7 +260,7 @@ infectsPlot <- ggplot(data = newInfects, aes(x = year,
   ylab("Annual number") + xlab("Year") +
   scale_colour_manual("", 
     labels = c("New infections", "Infections trend", 
-      "New diagnoses", "Diagnoses trend"),
+      "Annual notifications", "Notifications trend"),
     values = c(asrcols[2], "black", asrcols[5], "blue"),
     limits = c("infects", "infectsTrend","diags","diagsTrend"),
     guide = guide_legend(nrow = 2)) +
@@ -268,7 +268,7 @@ infectsPlot <- ggplot(data = newInfects, aes(x = year,
   geom_text(x = 2010, y = 300, label = paste("Pseudo-R^2 infections:",
     toString(round(rsq(trendInfects, type = "kl"), digits = 4))), 
     size = 3) + 
-  geom_text(x = 2010, y = 150, label = paste("Pseudo-R^2 diagnoses:",
+  geom_text(x = 2010, y = 150, label = paste("Pseudo-R^2 notifications:",
     toString(round(rsq(trendDiags, type = "kl"), digits = 4))), 
     size = 3) 
 
@@ -342,6 +342,7 @@ trendModels[["diagnoses"]] <- trendDiags
 
 # Add new infections
 trendCascade$stage[9] <- "infections"
+trendCascade$coeff[9] <- coeffInfects
 trendCascade$pvalue[9] <- p_valueInfects
 trendCascade$lower[9] <- intervalInfects[1]
 trendCascade$upper[9] <- intervalInfects[2]
@@ -389,7 +390,7 @@ yLabels <- c("infected" = "Number of PLHIV",
   "pldhiv" = "Number diagnosed",
   "numART" = "Number on ART",
   "suppressed" = "Number suppressed\n(VL < 200 copies/ml)",
-  "undiagnosed" = "Number undiagnosed",
+  "undiagnosed" = "Number of PLHIV\nundiagnosed",
   "noART" = "Number diagnosed\n not on ART",
   "unsuppressed" = 
     "Number unsuppressed\n(VL >= 200 copies/ml)")
@@ -1096,7 +1097,7 @@ BIC(trendModels[[step]])
 
 ```
 
-```{r segmented diagnoses and infections}
+```{r Segmented diagnoses and infections}
 # Do an independent segment analysis for diagnoses (as it is a bit 
 # trickier) and infections. 
 
@@ -1134,7 +1135,8 @@ segDiagsPlot <- ggplot(data = diagsData,
     limits = c("estimates", "overall", "segment"),
     labels = c("Estimates", "Overall model",
       "Segmented model")) +
-  coord_cartesian(xlim = c(2004, 2016), ylim = c(0, diagsmax)) + 
+  coord_cartesian(xlim = c(startYear, resultsYear), 
+    ylim = c(0, diagsmax)) + 
   ylab("Annual notifications") + xlab("Year") +  
   PlotOptions() +
   geom_vline(xintercept = segDiags$psi[2], linetype = "dashed",
@@ -1198,7 +1200,8 @@ segInfectsPlot <- ggplot(data = newInfects,
     limits = c("estimates", "overall", "segment"),
     labels = c("Estimates", "Overall model",
       "Segmented model")) +
-  coord_cartesian(xlim = c(2004, 2016), ylim = c(0, infectsmax)) + 
+  coord_cartesian(xlim = c(startYear, resultsYear), 
+    ylim = c(0, infectsmax)) + 
   ylab("Annual new infections") + xlab("Year") +  
   PlotOptions() +
   geom_vline(xintercept = segInfects$psi[2], linetype = "dashed",
@@ -1233,20 +1236,21 @@ BIC(segInfects)
 # Figure caption
 figs("segmentedTrends", "Trends in each step of the Australian HIV cascade over 2004-2016 comparing the overall and segmented models. The red discs show the best estimates for the cascade. The black lines show the estimates from the overall fitted Poisson models. The blue lines show the estimates from the segmented fitted Poisson models.")
 
-# Add the diagnoses plot to the combination plot
-combinedPlot2 <- grid.arrange(legend, 
-  segPlots[[1]] + theme(legend.position="none"), 
-  segPlots[[2]] + theme(legend.position="none"),
-  segPlots[[3]] + theme(legend.position="none"), 
-  segDiagsPlot + theme(legend.position="none"),
-  ncol = 2, nrow = 3, 
-  layout_matrix = rbind(c(1, 1), c(2, 3), c(4, 5)),
-  widths = c(4, 4), heights = c(0.8, 3.1, 3.1))
-
+# Add the diagnoses and infections plot to the combination plot
 stagesDiffsPlot3 <- ggdraw() +
-  draw_plot(combinedPlot2, 0, 0, 1, 1) +
-  draw_plot_label(c("A", "B", "C", "D"), c(0, 0.5, 0, 0.5),
-    c(0.9, 0.9, 0.45, 0.45), size = 12)
+  draw_plot(legend, 0, 0.93, 1, 0.07) + 
+  draw_plot(segPlots[[1]] + theme(legend.position="none"), 
+    0, 0.62, 0.5, 0.31) +
+  draw_plot(segPlots[[2]] + theme(legend.position="none"),
+    0, 0.32, 0.5, 0.31) +
+  draw_plot(segPlots[[3]] + theme(legend.position="none"),
+    0, 0, 0.5, 0.31) +
+  draw_plot(segInfectsPlot + theme(legend.position="none"),
+    0.5, 0.62, 0.5, 0.31) +
+  draw_plot(segDiagsPlot + theme(legend.position="none"),
+    0.5, 0.31, 0.5, 0.31) +
+  draw_plot_label(c("A", "B", "C", "D", "E"), c(0, 0, 0, 0.5, 0.5),
+    c(0.93, 0.62, 0.31, 0.93, 0.62), size = 12)
 
 if (savePlots) {
   # Save the diagnoses plot
@@ -1258,11 +1262,18 @@ if (savePlots) {
     plot = segDiagsPlot, width = 7.5, height = 6, units = "cm")
   
   ggsave(file.path(figFolder,
+    paste0("HIVcascade-Trends-infections_Segment_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat)),
+    plot = segInfectsPlot, width = 7.5, height = 6, units = "cm")
+  
+  ggsave(file.path(figFolder,
     paste("HIVcascade-Differences-Trends-All_Segment",
       toString(startYear), "-",
       toString(resultsYear),
       saveFormat, sep = "")),
-    plot = stagesDiffsPlot3, width = 18, height = 15, units = "cm")
+    plot = stagesDiffsPlot3, width = 18, height = 25, units = "cm")
 }
 
 ```
