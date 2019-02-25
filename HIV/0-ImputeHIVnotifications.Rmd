@@ -87,7 +87,6 @@ if (max(hivData$yeardiagnosis) < dataYear) {
 # Setup variables for overarching analysis                  
 allYears <- min(hivData$yeardiagnosis):dataYear # all years of data
 
-
 ```
 
 ```{r Set-up imputation}
@@ -137,7 +136,8 @@ imputeData <- cascadeData %>%
   select(impVars)
 otherData <- cascadeData %>%
   select(otherVars) %>%
-  rownames_to_column(var = "notification")
+  rownames_to_column(var = "notification") %>%
+  mutate(notification = as.integer(notification))
 
 # Save cascade data in impute folder
 write_csv(cascadeData, file.path(setsPath, "cascadeHIVdata.csv"))
@@ -148,39 +148,37 @@ write_csv(cascadeData, file.path(setsPath, "cascadeHIVdata.csv"))
 # This chunk runs the imputation on the imputeData set using the MICE 
 # package
 
-if (runImpute) {
 # Load packages for imputing
 LoadLibrary(mice)
 
 # Let's look at what is missing in imputeData
 md.pattern(imputeData)
 
-# Multiple imputation using MICE
-numImputeSets <- 10
-maxIterations <- 5 # set to default
-impMethod <- "pmm"
-impSeed <- 500
-
-imputeSets <- mice(imputeData, m = numImputeSets, maxit = maxIterations, 
-  method = impMethod, seed = impSeed)
-
-# Imputed values are in the imp field stored as a matrix for each varaible.
-# Each Row is the row number of the missing value and each column is the 
-# imputed value (number of columns equals the number of imputed sets).  
-
+if (runImpute) {
+  # Run imputation 
+  
+  # Multiple imputation using MICE
+  numImputeSets <- 10
+  maxIterations <- 5 # set to default
+  impMethod <- "pmm"
+  impSeed <- 500
+  
+  imputeSets <- mice(imputeData, m = numImputeSets, maxit = maxIterations, 
+    method = impMethod, seed = impSeed)
+  
+  # Imputed values are in the imp field stored as a matrix for each varaible.
+  # Each Row is the row number of the missing value and each column is the 
+  # imputed value (number of columns equals the number of imputed sets).  
+  
   if (saveImpute) {
     #Save imputeSets to file for loading later
     save(imputeSets, file = file.path(setsPath, "ImputeSets.R"))
-    # save(imputeSets, file = file.path(getwd(), "data", "ImputeSets.R"))
   }
-
+  
 } else {
   #Load already run imputeSets 
   load(file.path(setsPath, "ImputeSets.R"))
-  # load(file.path(getwd(), data, "ImputeSets.R"))
-
 }
-
 
 ```
 
@@ -198,17 +196,17 @@ impVars
 # sex
 table(imputeData$sex, useNA = "ifany")
 table(imputeData$sex) / sum(table(imputeData$sex)) # data
-table(test$imp$sex) / sum(table(test$imp$sex)) # imputed
+table(imputeSets$imp$sex) / sum(table(imputeSets$imp$sex)) # imputed
 
 # cob - biggy
 
 # agehiv
-densityplot(test, ~agehiv)
+densityplot(imputeSets, ~agehiv)
 
 # expgroup
 table(imputeData$expgroup, useNA = "ifany")
 table(imputeData$expgroup) / sum(table(imputeData$expgroup)) # data
-table(test$imp$expgroup) / sum(table(test$imp$expgroup)) # imputed
+table(imputeSets$imp$expgroup) / sum(table(imputeSets$imp$expgroup)) # imputed
 
 ```
 
@@ -221,7 +219,10 @@ cascadeDataImpute <- as_tibble(complete(imputeSets, action = "long")) %>%
 cascadeDataImpute <- left_join(cascadeDataImpute, otherData, 
   by = "notification")
 
-# Save as a large data frame or as separate data frames????
+# Save as a large data frame
+write_csv(cascadeDataImpute, file.path(setsPath, 
+  "cascadeHIVimputed.csv"))
+
 ```
 
 
