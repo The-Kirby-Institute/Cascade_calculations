@@ -100,7 +100,7 @@ impVars <- c("yeardiagnosis", "state", "diag_region", "sex", "cob",
   "agehiv", "expgroup")
 otherVars <- c("dob", "cd4bin", "cd4London", "yearaids", "typediagnosis",
   "aboriggroup", "yeardeath", "globalregion",
-  "countrygroup", "agebin")
+  "countrygroup", "agebin", "dateill", "previ_diag_overseas")
 
 # Create directory for storing imputed sets
 setsPath <- file.path(outputFolder,
