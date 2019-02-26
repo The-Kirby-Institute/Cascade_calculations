@@ -177,8 +177,8 @@ NumUnique <- function(dobframe, years, ignore, file = NULL) {
   numcases <- rep(NA,length(years))
   for (ii in seq(along=years)) {
     dobvector <- filter(dobframe,yeardiagnosis <= years[ii])$dob
-    if (length(dobvector) != 0) {
-      # Make sure our dobvector isn't empty
+    if (length(dobvector) != 0 && !is.na(dobvector)) {
+      # Make sure our dobvector isn't empty or an NA
       numcases[ii] <- RemoveDuplicates(dobvector,ignore)
     }
   }
@@ -284,7 +284,8 @@ GetUnique <- function(hivSet, allYears, yearUnique = NULL) {
       propunique)) %>% # replace infinite numbers
     mutate(duplicates = notifications - unique,
       cumduplicates = totalnotifications - cum_unique) %>%
-    # Add replce columns these will be the same as previous columns if yearUnique = NULL
+    # Add replce columns these will be the same as previous columns if 
+    # yearUnique = NULL
     mutate(propunique_replace = ifelse(year >= yearUnique, 1, propunique)) %>%
     mutate(unique_replace = propunique_replace * notifications) %>%
     mutate(duplicates_replace = notifications - unique_replace,

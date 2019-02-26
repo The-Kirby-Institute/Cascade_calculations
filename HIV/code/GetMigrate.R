@@ -7,9 +7,24 @@
 
 # Define local functions --------------------------------------------------
 extractData <- function(data, fcob, fage, fstate, fgender) {
-  subData <- data %>% 
+
+  # Do cob separately because it is a bit tricky
+  if (fcob == 'non-australia') {
+    # Special case - not born in Australia/born overseas
+    subData <- data %>%
+      filter(cob != 'Australia')
+  } else if (fcob =='non-aus-nz') {
+    # Special case - not born in Australia or NZ
+    subData <- data %>%
+      filter(!(cob %in% c('Australia', 'New Zealand')))
+  } else {
+    subData <- data %>%
+      filter(cob %in% fcob)
+  }
+  
+  subData <- subData %>% 
     filter(year %in% 2004:2014) %>%
-    filter(cob %in% fcob, age %in% fage, 
+    filter(age %in% fage, 
       state %in% fstate, gender %in% fgender) %>% 
     group_by(year) %>%
     summarise(departures = sum(nom),
