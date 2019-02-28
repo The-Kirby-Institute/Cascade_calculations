@@ -53,7 +53,7 @@ saveResults <- TRUE
 
 # Set HIV cascade parameters----------------------------------
 # Overarching project where all cascades will be stored
-projectOutput <- "ASR_2018" # "." for main output folder 
+projectOutput <- "Test_Cascades" # "." for main output folder 
                             # "HIV_Cascade_Paper" for paper
 numCascades <- 1
                             
@@ -80,7 +80,7 @@ numCascades <- 1
 ## calculations is accurate. 
 ##***********************************************************************##
 
-cascadeName <- "All-2017" # (single)
+cascadeName <- "Impute-2017" # (single)
 targetGender <- rep("all", numCascades) # all, male, female (single)
 targetAge <- rep("all", numCascades) # all or split (single)
 # Note regarding ageing: The calculations don't specifically target 
@@ -90,7 +90,7 @@ targetAge <- rep("all", numCascades) # all or split (single)
 # a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
 # split and then filter out age estimates as required essentially turns on 
 # doAge below. 
-targetCob <- rep("all", numCascades) # all=including n/a, Thailand, etc.
+targetCob <- rep("non-australia", numCascades) # all=including n/a, Thailand, etc.
   # (combination)
 targetExposure <- rep("all", numCascades) #msm, hetero, pwid, otherexp 
   # (combination)
@@ -98,7 +98,7 @@ targetAtsi <- rep("all", numCascades) # all, indigenous or non_indigenous.
   # Only used if country is Australia (single)
 
 # TODO: Merge these variables into one. 
-targetState <- rep("all", numCascades) # nsw, sa, nt, qld, vic, wa, act
+targetState <- rep("vic", numCascades) # nsw, sa, nt, qld, vic, wa, act
   # tas (combination)
 targetLocalRegion <- rep("all", numCascades) #tbd (combination)
 
@@ -110,7 +110,7 @@ targetGlobalRegion <- rep("all", numCascades) # South-East Asia,
 # These variables specify if the imputed notifications sets should be used 
 # and how many sets to use.
 # 
-useImputed <- FALSE
+useImputed <- TRUE
 nImputedSets <- 10 # Default is 10, the maximum
 
 # Script options-----------------------------------------------------------
@@ -184,6 +184,7 @@ saveUnique <- ifelse(!saveResults, FALSE, saveUnique)
   
 # Settings for generating ECDC model inputs--------------------------------
 ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
+ecdcData <- ifelse(useImputed, FALSE, ecdcData) # Turn off for imputation at the moment
 excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
 ecdcModel <- cascadeName # name
 if (excludeOS) {
