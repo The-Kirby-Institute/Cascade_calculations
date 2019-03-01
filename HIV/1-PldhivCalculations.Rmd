@@ -141,18 +141,18 @@ projectPldhiv <- rep(FALSE, numCascades)
 ```
 
 
-
 ```{r Error and option checking}
 # Error checking and changes in options based on cascade parameters
 # Check lengths of all cascade variables and options
-if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi, 
-  targetState, targetLocalRegion, targetGlobalRegion) != "all") > 1) {
-  warning("Multiple selections for subsetting: SubHivSet() and reallocation
-    may not work correctly if selections with lots of missing data are 
-    included")
-}
 
-# Some error checking 
+if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi, 
+  targetState, targetLocalRegion, targetGlobalRegion) != "all") > 1 && 
+    useImputed == FALSE) {
+  warning("Multiple selections for subsetting non-imputed data set: 
+    SubHivSet() will not work correctly. Changed to imputed data set")
+  useImputed <- TRUE
+  nImputedSets <- 10 # use default
+}
 
 # TODO: check lengths of all the variables and make sure they equal 
 # numCascades
@@ -216,6 +216,7 @@ source(file.path(HIVcode,"LivingDiagnosedAge.R"))
 
 # Function to easily extract sub-populations of interest 
 source(file.path(HIVcode, "SubHivSet.R"))
+source(file.path(HIVcode, "SubHivSetImpute.R"))
 
 # Functions for removing duplicates annually
 source(file.path(HIVcode, "DeduplicationFunctions.R"))
@@ -312,11 +313,7 @@ if (doAge) {
 ```
 
 ```{r Subset notifications}
-# Create subsetted notifications dataframe. May have to do this multiple
-# times to get the extact number of specific category and those excluded
-# for inter-regional movement. E.g. MSM only in NSW as excluded will have
-# non-MSM and non-NSW
-
+# Create subsetted notifications dataframe. 
 
 # Look at the overall notifications first
 if (excludeOS) {
@@ -357,27 +354,26 @@ if (useImputed) {
       filter(impute_set == ii) %>%
       select(-impute_set, -notification) 
     
-    tempHivSetReturn <- SubHivSet(tempHivSetAll, "all", targetGender,
+    tempHivSetReturn <- SubHivSetImpute(tempHivSetAll, "all", targetGender,
       targetExposure, targetCob, targetAtsi, targetState, 
       targetGlobalRegion)
-  
+    
     tempHivSet <- tempHivSetReturn[[1]]
     tempHivSetExcluded <- tempHivSetReturn[[2]]
-    tempHivSetUnknown <- tempHivSetReturn[[3]]
+    tempHivSetUnknown <- data_frame() # Empty
     
     # HivSetUnknown outputs should be empty
     if (nrow(tempHivSetUnknown) != 0) {
       stop("Unknowns detected in imputed data set.")
     }
     
-    if (interState && doAge) {
-      tempHivSetReturnAll <- SubHivSet(hivSetAll, "all", targetGender,
-        targetExposure, targetCob, targetAtsi,
-        "all", targetGlobalRegion)
+    if (interState || doAge) {
+      tempHivSetReturnAll <- SubHivSetImpute(tempHivSetAll, "all", targetGender,
+        targetExposure, targetCob, targetAtsi, "all", targetGlobalRegion)
       
       tempHivSetAll <- tempHivSetReturnAll[[1]]
       tempHivSetExcludedAll <- tempHivSetReturnAll[[2]]
-      tempHivSetUnknownAll <- tempHivSetReturnAll[[3]]
+      tempHivSetUnknownAll <- data_frame() # Empty
       
       # HivSetUnknown outputs should be empty
       if (nrow(tempHivSetUnknownAll) != 0) {
@@ -387,7 +383,7 @@ if (useImputed) {
     
     # Calculate unique notifications and duplicates for the known set.
     if (doUnique) {
-      tempHivSetUnique <- SubHivSet(tempHivSet, "all", targetGender,
+      tempHivSetUnique <- SubHivSetImpute(tempHivSetAll, "all", targetGender,
         targetExposure, "all", "all", targetState, "all")
       
       tempUniqueNotifications <- GetUnique(tempHivSetUnique[[1]], allYears, 
@@ -399,7 +395,7 @@ if (useImputed) {
       
       # For Interstate Calculations we need overall national estimates
       if (interState) {
-        tempHivSetUniqueAll <- SubHivSet(tempHivSet, "all", targetGender,
+        tempHivSetUniqueAll <- SubHivSetImpute(tempHivSetAll, "all", targetGender,
           targetExposure, "all", "all", "all", "all")
         
         tempUniqueNotificationsAll <- GetUnique(tempHivSetUniqueAll[[1]], 
@@ -453,7 +449,7 @@ if (useImputed) {
     hivResultsSets <- bind_rows(hivResultsSets, tempHivResults)
     hivResultsAgeSets <- bind_rows(hivResultsAgeSets, tempHivResultsAge)
     
-    if (interState && doAge) {
+    if (interState || doAge) {
       tempAnnualDiagsAll <- AnnualDiagnoses(tempHivSetAll, 
         tempHivSetExcludedAll, tempHivSetUnknownAll, allYears, doAge)
       
@@ -525,7 +521,7 @@ if (useImputed) {
     ungroup() %>% 
     as.matrix()
   
-  if (interState && doAge) {
+  if (interState || doAge) {
   hivResultsAll <- hivResultsAllSets %>%
     group_by(year) %>%
     summarise_all(funs(mean)) %>%
@@ -542,27 +538,23 @@ if (useImputed) {
   # Extract subset of notifications we want from data
   
   ##*********************************************************************##
-  ## WARNING -- The following function can produce incorrect estimates for the 
-  ## number unknown and the number excluded when it uses a combination of 
-  ## selections that includes selection with lots of missing data.  
-  ## To subset notifications with these categories will likely need 
-  ## imputation which has yet to be implemented. In the mean time care
-  ## is required and temporary hardcoded hacks might be required to ensure 
-  ## the number of notfications included in the calculations is accurate.
+  ## WARNING -- This following subsetting only works as required when 
+  ## selecting a single input category for notififcations. If multiple 
+  ## input categories are required you need to used the imputed 
+  ## notifications version.  
   ##*********************************************************************## 
   
   hivSetReturn <- SubHivSet(hivSetAll, "all", targetGender,
-    targetExposure, targetCob, targetAtsi,
+    targetExposure, targetCob, targetAtsi, 
     targetState, targetGlobalRegion)
   
   hivSet <- hivSetReturn[[1]]
   hivSetExcluded <- hivSetReturn[[2]]
   hivSetUnknown <- hivSetReturn[[3]]
   
-  if (interState && doAge) {
+  if (interState || doAge) {
     hivSetReturnAll <- SubHivSet(hivSetAll, "all", targetGender,
-      targetExposure, targetCob, targetAtsi,
-      "all", targetGlobalRegion)
+      targetExposure, targetCob, targetAtsi, "all", targetGlobalRegion)
     
     hivSetAll <- hivSetReturnAll[[1]]
     hivSetExcludedAll <- hivSetReturnAll[[2]]
@@ -576,17 +568,15 @@ if (useImputed) {
   # Calculate unique notifications and duplicates for the known set.
   if (doUnique) {
     hivSetUnique <- SubHivSet(hivSet, "all", targetGender,
-      targetExposure, "all", "all",
-      targetState, "all")
+      targetExposure, "all", "all", targetState, "all")
     
     uniqueNotifications <- GetUnique(hivSetUnique[[1]], allYears, 
       yearUnique = yearUnique)
     
     # For Interstate Calculations we need overall national estimates
     if (interState) {
-      hivSetUniqueAll <- SubHivSet(hivSet, "all", targetGender,
-        targetExposure, "all", "all",
-        "all", "all")
+      hivSetUniqueAll <- SubHivSet(hivSetAll, "all", targetGender,
+        targetExposure, "all", "all", "all", "all")
       
       uniqueNotificationsAll <- GetUnique(hivSetUniqueAll[[1]], 
         allYears, yearUnique = yearUnique)
@@ -610,7 +600,7 @@ if (useImputed) {
   hivResults <- annualDiags[[1]]
   hivResultsAge <- annualDiags[[2]]
   
-  if (interState && doAge) {
+  if (interState || doAge) {
     annualDiagsAll <- AnnualDiagnoses(hivSetAll, 
       hivSetExcludedAll, hivSetUnknownAll, allYears, doAge)
     
@@ -619,24 +609,6 @@ if (useImputed) {
   }
 
 }
-
-```
-
-```{r Annual notifications and proportions}
-
-# annualDiags <- AnnualDiagnoses(hivSet, hivSetExcluded, 
-#   hivSetUnknown, allYears, doAge)
-# 
-# hivResults <- annualDiags[[1]]
-# hivResultsAge <- annualDiags[[2]]
-# 
-# if (interState && doAge) {
-#   annualDiagsAll <- AnnualDiagnoses(hivSetAll, 
-#     hivSetExcludedAll, hivSetUnknownAll, allYears, doAge)
-#   
-#   hivResultsAll <- annualDiagsAll[[1]]
-#   hivResultsAgeAll <- annualDiagsAll[[2]]
-# }
 
 ```
 
@@ -651,11 +623,6 @@ subsetRates <- GetAdjustments(hivBase, hivAdjustments,
 if (doUnique) {
   subsetRates$cumunique <- uniqueNotifications$cumunique 
   subsetRates$annunique <- uniqueNotifications$annunique
-  
-  # if (interState) {
-  #    subsetRatesAll$cumunique <- uniqueNotificationsAll$cumunique 
-  #    subsetRatesAll$annunique <- uniqueNotificationsAll$annunique
-  # }
 } 
 
 # Get migration rate adjustments 
@@ -903,7 +870,7 @@ if (interState) {
     
   } else {
     # Calculate overall first for inter-regional migration
-    pldhivOverall <- LivingDiagnosed(hivResults$all_notifications,
+    pldhivOverall <- LivingDiagnosed(hivResultsAll$notifications,
       subsetRatesAll$annunique, 
       subsetRatesAll$deathrate,
       subsetRatesAll$mrate,
@@ -912,7 +879,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivOverallMin <- LivingDiagnosed(hivResults$all_notifications,
+    pldhivOverallMin <- LivingDiagnosed(hivResultsAll$notifications,
       subsetRatesAll$annunique,  
       subsetRatesAll$deathrate_upper,
       subsetRatesAll$mrate_upper,
@@ -921,7 +888,7 @@ if (interState) {
       select(year, everything()) %>%
       as_tibble()
     
-    pldhivOverallMax <- LivingDiagnosed(hivResults$all_notifications,
+    pldhivOverallMax <- LivingDiagnosed(hivResultsAll$notifications,
       subsetRatesAll$annunique,  
       subsetRatesAll$deathrate_lower,
       subsetRatesAll$mrate_lower,

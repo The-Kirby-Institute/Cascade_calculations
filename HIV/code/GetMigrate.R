@@ -11,26 +11,77 @@ extractData <- function(data, fcob, fage, fstate, fgender) {
   # Do cob separately because it is a bit tricky
   if (fcob == 'non-australia') {
     # Special case - not born in Australia/born overseas
-    subData <- data %>%
-      filter(cob != 'Australia')
+    subDataOz <- data %>% 
+      filter(year %in% 2004:2014) %>%
+      filter(age %in% fage, cob == 'Australia', 
+        state %in% fstate, gender %in% fgender) %>% 
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp))
+    
+    subDataAll <-  data %>% 
+      filter(year %in% 2004:2014) %>%
+      filter(age %in% fage, cob == 'all', 
+        state %in% fstate, gender %in% fgender) %>% 
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp))
+     
+     subData <- data_frame(year = subDataOz$year,
+       departures = subDataAll$departures - subDataOz$departures,
+       erp = subDataAll$erp - subDataOz$erp) %>%
+      mutate(migrate = departures / erp)
+    
   } else if (fcob =='non-aus-nz') {
     # Special case - not born in Australia or NZ
     subData <- data %>%
-      filter(!(cob %in% c('Australia', 'New Zealand')))
+      filter(!(cob %in% c('Australia', 'New Zealand', 'all')))
+    
+    subDataOz <- data %>% 
+      filter(year %in% 2004:2014) %>%
+      filter(age %in% fage, cob == 'Australia', 
+        state %in% fstate, gender %in% fgender) %>% 
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp))
+    
+    subDataNz <- data %>% 
+      filter(year %in% 2004:2014) %>%
+      filter(age %in% fage, cob == 'New Zealand', 
+        state %in% fstate, gender %in% fgender) %>% 
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp))
+    
+    subDataAll <-  data %>% 
+      filter(year %in% 2004:2014) %>%
+      filter(age %in% fage, cob == 'all', 
+        state %in% fstate, gender %in% fgender) %>% 
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp))
+    
+     subData <- data_frame(year = subDataOz$year,
+       departures = subDataAll$departures - subDataOz$departures - 
+         subDataNz$departures,
+       erp = subDataAll$erp - subDataOz$erp - subDataNz$erp) %>%
+      mutate(migrate = departures / erp)
+     
   } else {
-    subData <- data %>%
-      filter(cob %in% fcob)
+    subData <- data %>% 
+      filter(year %in% 2004:2014) %>%
+      filter(age %in% fage, cob %in% fcob, state %in% fstate, 
+        gender %in% fgender) %>% 
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp)) %>%
+      mutate(migrate = departures / erp)
   }
+
   
-  subData <- subData %>% 
-    filter(year %in% 2004:2014) %>%
-    filter(age %in% fage, 
-      state %in% fstate, gender %in% fgender) %>% 
-    group_by(year) %>%
-    summarise(departures = sum(nom),
-      erp = sum(erp)) %>%
-    mutate(migrate = departures / erp)
+  
   return(subData)
+  
 }
 
 predictRates <- function(subrate, allrate, year) {
