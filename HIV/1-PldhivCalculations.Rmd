@@ -49,11 +49,11 @@ Report(ASR))
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2017
-saveResults <- TRUE
+saveResults <- FALSE
 
 # Set HIV cascade parameters----------------------------------
 # Overarching project where all cascades will be stored
-projectOutput <- "ASR_2018" # "." for main output folder 
+projectOutput <- "Test_Cascades" # "." for main output folder 
                             # "HIV_Cascade_Paper" for paper
 numCascades <- 1
                             
@@ -80,7 +80,7 @@ numCascades <- 1
 ## calculations is accurate. 
 ##***********************************************************************##
 
-cascadeName <- "All-2017" # (single)
+cascadeName <- "test-2017" # (single)
 targetGender <- rep("all", numCascades) # all, male, female (single)
 targetAge <- rep("all", numCascades) # all or split (single)
 # Note regarding ageing: The calculations don't specifically target 
@@ -110,7 +110,7 @@ targetGlobalRegion <- rep("all", numCascades) # South-East Asia,
 # These variables specify if the imputed notifications sets should be used 
 # and how many sets to use.
 # 
-useImputed <- FALSE
+useImputed <- TRUE
 nImputedSets <- 10 # Default is 10, the maximum
 
 # Script options-----------------------------------------------------------
@@ -184,7 +184,7 @@ saveUnique <- ifelse(!saveResults, FALSE, saveUnique)
   
 # Settings for generating ECDC model inputs--------------------------------
 ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
-ecdcData <- ifelse(useImputed, FALSE, ecdcData) # Turn off for imputation at the moment
+# ecdcData <- ifelse(useImputed, FALSE, ecdcData) # Turn off for imputation at the moment
 excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
 ecdcModel <- cascadeName # name
 if (excludeOS) {
@@ -239,6 +239,14 @@ source(file.path(HIVcode, "AnnualDiagnoses.R"))
 source(file.path(HIVcode, "GetAdjustments.R"))
 source(file.path(HIVcode, "GetMigrate.R"))
 source(file.path(HIVcode, "GetInterRegion.R"))
+
+# Simple but useful functions for looking at things
+viewDiagnosed <- function() {
+  print(pldhivAll %>% tail())
+  print(pldhivAllMin %>% tail())
+  print(pldhivAllMax %>% tail())
+}
+
 
 ```
 
@@ -357,6 +365,10 @@ if (useImputed) {
     }
   }
   
+  if (ecdcData) {
+    imputeHivSet <- data_frame()
+  }
+  
   for (ii in 1:nImputedSets) {
     
     tempHivSetAll <- hivDataImputed %>%
@@ -376,6 +388,11 @@ if (useImputed) {
     tempHivSet <- tempHivSetReturn[[1]]
     tempHivSetExcluded <- tempHivSetReturn[[2]]
     tempHivSetUnknown <- data_frame() # Empty
+    
+    if (ecdcData) {
+      # Need to save all notifications 
+      imputeHivSet <- bind_rows(imputeHivSet, tempHivSet)
+    }
     
     # HivSetUnknown outputs should be empty
     if (nrow(tempHivSetUnknown) != 0) {
@@ -1117,27 +1134,38 @@ if (doAge) {
 ```{r ECDC Outputs}
 # ECDC calculations-------------------------------------------------------
 if (ecdcData) {
-  normalizeFactor <-  annualDiags[[1]]$ecdc_normalization
-  normalizeFactor[is.nan(normalizeFactor)] <- 1
+  
+  if (useImputed) {
+    normalizeFactor <- rep(1, length(allYears))
+    ecdcImputeSets <- nImputedSets
+  } else {
+    normalizeFactor <-  annualDiags[[1]]$ecdc_normalization
+    normalizeFactor[is.nan(normalizeFactor)] <- 1
+    ecdcImputeSets <- 1
+  }  
   
   # Folder for ECDC output
   ecdcFolder <- file.path(outputFolder, projectOutput)
   
   # ECDC data set
-  hivSetEcdc <- hivSet %>%
-    mutate(expgroup = ifelse(is.na(expgroup), "unknown", expgroup))
+  if (useImputed) {
+    hivSetEcdc <- imputeHivSet
+  } else {
+    hivSetEcdc <- hivSet %>%
+      mutate(expgroup = ifelse(is.na(expgroup), "unknown", expgroup))
+  }
   
   if (excludeOS) {
     # excluding OS diagnosis
     dataAll <- EcdcFolders(ecdcFolder, ecdcModel, 
       includeOS = FALSE)
     EcdcFiles(hivSetEcdc, dataAll, propUnique = subsetRates$cumunique,
-      propKnown = normalizeFactor)
+      propKnown = normalizeFactor, nDataSets = ecdcImputeSets)
   } else {
     # including OS diagnosis
     dataAll <- EcdcFolders(ecdcFolder, ecdcModel)
     EcdcFiles(hivSetEcdc, dataAll, propUnique = subsetRates$cumunique,
-      propKnown = normalizeFactor) 
+      propKnown = normalizeFactor, nDataSets = ecdcImputeSets) 
   }
   
   # Create output directory
@@ -1179,7 +1207,7 @@ if (ecdcData) {
   hivExpCum <- hivSetEcdc %>% 
     filter(is.na(previ_diag_overseas)) %>%
     group_by(expgroup, yeardiagnosis) %>% 
-    summarise(notifications = n()) %>% 
+    summarise(notifications = n() / ecdcImputeSets) %>% 
     ungroup() %>% 
     group_by(expgroup) %>% 
     mutate(cumnotifications = cumsum(notifications)) %>%
@@ -1193,7 +1221,8 @@ if (ecdcData) {
   if (!("pwid" %in% names(hivExpCum))) hivExpCum$pwid <- 0
   if (!("unknown" %in% names(hivExpCum))) hivExpCum$unknown <- 0
   
-  hivExpCum <- hivExpCum %>% select(-unknown) %>%
+  hivExpCum <- hivExpCum %>% 
+    select(-unknown) %>%
     gather("expgroup", "cumnotifications", 2:5) %>%
     mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
       cumnotifications)) %>%

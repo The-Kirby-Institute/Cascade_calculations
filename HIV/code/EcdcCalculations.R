@@ -8,7 +8,7 @@
 
 # Create output folders --------------------------------------------------
 EcdcFolders <- function(outputFolder, model, includeOS = TRUE,
-                        time = FALSE) {
+  time = FALSE) {
   
   if (includeOS) {
     folderAll <- "all"
@@ -56,35 +56,35 @@ EcdcWrite <- function(results, folder, category) {
   # Categories: hiv, hivaids, aids, <200, 200-349, 350-499, >500
   
   fileTag <- switch(category,
-                    "hiv" = "HIV",
-                    "hivaids" = "HIVAIDS",
-                    "aids" = "AIDS",
-                    "cg500" = "HIV_CD4_1", 
-                    "c350_499" = "HIV_CD4_2", 
-                    "c200_349" = "HIV_CD4_3", 
-                    "cl200" = "HIV_CD4_4",
-                    "not_reported_1" = "HIV_CD4_LM_1_0",
-                    "cl20_1" = "HIV_CD4_LM_1_1",
-                    "c20_49_1" = "HIV_CD4_LM_1_2",
-                    "c50_99_1" = "HIV_CD4_LM_1_3",
-                    "c100_149_1" = "HIV_CD4_LM_1_4",
-                    "c150_199_1" = "HIV_CD4_LM_1_5",
-                    "c200_249_1" = "HIV_CD4_LM_1_6",
-                    "c250_299_1" = "HIV_CD4_LM_1_7",
-                    "c300_349_1" = "HIV_CD4_LM_1_8",
-                    "cg350_1" = "HIV_CD4_LM_1_9",
-                    "not_reported_2" = "HIV_CD4_LM_2_0",
-                    "cl20_2" = "HIV_CD4_LM_2_1",
-                    "c20_49_2" = "HIV_CD4_LM_2_2",
-                    "c50_99_2" = "HIV_CD4_LM_2_3",
-                    "c100_149_2" = "HIV_CD4_LM_2_4",
-                    "c150_199_2" = "HIV_CD4_LM_2_5",
-                    "c200_249_2" = "HIV_CD4_LM_2_6",
-                    "c250_299_2" = "HIV_CD4_LM_2_7",
-                    "c300_349_2" = "HIV_CD4_LM_2_8",
-                    "cg350_2" = "HIV_CD4_LM_2_9",
-                    "deaths" = "Dead",
-                    "emigrants" = "Emig")
+    "hiv" = "HIV",
+    "hivaids" = "HIVAIDS",
+    "aids" = "AIDS",
+    "cg500" = "HIV_CD4_1", 
+    "c350_499" = "HIV_CD4_2", 
+    "c200_349" = "HIV_CD4_3", 
+    "cl200" = "HIV_CD4_4",
+    "not_reported_1" = "HIV_CD4_LM_1_0",
+    "cl20_1" = "HIV_CD4_LM_1_1",
+    "c20_49_1" = "HIV_CD4_LM_1_2",
+    "c50_99_1" = "HIV_CD4_LM_1_3",
+    "c100_149_1" = "HIV_CD4_LM_1_4",
+    "c150_199_1" = "HIV_CD4_LM_1_5",
+    "c200_249_1" = "HIV_CD4_LM_1_6",
+    "c250_299_1" = "HIV_CD4_LM_1_7",
+    "c300_349_1" = "HIV_CD4_LM_1_8",
+    "cg350_1" = "HIV_CD4_LM_1_9",
+    "not_reported_2" = "HIV_CD4_LM_2_0",
+    "cl20_2" = "HIV_CD4_LM_2_1",
+    "c20_49_2" = "HIV_CD4_LM_2_2",
+    "c50_99_2" = "HIV_CD4_LM_2_3",
+    "c100_149_2" = "HIV_CD4_LM_2_4",
+    "c150_199_2" = "HIV_CD4_LM_2_5",
+    "c200_249_2" = "HIV_CD4_LM_2_6",
+    "c250_299_2" = "HIV_CD4_LM_2_7",
+    "c300_349_2" = "HIV_CD4_LM_2_8",
+    "cg350_2" = "HIV_CD4_LM_2_9",
+    "deaths" = "Dead",
+    "emigrants" = "Emig")
   
   fileName <- file.path(folder, paste0(fileTag, ".csv"))
   
@@ -96,15 +96,15 @@ EcdcWrite <- function(results, folder, category) {
 
 # Diagnosis type-----------------------------------------------------------
 typeDiag <- function(hivData, type, minYear = 1980,
-                     exposure = TRUE, adjustUnique = NULL,
-                     normalize = NULL) {
+  exposure = TRUE, adjustUnique = NULL,
+  normalize = NULL, dataSets = 1) {
   
   if (exposure) {
     # Extract notifications
     if (type == "hiv") {
       diagType <- hivData %>%
         group_by(yeardiagnosis,  expgroup) %>%
-        summarise(diags = n()) %>%
+        summarise(diags = n() / dataSets) %>%
         ungroup() %>%
         spread(expgroup, diags) %>%
         rename(year = yeardiagnosis)
@@ -113,7 +113,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
         filter(typediagnosis %in% c("aids", "hivaids")) %>%
         # filter(typediagnosis %in% c("hivaids")) %>%
         group_by(yearaids, expgroup) %>%
-        summarise(diags = n()) %>%
+        summarise(diags = n() / dataSets) %>%
         ungroup() %>%
         spread(expgroup, diags) %>%
         rename(year = yearaids) %>%
@@ -123,7 +123,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
       diagType <- hivData %>%
         filter(typediagnosis == "hivaids") %>%
         group_by(yeardiagnosis,  expgroup) %>%
-        summarise(diags = n()) %>%
+        summarise(diags = n() / dataSets) %>%
         ungroup() %>%
         spread(expgroup, diags) %>%
         rename(year = yeardiagnosis)
@@ -140,15 +140,15 @@ typeDiag <- function(hivData, type, minYear = 1980,
     diagType <- diagType %>%
       mutate(known = hetero+msm+otherexp+pwid) %>%
       mutate(hetero = hetero + unknown * hetero/known,
-             msm = msm + unknown * msm/known,
-             pwid = pwid + unknown * pwid/known,
-             otherexp = otherexp + unknown * otherexp/known) %>%
+        msm = msm + unknown * msm/known,
+        pwid = pwid + unknown * pwid/known,
+        otherexp = otherexp + unknown * otherexp/known) %>%
       mutate(hetero = ifelse(is.nan(hetero), 0, hetero), 
-             msm = ifelse(is.nan(msm), 0, msm),
-             pwid = ifelse(is.nan(pwid), 0, pwid),
-             otherexp = ifelse(is.nan(otherexp), 0, otherexp)) %>%
+        msm = ifelse(is.nan(msm), 0, msm),
+        pwid = ifelse(is.nan(pwid), 0, pwid),
+        otherexp = ifelse(is.nan(otherexp), 0, otherexp)) %>%
       select(-known, -unknown)
-
+    
     allYears <- minYear:max(hivData$yeardiagnosis)
     # requiredYears <- allYears[!(allYears %in% diagType$year)]
     diagType <- FillDataFrame(allYears, diagType)
@@ -162,7 +162,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
     } else {
       warning("Notifications not adjusted for duplicates")
     }
-
+    
     # Replace any negatives with zero
     diagType[diagType < 0] <- 0
     
@@ -186,14 +186,14 @@ typeDiag <- function(hivData, type, minYear = 1980,
     if (type == "hiv") {
       diagType <- hivData %>%
         group_by(yeardiagnosis) %>%
-        summarise(all = n()) %>%
+        summarise(all = n() / dataSets) %>%
         ungroup() %>%
         rename(year = yeardiagnosis)
     } else if (type == "aids") {
       diagType <- hivData %>%
         filter(typediagnosis %in% c("aids", "hivaids")) %>%
         group_by(yearaids) %>%
-        summarise(all = n()) %>%
+        summarise(all = n() / dataSets) %>%
         ungroup() %>%
         rename(year = yearaids) %>%
         filter(year != 1956) # remove 1956 AIDS cases about 23.
@@ -202,7 +202,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
       diagType <- hivData %>%
         filter(typediagnosis == "hivaids") %>%
         group_by(yeardiagnosis) %>%
-        summarise(all = n()) %>%
+        summarise(all = n() / dataSets) %>%
         ungroup() %>%
         rename(year = yeardiagnosis)
       
@@ -240,7 +240,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
 
 # Number in each CD4 count all---------------------------------------------
 cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
-                   adjustUnique = NULL, london = FALSE, lmset = FALSE) {
+  adjustUnique = NULL, london = FALSE, lmset = FALSE, dataSets = 1) {
   
   # Organize all the data
   if (london) {
@@ -253,12 +253,12 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
       # HIV/AIDS + those with HIV symptoms
       hivData <- hivData %>%
         filter(typediagnosis %in% c("hivaids", "aids") |
-                 !is.na(dateill))
+            !is.na(dateill))
     }
     
     cd4DiagsAll <- hivData %>%
       group_by(yeardiagnosis, cd4London) %>%
-      summarise(diags = n()) %>%
+      summarise(diags = n() / dataSets) %>%
       ungroup() %>%
       spread(cd4London, diags)
     
@@ -273,7 +273,8 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
     if (!("cg350" %in% names(cd4DiagsAll))) cd4DiagsAll$cg350 <- 0
     if (!("not_reported" %in% names(cd4DiagsAll))) cd4DiagsAll$not_reported <- 0
     
-    cd4DiagsAll <- cd4DiagsAll %>% mutate(total = apply(select(., 2:10), 1, sum)) %>%
+    cd4DiagsAll <- cd4DiagsAll %>% 
+      mutate(total = apply(select(., 2:10), 1, sum)) %>%
       rename(year = yeardiagnosis)
   } else {
     # First filter out concurrent aids cases
@@ -282,7 +283,7 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
     
     cd4DiagsAll <- hivData %>%
       group_by(yeardiagnosis, cd4bin) %>%
-      summarise(diags = n()) %>%
+      summarise(diags = n() / dataSets) %>%
       ungroup() %>%
       spread(cd4bin, diags) %>%
       mutate(total = apply(select(., 2:6), 1, sum)) %>%
@@ -307,8 +308,7 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
   if (useprop) {
     
     propCD4all <- t(apply(select(cd4DiagsAll, -year, -total, 
-                                 -not_reported), 1,
-                          function(row) row/sum(row)))
+      -not_reported), 1, function(row) row/sum(row)))
     
     propCD4all[is.nan(propCD4all)] <- 0
     propCD4all <- as_data_frame(propCD4all)
@@ -335,8 +335,8 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
 
 # Number in each CD4 count by exposure------------------------------------
 cd4Exposure <- function(hivData, cd4binGroup,
-                        minYear = 1980, adjustUnique = NULL,
-                        london = FALSE, lmset = FALSE) {
+  minYear = 1980, adjustUnique = NULL, london = FALSE, lmset = FALSE,
+  dataSets = 1) {
   
   # Organize the data
   if (london) {
@@ -349,12 +349,12 @@ cd4Exposure <- function(hivData, cd4binGroup,
       # HIV/AIDS + those with HIV symptoms
       hivData <- hivData %>%
         filter(typediagnosis %in% c("hivaids", "aids") |
-                 !is.na(dateill))
+            !is.na(dateill))
     }
     
     cd4DiagsExp <- hivData %>%
       group_by(yeardiagnosis, cd4London, expgroup) %>%
-      summarise(diags = n()) %>%
+      summarise(diags = n() / dataSets) %>%
       ungroup() %>%
       spread(expgroup, diags)
     
@@ -378,7 +378,7 @@ cd4Exposure <- function(hivData, cd4binGroup,
     
     cd4DiagsExp <- hivData %>%
       group_by(yeardiagnosis, cd4bin, expgroup) %>%
-      summarise(diags = n()) %>%
+      summarise(diags = n() / dataSets) %>%
       ungroup() %>%
       spread(expgroup, diags)
     
