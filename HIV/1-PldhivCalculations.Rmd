@@ -53,7 +53,7 @@ saveResults <- TRUE
 
 # Set HIV cascade parameters----------------------------------
 # Overarching project where all cascades will be stored
-projectOutput <- "Test_Cascades" # "." for main output folder 
+projectOutput <- "ASR_2018" # "." for main output folder 
                             # "HIV_Cascade_Paper" for paper
 numCascades <- 1
                             
@@ -80,7 +80,7 @@ numCascades <- 1
 ## calculations is accurate. 
 ##***********************************************************************##
 
-cascadeName <- "Impute-2017" # (single)
+cascadeName <- "All-2017" # (single)
 targetGender <- rep("all", numCascades) # all, male, female (single)
 targetAge <- rep("all", numCascades) # all or split (single)
 # Note regarding ageing: The calculations don't specifically target 
@@ -90,15 +90,15 @@ targetAge <- rep("all", numCascades) # all or split (single)
 # a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
 # split and then filter out age estimates as required essentially turns on 
 # doAge below. 
-targetCob <- rep("non-australia", numCascades) # all=including n/a, Thailand, etc.
-  # (combination)
+targetCob <- rep("all", numCascades) # all=including n/a, Thailand, etc.
+  # (combination). "Australia", "non-australia", "non-aus-nz"
 targetExposure <- rep("all", numCascades) #msm, hetero, pwid, otherexp 
   # (combination)
 targetAtsi <- rep("all", numCascades) # all, indigenous or non_indigenous. 
   # Only used if country is Australia (single)
 
 # TODO: Merge these variables into one. 
-targetState <- rep("vic", numCascades) # nsw, sa, nt, qld, vic, wa, act
+targetState <- rep(c("all"), numCascades) # nsw, sa, nt, qld, vic, wa, act
   # tas (combination)
 targetLocalRegion <- rep("all", numCascades) #tbd (combination)
 
@@ -110,7 +110,7 @@ targetGlobalRegion <- rep("all", numCascades) # South-East Asia,
 # These variables specify if the imputed notifications sets should be used 
 # and how many sets to use.
 # 
-useImputed <- TRUE
+useImputed <- FALSE
 nImputedSets <- 10 # Default is 10, the maximum
 
 # Script options-----------------------------------------------------------
@@ -121,7 +121,7 @@ nImputedSets <- 10 # Default is 10, the maximum
 # Note: These are generally given the same value across all cascades in 
 # a project so use rep() by default. These can then be manually changed as 
 # required. 
-excludeAborig <- rep(FALSE, numCascades)
+excludeAborig <- rep(FALSE, numCascades) # FALSE be default to include indigenous
 doRetained <- rep(TRUE, numCascades) # TRUE for appending retained in care
 
 # Settings for doing deduplication analysis
@@ -327,6 +327,12 @@ annDiagsOrig <- hivSetAll %>%
   mutate(totalnotifications = cumsum(notifications)) %>%
   ungroup() 
 
+if (excludeAborig) {
+  # Set indigenous aside separately to add on later if required
+  hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
+  hivSetAll <- filter(hivSetAll, aboriggroup == 'non_indigenous')
+}
+
 # Now select/calculate annual notifications for selected categories
 
 if (useImputed) {
@@ -336,16 +342,19 @@ if (useImputed) {
   
   uniqueNotificationsSets <- data_frame()
   uniqueNotificationsAllSets <- data_frame()
-  propDiagsMaleSets <- data_frame()
-  propDiagsMaleAllSets <- data_frame()
+  
   hivResultsSets <- data_frame()
   hivResultsAgeSets <- data_frame()
   hivResultsAllSets <- data_frame()
   hivResultsAgeAllSets <- data_frame()
   
-  if (doAge) {
-    propDiagsAgeMaleSets <- data_frame()
-    propDiagsAgeMaleAllSets <- data_frame()
+  if (targetGender == "all") {
+    propDiagsMaleSets <- data_frame()
+    propDiagsMaleAllSets <- data_frame()
+    if (doAge) {
+      propDiagsAgeMaleSets <- data_frame()
+      propDiagsAgeMaleAllSets <- data_frame()
+    }
   }
   
   for (ii in 1:nImputedSets) {
@@ -353,6 +362,12 @@ if (useImputed) {
     tempHivSetAll <- hivDataImputed %>%
       filter(impute_set == ii) %>%
       select(-impute_set, -notification) 
+    
+    if (excludeAborig) {
+      # Set indigenous aside separately to add on later if required
+      tmepHivSetIndigenous <- filter(tempHivSetAll, aboriggroup == 'indigenous')
+      tempHivSetAll <- filter(tempHivSetAll, aboriggroup == 'non_indigenous')
+    }
     
     tempHivSetReturn <- SubHivSetImpute(tempHivSetAll, "all", targetGender,
       targetExposure, targetCob, targetAtsi, targetState, 
@@ -409,31 +424,34 @@ if (useImputed) {
     
     # Calculation cumulative proportion male. This is used for gender weighted
     # migration rates
-    tempPropDiagsMale <- ProportionMale(tempHivSet, analysisYear, FALSE)
-    tempPropDiagsMaleAll <- ProportionMale(tempHivSetAll, analysisYear, 
-      FALSE)
-    
-    tempPropDiagsMale <- as_tibble(tempPropDiagsMale) %>%
-      add_column(year = allYears, .before = 1)
-    tempPropDiagsMaleAll <- as_tibble(tempPropDiagsMaleAll) %>%
-      add_column(year = allYears, .before = 1) 
-    
-    # Collate
-    propDiagsMaleSets <- bind_rows(propDiagsMaleSets, tempPropDiagsMale)
-    propDiagsMaleAllSets <- bind_rows(propDiagsMaleAllSets,
-      tempPropDiagsMaleAll)
-    
-    if (doAge) {
-      tempPropDiagsAgeMale <- ProportionMale(tempHivSet, analysisYear, 
-        TRUE)
-      tempPropDiagsAgeMaleAll <- ProportionMale(tempHivSetAll, 
-        analysisYear, TRUE)
+    if (targetGender == "all") {
+      tempPropDiagsMale <- ProportionMale(tempHivSet, analysisYear, FALSE,
+        targetGender = targetGender)
+      tempPropDiagsMaleAll <- ProportionMale(tempHivSetAll, analysisYear, 
+        FALSE, targetGender = targetGender)
+      
+      tempPropDiagsMale <- as_tibble(tempPropDiagsMale) %>%
+        add_column(year = allYears, .before = 1)
+      tempPropDiagsMaleAll <- as_tibble(tempPropDiagsMaleAll) %>%
+        add_column(year = allYears, .before = 1) 
       
       # Collate
-      propDiagsAgeMaleSets <- bind_rows(propDiagsAgeMaleSets, 
-        as_tibble(tempPropDiagsAgeMale))
-      propDiagsAgeMaleAllSets <- bind_rows(propDiagsAgeMaleAllSets, 
-        as_tibble(tempPropDiagsAgeMaleAll))
+      propDiagsMaleSets <- bind_rows(propDiagsMaleSets, tempPropDiagsMale)
+      propDiagsMaleAllSets <- bind_rows(propDiagsMaleAllSets,
+        tempPropDiagsMaleAll)
+      
+      if (doAge) {
+        tempPropDiagsAgeMale <- ProportionMale(tempHivSet, analysisYear, 
+          TRUE, targetGender = targetGender)
+        tempPropDiagsAgeMaleAll <- ProportionMale(tempHivSetAll, 
+          analysisYear, TRUE, targetGender = targetGender)
+        
+        # Collate
+        propDiagsAgeMaleSets <- bind_rows(propDiagsAgeMaleSets, 
+          as_tibble(tempPropDiagsAgeMale))
+        propDiagsAgeMaleAllSets <- bind_rows(propDiagsAgeMaleAllSets, 
+          as_tibble(tempPropDiagsAgeMaleAll))
+      }
     }
     
     # Annual notifications
@@ -481,22 +499,23 @@ if (useImputed) {
   }
   
   # For proportion male convert back to vector
-  propDiagsMale <- propDiagsMaleSets %>%
-    group_by(year) %>%
-    summarise_all(funs(mean)) %>%
-    ungroup() %>%
-    select(value) %>%
-    as.matrix() %>%
-    as.vector 
-  propDiagsMaleAll <- propDiagsMaleAllSets %>%
-    group_by(year) %>%
-    summarise_all(funs(mean)) %>%
-    ungroup() %>%
-    select(value) %>%
-    as.matrix() %>%
-    as.vector
-  
-  if (doAge) {
+  if (targetGender == "all") {
+    propDiagsMale <- propDiagsMaleSets %>%
+      group_by(year) %>%
+      summarise_all(funs(mean)) %>%
+      ungroup() %>%
+      select(value) %>%
+      as.matrix() %>%
+      as.vector 
+    propDiagsMaleAll <- propDiagsMaleAllSets %>%
+      group_by(year) %>%
+      summarise_all(funs(mean)) %>%
+      ungroup() %>%
+      select(value) %>%
+      as.matrix() %>%
+      as.vector
+    
+    if (doAge) {
       propDiagsAgeMale <- propDiagsAgeMaleSets %>%
         group_by(year) %>%
         summarise_all(funs(mean)) %>%
@@ -508,6 +527,13 @@ if (useImputed) {
         ungroup() %>%
         as.matrix
     }
+  } else {
+    propDiagsMale <- NULL
+    propDiagsMaleAll <- NULL
+    
+    propDiagsAgeMale <- NULL
+    propDiagsAgeMaleAll <- NULL
+  }
 
   # Annual notifications
   hivResults <- hivResultsSets %>%
@@ -543,6 +569,12 @@ if (useImputed) {
   ## input categories are required you need to used the imputed 
   ## notifications version.  
   ##*********************************************************************## 
+  
+  if (excludeAborig) {
+    # Set indigenous aside separately to add on later if required
+    hivSetIndigenous <- filter(hivSetAll, aboriggroup == 'indigenous')
+    hivSetAll <- filter(hivSetAll, aboriggroup == 'non_indigenous')
+  }
   
   hivSetReturn <- SubHivSet(hivSetAll, "all", targetGender,
     targetExposure, targetCob, targetAtsi, 
@@ -585,12 +617,16 @@ if (useImputed) {
   
   # Calculation cumulative proportion male. This is used for gender weighted
   # migration rates
-  propDiagsMale <- ProportionMale(hivSet, analysisYear, FALSE)
-  propDiagsMaleAll <- ProportionMale(hivSetAll, analysisYear, FALSE)
-  
-  if (doAge) {
-    propDiagsAgeMale <- ProportionMale(hivSet, analysisYear, TRUE)
-    propDiagsAgeMaleAll <- ProportionMale(hivSetAll, analysisYear, TRUE)
+  if (targetGender == "all") {
+    propDiagsMale <- ProportionMale(hivSet, analysisYear, FALSE)
+    propDiagsMaleAll <- ProportionMale(hivSetAll, analysisYear, FALSE)
+    
+    if (doAge) {
+      propDiagsAgeMale <- ProportionMale(hivSet, analysisYear, TRUE,
+        targetGender = targetGender)
+      propDiagsAgeMaleAll <- ProportionMale(hivSetAll, analysisYear, TRUE,
+        targetGender = targetGender)
+    }
   }
   
   # Annual notifications and proportions
