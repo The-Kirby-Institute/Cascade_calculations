@@ -8,7 +8,8 @@ living with diagnosed HIV in Australia. This is one of the key steps for
 producing the estimates of the Australian HIV diagnosis and care cascade. 
 
 This script is part of a project containing version 3.0 of the HIV cascade
-calculation scripts. 
+calculation scripts. The main components of the script are in the 
+CalculatePldhiv.R function. 
 
 ```{r Initialization}
 # Chunk to setup everything
@@ -212,6 +213,14 @@ if (is.null(paramsFile)) {
 ```{r Functions}
 # Load functions used for analysis 
 
+# Define simple but useful functions for looking at things
+viewDiagnosed <- function() {
+  print(pldhivAll %>% tail())
+  print(pldhivAllMin %>% tail())
+  print(pldhivAllMax %>% tail())
+}
+
+# FUnctions used by CalculatePldhiv.R -------------------------------------
 # Source functions for filling in missing data
 source(file.path(Rcode, "FillMissing.R"))
 source(file.path(Rcode, "FillDataFrame.R"))
@@ -251,14 +260,6 @@ source(file.path(HIVcode, "GetInterRegion.R"))
 if (doRetained) {
   source(file.path(HIVcode, "RetainedCare.R"))
 }
-
-# Simple but useful functions for looking at things
-viewDiagnosed <- function() {
-  print(pldhivAll %>% tail())
-  print(pldhivAllMin %>% tail())
-  print(pldhivAllMax %>% tail())
-}
-
 
 ```
 
@@ -301,8 +302,6 @@ hivAdjustments <- read.csv(file.path(dataFolder,
   paste0("HIVadjustments-",
     toString(analysisYear), ".csv")))
 
-
-
 # Load cleaned NOM data variable (cleanNom)
 load(file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
 
@@ -331,9 +330,11 @@ hivAgeDeath <- read.csv(file.path(dataFolder, paste0("HIVageEstimates-",
 # Everything is pretty much done in that function.
 source(file.path(HIVcode, "CalculatePldhiv.R"))
 
+# List of lists to store output
+pldhivCalculations <- list()
 
 for (ii in 1:numCascades) {
-  pldhivCalculations <- CalculatePldhiv(analysisYear, saveResults, 
+  pldhivCalculations[ii] <- CalculatePldhiv(analysisYear, saveResults, 
     projectOutput, 
     # Cascade parameters
     cascadeName[ii], targetGender[ii], targetAge[ii], targetCob[ii], 
@@ -348,6 +349,7 @@ for (ii in 1:numCascades) {
     hivData, allYears, hivBase, hivAdjustments, cleanNom,
     absInterstate, ageList, yearList, hivAgeDeath)
 }
+
 
 ```
 
