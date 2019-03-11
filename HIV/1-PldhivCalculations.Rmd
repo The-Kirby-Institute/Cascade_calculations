@@ -18,6 +18,7 @@ calculation scripts.
 # Setup directories
 basePath <- getwd()
 Rcode <- file.path(dirname(basePath), "code") # All cascades code
+mainDataFolder <- file.path(dirname(getwd()), "data") # All cascades data
 HIVcode <- file.path(basePath, "code") 
 dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
@@ -299,35 +300,28 @@ hivBase <- read.csv(file.path(dataFolder, paste0("HIVbaseEstimates-",
 hivAdjustments <- read.csv(file.path(dataFolder,
   paste0("HIVadjustments-",
     toString(analysisYear), ".csv")))
-# hivInterstate <- read.csv(file.path(dataFolder,
-#   paste0("HIVinterstateEstimates-",
-#     toString(analysisYear), ".csv")))
 
-mainDataFolder <- file.path(dirname(getwd()), "data")
-# absMigration <- read.csv(file.path(mainDataFolder,
-#   paste0("ABS_migration_clean-", toString(analysisYear), ".csv")),
-#   as.is = 1)
+
 
 # Load cleaned NOM data variable (cleanNom)
 load(file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
- 
+
+# Interstate movement
 absInterstate <- read_csv(file.path(mainDataFolder, 
   paste0("ABS_interstate_age_sex_clean-", toString(analysisYear), ".csv")))
 
-if (doAge) {
-  # Specifications and deaths data by age
-  
-  # Set-up age matrix names
-  ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
-    "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
-    "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
-  
-  yearList <- paste0("y", as.character(allYears))
-  
-  # Load age based relative deathrates 
-  hivAgeDeath <- read.csv(file.path(dataFolder, paste0("HIVageEstimates-",
-      toString(analysisYear), ".csv")))
-}
+# Specifications and deaths data by age only used if doAge = TRUE ---------
+
+# Set-up age matrix names
+ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
+  "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
+  "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
+
+yearList <- paste0("y", as.character(allYears))
+
+# Load age based relative deathrates 
+hivAgeDeath <- read.csv(file.path(dataFolder, paste0("HIVageEstimates-",
+  toString(analysisYear), ".csv")))
 
 ```
 
@@ -340,12 +334,19 @@ source(file.path(HIVcode, "CalculatePldhiv.R"))
 
 for (ii in 1:numCascades) {
   pldhivCalculations <- CalculatePldhiv(analysisYear, saveResults, 
-    projectOutput, cascadeName[ii], targetGender[ii], targetAge[ii], 
-    targetCob[ii], targetExposure[ii], targetAtsi[ii], targetState[ii], 
-    targetLocalRegion[ii], targetGlobalRegion[ii], excludeAborig[ii], 
+    projectOutput, 
+    # Cascade parameters
+    cascadeName[ii], targetGender[ii], targetAge[ii], targetCob[ii], 
+    targetExposure[ii], targetAtsi[ii], targetState[ii], 
+    targetLocalRegion[ii], targetGlobalRegion[ii], 
+    # Specifications
+    excludeAborig[ii], 
     doRetained[ii], doUnique[ii], yearUnique[ii], ecdcData[ii], 
     ecdcVersion[ii], excludeOS[ii], projectPldhiv[ii], projectYear[ii], 
-    projectName[ii], projectOption[ii], projectDecrease[ii])
+    projectName[ii], projectOption[ii], projectDecrease[ii], 
+    # Data
+    hivData, allYears, hivBase, hivAdjustments, cleanNom,
+    absInterstate, ageList, yearList, hivAgeDeath)
 }
 
 ```
