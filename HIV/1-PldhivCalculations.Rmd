@@ -52,14 +52,20 @@ analysisYear <- 2017
 saveResults <- FALSE
 
 # Set HIV cascade parameters----------------------------------
-# Overarching project where all cascades will be stored
+
+# Overarching project folder where all cascades will be stored
 projectOutput <- "Test_Cascades" # "." for main output folder 
-                            # "HIV_Cascade_Paper" for paper
-numCascades <- 1
+                                 # "HIV_Cascade_Paper" for paper
+
+# Project CSV file for specifying cascade parameters - NULL = manual 
+# otherwise cascade parameters are entred via a file in projectOutput 
+# which need to exist
+paramsFile <- "ProjectParameters.csv"
                             
 # Cascade options----------------------------------------------------------
 # The following variables specify the charactersitsics and hence the 
-# notifications that will be included in the cascade. For some variables a # combination of categories can used by specifying a vector. Other 
+# notifications that will be included in the cascade. For some variables a 
+# combination of categories can used by specifying a vector. Other 
 # variables can only be specified as a single value.
 # 
 # When calculating multiple cascades these are entered as a list (of 
@@ -67,138 +73,139 @@ numCascades <- 1
 # variables. All lists and vectors need to be the same length (equal to
 # numCascades).
 # 
-# # Note: These often have same value across all cascades in 
+# Note: These often have same value across all cascades in 
 # a project so use rep() by default. These can then be manually changed as 
-# required. 
-# 
-##***********************************************************************##
-## WARNING -- Selecting multile selections for subsetting notififcations 
-## needs care when categories with lots of missing data are included. 
-## To subset notifications with these categories will likely need 
-## imputation which has yet to be implemented. In the mean time care
-## is required to ensure the number of notfications included in the 
-## calculations is accurate. 
-##***********************************************************************##
+# required.
 
-cascadeName <- "test-2017" # (single)
-targetGender <- rep("all", numCascades) # all, male, female (single)
-targetAge <- rep("all", numCascades) # all or split (single)
-# Note regarding ageing: The calculations don't specifically target 
-# specific ages.  Rather this simply chooses whether age is considered or 
-# not."all" means there is no division by age whereas "split" means teh 
-# calculations are doen for all agegroups specified as a0_4, a5_9, 
-# a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
-# split and then filter out age estimates as required essentially turns on 
-# doAge below. 
-targetCob <- rep("all", numCascades) # all=including n/a, Thailand, etc.
+if (is.null(paramsFile)) {
+  # Manually enter cascade specifications
+  
+  ##*********************************************************************##
+  ## WARNING -- If multiple input categories
+  ## are required you need to used the imputed notifications version.  
+  ##*********************************************************************##  
+  
+  numCascades <- 1
+  
+  cascadeName <- "test-2017" # (single)
+  targetGender <- rep("all", numCascades) # all, male, female (single)
+  targetAge <- rep("all", numCascades) # all or split (single)
+  # Note regarding ageing: The calculations don't specifically target 
+  # specific ages.  Rather this simply chooses whether age is considered or 
+  # not."all" means there is no division by age whereas "split" means teh 
+  # calculations are doen for all agegroups specified as a0_4, a5_9, 
+  # a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
+  # split and then filter out age estimates as required essentially turns on 
+  # doAge below. 
+  targetCob <- rep("all", numCascades) # all=including n/a, Thailand, etc.
   # (combination). "Australia", "non-australia", "non-aus-nz"
-targetExposure <- rep("all", numCascades) #msm, hetero, pwid, otherexp 
+  targetExposure <- rep("all", numCascades) #msm, hetero, pwid, otherexp 
   # (combination)
-targetAtsi <- rep("all", numCascades) # all, indigenous or non_indigenous. 
+  targetAtsi <- rep("all", numCascades) # all, indigenous or non_indigenous. 
   # Only used if country is Australia (single)
-
-# TODO: Merge these variables into one. 
-targetState <- rep(c("all"), numCascades) # nsw, sa, nt, qld, vic, wa, act
+  
+  # TODO: Merge these variables into one. 
+  targetState <- rep(c("all"), numCascades) # nsw, sa, nt, qld, vic, wa, act
   # tas (combination)
-targetLocalRegion <- rep("all", numCascades) #tbd (combination)
-
-targetGlobalRegion <- rep("all", numCascades) # South-East Asia, 
+  targetLocalRegion <- rep("all", numCascades) #tbd (combination)
+  
+  targetGlobalRegion <- rep("all", numCascades) # South-East Asia, 
   # Sub-Saharan Africa, Oceania, South American, Other cob, etc 
   # (combination)
   
-# Imputation options-------------------------------------------------------
-# These variables specify if the imputed notifications sets should be used 
-# and how many sets to use.
-# 
-useImputed <- TRUE
-nImputedSets <- 10 # Default is 10, the maximum
-
-# Script options-----------------------------------------------------------
-# The following variables specify the various calculation options. 
-# When calculating multiple cascades these are entered as a vector. All
-# vectors need to be the same length (equal to numCascades).
-# 
-# Note: These are generally given the same value across all cascades in 
-# a project so use rep() by default. These can then be manually changed as 
-# required. 
-excludeAborig <- rep(FALSE, numCascades) # FALSE be default to include indigenous
-doRetained <- rep(TRUE, numCascades) # TRUE for appending retained in care
-
-# Settings for doing deduplication analysis
-doUnique <- rep(TRUE, numCascades)
-yearUnique <- rep(2017, numCascades) #Use NULL or year 2100 to turn off
-saveUnique <- rep(FALSE, numCascades)
-
-# Settings for generating ECDC model inputs
-ecdcData <- rep(TRUE, numCascades)
-ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
-excludeOS <- rep(FALSE, numCascades)
-
-# Leave projections chunk turned off so it is not called unless required. 
-# Simply run projections from within the chunk. 
-projectPldhiv <- rep(FALSE, numCascades) 
-
-```
-
-
-```{r Error and option checking}
-# Error checking and changes in options based on cascade parameters
-# Check lengths of all cascade variables and options
-
-if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi, 
-  targetState, targetLocalRegion, targetGlobalRegion) != "all") > 1 && 
-    useImputed == FALSE) {
-  warning("Multiple selections for subsetting non-imputed data set: 
-    SubHivSet() will not work correctly. Changed to imputed data set")
-  useImputed <- TRUE
-  nImputedSets <- 10 # use default
-}
-
-# TODO: check lengths of all the variables and make sure they equal 
-# numCascades
-
-if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
-  stop("Error: targetGender or targetAtsi not a single value") 
-}
-
-if (targetAtsi != "all" && targetCob[1] != "Australia" &&
-    length(targetCob) != 1) {
-  stop("Error: indigenous status only valid for Australian born")   
-}
-
-# Change script options based on cascade parameters and other options------
-interState <- ifelse(targetState[1] != "all", TRUE, FALSE)
-doAge <- ifelse(targetAge == "split", TRUE, FALSE) # TRUE for ageing
-doRetained <- ifelse(doAge, FALSE, doRetained) # Turn off for ageing
-if (doRetained) {
-  # Need to specify years for reatined in care calculations
-  # This is simply a proportion based on James McMahon's paper
-  # which suggested 92-98% of PLDHIV were retained in care. 
-  retainedYears <- 2013:analysisYear
-}
-
-# Settings for doing deduplication analysis--------------------------------
-doUnique <- ifelse(targetAtsi == "indigenous", FALSE, doUnique)
-yearUnique <- ifelse(is.null(yearUnique), 2100, yearUnique) # Well past now
-saveUnique <- ifelse(!saveResults, FALSE, saveUnique)
+  # Imputation options-------------------------------------------------------
+  # These variables specify if the imputed notifications sets should be used 
+  # and how many sets to use.
+  # 
+  useImputed <- rep(TRUE, numCascades)
+  nImputedSets <- rep(10, numCascades)  # Default is 10, the maximum
   
-# Settings for generating ECDC model inputs--------------------------------
-ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
-# ecdcData <- ifelse(useImputed, FALSE, ecdcData) # Turn off for imputation at the moment
-excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
-ecdcModel <- cascadeName # name
-if (excludeOS) {
-  # If excludeOS don't save the pldhiv estimates as we are only using this
-  # for ECDC calculations
-  saveResults <- FALSE
-  doRetained <- FALSE
-}
-
-# Store paramaters for saving----------------------------------------------
-hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
-  targetExposure, targetAtsi, targetState, targetLocalRegion,
-  targetGlobalRegion, interState, doAge, excludeAborig, doRetained,
-  doUnique, yearUnique, ecdcData, ecdcVersion, excludeOS, projectPldhiv)
+  # Script options--------------------------------------------------------
+  # The following variables specify the various calculation options. 
+  # When calculating multiple cascades these are entered as a vector. All
+  # vectors need to be the same length (equal to numCascades).
+  # 
+  # Note: These are generally given the same value across all cascades in 
+  # a project so use rep() by default. These can then be manually changed  
+  # as required. 
+  excludeAborig <- rep(FALSE, numCascades) # FALSE be default to include 
+                                           # indigenous
+  doRetained <- rep(TRUE, numCascades) # TRUE for appending retained in care
+  
+  # Settings for doing deduplication analysis
+  doUnique <- rep(TRUE, numCascades)
+  yearUnique <- rep(2017, numCascades) #Use NULL or year 2100 to turn off
+  saveUnique <- rep(FALSE, numCascades)
+  
+  # Settings for generating ECDC model inputs
+  ecdcData <- rep(TRUE, numCascades)
+  ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
+  excludeOS <- rep(FALSE, numCascades)
+  
+  # Leave projections chunk turned off so it is not called unless required. 
+  # Simply run projections from within the chunk. 
+  projectPldhiv <- rep(FALSE, numCascades) 
+  
+  # Manually set final year for projections and projection name
+  projectYear <- rep(analysisYear + 10, numCascades)  
+  projectName <- rep("future_sq", numCascades)
+  
+  # Specifiy projection option for future diagnoses - can project 
+  # under the current "status-quo" level or follow trend over last 5 years
+  # or project a relative reduction
+  projectOption <- rep("status-quo", numCascades) #status-quo, linear, reduce 
+  projectDecrease <- 0 # 0, 0.65 (35% reduction), 0.5 (50% 
+                          # reduction), 0.35 (65% reduction) 
+                          # relative reduction!
+  
+} else {
+  # Read in a CSV file in 'projectOutput' (note project output folder has 
+  # to already exist) with the 'paramsFile' name. 
+  
+  cascadeParameters <- read_csv(file.path(outputFolder, projectOutput,
+    paramsFile))
+  
+  # Number of cascades
+  numCascades <- nrow(cascadeParameters)
+  
+  # Pull out all the parameters separately. Default values are shown 
+  # after each parameter (use in file and change as required)
+  cascadeName <- cascadeParameters$cascadeName # Default: "All-analysisYear"
+  targetGender <- cascadeParameters$targetGender # Default: "all"
+  targetAge <- cascadeParameters$targetAge # Default: "all"
+  targetCob <- cascadeParameters$targetCob # Default: "all"
+  targetExposure <- cascadeParameters$targetExposure # Default: "all"
+  targetAtsi <- cascadeParameters$targetAtsi # Default: "all"
+  targetState <- cascadeParameters$targetState # Default: "all"
+  targetLocalRegion <- cascadeParameters$targetLocalRegion # Default: "all"
+  targetGlobalRegion <- cascadeParameters$targetGlobalRegion # Default: "all"
+  
+  # Imputation options
+  useImputed <- cascadeParameters$useImputed # Default: TRUE
+  nImputedSets <- cascadeParameters$nImputedSets # Default: 10
+  
+  # Script options
+  excludeAborig <- cascadeParameters$excludeAborig # Default: FALSE
+  doRetained <- cascadeParameters$doRetained # Default: TRUE
+  
+  # Deduplication analysis
+  doUnique <- cascadeParameters$doUnique # Default: TRUE
+  yearUnique <- cascadeParameters$yearUnique # Default: 2017
+  saveUnique <- cascadeParameters$saveUnique # Default: FALSE
+  
+  # ECDC model
+  ecdcData <- cascadeParameters$ecdcData # Default: TRUE
+  ecdcVersion <- cascadeParameters$ecdcVersion # Default: "1.3.0"
+  excludeOS <- cascadeParameters$excludeOS # Default: FALSE
+  
+  # Projections - defaults set to status quo for 10 years 
+  projectPldhiv <- cascadeParameters$projectPldhiv # Default: FALSE
+  projectYear <- cascadeParameters$projectYear # Default: 2017
+  projectName <- cascadeParameters$projectName # Default: analysisYear + 10
+  projectOption <- cascadeParameters$projectOption # Default: "future_sq"
+  projectDecrease <- cascadeParameters$projectDecrease # Default: 0
+    
+} 
 
 ```
 
@@ -239,6 +246,11 @@ source(file.path(HIVcode, "AnnualDiagnoses.R"))
 source(file.path(HIVcode, "GetAdjustments.R"))
 source(file.path(HIVcode, "GetMigrate.R"))
 source(file.path(HIVcode, "GetInterRegion.R"))
+
+# Perform and append retained in care calculations
+if (doRetained) {
+  source(file.path(HIVcode, "RetainedCare.R"))
+}
 
 # Simple but useful functions for looking at things
 viewDiagnosed <- function() {
@@ -317,6 +329,75 @@ if (doAge) {
   hivAgeDeath <- read.csv(file.path(dataFolder, paste0("HIVageEstimates-",
       toString(analysisYear), ".csv")))
 }
+
+```
+
+```{r Loop through cascades}
+# This chunk loops through the cascade parameters and produces the 
+# PLDHIV cascade estimates. 
+
+
+```
+
+```{r Error and option checking}
+# Error checking and changes in options based on cascade parameters
+# Check lengths of all cascade variables and options
+
+if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi, 
+  targetState, targetLocalRegion, targetGlobalRegion) != "all") > 1 && 
+    useImputed == FALSE) {
+  warning("Multiple selections for subsetting non-imputed data set: 
+    SubHivSet() will not work correctly. Changed to imputed data set")
+  useImputed <- TRUE
+  nImputedSets <- 10 # use default
+}
+
+# TODO: check lengths of all the variables and make sure they equal 
+# numCascades
+
+if ((length(targetGender) > 1) || (length(targetAtsi) > 1)) {
+  stop("Error: targetGender or targetAtsi not a single value") 
+}
+
+if (targetAtsi != "all" && targetCob[1] != "Australia" &&
+    length(targetCob) != 1) {
+  stop("Error: indigenous status only valid for Australian born")   
+}
+
+# Change script options based on cascade parameters and other options------
+interState <- ifelse(targetState[1] != "all", TRUE, FALSE)
+doAge <- ifelse(targetAge == "split", TRUE, FALSE) # TRUE for ageing
+doRetained <- ifelse(doAge, FALSE, doRetained) # Turn off for ageing
+if (doRetained) {
+  # Need to specify years for reatined in care calculations
+  # This is simply a proportion based on James McMahon's paper
+  # which suggested 92-98% of PLDHIV were retained in care. 
+  retainedYears <- 2013:analysisYear
+}
+
+# Settings for doing deduplication analysis--------------------------------
+doUnique <- ifelse(targetAtsi == "indigenous", FALSE, doUnique)
+yearUnique <- ifelse(is.null(yearUnique), 2100, yearUnique) # Well past now
+saveUnique <- ifelse(!saveResults, FALSE, saveUnique)
+  
+# Settings for generating ECDC model inputs--------------------------------
+ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
+# ecdcData <- ifelse(useImputed, FALSE, ecdcData) # Turn off for imputation at the moment
+excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
+ecdcModel <- cascadeName # name
+if (excludeOS) {
+  # If excludeOS don't save the pldhiv estimates as we are only using this
+  # for ECDC calculations
+  saveResults <- FALSE
+  doRetained <- FALSE
+}
+
+# Store paramaters for saving----------------------------------------------
+hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
+  targetExposure, targetAtsi, targetState, targetLocalRegion,
+  targetGlobalRegion, interState, doAge, excludeAborig, doRetained,
+  doUnique, yearUnique, ecdcData, ecdcVersion, excludeOS, projectPldhiv,
+  projectYear, projectName, projectOption, projectDecrease)
 
 ```
 
@@ -1286,7 +1367,7 @@ if (doRetained) {
 }
 ```
 
-```{r Save results}
+```{r Save cascade results}
 if (saveResults) {
   # Create output directory
   resultsPath <- file.path(outputFolder, projectOutput, cascadeName)
@@ -1329,7 +1410,6 @@ if (saveResults) {
     saveStringUnique <- file.path(resultsPath, "UniqueNotifications")
     write_csv(uniqueNotifications, paste0(saveStringUnique, ".csv"))
   }
-  
 }
 
 ```
@@ -1346,9 +1426,7 @@ if (saveResults) {
 # 
 # Any counterfactual or future projection scenario can be manually 
 # specified.
-# 
-# Maybe move this into a separate function or script but fits nicely here.
-# projectPldhiv <- TRUE
+
 if (projectPldhiv) { 
   
   # Manually set final year for projections and projection name
@@ -1361,11 +1439,7 @@ if (projectPldhiv) {
                           # reduction), 0.35 (65% reduction) 
                           # relative reduction!
   
-  saveProjResults <- TRUE 
-  
-  
-  # Reset if saving things overall
-  saveProjResults <- ifelse(saveResults, TRUE, saveProjResults) 
+  saveProjResults <- saveResults 
   
   # Functions for setting up vectors
   End <- function(vector) return(tail(vector, 1))
@@ -1532,7 +1606,8 @@ if (projectPldhiv) {
       as_tibble()
   }
   
-  if (saveProjResults) {
+  # Save results ----------------------------------------------------------
+  if (saveResults) {
     # Create output directory
     resultsPath <- file.path(outputFolder, projectOutput, cascadeName)
     dir.create(resultsPath, showWarnings = FALSE, recursive = TRUE)
