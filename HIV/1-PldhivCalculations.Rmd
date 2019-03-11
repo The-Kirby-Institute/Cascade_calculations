@@ -46,7 +46,7 @@ Report(ASR))
 - HIV_Cascade_Paper
 - Ageing_Paper
 
-```{r Script parameters}
+```{r Cascade and script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2017
 saveResults <- FALSE
@@ -104,7 +104,6 @@ if (is.null(paramsFile)) {
   targetAtsi <- rep("all", numCascades) # all, indigenous or non_indigenous. 
   # Only used if country is Australia (single)
   
-  # TODO: Merge these variables into one. 
   targetState <- rep(c("all"), numCascades) # nsw, sa, nt, qld, vic, wa, act
   # tas (combination)
   targetLocalRegion <- rep("all", numCascades) #tbd (combination)
@@ -334,8 +333,20 @@ if (doAge) {
 
 ```{r Loop through cascades}
 # This chunk loops through the cascade parameters and produces the 
-# PLDHIV cascade estimates. 
+# PLDHIV cascade estimates by calling the main pldhiv calculation function.
+# Everything is pretty much done in that function.
+source(file.path(HIVcode, "CalculatePldhiv.R"))
 
+
+for (ii in 1:numCascades) {
+  pldhivCalculations <- CalculatePldhiv(analysisYear, saveResults, 
+    projectOutput, cascadeName[ii], targetGender[ii], targetAge[ii], 
+    targetCob[ii], targetExposure[ii], targetAtsi[ii], targetState[ii], 
+    targetLocalRegion[ii], targetGlobalRegion[ii], excludeAborig[ii], 
+    doRetained[ii], doUnique[ii], yearUnique[ii], ecdcData[ii], 
+    ecdcVersion[ii], excludeOS[ii], projectPldhiv[ii], projectYear[ii], 
+    projectName[ii], projectOption[ii], projectDecrease[ii])
+}
 
 ```
 
@@ -395,9 +406,10 @@ if (excludeOS) {
 # Store paramaters for saving----------------------------------------------
 hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
   targetExposure, targetAtsi, targetState, targetLocalRegion,
-  targetGlobalRegion, interState, doAge, excludeAborig, doRetained,
+  targetGlobalRegion, excludeAborig, doRetained,
   doUnique, yearUnique, ecdcData, ecdcVersion, excludeOS, projectPldhiv,
-  projectYear, projectName, projectOption, projectDecrease)
+  projectYear, projectName, projectOption, projectDecrease, analysisYear, 
+  interState, doAge)
 
 ```
 
