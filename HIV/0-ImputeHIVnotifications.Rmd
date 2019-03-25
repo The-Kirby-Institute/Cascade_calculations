@@ -48,9 +48,12 @@ source(file.path(Rcode, "FormatData.R"))
 # Script options
 dataYear <- 2017
 
-runImpute <- FALSE
+runImpute <- TRUE
 saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 
-                   # This file is loaded if runImpute <- FALSE
+# This file is loaded if runImpute <- FALSE
+
+runChecks <- FALSE
+changeFemaleMsm <- TRUE
 
 ```
 
@@ -117,7 +120,7 @@ saveStringDetails <- file.path(setsPath, "imputedHIVset")
 # variables, making sure impute character variables are factors, and 
 # replacing unknown/missing/not reported as NA. 
 cascadeData <- hivData %>%
-  select(c(impVars, otherVars)) %>%
+  select(c(impVars, otherVars, postcode)) %>% # Drop postcode later
   mutate(sex = ifelse(sex == "unknown", NA, sex),
     cob = ifelse(cob == "Not Reported", NA, cob),
     expgroup = ifelse(expgroup == "unknown", NA, expgroup)) %>%
@@ -133,9 +136,9 @@ cascadeData <- hivData %>%
 
 # Separate data for imputing and other data
 imputeData <- cascadeData %>%
-  select(impVars)
+  select(impVars, postcode) # Drop postcode later
 otherData <- cascadeData %>%
-  select(otherVars) %>%
+  select(otherVars, "state") %>%
   rownames_to_column(var = "notification") %>%
   mutate(notification = as.integer(notification))
 
@@ -144,15 +147,110 @@ write_csv(cascadeData, file.path(setsPath, "cascadeHIVdata.csv"))
 
 ```
 
-```{r Run imputation} 
-# This chunk runs the imputation on the imputeData set using the MICE 
-# package
+```{r Initial manual imputation}
+# This chunk is for checking the missing and filling in any values that can
+# be inferred manually
 
 # Load packages for imputing
 LoadLibrary(mice)
 
 # Let's look at what is missing in imputeData
 md.pattern(imputeData)
+
+# One NA for state which should be NSW based on diag_region
+# filter(imputeData, is.na(state))  
+imputeData[is.na(imputeData$state), ]$state <- "nsw"
+
+# Check if any msm have missing or wrong gender - three msm are 
+# designated female - replace exposure with "pwid" as coded MSM-IDU
+# (confirmed to be female)
+
+indices <- which(imputeData$sex == "female" & imputeData$expgroup == "msm")
+imputeData[indices, ]$expgroup <- "pwid"
+
+# Fix up issues with postcodes -------------------------------------------
+# The postcode varaible iss ssupposed to record postcode of residence at 
+# the time of diagnosis. However, sometimes the place of diagnosis is
+# recorded instead which can be in a different state. Here we search for 
+# erroneous postcodes (based on not corresponding to the state) for each 
+# state and classify them as missing. Number of erroneous postcodes: 
+# ACT = 36; NSW = 50; NT = 5; QLD = 197; SA = 4; Tas = 0; Vic = 45; WA = 7. 
+
+actPostcodes <- c(200:299, 2600:2618, 2900:2920)
+actErr <- which(imputeData$state == "act" & 
+    !(imputeData$postcode %in% actPostcodes) & 
+    !is.na(imputeData$diag_region))
+# length(actErr)
+# imputeData[actErr, ]
+if (length(actErr) != 0) imputeData[actErr, ]$postcode <- NA
+
+nswPostcodes <- c(1000:2599, 2619:2899, 2921:2999, 3586, 3644, 3707)
+nswErr <- which(imputeData$state == "nsw" & 
+    !(imputeData$postcode %in% nswPostcodes) & 
+    !is.na(imputeData$diag_region))
+# length(nswErr)
+# imputeData[nswErr, ]
+if (length(nswErr) != 0) imputeData[nswErr, ]$postcode <- NA
+
+ntPostcodes <- 800:999
+ntErr <- which(imputeData$state == "nt" & 
+    !(imputeData$postcode %in% ntPostcodes) & 
+    !is.na(imputeData$diag_region))
+# length(ntErr)
+# imputeData[ntErr, ]
+if (length(ntErr) != 0) imputeData[ntErr, ]$postcode <- NA
+
+qldPostcodes <- c(4000:4999, 9000:9999)
+qldErr <- which(imputeData$state == "qld" & 
+    !(imputeData$postcode %in% qldPostcodes) & 
+    !is.na(imputeData$diag_region))
+# length(qldErr)
+# imputeData[qldErr, ]
+if (length(qldErr) != 0) imputeData[qldErr, ]$postcode <- NA
+
+saPostcodes <- 5000:5999
+saErr <- which(imputeData$state == "sa" & 
+    !(imputeData$postcode %in% saPostcodes) & 
+    !is.na(imputeData$diag_region))
+# length(saErr)
+# imputeData[saErr, ]
+if (length(saErr) != 0) imputeData[saErr, ]$postcode <- NA
+
+tasPostcodes <- 7000:7999
+tasErr <- which(imputeData$state == "tas" & 
+    !(imputeData$postcode %in% tasPostcodes) & 
+    !is.na(imputeData$diag_region))
+# length(tasErr)
+# imputeData[tasErr, ]
+if (length(tasErr) != 0) imputeData[tasErr, ]$postcode <- NA
+
+vicPostcodes <- c(3000:3999, 8000:8999)
+vicErr <- which(imputeData$state == "vic" & 
+    !(imputeData$postcode %in% vicPostcodes) & 
+    !is.na(imputeData$diag_region))
+# length(vicErr)
+# imputeData[vicErr, ]
+if (length(vicErr) != 0) imputeData[vicErr, ]$postcode <- NA
+
+waPostcodes <- 6000:6999
+waErr <- which(imputeData$state == "wa" & 
+    !(imputeData$postcode %in% waPostcodes) & 
+    !is.na(imputeData$diag_region))
+# length(waErr)
+# imputeData[waErr, ]
+if (length(waErr) != 0) imputeData[waErr, ]$postcode <- NA
+
+# Now remove postcode
+imputeData <- imputeData %>%
+  select(-postcode)
+
+```
+
+```{r Run imputation} 
+# This chunk runs the imputation on the imputeData set using the MICE 
+# package. This imputation is run independently for each state to make sure
+# diag_region does not mismatch with state. All imputed sets are saved for
+# testing and merging later.     
 
 if (runImpute) {
   # Run imputation 
@@ -162,9 +260,55 @@ if (runImpute) {
   maxIterations <- 5 # set to default
   impMethod <- "pmm"
   impSeed <- 500
+  imputeSequence <- c("yeardiagnosis", "state", "agehiv", "sex",
+    "expgroup", "cob", "diag_region")
+  predictorMatrix <- matrix(c(0, 1, 1, 1, 1, 1, 1,
+    1, 0, 1, 1, 1, 1, 1,
+    1, 1, 0, 1, 1, 0, 0,
+    1, 1, 1, 0, 1, 0, 0,
+    1, 1, 1, 1, 0, 0, 0,
+    1, 1, 1, 1, 1, 0, 1,
+    1, 1, 1, 1, 1, 1, 0), byrow = TRUE, nrow = 7)
+  colnames(predictorMatrix) <- imputeSequence
+  rownames(predictorMatrix) <- imputeSequence
   
-  imputeSets <- mice(imputeData, m = numImputeSets, maxit = maxIterations, 
-    method = impMethod, seed = impSeed)
+  # Due to issues with state and diag_region not aligning following 
+  # imputation. Run imputation separately for each state then 
+  # combine.  
+  imputeDataACT <- filter(imputeData, state == "act")
+  imputeDataNSW <- filter(imputeData, state == "nsw")
+  imputeDataNT <- filter(imputeData, state == "nt")
+  imputeDataQLD <- filter(imputeData, state == "qld")
+  imputeDataSA <- filter(imputeData, state == "sa")
+  imputeDataTAS <- filter(imputeData, state == "tas")
+  imputeDataVIC <- filter(imputeData, state == "vic")
+  imputeDataWA <- filter(imputeData, state == "wa")
+  
+  # Run the imputation for each state
+  imputeSetsACT <- mice(imputeDataACT, m = numImputeSets, 
+    maxit = maxIterations, method = impMethod, seed = impSeed,
+    visitSequence = imputeSequence, predictorMatrix = predictorMatrix)
+  imputeSetsNSW <- mice(imputeDataNSW, m = numImputeSets, 
+    maxit = maxIterations, method = impMethod, seed = impSeed,
+    visitSequence = imputeSequence, predictorMatrix = predictorMatrix)
+  imputeSetsNT <- mice(imputeDataNT, m = numImputeSets, 
+    maxit = maxIterations, method = impMethod, seed = impSeed,
+    visitSequence = imputeSequence, predictorMatrix = predictorMatrix)
+  imputeSetsQLD <- mice(imputeDataQLD, m = numImputeSets, 
+    maxit = maxIterations, method = impMethod, seed = impSeed,
+    visitSequence = imputeSequence, predictorMatrix = predictorMatrix)
+  imputeSetsSA <- mice(imputeDataSA, m = numImputeSets, 
+    maxit = maxIterations, method = impMethod, seed = impSeed,
+    visitSequence = imputeSequence, predictorMatrix = predictorMatrix)
+  imputeSetsTAS <- mice(imputeDataTAS, m = numImputeSets, 
+    maxit = maxIterations, method = impMethod, seed = impSeed,
+    visitSequence = imputeSequence, predictorMatrix = predictorMatrix)
+  imputeSetsVIC <- mice(imputeDataVIC, m = numImputeSets, 
+    maxit = maxIterations, method = impMethod, seed = impSeed,
+    visitSequence = imputeSequence, predictorMatrix = predictorMatrix)
+  imputeSetsWA <- mice(imputeDataWA, m = numImputeSets, 
+    maxit = maxIterations, method = impMethod, seed = impSeed,
+    visitSequence = imputeSequence, predictorMatrix = predictorMatrix)
   
   # Imputed values are in the imp field stored as a matrix for each varaible.
   # Each Row is the row number of the missing value and each column is the 
@@ -172,7 +316,9 @@ if (runImpute) {
   
   if (saveImpute) {
     #Save imputeSets to file for loading later
-    save(imputeSets, file = file.path(setsPath, "ImputeSets.R"))
+    save(imputeSetsACT, imputeSetsNSW, imputeSetsNT, imputeSetsQLD,
+      imputeSetsSA, imputeSetsTAS, imputeSetsVIC, imputeSetsWA,
+      file = file.path(setsPath, "ImputeSets.R"))
   }
   
 } else {
@@ -182,47 +328,244 @@ if (runImpute) {
 
 ```
 
-```{r Check imputation}
-# This chunk produces a number of plots and tables to assess the imputation
-# 
-impVars
+```{r Complete imputation}
+# Fill in all the missing values for each state then combine
+cascadeDataImputeACT <- as_tibble(complete(imputeSetsACT, 
+  action = "long")) %>%
+  rename(impute_set = .imp, notification = .id) %>%
+  left_join(select(filter(otherData, state == "act"), -state), 
+    by = "notification")
 
-# yeardiagnosis is complete
+cascadeDataImputeNSW <- as_tibble(complete(imputeSetsNSW, 
+  action = "long")) %>%
+  rename(impute_set = .imp, notification = .id) %>%
+  left_join(select(filter(otherData, state == "nsw"), -state), 
+    by = "notification")
 
-# state - only one missing so don't need to check
+cascadeDataImputeNT <- as_tibble(complete(imputeSetsNT, 
+  action = "long")) %>%
+  rename(impute_set = .imp, notification = .id) %>%
+  left_join(select(filter(otherData, state == "nt"), -state), 
+    by = "notification")
 
-# diag_region - biggy
+cascadeDataImputeQLD <- as_tibble(complete(imputeSetsQLD, 
+  action = "long")) %>%
+  rename(impute_set = .imp, notification = .id) %>%
+  left_join(select(filter(otherData, state == "qld"), -state), 
+    by = "notification")
 
-# sex
-table(imputeData$sex, useNA = "ifany")
-table(imputeData$sex) / sum(table(imputeData$sex)) # data
-table(imputeSets$imp$sex) / sum(table(imputeSets$imp$sex)) # imputed
+cascadeDataImputeSA <- as_tibble(complete(imputeSetsSA, 
+  action = "long")) %>%
+  rename(impute_set = .imp, notification = .id) %>%
+  left_join(select(filter(otherData, state == "sa"), -state), 
+    by = "notification")
 
-# cob - biggy
+cascadeDataImputeTAS <- as_tibble(complete(imputeSetsTAS, 
+  action = "long")) %>%
+  rename(impute_set = .imp, notification = .id) %>%
+  left_join(select(filter(otherData, state == "tas"), -state), 
+    by = "notification")
 
-# agehiv
-densityplot(imputeSets, ~agehiv)
+cascadeDataImputeVIC <- as_tibble(complete(imputeSetsVIC, 
+  action = "long")) %>%
+  rename(impute_set = .imp, notification = .id) %>%
+  left_join(select(filter(otherData, state == "vic"), -state), 
+    by = "notification")
 
-# expgroup
-table(imputeData$expgroup, useNA = "ifany")
-table(imputeData$expgroup) / sum(table(imputeData$expgroup)) # data
-table(imputeSets$imp$expgroup) / sum(table(imputeSets$imp$expgroup)) # imputed
+cascadeDataImputeWA <- as_tibble(complete(imputeSetsWA, 
+  action = "long")) %>%
+  rename(impute_set = .imp, notification = .id) %>%
+  left_join(select(filter(otherData, state == "wa"), -state), 
+    by = "notification")
+
+# Merge all state sets
+cascadeDataImpute <- bind_rows(cascadeDataImputeACT, cascadeDataImputeNSW,
+  cascadeDataImputeNT, cascadeDataImputeQLD, cascadeDataImputeSA,
+  cascadeDataImputeTAS, cascadeDataImputeVIC, cascadeDataImputeWA)
+cascadeDataImpute <- cascadeDataImpute %>%
+  mutate(notification = 1:nrow(.))
 
 ```
 
-```{r Complete imputation}
-# Fill in all the missing values
-cascadeDataImpute <- as_tibble(complete(imputeSets, action = "long")) %>%
-  rename(impute_set = .imp, notification = .id)
+```{r Check imputation}
+if (runChecks) {
+  # This chunk produces a number of plots and tables to assess the 
+  # imputation The primary purpose is to make sure the imputation values 
+  # align proportionally with the known values
   
-# Add the additional data variables
-cascadeDataImpute <- left_join(cascadeDataImpute, otherData, 
-  by = "notification")
+  impVars # For refernece
+  
+  # yeardiagnosis is complete and state is complete following manual fix. 
+  # The other variables have missing data. We create a function here so we 
+  # can look at each state separately. 
+  
+  imputeCheck <- function(imputeSet, dataSet, completeSet, file = NULL) {
+    # Nested function to check imputation for each state
+    
+    # diag_region - this is a variable with substantial amount of missing
+    # data. Here we calculate the proportions and see the average overall 
+    # number for each diagnosis region for comparison. Likely to be a lot  
+    # of uncertainty especially with small numbers.
+    
+    # Set-up data frame - note levels contain all regions across Australia
+    # so have to filter later
+    diagProp <- data_frame(diag_region = levels(completeSet$diag_region))
+    
+    for (ii in 1:10) {
+      diagProp[, paste0("set", toString(ii))] <- 
+        table(imputeSet$imp$diag_region[, ii]) / 
+        sum(table(imputeSet$imp$diag_region[, ii])) # imputed
+    }
+    
+    diagProp <- diagProp %>%
+      mutate(average = rowMeans(select(., -diag_region), na.rm = TRUE)) %>%
+      mutate(data = table(filter(dataSet, 
+        !is.na(diag_region))$diag_region) / sum(table(filter(dataSet,
+          !is.na(diag_region))$diag_region)),
+        overall = table(completeSet$diag_region) / 
+          sum(table(completeSet$diag_region))) %>%
+      mutate(ave_number =  table(completeSet$diag_region) / 10) %>%
+      filter(diag_region %in% as.character(unique(completeSet$diag_region)))
+    
+    # sex
+    sexProp <- data_frame(sex = levels(completeSet$sex))
+    
+    for (ii in 1:10) {
+      sexProp[, paste0("set", toString(ii))] <- 
+        table(imputeSet$imp$sex[, ii]) / 
+        sum(table(imputeSet$imp$sex[, ii])) # imputed
+    }
+    
+    sexProp <- sexProp %>%
+      mutate(average = rowMeans(select(., -sex), na.rm = TRUE)) %>%
+      mutate(data = table(filter(dataSet, !is.na(sex))$sex) / 
+          sum(table(filter(dataSet, !is.na(sex))$sex)),
+        overall = table(completeSet$sex) / 
+          sum(table(completeSet$sex)))
+    
+    # cob - this is a variable with substantial amount of missing data
+    # Here we calculate the proportions and see the average overall number
+    # for each country of birth for comparison. Likely to be a lot of 
+    # uncertainty especially with small numbers.
+    # 
+    # Set-up data frame - note levels contain all countries across 
+    # Australia so have to filter later
+    cobProp <- data_frame(cob = levels(completeSet$cob))
+    
+    for (ii in 1:10) {
+      cobProp[, paste0("set", toString(ii))] <- 
+        table(imputeSet$imp$cob[, ii]) / 
+        sum(table(imputeSet$imp$cob[, ii])) # imputed
+    }
+    
+    cobProp <- cobProp %>%
+      mutate(average = rowMeans(select(., -cob), na.rm = TRUE)) %>%
+      mutate(data = table(filter(dataSet, !is.na(cob))$cob) / 
+          sum(table(filter(dataSet, !is.na(cob))$cob)),
+        overall = table(completeSet$cob) / 
+          sum(table(completeSet$cob))) %>%
+      mutate(ave_number =  table(completeSet$cob) / 10) %>%
+      filter(cob %in% as.character(unique(completeSet$cob)))
+    
+    # agehiv - calculate mean age of diagnosis. We do a desnity plot
+    # later outsied the function
+    meanAge <- data_frame(agehiv = "meanAge")
+    
+    for (ii in 1:10) {
+      meanAge[, paste0("set", toString(ii))] <- 
+        mean(imputeSet$imp$agehiv[, ii]) # imputed
+    }
+    
+    meanAge <- meanAge %>%
+      mutate(average = rowMeans(select(., -agehiv), na.rm = TRUE)) %>%
+      mutate(data = mean(dataSet$agehiv, na.rm = TRUE),
+        overall = mean(completeSet$agehiv))
+    
+    # expgroup 
+    expProp <- data_frame(expgroup = levels(completeSet$expgroup))
+    
+    for (ii in 1:10) {
+      expProp[, paste0("set", toString(ii))] <- 
+        table(imputeSet$imp$expgroup[, ii]) / 
+        sum(table(imputeSet$imp$expgroup[, ii])) # imputed
+    }
+    
+    expProp <- expProp %>%
+      mutate(average = rowMeans(select(., -expgroup), na.rm = TRUE)) %>%
+      mutate(data = table(filter(dataSet, !is.na(expgroup))$expgroup) / 
+          sum(table(filter(dataSet, !is.na(expgroup))$expgroup)),
+        overall = table(completeSet$expgroup) / 
+          sum(table(completeSet$expgroup)))
+    
+    # Save tables to csv files if file is specified
+    if (!is.null(file)) {
+      write_csv(diagProp, paste0(file, "_diagProp.csv"))
+      write_csv(sexProp, paste0(file, "_sexProp.csv"))
+      write_csv(cobProp, paste0(file, "_cobProp.csv"))
+      write_csv(meanAge, paste0(file, "_meanAge.csv"))
+      write_csv(expProp, paste0(file, "_expProp.csv")) 
+    }
+    
+    #Return outputs in a list
+    output <- list("diag_region" = diagProp, "sex" = sexProp, 
+      "cob" = cobProp, "age" = meanAge, "exp" = expProp)
+  }  
+  
+  # Check for each state to investigate
+  fileBase <- file.path(setsPath, "impute_checks") 
+  dir.create(fileBase, showWarnings = FALSE, recursive = TRUE)
+  
+  actCheck <- imputeCheck(imputeSetsACT, imputeDataACT, 
+    cascadeDataImputeACT, file = file.path(fileBase, "ACT"))
+  nswCheck <- imputeCheck(imputeSetsNSW, imputeDataNSW, 
+    cascadeDataImputeNSW, file = file.path(fileBase, "NSW"))
+  ntCheck <- imputeCheck(imputeSetsNT, imputeDataNT, 
+    cascadeDataImputeNT, file = file.path(fileBase, "NT"))
+  qldCheck <- imputeCheck(imputeSetsQLD, imputeDataQLD, 
+    cascadeDataImputeQLD, file = file.path(fileBase, "QLD"))
+  saCheck <- imputeCheck(imputeSetsSA, imputeDataSA, 
+    cascadeDataImputeSA, file = file.path(fileBase, "SA"))
+  tasCheck <- imputeCheck(imputeSetsTAS, imputeDataTAS, 
+    cascadeDataImputeTAS, file = file.path(fileBase, "TAS"))
+  vicCheck <- imputeCheck(imputeSetsVIC, imputeDataVIC, 
+    cascadeDataImputeVIC, file = file.path(fileBase, "VIC"))
+  waCheck <- imputeCheck(imputeSetsWA, imputeDataWA, 
+    cascadeDataImputeWA, file = file.path(fileBase, "WA"))
+  
+  # agehiv - Density plots ------------------------------------------------
+  densityplot(imputeSetsACT, ~agehiv) # Warning - only 2 missing ages
+  densityplot(imputeSetsNSW, ~agehiv) # 83 missing ages
+  # densityplot(imputeSetsNT, ~agehiv) # No missing ages
+  # densityplot(imputeSetsQLD, ~agehiv) # No missing ages
+  densityplot(imputeSetsSA, ~agehiv) # Warning - only 2 missing ages
+  # densityplot(imputeSetsTAS, ~agehiv) # No missing ages
+  densityplot(imputeSetsVIC, ~agehiv) # 103 missing ages
+  # densityplot(imputeSetsWA, ~agehiv) # No missing ages
+  
+  # Check for mismatches between sex and exposure -------------------------
+  for (ii in 1:numImputeSets) {
+    temp <- filter(cascadeDataImpute, impute_set == ii, 
+      sex == "female", expgroup == "msm")
+    print(nrow(temp))
+  }
+}
 
-# Save as a large data frame
+if (changeFemaleMsm) {
+  # Seems to be around 5 to 30 mismatches in each set. Should be okay to 
+  # change all msm to male. 
+  indices <- which(cascadeDataImpute$sex == "female" & 
+      cascadeDataImpute$expgroup == "msm")
+  if (length(indices) != 0) {
+    cascadeDataImpute[indices, ]$sex <- "male"
+  }
+}
+
+```
+
+```{r Update and save final set}
+# Save final set of imputed notifications as a large data frame
 write_csv(cascadeDataImpute, file.path(setsPath, 
   "cascadeHIVimputed.csv"))
 
 ```
-
 
