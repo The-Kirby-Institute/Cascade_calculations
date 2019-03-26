@@ -31,13 +31,17 @@ FillDataFrame <- function(years, df, cumulative = FALSE) {
   for (ii in seq(along = years)) {
     if (!(years[ii] %in% df$year)) {
       if (cumulative) {
-        # Missing so make the current value equal to previous value
+        # Missing so make the current value equal to previous value 
+        tempRow <- fillMissing[ii-1, 2:ncol(fillMissing)]
+        if (nrow(tempRow) == 0) {
+          tempRow <- rep(0, ncol(df) - 1)
+        }
         fillMissing <- insertRow(fillMissing, c(years[ii], 
-          df[ii-1, 2:ncol(df)]), ii)
+          tempRow), ii)
       } else {
         # Missing so make the current value equal to zero
         fillMissing <- insertRow(fillMissing, c(years[ii], 
-          rep(0, ncol(df) - 1)), ii)
+          rep(0, ncol(fillMissing) - 1)), ii)
       }  
     }
   }
