@@ -983,7 +983,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       ungroup() %>% 
       select(-notifications) %>%
       spread(expgroup, cumnotifications) 
-    
+
     if (!("hetero" %in% names(hivExpCum))) hivExpCum$hetero <- 0
     if (!("msm" %in% names(hivExpCum))) hivExpCum$msm <- 0
     if (!("otherexp" %in% names(hivExpCum))) hivExpCum$otherexp <- 0
@@ -1004,8 +1004,11 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       ungroup() %>% 
       spread(expgroup, propnotifications) %>%
       rename(year = yeardiagnosis) 
-    hivExpCum$msm[2] <- 1.0
-    
+    if (targetGender != "female") {
+      # Add an msm notification to 1981
+      hivExpCum$msm[2] <- 1.0
+    } 
+
     expDeaths <- FillDataFrame(1980:analysisYear, hivExpCum, 
       cumulative = TRUE)
     expDeaths[, 2:5] <- expDeaths[, 2:5] * 

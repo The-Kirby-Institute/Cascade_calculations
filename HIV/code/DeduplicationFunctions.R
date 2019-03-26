@@ -273,7 +273,6 @@ GetUnique <- function(hivSet, allYears, yearUnique = NULL) {
   uniqueNotifications$cum_unique <- 
     uniqueNotifications$cumpropunique * uniqueNotifications$totalnotifications
   
-  
   uniqueNotifications$unique <- AnnualUnique(uniqueNotifications$notifications,
     uniqueNotifications$cumpropunique) 
   uniqueNotifications$propunique <- uniqueNotifications$unique /

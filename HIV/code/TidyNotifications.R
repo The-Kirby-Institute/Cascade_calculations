@@ -156,11 +156,11 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
     # Diagnosed with AIDS
     hivData$yearaids <- as.numeric(format(as.Date(hivData$dateaids), 
       "%Y"))
-    hivData$yearaids[is.na(hivData$yearaids)] <- -99
+    hivData$yearaids[is.na(hivData$yearaids)] <- NA
     
     # Add column with hiv, hivaids or aids
     hivData$typediagnosis <- "hiv"
-    hivData$typediagnosis[hivData$yearaids != -99] <- "aids"
+    hivData$typediagnosis[!is.na(hivData$yearaids)] <- "aids"
     
     indices <- hivData$yearhiv == hivData$yearaids
     hivData$typediagnosis[indices] <- "hivaids"
