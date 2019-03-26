@@ -334,6 +334,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     hivResultsAge <- hivResultsAgeSets %>%
       group_by(agegroup) %>%
       summarise_all(funs(mean)) %>%
+      as.data.frame() %>%
       column_to_rownames(var = "agegroup") %>%
       ungroup() %>% 
       as.matrix()
@@ -346,6 +347,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       hivResultsAgeAll <- hivResultsAgeAllSets %>%
         group_by(agegroup) %>%
         summarise_all(funs(mean)) %>%
+        as.data.frame() %>%
         column_to_rownames(var = "agegroup") %>%
         ungroup() %>% 
         as.matrix()

@@ -9,7 +9,7 @@
 extractInterData <- function(interData, nomData, fage, fregion, fsex) {
   
   # Fix up age band for nomData
-  if (fage == "a75+") { 
+  if (length(fage) == 1 && fage[1] == "a75+") { 
     # Might produce a warning which can be ignored
     nomAge <- "a75_79"
   } else {
