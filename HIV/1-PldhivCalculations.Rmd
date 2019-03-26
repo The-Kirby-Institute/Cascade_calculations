@@ -56,7 +56,7 @@ saveResults <- TRUE
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "Test_Cascades" # "." for main output folder 
+projectOutput <- "CALD_Cascades" # "." for main output folder 
                                  # "HIV_Cascade_Paper" for paper
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
@@ -221,7 +221,7 @@ viewDiagnosed <- function() {
   print(pldhivAllMax %>% tail())
 }
 
-# FUnctions used by CalculatePldhiv.R -------------------------------------
+# Functions used by CalculatePldhiv.R -------------------------------------
 # Source functions for filling in missing data
 source(file.path(Rcode, "FillMissing.R"))
 source(file.path(Rcode, "FillDataFrame.R"))
@@ -258,7 +258,7 @@ source(file.path(HIVcode, "GetMigrate.R"))
 source(file.path(HIVcode, "GetInterRegion.R"))
 
 # Perform and append retained in care calculations
-if (doRetained) {
+if (any(doRetained)) {
   source(file.path(HIVcode, "RetainedCare.R"))
 }
 
@@ -271,13 +271,31 @@ if (doRetained) {
 # Load cascade notifications data from storage
 hivData <- read_csv(file.path(notificationsFolder, 
   paste0("cascadeImputedHIVnotifications-", toString(analysisYear)),
-  "cascadeHIVdata.csv"))
+  "cascadeHIVdata.csv"), col_types = cols(
+    .default = col_character(),
+    yeardiagnosis = col_double(),
+    agehiv = col_integer(),
+    dob = col_date(format = ""),
+    yearaids = col_double(),
+    yeardeath = col_double(),
+    dateill = col_date(format = ""),
+    previ_diag_overseas = col_integer(),
+    postcode = col_integer()
+  ))
 
 # Load imputed notifications sets if required
-if (useImputed) {
+if (any(useImputed)) {
   hivDataImputed <- read_csv(file.path(notificationsFolder, 
      paste0("cascadeImputedHIVnotifications-", toString(analysisYear)),
-    "cascadeHIVimputed.csv"))
+    "cascadeHIVimputed.csv"), col_types = cols(
+    .default = col_character(),
+    yeardiagnosis = col_double(),
+    agehiv = col_integer(),
+    dob = col_date(format = ""),
+    yearaids = col_double(),
+    yeardeath = col_double(),
+    dateill = col_date(format = ""),
+    previ_diag_overseas = col_integer()))
 }
 
 # Data checks-------------------------------------------------------------
@@ -308,7 +326,15 @@ load(file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
 
 # Interstate movement
 absInterstate <- read_csv(file.path(mainDataFolder, 
-  paste0("ABS_interstate_age_sex_clean-", toString(analysisYear), ".csv")))
+  paste0("ABS_interstate_age_sex_clean-", toString(analysisYear), ".csv")),
+  col_types = cols(
+    year = col_integer(),
+    region = col_character(),
+    sex = col_character(),
+    age = col_character(),
+    type = col_character(),
+    value = col_integer()
+  ))
 
 # Specifications and deaths data by age only used if doAge = TRUE ---------
 
@@ -335,6 +361,15 @@ source(file.path(HIVcode, "CalculatePldhiv.R"))
 pldhivCalculations <- list()
 
 for (ii in 1:numCascades) {
+  
+  # Select correct data set
+  if (useImputed[ii]) {
+    pldhivData <- hivDataImputed
+  } else {
+    pldhivData <- hivData
+  }
+  
+  # Do the calulations
   pldhivCalculations[[ii]] <- CalculatePldhiv(analysisYear, saveResults, 
     projectOutput, 
     # Cascade parameters
@@ -347,9 +382,10 @@ for (ii in 1:numCascades) {
     ecdcVersion[ii], excludeOS[ii], projectPldhiv[ii], projectYear[ii], 
     projectName[ii], projectOption[ii], projectDecrease[ii], 
     # Data
-    hivData, allYears, hivBase, hivAdjustments, cleanNom,
+    pldhivData, allYears, hivBase, hivAdjustments, cleanNom,
     absInterstate, ageList, yearList, hivAgeDeath)
 }
+
 
 ```
 
