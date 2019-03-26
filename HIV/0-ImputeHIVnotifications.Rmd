@@ -52,7 +52,7 @@ runImpute <- TRUE
 saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 
 # This file is loaded if runImpute <- FALSE
 
-runChecks <- FALSE
+runChecks <- TRUE
 changeFemaleMsm <- TRUE
 
 ```
@@ -66,13 +66,43 @@ source(file.path(HIVcode, "TidyNotifications.R"))
 
 # Load cleaned notifications data
 origHivData <- read_csv(file.path(notificationsFolder,
-  paste0("cascadeHIVnotifications-clean-", toString(dataYear), ".csv"))) 
+  paste0("cascadeHIVnotifications-clean-", toString(dataYear), ".csv")),
+  col_types = cols(
+    .default = col_integer(),
+    state = col_character(),
+    sex = col_character(),
+    dob = col_date(format = ""),
+    rob = col_character(),
+    datediagnosis = col_date(format = ""),
+    dateaids = col_date(format = ""),
+    exposure = col_character(),
+    dateneg = col_date(format = ""),
+    dateindet = col_date(format = ""),
+    dateill = col_date(format = ""),
+    datedeath = col_date(format = ""),
+    cd4date = col_date(format = ""),
+    linked = col_character(),
+    expgroup = col_character(),
+    countrygroup = col_character(),
+    aboriggroup = col_character()
+  )) 
 
 # Read in country code data
-countryCodes <- read_csv(file.path(dataFolder, "countryRegionCodes.csv")) 
+countryCodes <- read_csv(file.path(dataFolder, "countryRegionCodes.csv"),
+  col_types = cols(
+    COUNTRY_NAME = col_character(),
+    REGION = col_character(),
+    COUNTRY_CODE = col_integer(),
+    REGION_CODE = col_integer()
+)) 
 
 # Read in location of diagnosis coding
-regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
+regionCodes <- read_csv(file.path(dataFolder, "postcodeRegionCodes.csv"),
+  col_types = cols(
+    postcode = col_integer(),
+    SA3_code = col_integer(),
+    SA3_name_2016 = col_character()
+))
 
 # Tidy up notifications for calculations
 hivData <- TidyNotifications(origHivData, dataYear, countryCodes,
@@ -134,14 +164,6 @@ cascadeData <- hivData %>%
     cob = as.factor(cob), 
     expgroup = as.factor(expgroup)) 
 
-# Separate data for imputing and other data
-imputeData <- cascadeData %>%
-  select(impVars, postcode) # Drop postcode later
-otherData <- cascadeData %>%
-  select(otherVars, "state") %>%
-  rownames_to_column(var = "notification") %>%
-  mutate(notification = as.integer(notification))
-
 # Save cascade data in impute folder
 write_csv(cascadeData, file.path(setsPath, "cascadeHIVdata.csv"))
 
@@ -155,18 +177,18 @@ write_csv(cascadeData, file.path(setsPath, "cascadeHIVdata.csv"))
 LoadLibrary(mice)
 
 # Let's look at what is missing in imputeData
-md.pattern(imputeData)
+md.pattern(select(cascadeData, impVars))
 
 # One NA for state which should be NSW based on diag_region
 # filter(imputeData, is.na(state))  
-imputeData[is.na(imputeData$state), ]$state <- "nsw"
+cascadeData[is.na(cascadeData$state), ]$state <- "nsw"
 
 # Check if any msm have missing or wrong gender - three msm are 
 # designated female - replace exposure with "pwid" as coded MSM-IDU
 # (confirmed to be female)
 
-indices <- which(imputeData$sex == "female" & imputeData$expgroup == "msm")
-imputeData[indices, ]$expgroup <- "pwid"
+indices <- which(cascadeData$sex == "female" & cascadeData$expgroup == "msm")
+cascadeData[indices, ]$expgroup <- "pwid"
 
 # Fix up issues with postcodes -------------------------------------------
 # The postcode varaible iss ssupposed to record postcode of residence at 
@@ -177,72 +199,70 @@ imputeData[indices, ]$expgroup <- "pwid"
 # ACT = 36; NSW = 50; NT = 5; QLD = 197; SA = 4; Tas = 0; Vic = 45; WA = 7. 
 
 actPostcodes <- c(200:299, 2600:2618, 2900:2920)
-actErr <- which(imputeData$state == "act" & 
-    !(imputeData$postcode %in% actPostcodes) & 
-    !is.na(imputeData$diag_region))
+actErr <- which(cascadeData$state == "act" & 
+    !(cascadeData$postcode %in% actPostcodes) & 
+    !is.na(cascadeData$diag_region))
 # length(actErr)
 # imputeData[actErr, ]
-if (length(actErr) != 0) imputeData[actErr, ]$postcode <- NA
+if (length(actErr) != 0) cascadeData[actErr, ]$postcode <- NA
 
 nswPostcodes <- c(1000:2599, 2619:2899, 2921:2999, 3586, 3644, 3707)
-nswErr <- which(imputeData$state == "nsw" & 
-    !(imputeData$postcode %in% nswPostcodes) & 
-    !is.na(imputeData$diag_region))
+nswErr <- which(cascadeData$state == "nsw" & 
+    !(cascadeData$postcode %in% nswPostcodes) & 
+    !is.na(cascadeData$diag_region))
 # length(nswErr)
 # imputeData[nswErr, ]
-if (length(nswErr) != 0) imputeData[nswErr, ]$postcode <- NA
+if (length(nswErr) != 0) cascadeData[nswErr, ]$postcode <- NA
 
 ntPostcodes <- 800:999
-ntErr <- which(imputeData$state == "nt" & 
-    !(imputeData$postcode %in% ntPostcodes) & 
-    !is.na(imputeData$diag_region))
+ntErr <- which(cascadeData$state == "nt" & 
+    !(cascadeData$postcode %in% ntPostcodes) & 
+    !is.na(cascadeData$diag_region))
 # length(ntErr)
 # imputeData[ntErr, ]
-if (length(ntErr) != 0) imputeData[ntErr, ]$postcode <- NA
+if (length(ntErr) != 0) cascadeData[ntErr, ]$postcode <- NA
 
 qldPostcodes <- c(4000:4999, 9000:9999)
-qldErr <- which(imputeData$state == "qld" & 
-    !(imputeData$postcode %in% qldPostcodes) & 
-    !is.na(imputeData$diag_region))
+qldErr <- which(cascadeData$state == "qld" & 
+    !(cascadeData$postcode %in% qldPostcodes) & 
+    !is.na(cascadeData$diag_region))
 # length(qldErr)
 # imputeData[qldErr, ]
-if (length(qldErr) != 0) imputeData[qldErr, ]$postcode <- NA
+if (length(qldErr) != 0) cascadeData[qldErr, ]$postcode <- NA
 
 saPostcodes <- 5000:5999
-saErr <- which(imputeData$state == "sa" & 
-    !(imputeData$postcode %in% saPostcodes) & 
-    !is.na(imputeData$diag_region))
+saErr <- which(cascadeData$state == "sa" & 
+    !(cascadeData$postcode %in% saPostcodes) & 
+    !is.na(cascadeData$diag_region))
 # length(saErr)
 # imputeData[saErr, ]
-if (length(saErr) != 0) imputeData[saErr, ]$postcode <- NA
+if (length(saErr) != 0) cascadeData[saErr, ]$postcode <- NA
 
 tasPostcodes <- 7000:7999
-tasErr <- which(imputeData$state == "tas" & 
-    !(imputeData$postcode %in% tasPostcodes) & 
-    !is.na(imputeData$diag_region))
+tasErr <- which(cascadeData$state == "tas" & 
+    !(cascadeData$postcode %in% tasPostcodes) & 
+    !is.na(cascadeData$diag_region))
 # length(tasErr)
 # imputeData[tasErr, ]
-if (length(tasErr) != 0) imputeData[tasErr, ]$postcode <- NA
+if (length(tasErr) != 0) cascadeData[tasErr, ]$postcode <- NA
 
 vicPostcodes <- c(3000:3999, 8000:8999)
-vicErr <- which(imputeData$state == "vic" & 
-    !(imputeData$postcode %in% vicPostcodes) & 
-    !is.na(imputeData$diag_region))
+vicErr <- which(cascadeData$state == "vic" & 
+    !(cascadeData$postcode %in% vicPostcodes) & 
+    !is.na(cascadeData$diag_region))
 # length(vicErr)
 # imputeData[vicErr, ]
-if (length(vicErr) != 0) imputeData[vicErr, ]$postcode <- NA
+if (length(vicErr) != 0) cascadeData[vicErr, ]$postcode <- NA
 
 waPostcodes <- 6000:6999
-waErr <- which(imputeData$state == "wa" & 
-    !(imputeData$postcode %in% waPostcodes) & 
-    !is.na(imputeData$diag_region))
+waErr <- which(cascadeData$state == "wa" & 
+    !(cascadeData$postcode %in% waPostcodes) & 
+    !is.na(cascadeData$diag_region))
 # length(waErr)
 # imputeData[waErr, ]
-if (length(waErr) != 0) imputeData[waErr, ]$postcode <- NA
+if (length(waErr) != 0) cascadeData[waErr, ]$postcode <- NA
 
-# Now remove postcode
-imputeData <- imputeData %>%
-  select(-postcode)
+
 
 ```
 
@@ -250,7 +270,50 @@ imputeData <- imputeData %>%
 # This chunk runs the imputation on the imputeData set using the MICE 
 # package. This imputation is run independently for each state to make sure
 # diag_region does not mismatch with state. All imputed sets are saved for
-# testing and merging later.     
+# testing and merging later.   
+
+# Separate data for imputing and other data - we use a little function
+# to extract and modify the state data
+imputeData <- cascadeData %>%
+  select(impVars) # Drop postcode later
+otherData <- cascadeData %>%
+  select(otherVars) %>%
+  rownames_to_column(var = "notification") %>%
+  mutate(notification = as.integer(notification))
+
+# Due to issues with state and diag_region not aligning following
+# imputation. Run imputation separately for each state then
+# combine.
+
+# A little function to extract and modify state other data
+stateData <- function(impState) {
+  stateDiags <- filter(cascadeData, state == impState)
+  imputeState <- stateDiags %>% select(impVars)
+  otherState<- stateDiags %>%
+    select(otherVars) %>%
+    mutate(notification = 1:nrow(.)) %>%
+    select(notification, everything())
+  
+  return(list(imputeState, otherState))
+}
+
+# Now produce the separate 
+imputeDataACT <- stateData("act")[[1]]
+otherDataACT <- stateData("act")[[2]]
+imputeDataNSW <- stateData("nsw")[[1]]
+otherDataNSW <- stateData("nsw")[[2]]
+imputeDataNT <- stateData("nt")[[1]]
+otherDataNT <- stateData("nt")[[2]]
+imputeDataQLD <- stateData("qld")[[1]]
+otherDataQLD <- stateData("qld")[[2]]
+imputeDataSA <- stateData("sa")[[1]]
+otherDataSA <- stateData("sa")[[2]]
+imputeDataTAS <- stateData("tas")[[1]]
+otherDataTAS <- stateData("tas")[[2]]
+imputeDataVIC <- stateData("vic")[[1]]
+otherDataVIC <- stateData("vic")[[2]]
+imputeDataWA <- stateData("wa")[[1]]
+otherDataWA <- stateData("wa")[[2]]
 
 if (runImpute) {
   # Run imputation 
@@ -272,17 +335,6 @@ if (runImpute) {
   colnames(predictorMatrix) <- imputeSequence
   rownames(predictorMatrix) <- imputeSequence
   
-  # Due to issues with state and diag_region not aligning following 
-  # imputation. Run imputation separately for each state then 
-  # combine.  
-  imputeDataACT <- filter(imputeData, state == "act")
-  imputeDataNSW <- filter(imputeData, state == "nsw")
-  imputeDataNT <- filter(imputeData, state == "nt")
-  imputeDataQLD <- filter(imputeData, state == "qld")
-  imputeDataSA <- filter(imputeData, state == "sa")
-  imputeDataTAS <- filter(imputeData, state == "tas")
-  imputeDataVIC <- filter(imputeData, state == "vic")
-  imputeDataWA <- filter(imputeData, state == "wa")
   
   # Run the imputation for each state
   imputeSetsACT <- mice(imputeDataACT, m = numImputeSets, 
@@ -329,54 +381,48 @@ if (runImpute) {
 ```
 
 ```{r Complete imputation}
-# Fill in all the missing values for each state then combine
+# Fill in all the missing values for each state then combine with other 
+# data
+
 cascadeDataImputeACT <- as_tibble(complete(imputeSetsACT, 
   action = "long")) %>%
   rename(impute_set = .imp, notification = .id) %>%
-  left_join(select(filter(otherData, state == "act"), -state), 
-    by = "notification")
+  left_join(otherDataACT, by = "notification")
 
 cascadeDataImputeNSW <- as_tibble(complete(imputeSetsNSW, 
   action = "long")) %>%
   rename(impute_set = .imp, notification = .id) %>%
-  left_join(select(filter(otherData, state == "nsw"), -state), 
-    by = "notification")
+  left_join(otherDataNSW, by = "notification")
 
 cascadeDataImputeNT <- as_tibble(complete(imputeSetsNT, 
   action = "long")) %>%
   rename(impute_set = .imp, notification = .id) %>%
-  left_join(select(filter(otherData, state == "nt"), -state), 
-    by = "notification")
+  left_join(otherDataNT, by = "notification")
 
 cascadeDataImputeQLD <- as_tibble(complete(imputeSetsQLD, 
   action = "long")) %>%
   rename(impute_set = .imp, notification = .id) %>%
-  left_join(select(filter(otherData, state == "qld"), -state), 
-    by = "notification")
+  left_join(otherDataQLD, by = "notification")
 
 cascadeDataImputeSA <- as_tibble(complete(imputeSetsSA, 
   action = "long")) %>%
   rename(impute_set = .imp, notification = .id) %>%
-  left_join(select(filter(otherData, state == "sa"), -state), 
-    by = "notification")
+  left_join(otherDataSA, by = "notification")
 
 cascadeDataImputeTAS <- as_tibble(complete(imputeSetsTAS, 
   action = "long")) %>%
   rename(impute_set = .imp, notification = .id) %>%
-  left_join(select(filter(otherData, state == "tas"), -state), 
-    by = "notification")
+  left_join(otherDataTAS, by = "notification")
 
 cascadeDataImputeVIC <- as_tibble(complete(imputeSetsVIC, 
   action = "long")) %>%
   rename(impute_set = .imp, notification = .id) %>%
-  left_join(select(filter(otherData, state == "vic"), -state), 
-    by = "notification")
+  left_join(otherDataVIC, by = "notification")
 
 cascadeDataImputeWA <- as_tibble(complete(imputeSetsWA, 
   action = "long")) %>%
   rename(impute_set = .imp, notification = .id) %>%
-  left_join(select(filter(otherData, state == "wa"), -state), 
-    by = "notification")
+  left_join(otherDataWA, by = "notification")
 
 # Merge all state sets
 cascadeDataImpute <- bind_rows(cascadeDataImputeACT, cascadeDataImputeNSW,
