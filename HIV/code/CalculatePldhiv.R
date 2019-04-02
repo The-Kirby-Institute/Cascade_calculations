@@ -155,7 +155,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       
       tempHivSetReturn <- SubHivSetImpute(tempHivSetAll, "all", 
         targetGender, targetExposure, targetCob, targetAtsi, targetState, 
-        targetGlobalRegion)
+        targetLocalRegion , targetGlobalRegion)
       
       tempHivSet <- tempHivSetReturn[[1]]
       tempHivSetExcluded <- tempHivSetReturn[[2]]
@@ -171,10 +171,11 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         stop("Unknowns detected in imputed data set.")
       }
       
+      # For Interstate and Age we need overall estimates
       if (interState || doAge) {
         tempHivSetReturnAll <- SubHivSetImpute(tempHivSetAll, "all",
           targetGender, targetExposure, targetCob, targetAtsi, "all",
-          targetGlobalRegion)
+          "all", targetGlobalRegion)
         
         tempHivSetAll <- tempHivSetReturnAll[[1]]
         tempHivSetExcludedAll <- tempHivSetReturnAll[[2]]
@@ -187,9 +188,11 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       }
       
       # Calculate unique notifications and duplicates for the known set.
+      # Assume local region estimates match the state estimates
       if (doUnique) {
         tempHivSetUnique <- SubHivSetImpute(tempHivSetAll, "all", 
-          targetGender, targetExposure, "all", "all", targetState, "all")
+          targetGender, targetExposure, "all", "all", targetState, "all", 
+          "all")
         
         tempUniqueNotifications <- GetUnique(tempHivSetUnique[[1]], 
           allYears, yearUnique = yearUnique)
@@ -201,7 +204,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         # For Interstate Calculations we need overall national estimates
         if (interState) {
           tempHivSetUniqueAll <- SubHivSetImpute(tempHivSetAll, "all",
-            targetGender, targetExposure, "all", "all", "all", "all")
+            targetGender, targetExposure, "all", "all", "all", "all", 
+            "all")
           
           tempUniqueNotificationsAll <- GetUnique(tempHivSetUniqueAll[[1]], 
             allYears, yearUnique = yearUnique) 
@@ -369,8 +373,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     }
     
     hivSetReturn <- SubHivSet(hivSetAll, "all", targetGender,
-      targetExposure, targetCob, targetAtsi, 
-      targetState, targetGlobalRegion)
+      targetExposure, targetCob, targetAtsi, targetState, 
+      targetLocalRegion, targetGlobalRegion)
     
     hivSet <- hivSetReturn[[1]]
     hivSetExcluded <- hivSetReturn[[2]]
@@ -378,7 +382,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     
     if (interState || doAge) {
       hivSetReturnAll <- SubHivSet(hivSetAll, "all", targetGender,
-        targetExposure, targetCob, targetAtsi, "all", targetGlobalRegion)
+        targetExposure, targetCob, targetAtsi, "all", targetLocalRegion, 
+        targetGlobalRegion)
       
       hivSetAll <- hivSetReturnAll[[1]]
       hivSetExcludedAll <- hivSetReturnAll[[2]]
@@ -390,9 +395,10 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     # hivSetExcluded <- filter(hivSetExcluded, state == targetState)
     
     # Calculate unique notifications and duplicates for the known set.
+    # Assume local region estimates match the state estimates
     if (doUnique) {
       hivSetUnique <- SubHivSet(hivSet, "all", targetGender,
-        targetExposure, "all", "all", targetState, "all")
+        targetExposure, "all", "all", targetState, "all", "all")
       
       uniqueNotifications <- GetUnique(hivSetUnique[[1]], allYears, 
         yearUnique = yearUnique)
@@ -400,7 +406,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       # For Interstate Calculations we need overall national estimates
       if (interState) {
         hivSetUniqueAll <- SubHivSet(hivSetAll, "all", targetGender,
-          targetExposure, "all", "all", "all", "all")
+          targetExposure, "all", "all", "all", "all", "all")
         
         uniqueNotificationsAll <- GetUnique(hivSetUniqueAll[[1]], 
           allYears, yearUnique = yearUnique)
@@ -440,7 +446,9 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   
   ## Generate base and adjustment estimates ------------------------------
   # Now get the death rates, base migration rates, and proportion stay 
-  # rates. Migration rates are now calculated using GetMigrate
+  # rates. Migration rates are now calculated using GetMigrate. 
+  # We assume the same deathrate, emigration rate and proportion stay for
+  # all local regions based on state, so no targetLocalRegion in call. 
   subsetRates <- GetAdjustments(hivBase, hivAdjustments, 
     "all", targetGender, targetExposure, targetCob, targetAtsi, 
     targetLocalRegion, targetState, targetGlobalRegion) 
@@ -451,9 +459,9 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     subsetRates$annunique <- uniqueNotifications$annunique
   } 
   
-  # Get migration rate adjustments 
+  # Get migration rate adjustments - targetLocalregion = "all"
   relMigration <- GetMigrate(analysisYear, cleanNom, "all",
-    targetGender, targetExposure, targetCob, targetAtsi, targetLocalRegion,
+    targetGender, targetExposure, targetCob, targetAtsi, "all",
     targetState, targetGlobalRegion, propMale = propDiagsMale)
   
   # Adjust migration rate for Indigenous population if required
@@ -481,7 +489,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     # For interstate calculations also need overall population estimates
     subsetRatesAll <- GetAdjustments(hivBase, hivAdjustments,
       "all", targetGender, targetExposure, targetCob, targetAtsi, 
-      targetLocalRegion, "all", targetGlobalRegion)  
+      "all", "all", targetGlobalRegion)  
     
     if (doUnique) {
       subsetRatesAll$cumunique <- uniqueNotificationsAll$cumunique 
@@ -491,7 +499,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     # Get migration rate adjustments 
     relMigrationAll <- GetMigrate(analysisYear, cleanNom, "all",
       targetGender, targetExposure, targetCob, targetAtsi,
-      targetLocalRegion, "all", targetGlobalRegion, 
+      "all", "all", targetGlobalRegion, 
       propMale = propDiagsMale)
     
     # Adjust migration rate for Indigenous population if required
@@ -513,8 +521,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     subsetRatesAll$mrate_upper <- relMigrationAll *
       hivBase$migrationrate_upper
     
-    # Get interregion rates - only have date since 1982 assume zero rate 
-    # for 1980-81. 
+    # Get interregion or interegion rates - only have data since 1982 
+    # assume zero rate for 1980-81. 
     interRegionRates <- GetInterRegion(analysisYear, cleanNom, 
       absInterstate, NULL, "all", "all", targetState, targetLocalRegion,
       assumeAdult = TRUE)
@@ -524,7 +532,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   }
   
   if (doAge) {
-    # No get relative migration and death rates by age. 
+    # Now get relative migration and death rates by age. 
     # Death rates are assumed to be the same for overall and 
     # interstate/interegion
     
@@ -539,7 +547,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     
     # Relative migration rates
     relAgeMigrate <- GetMigrateAge(analysisYear, cleanNom, targetGender, 
-      targetExposure, targetCob, targetAtsi, targetLocalRegion, 
+      targetExposure, targetCob, targetAtsi, "all", 
       targetState, targetGlobalRegion, propMale = propDiagsAgeMale)
     
     colnames(relAgeMigrate) <- yearList
@@ -549,7 +557,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       # Need overall relative migration rates as well
       relAgeMigrateAll <- GetMigrateAge(analysisYear, cleanNom, 
         targetGender, targetExposure, targetCob, targetAtsi, 
-        targetLocalRegion, "all", targetGlobalRegion, 
+        "all", "all", targetGlobalRegion, 
         propMale = propDiagsAgeMaleAll)
       
       # Get interregion rates by age
@@ -562,7 +570,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   }
   
   ## Calculate PLDHIV ----------------------------------------------------
-  # This chunk fianlly calculates the number of people living with 
+  # This chunk finally calculates the number of people living with 
   # diagnosed HIV
   
   if (interState) {

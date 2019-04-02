@@ -3,7 +3,7 @@
 # N.A. Bretana and R. T. Gray
 
 SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi, 
-                      fState, fGlobalRegion){
+                      fState, fLocalRegion, fGlobalRegion){
   # Extract the notifications data based on the input variables 
   # TODO: Need to add local target region (LHD SLA etc)
   # 
@@ -42,9 +42,12 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   ## are required you need to used the imputed notifications version.  
   ##*********************************************************************## 
   
-  # Do an intial check to see if only one variable is "all"
-  if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi, 
-    targetState, targetLocalRegion, targetGlobalRegion) != "all") > 1) {
+  # Do an intial check to see if only one variable is "all". 
+  # Okay for fState and fLocalRegion to not equal all because state is
+  # changed to match local region
+  if (sum(c(fAge, fCob, fGender, fExposure, fAtsi, 
+    fState, fGlobalRegion) != "all") > 1 || sum(c(fAge, fCob, fGender, 
+      fExposure, fAtsi, fLocalRegion, fGlobalRegion) != "all") > 1) {
     stop("SubSetHiv does not work for multiple categories. You need to use
           the imputed data set and subset version")
   }
@@ -177,6 +180,25 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
       filter(includeframe, !(state %in% fState)))
     includeframe <- filter(includeframe, state %in% fState)
   }
+  
+  if(fLocalRegion[1] != 'all'){
+    # Store unkowns
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, 
+      diag_region == 'Not Reported'))
+    unknownframe <- bind_rows(unknownframe, filter(includeframe, 
+      is.na(diag_region)))
+    
+    # Remove missing so not double countered in excluded and included -
+    # need so excluded doesn't pick up "Not Reported"
+    includeframe <- filter(includeframe, diag_region != 'Not Reported',
+      !is.na(diag_region)) 
+    
+    # Exclude ones we don't want and keep ones we want
+    excludeframe <- bind_rows(excludeframe, 
+      filter(includeframe, !(diag_region %in% fLocalRegion)))
+    includeframe <- filter(includeframe, diag_region %in% fLocalRegion)
+  }
+  
   
   if(fGlobalRegion[1] != "all"){
     # Store unkowns

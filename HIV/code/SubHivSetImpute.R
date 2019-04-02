@@ -3,7 +3,7 @@
 # R. T. Gray
 
 SubHivSetImpute <- function(hivdataframe, fAge, fGender, fExposure, fCob, 
-  fAtsi, fState, fGlobalRegion){
+  fAtsi, fState, fLocalRegion, fGlobalRegion){
   # Extract the notifications data based on the input variables from the
   # imputed notifications data set which means there are no unknowns
   # 
@@ -93,6 +93,13 @@ SubHivSetImpute <- function(hivdataframe, fAge, fGender, fExposure, fCob,
     excludeframe <- bind_rows(excludeframe, 
       filter(includeframe, !(state %in% fState)))
     includeframe <- filter(includeframe, state %in% fState)
+  }
+  
+  if(fLocalRegion[1] != 'all'){
+    # Exclude ones we don't want and keep ones we want
+    excludeframe <- bind_rows(excludeframe, 
+      filter(includeframe, !(diag_region %in% fLocalRegion)))
+    includeframe <- filter(includeframe, diag_region %in% fLocalRegion)
   }
   
   if(fGlobalRegion[1] != "all"){

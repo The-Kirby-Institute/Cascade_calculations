@@ -62,7 +62,7 @@ projectOutput <- "CALD_Cascades" # "." for main output folder
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entred via a file in projectOutput 
 # which need to exist
-paramsFile <- "ProjectParameters.csv"
+paramsFile <- NULL #"ProjectParameters.csv"
                             
 # Cascade options----------------------------------------------------------
 # The following variables specify the charactersitsics and hence the 
@@ -108,7 +108,7 @@ if (is.null(paramsFile)) {
   
   targetState <- rep(c("all"), numCascades) # nsw, sa, nt, qld, vic, wa, act
   # tas (combination)
-  targetLocalRegion <- rep("all", numCascades) #tbd (combination)
+  targetLocalRegion <- rep("Daly - Tiwi - West Arnhem", numCascades) #tbd (combination)
   
   targetGlobalRegion <- rep("all", numCascades) # South-East Asia, 
   # Sub-Saharan Africa, Oceania, South American, Other cob, etc 
@@ -242,7 +242,7 @@ source(file.path(HIVcode, "DeduplicationFunctions.R"))
 source(file.path(HIVcode, "ReplaceEstimates.R"))
 
 # Function to tidy notifications
-source(file.path(HIVcode, "TidyNotifications.R"))
+# source(file.path(HIVcode, "TidyNotifications.R"))
 
 # Functions to output ECDC model data
 source(file.path(HIVcode, "EcdcCalculations.R"))
@@ -256,6 +256,9 @@ source(file.path(HIVcode, "AnnualDiagnoses.R"))
 source(file.path(HIVcode, "GetAdjustments.R"))
 source(file.path(HIVcode, "GetMigrate.R"))
 source(file.path(HIVcode, "GetInterRegion.R"))
+
+# Function for getting state/territory from local region
+source(file.path(HIVcode, "RegionState.R"))
 
 # Perform and append retained in care calculations
 if (any(doRetained)) {
@@ -336,6 +339,19 @@ absInterstate <- read_csv(file.path(mainDataFolder,
     value = col_integer()
   ))
 
+# Inter-region movement
+absInterRegion <- read_csv(file.path(mainDataFolder, 
+  paste0("ABS_interregion_age_sex_clean-", toString(analysisYear), ".csv")),
+  col_types = cols(
+    year = col_integer(),
+    region = col_character(),
+    sex = col_character(),
+    age = col_character(),
+    arrivals = col_integer(),
+    departures = col_integer(),
+    erp = col_integer()
+  ))
+
 # Specifications and deaths data by age only used if doAge = TRUE ---------
 
 # Set-up age matrix names
@@ -349,6 +365,13 @@ yearList <- paste0("y", as.character(allYears))
 hivAgeDeath <- read.csv(file.path(dataFolder, paste0("HIVageEstimates-",
   toString(analysisYear), ".csv")))
 
+# Load region codes
+regionCodes <- read_csv(file.path(dataFolder, "postcodeRegionCodes.csv"),
+  col_types = cols(
+    postcode = col_integer(),
+    SA3_code = col_integer(),
+    SA3_name_2016 = col_character()
+))
 ```
 
 ```{r Loop through cascades}
@@ -367,6 +390,22 @@ for (ii in 1:numCascades) {
     pldhivData <- hivDataImputed
   } else {
     pldhivData <- hivData
+  }
+  
+  # Make sure targetState matches targetLocalRegion - targetState should
+  # be set to "all" (and will be changed here) or the correct state
+  # corresponding to the local region. If not an error is produced. 
+  if (targetLocalRegion[ii] != "all") {
+    if (targetState[ii] == "all") {
+      # Change state to match targetLocalRegion 
+      targetState[ii] <- RegionState(targetLocalRegion[ii], regionCodes)
+    } else {
+      # Check state matches target region
+      currentState <- RegionState(targetLocalRegion[ii], regionCodes)
+      if (currentState != targetState[ii]) {
+        stop("Error: targetState does not align with targetLocalRegion") 
+      }
+    }
   }
   
   # Do the calulations

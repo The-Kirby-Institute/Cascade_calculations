@@ -60,6 +60,8 @@ GetInterRegion <- function(finalYear, nomData, interstateData,
   interRegionData, targetGender, targetAge, targetState, targetRegion, 
   assumeAdult = TRUE, propMale = NULL) {
   
+  targetRegion <- "all"
+  
   # First need to sort out if it is regional or state estimate
   if (targetState[1] != "all" && targetRegion[1] != "all") {
     stop("Cannot do state and regional estimates at same time")
@@ -162,15 +164,16 @@ GetInterRegion <- function(finalYear, nomData, interstateData,
         # arriverateMales <- predictInterRates(maleData$arrivals / 
         #     (maleData$allerp - maleData$erp), finalYear)
         # 
-        # femaleData <- extractInterData(interstateData, nomData, adjustAges, 
-        #   targetState, "female")
+        # femaleData <- extractInterData(interstateData, nomData, 
+        #   adjustAges, targetState, "female")
         # 
         # departrateFemales <- predictInterRates(femaleData$departures / 
         #     femaleData$erp, finalYear)
         # arriverateFemales <- predictInterRates(femaleData$arrivals / 
         #     (femaleData$allerp - femaleData$erp), finalYear)  
         # 
-        # # Adjust for gender - May need to change propRate for inside and outside 
+        # # Adjust for gender - May need to change propRate for inside and
+        #  outside 
         # # the region! 
         # departrate <- propMale * departrateMales  + (1 - propMale) * 
         #   departrateFemales
@@ -184,7 +187,11 @@ GetInterRegion <- function(finalYear, nomData, interstateData,
     hivInterRegion$arriverate <- arriverate  
     
   } else {
-    # We are doing regional SA4 level calculations 
+    # We are doing regional SA3 level calculations 
+    
+    
+    
+    
   }
   
   return(hivInterRegion)
