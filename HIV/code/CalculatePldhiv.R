@@ -22,8 +22,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   useImputed, nImputedSets, excludeAborig, doRetained, doUnique, 
   yearUnique, ecdcData, ecdcVersion, excludeOS, projectPldhiv, projectYear, 
   projectName, projectOption, projectDecrease, hivData, allYears, hivBase, 
-  hivAdjustments, cleanNom, absInterstate, ageList, yearList, 
-  hivAgeDeath) {
+  hivAdjustments, cleanNom, absInterstate, absInterRegion, ageList, 
+  yearList, hivAgeDeath) {
   
   # Initialise optional outputs
   uniqueNotifications <- NULL
@@ -72,6 +72,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   
   # Settings for generating ECDC model inputs-----------------------------
   ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
+  ecdcData <- ifelse(targetLocalRegion != "all", FALSE, ecdcData)
   excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
   ecdcModel <- cascadeName # name
   if (excludeOS) {
@@ -521,11 +522,11 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     subsetRatesAll$mrate_upper <- relMigrationAll *
       hivBase$migrationrate_upper
     
-    # Get interregion or interegion rates - only have data since 1982 
+    # Get interstate or inter-region rates - only have data since 1982 
     # assume zero rate for 1980-81. 
     interRegionRates <- GetInterRegion(analysisYear, cleanNom, 
-      absInterstate, NULL, "all", "all", targetState, targetLocalRegion,
-      assumeAdult = TRUE)
+      absInterstate, absInterRegion, "all", "all", targetState, 
+      targetLocalRegion, assumeAdult = TRUE)
     
     subsetRates$inter_arriverate <- interRegionRates$arriverate
     subsetRates$inter_departrate <- interRegionRates$departrate
@@ -560,9 +561,10 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         "all", "all", targetGlobalRegion, 
         propMale = propDiagsAgeMaleAll)
       
-      # Get interregion rates by age
+      # Get inter-region rates by age
       interRegionAge <- GetInterRegionAge(analysisYear, cleanNom, 
-        absInterstate, NULL, "all", targetState, targetLocalRegion)
+        absInterstate, absInterRegion, "all", targetState, 
+        targetLocalRegion)
       
       interDepartrateAge <- interRegionAge[[1]]
       interArriverateAge <- interRegionAge[[2]]

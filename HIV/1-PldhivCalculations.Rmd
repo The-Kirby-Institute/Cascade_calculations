@@ -422,7 +422,7 @@ for (ii in 1:numCascades) {
     projectName[ii], projectOption[ii], projectDecrease[ii], 
     # Data
     pldhivData, allYears, hivBase, hivAdjustments, cleanNom,
-    absInterstate, ageList, yearList, hivAgeDeath)
+    absInterstate, absInterRegion, ageList, yearList, hivAgeDeath)
 }
 
 
