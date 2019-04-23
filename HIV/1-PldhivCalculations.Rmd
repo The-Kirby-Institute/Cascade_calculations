@@ -56,7 +56,7 @@ saveResults <- TRUE
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "CALD_Cascades" # "." for main output folder 
+projectOutput <- "Test_Cascades" # "." for main output folder 
                                  # "HIV_Cascade_Paper" for paper
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
@@ -89,9 +89,9 @@ if (is.null(paramsFile)) {
   
   numCascades <- 1
   
-  cascadeName <- "test-2017" # (single)
+  cascadeName <- "Test-region-2017" # (single)
   targetGender <- rep("all", numCascades) # all, male, female (single)
-  targetAge <- rep("all", numCascades) # all or split (single)
+  targetAge <- rep("split", numCascades) # all or split (single)
   # Note regarding ageing: The calculations don't specifically target 
   # specific ages.  Rather this simply chooses whether age is considered or 
   # not."all" means there is no division by age whereas "split" means teh 
@@ -383,11 +383,19 @@ source(file.path(HIVcode, "CalculatePldhiv.R"))
 # List of lists to store output
 pldhivCalculations <- list()
 
+# Vector to store original number of notifications if imputation is used
+numNotificationsOrig <- c() 
+
 for (ii in 1:numCascades) {
   
   # Select correct data set
   if (useImputed[ii]) {
     pldhivData <- hivDataImputed
+    
+    numNotificationsOrig[ii] <- nrow(SubHivSet(hivData, "all", targetGender, 
+      targetExposure, targetCob, targetAtsi, targetState, 
+      targetLocalRegion, targetGlobalRegion)[[1]])
+    
   } else {
     pldhivData <- hivData
   }
@@ -408,7 +416,8 @@ for (ii in 1:numCascades) {
     }
   }
   
-  # Do the calulations
+  # Do the calulations - note uniaue notifications output is at the 
+  # state level not local region level. 
   pldhivCalculations[[ii]] <- CalculatePldhiv(analysisYear, saveResults, 
     projectOutput, 
     # Cascade parameters
@@ -423,6 +432,7 @@ for (ii in 1:numCascades) {
     # Data
     pldhivData, allYears, hivBase, hivAdjustments, cleanNom,
     absInterstate, absInterRegion, ageList, yearList, hivAgeDeath)
+  
 }
 
 
