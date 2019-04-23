@@ -202,7 +202,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         uniqueNotificationsSets <- bind_rows(uniqueNotificationsSets, 
           tempUniqueNotifications)
         
-        # For Interstate Calculations we need overall national estimates
+        # For Interstate and inter-regional Calculations we need overall
+        # national estimates
         if (interState) {
           tempHivSetUniqueAll <- SubHivSetImpute(tempHivSetAll, "all",
             targetGender, targetExposure, "all", "all", "all", "all", 
@@ -531,7 +532,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     subsetRates$inter_arriverate <- interRegionRates$arriverate
     subsetRates$inter_departrate <- interRegionRates$departrate
   }
-  
+
   if (doAge) {
     # Now get relative migration and death rates by age. 
     # Death rates are assumed to be the same for overall and 
@@ -560,7 +561,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         targetGender, targetExposure, targetCob, targetAtsi, 
         "all", "all", targetGlobalRegion, 
         propMale = propDiagsAgeMaleAll)
-      
+
       # Get inter-region rates by age
       interRegionAge <- GetInterRegionAge(analysisYear, cleanNom, 
         absInterstate, absInterRegion, "all", targetState, 
@@ -1348,7 +1349,9 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     "hivDiagnosed" = hivDiagnosed, 
     "hivParams" = hivParams,
     "uniqueNotifications" = uniqueNotifications,
-    "pldhivAllFuture" = pldhivAllFuture)
+    "pldhivAllFuture" = pldhivAllFuture, 
+    "hivResults" = hivResults,
+    "hivResultsAge" = hivResultsAge)
   
   # Return
   return(pldhivCalculations)

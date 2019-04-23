@@ -238,20 +238,20 @@ GetInterRegion <- function(finalYear, nomData, interstateData,
       # TODO: Maybe do this for state movement as well
       if (targetAge %in% c("a0_4", "a5_9", "a10_14")) {
         adjustAges <- "a0_14"
-        erpAges <- adjustAges
+        erpAges <- c("a0_4", "a5_9", "a10_14")
       } else if (targetAge %in% c("a15_19", "a20_24")) {
         adjustAges <- "a15_24"
-        erpAges <- adjustAges
-      } else if (targetAge %in% c( "a25_29", "a30_34", "a35_39", "a40_44")) {
+        erpAges <- c("a15_19", "a20_24")
+      } else if (targetAge %in% c("a25_29", "a30_34", "a35_39", "a40_44")) {
         adjustAges <- "a25_44"
-        erpAges <- adjustAges
+        erpAges <- c("a25_29", "a30_34", "a35_39", "a40_44")
       } else if (targetAge %in% c("a45_49", "a50_54", "a55_59", "a60_64")) {
         adjustAges <- "a45_64"
-        erpAges <- adjustAges
+        erpAges <- c("a45_49", "a50_54", "a55_59", "a60_64")
       } else if (targetAge %in% c("a65_69", "a70_74", "a75_79", "a80_84", 
         "a85+")) {
         adjustAges <- "a65+"
-        erpAges <- adjustAges
+        erpAges <- c("a65_69", "a70_74", "a75_79", "a80_84", "a85+")
       } else {
         # Must be an incorrect age
         stop("Incorrect age for inter region movement")

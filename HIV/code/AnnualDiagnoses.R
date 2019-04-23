@@ -87,7 +87,9 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
     all_notifications = adjustDiags$all,
     all_cumnotifications = cumsum(adjustDiags$all),
     ecdc_normalization = adjustDiags$included / 
-    adjustDiags$adjusted_included)
+    adjustDiags$adjusted_included) %>%
+    mutate(ecdc_normalization = ifelse(is.nan(ecdc_normalization), 0, 
+        ecdc_normalization))
   
   # Proportion in each age group--------------------------------------------
   # For the known diagnoses calculate proportion by age bin, exposure group,
@@ -130,7 +132,7 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
     hivResultsAge <- agedDiags %>% 
       left_join(., hivResults, by = "year") %>% 
       select(-diagnoses, -cumnotifications, -all_notifications,
-        -all_cumnotifications) %>%
+        -all_cumnotifications, -ecdc_normalization) %>%
       group_by(year, agebin) %>%
       mutate(diags = propdiags * notifications) %>%
       select(-propdiags, -notifications) %>%

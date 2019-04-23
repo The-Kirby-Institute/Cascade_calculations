@@ -47,19 +47,30 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
         group_by(yeardiagnosis, sex, agebin) %>%
         summarise(notifications = n()) %>%
         ungroup() %>%
-        spread(sex, notifications)
+        spread(sex, notifications) %>%
+        mutate(other = Reduce("+", 
+          select(., -yeardiagnosis, -agebin, -male))) %>%
+        rename(year = yeardiagnosis) %>%
+        select(year, agebin, male, other)
       hivSetGenderAge[is.na(hivSetGenderAge)] <- 0
-      if ("unknown" %in% names(hivSetGenderAge)) {
-        hivSetGenderAge <- hivSetGenderAge %>%
-          mutate(other = female+transgender+unknown) %>%
-          rename(year = yeardiagnosis) %>%
-          select(year, agebin, male, other)
-      } else {
-        hivSetGenderAge <- hivSetGenderAge %>%
-          mutate(other = female+transgender) %>%
-          rename(year = yeardiagnosis) %>%
-          select(year, agebin, male, other)
-      }
+      # 
+      # hivSetGenderAge <- hivSetGenderAge %>%
+      #     mutate(other = Reduce("+", 
+      #       select(., -yeardiagnosis, -agebin, -male))) %>%
+      #     rename(year = yeardiagnosis) %>%
+      #     select(year, agebin, male, other)
+      # 
+      # if ("unknown" %in% names(hivSetGenderAge)) {
+      #   hivSetGenderAge <- hivSetGenderAge %>%
+      #     mutate(other = female+transgender+unknown) %>%
+      #     rename(year = yeardiagnosis) %>%
+      #     select(year, agebin, male, other)
+      # } else {
+      #   hivSetGenderAge <- hivSetGenderAge %>%
+      #     mutate(other = Reduce("+", select(., -yeardiagnosis, -agebin, -male))) %>%
+      #     rename(year = yeardiagnosis) %>%
+      #     select(year, agebin, male, other)
+      # }
       hivSetGenderAge[is.na(hivSetGenderAge)] <- 0
       
       # Fill in missing years with zeros - have to do males and others and
