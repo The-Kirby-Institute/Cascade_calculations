@@ -283,7 +283,7 @@ GetInterRegion <- function(finalYear, nomData, interstateData,
       #   ungroup()
       
       maleData <- extractRegionData(interRegionData, nomData, adjustAges, 
-        erpAges, targetLocalRegion, "male")
+        erpAges, targetRegion, "male")
       
       departrate <- predictInterRates(maleData$departures / maleData$erp, 
         finalYear, dataYears = maleData$year)
@@ -296,27 +296,27 @@ GetInterRegion <- function(finalYear, nomData, interstateData,
       
       # Female data and rates
       femaleData <- extractRegionData(interRegionData, nomData, adjustAges, 
-        erpAges, targetLocalRegion, "female")
+        erpAges, targetRegion, "female")
       
       departrate <- predictInterRates(femaleData$departures / 
-          femaleData$erp, finalYear, dataYears = maleData$year)
+          femaleData$erp, finalYear, dataYears = femaleData$year)
       
       arriverate <- predictInterRates(femaleData$arrivals / 
           (femaleData$allerp - femaleData$erp), finalYear,
-        dataYears = maleData$year)
+        dataYears = femaleData$year)
       
     } else {
       if (is.null(propMale)) {
         # Don't adjust for gender  
         allData <-  extractRegionData(interRegionData, nomData, adjustAges, 
-        erpAges, targetLocalRegion, "all")
+        erpAges, targetRegion, "all")
         
         departrate <- predictInterRates(allData$departures / allData$erp, 
-          finalYear, dataYears = maleData$year)
+          finalYear, dataYears = allData$year)
         
         arriverate <- predictInterRates(allData$arrivals / 
             (allData$allerp - allData$erp), finalYear, 
-          dataYears = maleData$year)
+          dataYears = allData$year)
         
       } else {
         # Adjust for gender using propMale 
