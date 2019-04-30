@@ -54,7 +54,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     stop("Error: indigenous status only valid for Australian born")   
   }
   
-  # Change script options based on cascade parameters and other options --
+  # Change script options based on cascade parameters and other options---
   interState <- ifelse(targetState[1] != "all", TRUE, FALSE)
   doAge <- ifelse(targetAge == "split", TRUE, FALSE) # TRUE for ageing
   doRetained <- ifelse(doAge, FALSE, doRetained) # Turn off for ageing
@@ -572,10 +572,44 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       interArriverateAge <- interRegionAge[[2]]
     }
   }
-  browser()
+  # browser()
+  
+  ## Projections ---------------------------------------------------------
+  # This chunk is used for setting up projections of the number of people 
+  # living with diagnosed HIV. To do the projections we simply make
+  # assumptions about the future changes to annual diagnoses, deathrates, 
+  # population movement rates into a specified future period.  
+  # 
+  # Any change to the inputs of the function LivingDiagnosed can be 
+  # manually specified the default is to keep everything the same as the
+  # analysis year. Any counterfactual or future projection scenario can be
+  # manually specified.
+  
+  if (projectPldhiv) { 
+    
+    saveProjResults <- saveResults 
+    
+    # Setup projection years
+    projectYears <- (analysisYear + 1):projectYear
+    nprojYears <- length(projectYears)
+    # totalYears <- c(allYears, projectYears)
+  
+    ProjectDiagnoses(hivResultsAll$notifications, allYears, 
+      projectDecrease, projectYears, projectOption, diagnosesAge = hivResultsAge)[[1]]
+  
+  } 
+  
   ## Calculate PLDHIV ----------------------------------------------------
   # This chunk finally calculates the number of people living with 
   # diagnosed HIV
+
+  
+  
+  
+  # ProducePldhiv(allYears, hivResults, hivResultsAll, subsetRates, 
+  #   subsetRatesAll, hivResultsAge, hivResultsAgeAll, relAgeDeath, 
+  #   relAgeMigrate, interArriverateAge, interDepartrateAge, interstate, 
+  #   doAge)
   
   if (interState) {
     # A bit more work to do if we do inter-regional migration
@@ -1135,11 +1169,11 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   # migration rates into a specified future period.  
   # 
   # Any change in inputs to LivingDiagnosed function can be manually 
-  # specified the default is to keep everything the same as the analysis 
-  # year.
-  # 
-  # Any counterfactual or future projection scenario can be manually 
-  # specified.
+  # specified in the ProjectDiagnoses.R function the default is to keep
+  # everything the same as the analysis year. Do not need different 
+  # emigration rates for overall and age calculations because the overall 
+  # rate assumes all PLDHIV are adults and to align with estimates above up 
+  # to analysis year.
   
   if (projectPldhiv) { 
     
@@ -1148,211 +1182,437 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     # Setup projection years
     projectYears <- (analysisYear + 1):projectYear
     nprojYears <- length(projectYears)
-    totalYears <- c(allYears, projectYears)
+    # totalYears <- c(allYears, projectYears)
     
-    # Setup Projection relative decrease (linear over projectYears)
-    projectDecreaseFuture <- seq(1, projectDecrease, length = (nprojYears+1))
-    projectDecreaseAll <- c(rep(1, length(allYears)), 
-      tail(projectDecreaseFuture, nprojYears))
+    # Set-up projection inputs
+    # Use trend diagnoses as default - 
     
-    # Default vectors for projections assume everything stays the same.
-    # Keeping the number of diagnoses and annUnique the same as the 
-    # analysis year value means the same number of unique diagnoses will
-    # occur each year. SELECT STANDARD OPTION OR MANUALLY CHANGE TO RUN
-    #  ALTERNATE SCENARIOS.
-    
-    # Diagnoses options for overall calculations - if a state or region 
-    # need overall as well
-    if (projectOption == "status-quo") {
-      diagnosesFuture <- ProjVec(hivResults$notifications, nprojYears)
-      if (interstate) {
-        diagnosesFutureOverall <- ProjVec(hivResultsAll$notifications, 
-          nprojYears)
-      }
-    } else if (projectOption == "linear") {
-      # Trend diagnoses (using trend over last 5 years)
-      trendlm <- lm(diagnoses ~ year, 
-        data.frame(year = (analysisYear - 4):analysisYear, 
-          diagnoses = tail(hivResults$notifications, 5)))
-      trendDiags <- predict(trendlm, data.frame(year = projectYears))
-      diagnosesFuture <- c(hivResults$notifications, trendDiags)
-      if (interstate) {
-        trendlmOverall <- lm(diagnoses ~ year, 
-          data.frame(year = (analysisYear - 4):analysisYear, 
-          diagnoses = tail(hivResultsAll$notifications, 5)))
-        trendDiagsOverall <- predict(trendlmOverall, 
-          data.frame(year = projectYears))
-        diagnosesFutureOverall <- c(hivResultsAll$notifications, 
-          trendDiagsOverall)
-      }
-    } else if(projectOption == "reduce") {
-      diagnosesFuture <- projectDecreaseAll * 
-        ProjVec(hivResults$notifications, nprojYears)
-      if (interstate) {
-        diagnosesFutureOverall <- projectDecreaseAll * 
-          ProjVec(hivResultsAll$notifications, nprojYears)
-      }
-    } else {
-      # MANUALLY CHANGE HERE TO RUN ALTERNATE SCENARIOS
-    }
-    
-    # Use trend diagnoses as default - not need different emigration 
-    # rates for overall and age calculations because the overall rate assumes
-    # all PLDHIV are adults and to align with estimates above up to 
-    # analysis year.
-    diagnoses <- diagnosesFuture
-    
-    
-    
-    annUnique <- ProjVec(subsetRates$annunique, nprojYears)
-    deathrate <- ProjVec(subsetRates$deathrate, nprojYears)
-    osrateOverall <- ProjVec(subsetRates$mrate, nprojYears)
-    osrateAge <- ProjVec(hivBase$migrationrate, nprojYears)
-    propStay <- ProjVec(subsetRates$propstay, nprojYears)   
-    
-    # CHANGE DEFAULTS HERE
-    # 
-    # Example showing counterfactual to calculate number living 
-    # diagnosed before 1996 etc
-    # diagnoses[totalYears > 1996] <- 0 
-    # projectName <- "pre1996"
-    # Example looking at future impact of PrEP after 2016 assuming 
-    # 50% reduction in diagnoses
-    # diagnoses[totalYears > 2016] <- 0.5 * diagnoses[totalYears > 2016]
-    
-    # Do future projections
+    # Now do the projections-BAD CODE as it is essentially a copy and paste 
+    # of the PLDHIV calculations code above. Just easier to do for the
+    # moment.
     if (interState) {
-      # Need to do overall as well
-      diagnosesOverall <- diagnosesFuture
-      annUniqueOverall <- ProjVec(subsetRatesAll$annunique, nprojYears)
-      deathrateOverall <- ProjVec(subsetRatesAll$deathrate, nprojYears)
-      osrateOverall <- ProjVec(subsetRatesAll$mrate, nprojYears)
-      propStayOverall <- ProjVec(subsetRates$propstay, nprojYears)  
-      
-      
-      pldhivOverallFuture <- LivingDiagnosed(hivResultsAll$notifications,
-        , 
-        subsetRatesAll$deathrate,
-        subsetRatesAll$mrate,
-        subsetRatesAll$propstay)
-      
-      
-      pldhivAllFuture <- LivingDiagnosed(diagnoses,
-        annUnique, 
-        deathrate,
-        osrateOverall,
-        propStay) %>%
-        mutate(year = totalYears) %>%
-        select(year, everything())
-      
-    } else {
-      # Just overall 
-      pldhivAllFuture <- LivingDiagnosed(diagnoses,
-        annUnique, 
-        deathrate,
-        osrateOverall,
-        propStay) %>%
-        mutate(year = totalYears) %>%
-        select(year, everything())
-    }
-    
-    
-    # Do a similar process for each age group if doing age and run in 
-    # Living DiagnosedAge(). To do past 5 years age trends we need to loop
-    # cross age groups to generate estimates.
-    if (doAge) {
-      
-      # Setup hivResultsAge for future. Most are the same as for the 
-      # non-age calculations except diagnoses, relAgeDeath, and 
-      # relAgeMigrate need to be extended into the future. 
-      
-      # Status quo diagnoses and relative reductions can be applied across
-      # the age groups
-      
-      if (projectOption == "status-quo") {
-        hivResultsAgeFuture <- cbind(hivResultsAge,
-          matrix(rep(hivResultsAge[,ncol(hivResultsAge-1)], nprojYears), 
+      if (doAge) {
+        # Do age based interstate calculations
+        
+        # Set-up projection diagnoses - need regional and overall calculations
+        diagnosesFuture <- ProjectDiagnoses(hivResults$notifications, 
+          allYears, projectDecrease, projectYears, projectOption, 
+          diagnosesAge = hivResultsAge)
+        
+        diagnosesFutureAll <- ProjectDiagnoses(hivResultsAll$notifications, 
+          allYears, projectDecrease, projectYears, projectOption, 
+          diagnosesAge = hivResultsAgeAll)
+        
+        # Set-up age based deaths and migration factors
+        
+        # Deaths is a bit tricky because the final row is zero
+        relAgeDeathFuture <- cbind(relAgeDeath[, 1:(ncol(relAgeDeath)-1)], 
+          matrix(rep(relAgeDeath[, (ncol(relAgeDeath)-1)], nprojYears), 
+            ncol = nprojYears), relAgeDeath[, ncol(relAgeDeath)])
+        colnames(relAgeDeathFuture) <- paste0("y", 
+          as.character(c(allYears, projectYears)))
+        
+        # Population movement is straight forward
+        relAgeMigrateFuture <- cbind(relAgeMigrate,
+          matrix(rep(relAgeMigrate[,ncol(relAgeMigrate-1)], nprojYears), 
             ncol = nprojYears))
-        colnames(hivResultsAgeFuture) <- paste0("y", 
-          as.character(totalYears))
-      } else if (projectOption == "linear") {
-        # Project each age group independently
-        hivResultsAgeFuture <- cbind(hivResultsAge,
-          matrix(0, ncol = nprojYears, nrow = nages))
-        colnames(hivResultsAgeFuture) <- paste0("y", 
-          as.character(totalYears))
-        for (age in 1:nages) {
-          # Extract age group diagnoses
-          ageDiagnoses <- hivResultsAge[age, ]
-          
-          # Estimate trends
-          trendlm <- lm(diagnoses ~ year, 
-            data.frame(year = (analysisYear - 4):analysisYear, 
-              diagnoses = tail(ageDiagnoses, 5)))
-          trendDiags <- predict(trendlm, data.frame(year = projectYears))
-          
-          # Make sure diagnoses are at least zero (okay as normalization 
-          # should fix this.
-          trendDiags[trendDiags < 0] <- 0
-          
-          # Store final age trends
-          hivResultsAgeFuture[age, ] <- c(ageDiagnoses, trendDiags)
-        } 
-      } else if(projectOption == "reduce") {
-        # Assume same reduction across all age groups
-        hivResultsAgeFuture <- cbind(hivResultsAge,
-          matrix(0, ncol = nprojYears, nrow = nages))
-        colnames(hivResultsAgeFuture) <- paste0("y", 
-          as.character(totalYears))
-        for (age in 1:nages) {
-          # Extract age group diagnoses
-          ageDiagnoses <- hivResultsAge[age, ]
-          
-          # Reduce future diagnoses
-          diagnosesFuture <- projectDecreaseAll * ProjVec(ageDiagnoses, 
-            nprojYears)
-          
-          # Store final age trends
-          hivResultsAgeFuture[age, ] <- diagnosesFuture
-        }
+        colnames(relAgeMigrateFuture) <- paste0("y", 
+          as.character(c(allYears, projectYears)))
+        
+        relAgeMigrateFutureAll <- cbind(relAgeMigrateAll,
+          matrix(rep(relAgeMigrateAll[,ncol(relAgeMigrateAll-1)], nprojYears), 
+            ncol = nprojYears))
+        colnames(relAgeMigrateFutureAll) <- paste0("y", 
+          as.character(c(allYears, projectYears)))
+        
+        interArriverateAgeFuture <- cbind(interArriverateAge,
+          matrix(rep(interArriverateAge[,ncol(interArriverateAge-1)], 
+            nprojYears), ncol = nprojYears))
+        colnames(interArriverateAgeFuture) <- paste0("y", 
+          as.character(c(allYears, projectYears)))
+        
+        interDepartrateAgeFuture <- cbind(interDepartrateAge,
+          matrix(rep(interDepartrateAge[,ncol(interDepartrateAge-1)], 
+            nprojYears), ncol = nprojYears))
+        colnames(interDepartrateAgeFuture) <- paste0("y", 
+          as.character(c(allYears, projectYears)))
+      
+        # Calculate overall national PLDHIV estimates for interstate 
+        # migration
+        pldhivOverallAllProj <- LivingDiagnosed(diagnosesFutureAll[[1]],
+          ProjVec(subsetRatesAll$annunique, nprojYears),
+          ProjVec(subsetRatesAll$deathrate, nprojYears),
+          ProjVec(subsetRatesAll$mrate, nprojYears),
+          ProjVec(subsetRatesAll$propstay, nprojYears)) %>%
+          mutate(year = allYears) %>%
+          select(year, everything()) %>%
+          as_tibble()
+        
+        # pldhivOverallAllMin <- LivingDiagnosed(hivResultsAll$notifications,
+        #   subsetRatesAll$annunique,  
+        #   subsetRatesAll$deathrate_upper,
+        #   subsetRatesAll$mrate_upper,
+        #   subsetRatesAll$propstay_lower) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
+        # 
+        # pldhivOverallAllMax <- LivingDiagnosed(hivResultsAll$notifications,
+        #   subsetRatesAll$annunique,  
+        #   subsetRatesAll$deathrate_lower,
+        #   subsetRatesAll$mrate_lower,
+        #   subsetRatesAll$propstay_upper) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
+        
+        # Calculate National pldhiv by age
+        pldhivAgeAllProj <- LivingDiagnosedAge(diagnosesFutureAll[[2]],
+          ProjVec(subsetRatesAll$annunique, nprojYears),
+          ProjVec(subsetRatesAll$deathrate, nprojYears),
+          ProjVec(hivBase$migrationrate, nprojYears),
+          ProjVec(subsetRatesAll$propstay, nprojYears),
+          agedeath = relAgeDeathFuture,
+          agemigrate = relAgeMigrateFutureAll,
+          normalize = pldhivOverallAll$pldhiv)
+        
+        # pldhivAgeAllMin <- LivingDiagnosedAge(hivResultsAgeAll,
+        #   subsetRatesAll$annunique, 
+        #   subsetRatesAll$deathrate_upper,
+        #   hivBase$migrationrate_upper, 
+        #   subsetRatesAll$propstay_lower,
+        #   agedeath = relAgeDeath,
+        #   agemigrate = relAgeMigrate,
+        #   normalize = pldhivOverallAllMin$pldhiv)
+        # 
+        # pldhivAgeAllMax <- LivingDiagnosedAge(hivResultsAgeAll,
+        #   subsetRatesAll$annunique, 
+        #   subsetRatesAll$deathrate_lower,
+        #   hivBase$migrationrate_lower, 
+        #   subsetRatesAll$propstay_upper,
+        #   agedeath = relAgeDeath,
+        #   agemigrate = relAgeMigrate,
+        #   normalize = pldhivOverallAllMax$pldhiv)
+        
+        # Calculate overall (non-age) PLDHIV state estimates for normalization
+        pldhivOverallProj <- LivingDiagnosed(diagnosesFuture[[1]],
+          ProjVec(subsetRates$annunique, nprojYears),
+          ProjVec(subsetRates$deathrate, nprojYears),
+          ProjVec(subsetRates$mrate, nprojYears),
+          ProjVec(subsetRates$propstay, nprojYears),
+          arrivals = ProjVec(subsetRates$inter_arriverate, nprojYears),
+          departs = ProjVec(subsetRates$inter_departrate, nprojYears),
+          pldhiv = pldhivOverallAllProj$pldhiv) %>%
+          mutate(year = allYears) %>%
+          select(year, everything()) %>%
+          as_tibble()
+        
+        # pldhivOverallMin <- LivingDiagnosed(hivResults$notifications,
+        #   subsetRates$annunique,  
+        #   subsetRates$deathrate_upper,
+        #   subsetRates$mrate_upper,
+        #   subsetRates$propstay_lower,
+        #   arrivals = subsetRates$inter_arriverate, 
+        #   departs = subsetRates$inter_departrate) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
+        # 
+        # pldhivOverallMax <- LivingDiagnosed(hivResults$notifications,
+        #   subsetRates$annunique,  
+        #   subsetRates$deathrate_lower,
+        #   subsetRates$mrate_lower,
+        #   subsetRates$propstay_upper,
+        #   arrivals = subsetRates$inter_arriverate, 
+        #   departs = subsetRates$inter_departrate) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
+        
+        # Calculate state estimates by age
+        pldhivAllProj <- LivingDiagnosedAge(diagnosesFuture[[2]],
+          ProjVec(subsetRates$annunique, nprojYears),
+          ProjVec(subsetRates$deathrate, nprojYears),
+          ProjVec(hivBase$migrationrate, nprojYears),
+          ProjVec(subsetRates$propstay, nprojYears),
+          agedeath = relAgeDeathFuture,
+          agemigrate = relAgeMigrateFuture,
+          arrivals = interArriverateAgeFuture,
+          departs = interDepartrateAgeFuture,
+          pldhiv =  pldhivAgeAllProj, 
+          normalize = pldhivOverallProj$pldhiv)
+        
+        # pldhivAllMin <- LivingDiagnosedAge(hivResultsAge,
+        #   subsetRates$annunique, 
+        #   subsetRates$deathrate_upper,
+        #   hivBase$migrationrate_upper, 
+        #   subsetRates$propstay_lower,
+        #   agedeath = relAgeDeath,
+        #   agemigrate = relAgeMigrate,
+        #   arrivals = interArriverateAge,
+        #   departs = interDepartrateAge,
+        #   pldhiv =  pldhivAgeAllMin,
+        #   normalize = pldhivOverallMin$pldhiv)
+        # 
+        # pldhivAllMax <- LivingDiagnosedAge(hivResultsAge,
+        #   subsetRates$annunique, 
+        #   subsetRates$deathrate_lower,
+        #   hivBase$migrationrate_lower, 
+        #   subsetRates$propstay_upper,
+        #   agedeath = relAgeDeath,
+        #   agemigrate = relAgeMigrate,
+        #   arrivals = interArriverateAge,
+        #   departs = interDepartrateAge,
+        #   pldhiv =  pldhivAgeAllMax,
+        #   normalize = pldhivOverallMax$pldhiv)
+        
       } else {
-        # MANUALLY CHANGE HERE TO RUN ALTERNATE SCENARIOS
+        
+        # Set-up projection diagnoses - need regional and overall calculations
+        diagnosesFuture <- ProjectDiagnoses(hivResults$notifications, 
+          allYears, projectDecrease, projectYears, projectOption)
+        
+        diagnosesFutureAll <- ProjectDiagnoses(hivResultsAll$notifications, 
+          allYears, projectDecrease, projectYears, projectOption)
+        
+        # Calculate overall first for inter-regional migration
+        pldhivOverallProj <- LivingDiagnosed(diagnosesFutureAll[[1]],
+          ProjVec(subsetRatesAll$annunique, nprojYears), 
+          ProjVec(subsetRatesAll$deathrate, nprojYears),
+          ProjVec(subsetRatesAll$mrate, nprojYears),
+          ProjVec(subsetRatesAll$propstay, nprojYears)) %>%
+          mutate(year = allYears) %>% 
+          select(year, everything()) %>%
+          as_tibble()
+        
+        # pldhivOverallMin <- LivingDiagnosed(hivResultsAll$notifications,
+        #   subsetRatesAll$annunique,  
+        #   subsetRatesAll$deathrate_upper,
+        #   subsetRatesAll$mrate_upper,
+        #   subsetRatesAll$propstay_lower) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
+        # 
+        # pldhivOverallMax <- LivingDiagnosed(hivResultsAll$notifications,
+        #   subsetRatesAll$annunique,  
+        #   subsetRatesAll$deathrate_lower,
+        #   subsetRatesAll$mrate_lower,
+        #   subsetRatesAll$propstay_upper) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
+        
+        # Now do regional migration
+        pldhivAllProj <- LivingDiagnosed(diagnosesFuture[[1]],
+          ProjVec(subsetRates$annunique, nprojYears), 
+          ProjVec(subsetRates$deathrate, nprojYears), 
+          ProjVec(subsetRates$mrate, nprojYears),
+          ProjVec(subsetRates$propstay, nprojYears),
+          arrivals = ProjVec(subsetRates$inter_arriverate, nprojYears), 
+          departs = ProjVec(subsetRates$inter_departrate, nprojYears),
+          pldhiv = pldhivOverallProj$pldhiv) %>%
+          mutate(year = allYears) %>%
+          select(year, everything()) %>%
+          as_tibble()
+        
+        # Use best estimate overall for min and max
+        # pldhivAllMin <- LivingDiagnosed(hivResults$notifications,
+        #   subsetRates$annunique,  
+        #   subsetRates$deathrate_upper,
+        #   subsetRates$mrate_upper,
+        #   subsetRates$propstay_lower,
+        #   arrivals = subsetRates$inter_arriverate,
+        #   departs = subsetRates$inter_departrate,
+        #   pldhiv = pldhivOverall$pldhiv) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
+        # 
+        # pldhivAllMax <- LivingDiagnosed(hivResults$notifications,
+        #   subsetRates$annunique,  
+        #   subsetRates$deathrate_lower,
+        #   subsetRates$mrate_lower,
+        #   subsetRates$propstay_upper,
+        #   arrivals = subsetRates$inter_arriverate,
+        #   departs = subsetRates$inter_departrate,
+        #   pldhiv = pldhivOverall$pldhiv) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
+        
+      } 
+    } else {
+      # Do overall calculations only
+      if (doAge) {
+        # Do age based calculations 
+        diagnosesFuture <- ProjectDiagnoses(hivResults$notifications, 
+          allYears, projectDecrease, projectYears, projectOption, 
+          diagnosesAge = hivResultsAge)
+        
+        # Set-up age based deaths and migration factors
+        
+        # Deaths is a bit tricky because the final row is zero
+        relAgeDeathFuture <- cbind(relAgeDeath[, 1:(ncol(relAgeDeath)-1)], 
+          matrix(rep(relAgeDeath[, (ncol(relAgeDeath)-1)], nprojYears), 
+            ncol = nprojYears), relAgeDeath[, ncol(relAgeDeath)])
+        colnames(relAgeDeathFuture) <- paste0("y", 
+          as.character(c(allYears, projectYears)))
+        
+        # Population movement is straight forward
+        relAgeMigrateFuture <- cbind(relAgeMigrate,
+          matrix(rep(relAgeMigrate[,ncol(relAgeMigrate-1)], nprojYears), 
+            ncol = nprojYears))
+        colnames(relAgeMigrateFuture) <- paste0("y", 
+          as.character(c(allYears, projectYears)))
+        
+        interArriverateAgeFuture <- cbind(interArriverateAge,
+          matrix(rep(interArriverateAge[,ncol(interArriverateAge-1)], 
+            nprojYears), ncol = nprojYears))
+        colnames(interArriverateAgeFuture) <- paste0("y", 
+          as.character(c(allYears, projectYears)))
+        
+        interDepartrateAgeFuture <- cbind(interDepartrateAge,
+          matrix(rep(interDepartrateAge[,ncol(interDepartrateAge-1)], 
+            nprojYears), ncol = nprojYears))
+        colnames(interDepartrateAgeFuture) <- paste0("y", 
+          as.character(c(allYears, projectYears)))
+      
+        # Calculate overall (non-age) PLDHIV estimates for normalization
+        pldhivOverallProj <- LivingDiagnosed(diagnosesFuture[[1]],
+          ProjVec(subsetRates$annunique, nprojYears),
+          ProjVec(subsetRates$deathrate, nprojYears),
+          ProjVec(subsetRates$mrate, nprojYears),
+          ProjVec(subsetRates$propstay, nprojYears)) %>%
+          mutate(year = allYears) %>%
+          select(year, everything()) %>%
+          as_tibble()
+        
+        # pldhivOverallMin <- LivingDiagnosed(hivResults$notifications,
+        #   subsetRates$annunique,  
+        #   subsetRates$deathrate_upper,
+        #   subsetRates$mrate_upper,
+        #   subsetRates$propstay_lower) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
+        # 
+        # pldhivOverallMax <- LivingDiagnosed(hivResults$notifications,
+        #   subsetRates$annunique,  
+        #   subsetRates$deathrate_lower,
+        #   subsetRates$mrate_lower,
+        #   subsetRates$propstay_upper) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
+        
+        # Calculate age group estimates 
+        pldhivAllProj <- LivingDiagnosedAge(diagnosesFuture[[2]],
+          ProjVec(subsetRates$annunique, nprojYears),
+          ProjVec(subsetRates$deathrate, nprojYears),
+          ProjVec(hivBase$migrationrate, nprojYears),
+          ProjVec(subsetRates$propstay, nprojYears),
+          agedeath = relAgeDeathFuture,
+          agemigrate = relAgeMigrateFuture,
+          normalize = pldhivOverall$pldhiv) 
+        
+        # pldhivAllMin <- LivingDiagnosedAge(hivResultsAge,
+        #   subsetRates$annunique, 
+        #   subsetRates$deathrate_upper,
+        #   hivBase$migrationrate_upper, 
+        #   subsetRates$propstay_lower,
+        #   agedeath = relAgeDeath,
+        #   agemigrate = relAgeMigrate,
+        #   normalize = pldhivOverallMin$pldhiv)
+        # 
+        # pldhivAllMax <- LivingDiagnosedAge(hivResultsAge,
+        #   subsetRates$annunique, 
+        #   subsetRates$deathrate_lower,
+        #   hivBase$migrationrate_lower, 
+        #   subsetRates$propstay_upper,
+        #   agedeath = relAgeDeath,
+        #   agemigrate = relAgeMigrate,
+        #   normalize = pldhivOverallMax$pldhiv)
+        
+      } else {
+        
+        diagnosesFuture <- ProjectDiagnoses(hivResults$notifications, 
+          allYears, projectDecrease, projectYears, projectOption)
+        
+        pldhivAllProj <- LivingDiagnosed(diagnosesFuture[[1]],
+          ProjVec(subsetRates$annunique, nprojYears),
+          ProjVec(subsetRates$deathrate, nprojYears),
+          ProjVec(subsetRates$mrate, nprojYears),
+          ProjVec(subsetRates$propstay, nprojYears)) %>%
+          mutate(year = allYears) %>%
+          select(year, everything()) %>%
+          as_tibble()
+        
+        # pldhivAllMin <- LivingDiagnosed(hivResults$notifications,
+        #   subsetRates$annunique,  
+        #   subsetRates$deathrate_upper,
+        #   subsetRates$mrate_upper,
+        #   subsetRates$propstay_lower) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
+        # 
+        # pldhivAllMax <- LivingDiagnosed(hivResults$notifications,
+        #   subsetRates$annunique,  
+        #   subsetRates$deathrate_lower,
+        #   subsetRates$mrate_lower,
+        #   subsetRates$propstay_upper) %>%
+        #   mutate(year = allYears) %>%
+        #   select(year, everything()) %>%
+        #   as_tibble()
       }
-      
-      # Set aged diagnoses option
-      diagnosesAge <- hivResultsAgeFuture
-      
-      # Deaths is a bit tricky because the final row is zero
-      relAgeDeathFuture <- cbind(relAgeDeath[, 1:(ncol(relAgeDeath)-1)], 
-        matrix(rep(relAgeDeath[, (ncol(relAgeDeath)-1)], nprojYears), 
-          ncol = nprojYears), relAgeDeath[, ncol(relAgeDeath)])
-      colnames(relAgeDeathFuture) <- paste0("y", as.character(totalYears))
-      
-      # Migration is straight forward
-      relAgeMigrateFuture <- cbind(relAgeMigrate,
-        matrix(rep(relAgeMigrate[,ncol(relAgeMigrate-1)], nprojYears), 
-          ncol = nprojYears))
-      colnames(relAgeMigrateFuture) <- paste0("y", 
-        as.character(totalYears))
-      
-      # Now run projections
-      pldhivAgeFuture <- LivingDiagnosedAge(diagnosesAge,
-        annUnique, 
-        deathrate,
-        osrateAge, 
-        propStay, 
-        agedeath = relAgeDeathFuture,
-        agemigrate = relAgeMigrateFuture,
-        normalize = pldhivAllFuture$pldhiv)
-      
-      # Convert to a long data frame
-      hivDiagnosedFuture <- as.data.frame(pldhivAgeFuture) %>% 
-        rownames_to_column(var = "agebin") %>%
-        gather("year", "pldhiv", 2:ncol(.)) %>%
-        select(year, everything()) %>%
-        mutate(year = as.integer(str_sub(year, 2))) %>%
-        as_tibble()
     }
+    
+    # Store projection results
+  if (doAge) {
+    # Store estimates by year and age
+    pldhivDfProj <- as.data.frame(pldhivAllProj) %>% 
+      rownames_to_column(var = "agebin") %>%
+      gather("year", "pldhiv", 2:ncol(.)) %>%
+      select(year, everything()) %>%
+      mutate(year = as.integer(str_sub(year, 2))) %>%
+      as_tibble()
+    
+    # pldhivDfMin <- as.data.frame(pldhivAllMin) %>% 
+    #   rownames_to_column(var = "agebin") %>%
+    #   gather("year", "pldhiv", 2:ncol(.)) %>%
+    #   select(year, everything()) %>%
+    #   mutate(year = as.integer(str_sub(year, 2))) %>%
+    #   as_tibble()
+    # 
+    # pldhivDfMax <- as.data.frame(pldhivAllMax) %>% 
+    #   rownames_to_column(var = "agebin") %>%
+    #   gather("year", "pldhiv", 2:ncol(.)) %>%
+    #   select(year, everything()) %>%
+    #   mutate(year = as.integer(str_sub(year, 2))) %>%
+    #   as_tibble()
+    
+    hivDiagnosedProj <- data.frame(stage = "pldhiv",
+      year = pldhivDfProj$year,
+      agebin = pldhivDfProj$agebin,
+      value = pldhivDfProj$pldhiv,
+      lower = NA,
+      upper = NA) %>%
+      as_tibble()
+      # lower = pldhivDfMin$pldhiv,
+      # upper = pldhivDfMax$pldhiv) %>%
+      # as_tibble()
+    
+  } else {
+    # Don't need to store age
+    hivDiagnosedProj <- data.frame(stage = "pldhiv",
+      year = allYears,
+      value = pldhivAllProj$pldhiv,
+      lower = NA,
+      upper = NA)
+      # lower = pldhivAllMin$pldhiv,
+      # upper = pldhivAllMax$pldhiv)
+  }
     
     # Save projection results --------------------------------------------
     if (saveResults) {

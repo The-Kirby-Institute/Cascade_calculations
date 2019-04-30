@@ -56,13 +56,13 @@ saveResults <- TRUE
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "Test_Cascades" # "." for main output folder 
+projectOutput <- "Pldhiv_Mapping_2019" # "." for main output folder 
                                  # "HIV_Cascade_Paper" for paper
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entred via a file in projectOutput 
 # which need to exist
-paramsFile <- NULL #"ProjectParameters.csv"
+paramsFile <-"ProjectParametersPartial.csv"
                             
 # Cascade options----------------------------------------------------------
 # The following variables specify the charactersitsics and hence the 
@@ -89,9 +89,9 @@ if (is.null(paramsFile)) {
   
   numCascades <- 1
   
-  cascadeName <- "Test-region-2017" # (single)
+  cascadeName <- "Test-2017" # (single)
   targetGender <- rep("all", numCascades) # all, male, female (single)
-  targetAge <- rep("split", numCascades) # all or split (single)
+  targetAge <- rep("all", numCascades) # all or split (single)
   # Note regarding ageing: The calculations don't specifically target 
   # specific ages.  Rather this simply chooses whether age is considered or 
   # not."all" means there is no division by age whereas "split" means teh 
@@ -108,7 +108,7 @@ if (is.null(paramsFile)) {
   
   targetState <- rep(c("all"), numCascades) # nsw, sa, nt, qld, vic, wa, act
   # tas (combination)
-  targetLocalRegion <- rep("Daly - Tiwi - West Arnhem", numCascades) #tbd (combination)
+  targetLocalRegion <- rep("all", numCascades) #tbd (combination)
   
   targetGlobalRegion <- rep("all", numCascades) # South-East Asia, 
   # Sub-Saharan Africa, Oceania, South American, Other cob, etc 
@@ -156,7 +156,7 @@ if (is.null(paramsFile)) {
   # under the current "status-quo" level or follow trend over last 5 years
   # or project a relative reduction
   projectOption <- rep("status-quo", numCascades) #status-quo, linear, reduce 
-  projectDecrease <- 0 # 0, 0.65 (35% reduction), 0.5 (50% 
+  projectDecrease <- 1 # 1 (0% reduction), 0.65 (35% reduction), 0.5 (50% 
                           # reduction), 0.35 (65% reduction) 
                           # relative reduction!
   
@@ -221,6 +221,11 @@ viewDiagnosed <- function() {
   print(pldhivAllMax %>% tail())
 }
 
+# Functions for setting up vectors for projections
+End <- function(vector) return(tail(vector, 1))
+ProjVec <- function(vector, nyears) return(c(vector, 
+  rep(End(vector), nyears)))
+
 # Functions used by CalculatePldhiv.R -------------------------------------
 # Source functions for filling in missing data
 source(file.path(Rcode, "FillMissing.R"))
@@ -265,6 +270,10 @@ if (any(doRetained)) {
   source(file.path(HIVcode, "RetainedCare.R"))
 }
 
+# For producing future estimates of diagnoses for projections
+if (any(projectPldhiv)) {
+  source(file.path(HIVcode, "ProjectDiagnoses.R"))
+}
 ```
 
 ```{r Load notifications}
@@ -392,7 +401,7 @@ for (ii in 1:numCascades) {
   if (useImputed[ii]) {
     pldhivData <- hivDataImputed
     
-    numNotificationsOrig[ii] <- nrow(SubHivSet(hivData, "all", targetGender, 
+    numNotificationsOrig[ii] <- nrow(SubHivSetImpute(hivData, "all", targetGender, 
       targetExposure, targetCob, targetAtsi, targetState, 
       targetLocalRegion, targetGlobalRegion)[[1]])
     
@@ -415,6 +424,8 @@ for (ii in 1:numCascades) {
       }
     }
   }
+  
+  print(cascadeName[ii])
   
   # Do the calulations - note uniaue notifications output is at the 
   # state level not local region level. 
