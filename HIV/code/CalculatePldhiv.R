@@ -1160,7 +1160,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     if (interState) {
       if (doAge) {
         # Do age based interstate calculations
-        
+
         # Set-up projection diagnoses - need regional and overall calculations
         diagnosesFuture <- ProjectDiagnoses(hivResults$notifications, 
           allYears, projectDecrease, projectYears, projectOption, 
@@ -1605,13 +1605,13 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       
       # Save results
       if (doAge) {
-        write_csv(rownames_to_column(as.data.frame(pldhivAgeFuture), 
+        write_csv(rownames_to_column(as.data.frame(pldhivAllFuture), 
           var = "agebin"), paste0(saveStringDetails, projectName,
             ".csv")) 
         write_csv(hivDiagnosedFuture, paste0(saveStringPldhiv, "-",
           projectName, ".csv"))
-        write_csv(pldhivAllFuture, paste0(saveStringDetails, projectName,
-          "_overall.csv"))
+        write_csv(pldhivOverallFuture, paste0(saveStringDetails, 
+          projectName, "_overall.csv"))
       } else {
         write_csv(pldhivAllFuture, paste0(saveStringDetails, projectName,
           ".csv"))
