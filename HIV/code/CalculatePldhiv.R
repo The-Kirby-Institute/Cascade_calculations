@@ -1537,18 +1537,6 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
             ncol = nprojYears))
         colnames(relAgeMigrateFuture) <- paste0("y", 
           as.character(c(allYears, projectYears)))
-        
-        interArriverateAgeFuture <- cbind(interArriverateAge,
-          matrix(rep(interArriverateAge[,ncol(interArriverateAge-1)], 
-            nprojYears), ncol = nprojYears))
-        colnames(interArriverateAgeFuture) <- paste0("y", 
-          as.character(c(allYears, projectYears)))
-        
-        interDepartrateAgeFuture <- cbind(interDepartrateAge,
-          matrix(rep(interDepartrateAge[,ncol(interDepartrateAge-1)], 
-            nprojYears), ncol = nprojYears))
-        colnames(interDepartrateAgeFuture) <- paste0("y", 
-          as.character(c(allYears, projectYears)))
       
         # Calculate overall (non-age) PLDHIV estimates for normalization
         pldhivOverallFuture <- LivingDiagnosed(diagnosesFuture[[1]],
