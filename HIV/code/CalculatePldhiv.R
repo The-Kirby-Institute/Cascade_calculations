@@ -978,6 +978,13 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       upper = pldhivDfMax$pldhiv) %>%
       as_tibble()
     
+    hivDiagnosedOverall <- data.frame(stage = "pldhiv",
+      year = allYears,
+      value = pldhivAllOverall$pldhiv,
+      lower = pldhivAllOverallMin$pldhiv,
+      upper = pldhivAllOverallMax$pldhiv)
+    
+    
   } else {
     # Don't need to store age
     hivDiagnosed <- data.frame(stage = "pldhiv",
@@ -1178,6 +1185,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     saveStringPldhiv <- file.path(resultsPath, 
       paste0("HIVpldhivEstimates-", toString(analysisYear)))
     if (doAge) {
+      write_csv(hivDiagnosedOverall, paste0(saveStringPldhiv, ".csv"))
       saveStringPldhiv <- paste0(saveStringPldhiv, "-age")
     }
     write_csv(hivDiagnosed, paste0(saveStringPldhiv, ".csv"))

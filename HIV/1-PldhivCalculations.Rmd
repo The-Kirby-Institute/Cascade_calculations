@@ -62,7 +62,7 @@ projectOutput <- "Pldhiv_Mapping_2019" # "." for main output folder
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entred via a file in projectOutput 
 # which need to exist
-paramsFile <-"ProjectParametersPartial.csv"
+paramsFile <-"ProjectParameters.csv"
                             
 # Cascade options----------------------------------------------------------
 # The following variables specify the charactersitsics and hence the 
