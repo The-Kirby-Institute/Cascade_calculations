@@ -68,6 +68,7 @@ extractRegionData <- function(regionData, nomData, fage,
     summarise(erp = sum(erp)) %>%
     ungroup()
   
+  
   subData <- subRegionData %>%
     mutate(allerp = allErpData$erp)
   

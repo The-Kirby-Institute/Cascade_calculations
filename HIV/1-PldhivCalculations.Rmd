@@ -428,21 +428,29 @@ for (ii in 1:numCascades) {
   print(cascadeName[ii])
   
   # Do the calulations - note uniaue notifications output is at the 
-  # state level not local region level. 
-  pldhivCalculations[[ii]] <- CalculatePldhiv(analysisYear, saveResults, 
-    projectOutput, 
-    # Cascade parameters
-    cascadeName[ii], targetGender[ii], targetAge[ii], targetCob[ii], 
-    targetExposure[ii], targetAtsi[ii], targetState[ii], 
-    targetLocalRegion[ii], targetGlobalRegion[ii], 
-    # Specifications
-    useImputed[ii], nImputedSets[ii], excludeAborig[ii], 
-    doRetained[ii], doUnique[ii], yearUnique[ii], ecdcData[ii], 
-    ecdcVersion[ii], excludeOS[ii], projectPldhiv[ii], projectYear[ii], 
-    projectName[ii], projectOption[ii], projectDecrease[ii], 
-    # Data
-    pldhivData, allYears, hivBase, hivAdjustments, cleanNom,
-    absInterstate, absInterRegion, ageList, yearList, hivAgeDeath)
+  # state level not local region level.
+  if (!(targetLocalRegion[ii] == "all") & nrow(filter(absInterRegion, 
+    region == targetLocalRegion[ii])) == 0) {
+    
+    warning(paste0("Can't calculate PLDHIV as there is no ABS data for ",
+      targetLocalRegion[ii]))
+    
+  } else {
+    pldhivCalculations[[ii]] <- CalculatePldhiv(analysisYear, saveResults, 
+      projectOutput, 
+      # Cascade parameters
+      cascadeName[ii], targetGender[ii], targetAge[ii], targetCob[ii], 
+      targetExposure[ii], targetAtsi[ii], targetState[ii], 
+      targetLocalRegion[ii], targetGlobalRegion[ii], 
+      # Specifications
+      useImputed[ii], nImputedSets[ii], excludeAborig[ii], 
+      doRetained[ii], doUnique[ii], yearUnique[ii], ecdcData[ii], 
+      ecdcVersion[ii], excludeOS[ii], projectPldhiv[ii], projectYear[ii], 
+      projectName[ii], projectOption[ii], projectDecrease[ii], 
+      # Data
+      pldhivData, allYears, hivBase, hivAdjustments, cleanNom,
+      absInterstate, absInterRegion, ageList, yearList, hivAgeDeath)
+  }
   
 }
 

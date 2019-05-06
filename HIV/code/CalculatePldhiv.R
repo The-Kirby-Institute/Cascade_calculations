@@ -980,9 +980,9 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     
     hivDiagnosedOverall <- data.frame(stage = "pldhiv",
       year = allYears,
-      value = pldhivAllOverall$pldhiv,
-      lower = pldhivAllOverallMin$pldhiv,
-      upper = pldhivAllOverallMax$pldhiv)
+      value = pldhivOverall$pldhiv,
+      lower = pldhivOverallMin$pldhiv,
+      upper = pldhivOverallMax$pldhiv)
     
     
   } else {

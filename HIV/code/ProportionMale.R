@@ -29,7 +29,7 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
       "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
     
     # Calculation cumulative proportion male for each age group.
-    if (targetGender == "all") {
+    if (targetGender == "all" && nrow(hivSet) != 0) {
       hivSetGenderAge <- hivSet %>%
         group_by(yeardiagnosis, sex, agebin) %>%
         summarise(notifications = n()) %>%
@@ -47,7 +47,7 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
           mutate(female = 0)
       }
       
-     hivSetGenderAge <- hivSetGenderAge %>%
+      hivSetGenderAge <- hivSetGenderAge %>%
         mutate(other = Reduce("+", 
           select(., -yeardiagnosis, -agebin, -male))) %>%
         rename(year = yeardiagnosis) %>%
@@ -109,13 +109,20 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
         spread(agebin, propmale)
       
       propDiagsMale <- as.matrix(hivGenderAgeCum)
-      
+
     } else {
-      propDiagsMale <- NULL
+      propDiagsMale <- matrix(1, nrow = length(1980:analysisYear),
+        ncol = length(ageList)) 
+      colnames(propDiagsMale) <- ageList
+      propDiagsMale <- as_tibble(propDiagsMale) %>%
+        mutate(year = 1980:analysisYear) %>%
+        select(year, everything()) %>%
+        as.matrix()
     } 
   } else {
     # Not doing age calculations
-    if (targetGender == "all") {
+    
+    if (targetGender == "all" && nrow(hivSet) != 0) {
       hivSetGender <- hivSet %>% 
         group_by(yeardiagnosis, sex) %>% 
         summarise(notifications = n()) %>% 
@@ -156,11 +163,11 @@ ProportionMale <- function(hivSet, analysisYear, doAge,
         mutate(propmale = cummale / (cummale + cumother)) %>%
         mutate(propmale = ifelse(is.nan(propmale), 1, propmale)) %>%
         select(-cummale, -cumother) 
-        
-        propDiagsMale <- hivGenderCum$propmale
-        
+      
+      propDiagsMale <- hivGenderCum$propmale
+      
     } else {
-      propDiagsMale <- NULL
+      propDiagsMale <- rep(1, length(1980:analysisYear))
     } 
   }
   

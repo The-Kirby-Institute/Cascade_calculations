@@ -23,9 +23,10 @@ RegionState <- function(localRegion, regionCodes) {
   }
   
   # See which state postcodes belong to
-  if (all(postcodes %in% c(200:299, 2600:2618, 2900:2920))) {
+  # Note have specified 2618 to be in NSW (it is across the border with ACT)
+  if (all(postcodes %in% c(200:299, 2600:2617, 2900:2920))) {
     state <- "act" 
-  } else if (all(postcodes %in% c(1000:2599, 2619:2899, 2921:2999, 3586, 
+  } else if (all(postcodes %in% c(1000:2599, 2618:2899, 2921:2999, 3586, 
     3644, 3707))) {
     state <- "nsw"
   } else if (all(postcodes %in% 800:999)) {
