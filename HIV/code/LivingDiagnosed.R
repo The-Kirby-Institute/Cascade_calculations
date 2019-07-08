@@ -154,6 +154,7 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   # Return final output
   #return(nliving)
   return(data.frame(pldhiv  = nliving,
+                    diagnoses = annualdiags,
                     duplicates = nduplicates,
                     deaths = ndead, 
                     emigrants = nmigrants,

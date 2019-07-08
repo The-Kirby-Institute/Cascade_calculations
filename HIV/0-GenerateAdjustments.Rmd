@@ -25,7 +25,7 @@ basePath <- file.path(dirname(getwd()), "HIV")
 Rcode <- file.path(dirname(getwd()), "code") 
 HIVcode <- file.path(basePath, "code") 
 notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data",
-  "National HIV Registry", "2017", "National", "Hamish & Richard")
+  "National HIV Registry", "Cascades")
 dataFolder <- file.path(basePath, "data")
 
 # Load standard libraries and options ------------------------------------
@@ -44,7 +44,7 @@ source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2017
+analysisYear <- 2018
 startYear <- 1980 # First year in HIV registry is 1980
 
 allYears <- startYear:analysisYear 
@@ -380,8 +380,10 @@ if (analysisYear >= 2017) {
   absDeparts <- mutate(absDeparts, migrate = permanent / erp)
   mrate <- absDeparts$migrate
   
-  # At this stage use last years migration rate for 2017
-  mrate <- c(mrate, tail(mrate, 1))
+  # At this stage use 2016 migration rate for future years
+  
+  mrate <- c(mrate, rep(tail(mrate, 1), 
+    length(allYears) - length(startYear:2016)))
 
 } else {
   absDeparts <- mutate(absDeparts, migrate = permanent / erp)
@@ -591,16 +593,38 @@ hivAdjustments$pstay_nsw_lower <- propStayLowerNSW /
 hivAdjustments$pstay_nsw_upper <- hivBaseRates$propstay_upper /
   hivBaseRates$propstay_upper
 
-# Specific Vic estimates
-propStayVic <- 1
-propStayLowerVic <- 1
-propStayUpperVic <- 1
+# Specific population estimates for Australian born and overseas born.
+# Currently these are  in
+# NSW
+hivAdjustments$pstay_aus <- rep((1 - 0.0072), length(allYears)) / 
+  hivBaseRates$propstay
+hivAdjustments$pstay_aus_lower <- rep((1 - 2 * 0.0072), 
+  length(allYears)) / 
+  hivBaseRates$propstay_lower
+hivAdjustments$pstay_aus_upper <- rep(1, length(allYears)) / 
+  hivBaseRates$propstay_upper
+
+hivAdjustments$pstay_os <- rep((1 - 0.1008), length(allYears)) / 
+  hivBaseRates$propstay
+hivAdjustments$pstay_os_lower <- rep((1 - 2 * 0.1008), 
+  length(allYears)) / 
+  hivBaseRates$propstay_lower
+hivAdjustments$pstay_os_upper <- rep(1, length(allYears)) / 
+  hivBaseRates$propstay_upper
+
+# Specific estimates for non-NSW states - assume no post-diagnosis
+# movement Based on the NSW data compared to our national assumption
+# almost all the post-diagnosis movement must come from NSW
+propStayVic <- rep(1, length(allYears))
+propStayLowerVic <- rep(1, length(allYears))
+propStayUpperVic <- rep(1, length(allYears))
 
 hivAdjustments$pstay_vic <- propStayVic / hivBaseRates$propstay
 hivAdjustments$pstay_vic_lower <- propStayLowerVic /
   hivBaseRates$propstay_lower
 hivAdjustments$pstay_vic_upper <- propStayUpperVic /
   hivBaseRates$propstay_upper
+
 
 ```
 
@@ -938,6 +962,7 @@ hivInterstate$departures <- NA
 hivInterstate$departrate2 <- NA
 
 for (region in head(states, -1)) {
+  print(region)
   lmDepart <- lm(departures ~ year, data = filter(absInterstate, 
     state == region))
   departState <- predict(lmDepart, data.frame(year = allYears))

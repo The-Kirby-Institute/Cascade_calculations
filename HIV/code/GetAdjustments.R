@@ -232,41 +232,72 @@ GetAdjustments <- function(hivBase, hivAdjustments,
   #   adjustments$inter_departrate <- 0
   # }
   
-  # Further adjust propstay and deathrate by location
-  # Now adjust for location only have this for nsw and vic
-  if (targetState[1] == "nsw" && length(targetState) == 1) {
-    adjustments$propstay <- adjustments$propstay * 
-      hivAdjustments$pstay_nsw
-    adjustments$propstay_lower <- adjustments$propstay_lower * 
-      hivAdjustments$pstay_nsw_lower
-    adjustments$propstay_upper <- adjustments$propstay_upper * 
-      hivAdjustments$pstay_nsw_upper
+
+  # Further adjust propstay and deathrate by location only have this for 
+  # NSW and Victoria. For other states assume no post-diagnosis movement
+  # and the national deathrate
+  if (targetState[1] != "all" && length(targetState) == 1) {
     
-    adjustments$deathrate <- adjustments$deathrate * 
-      hivAdjustments$drate_nsw
-    adjustments$deathrate_lower <- adjustments$deathrate_lower * 
-      hivAdjustments$drate_nsw_lower
-    adjustments$deathrate_upper <- adjustments$deathrate_upper * 
-      hivAdjustments$drate_nsw_upper
-    
+    if (targetState[1] == "nsw") {
+      
+      # Adjust propstay in NSW by country of birth
+      if (targetCob[1] != "all" && length(targetCob) == 1) {
+        if (targetCob[1] %in% c("Australia", "New Zealand")  && 
+            length(targetState) == 1) {
+          adjustments$propstay <- adjustments$propstay * 
+            hivAdjustments$pstay_aus
+          adjustments$propstay_lower <- adjustments$propstay_lower * 
+            hivAdjustments$pstay_aus_lower
+          adjustments$propstay_upper <- adjustments$propstay_upper * 
+            hivAdjustments$pstay_aus_upper
+        } else {
+          adjustments$propstay <- adjustments$propstay * 
+            hivAdjustments$pstay_os
+          adjustments$propstay_lower <- adjustments$propstay_lower * 
+            hivAdjustments$pstay_os_lower
+          adjustments$propstay_upper <- adjustments$propstay_upper * 
+            hivAdjustments$pstay_os_upper
+        }
+      }
+      
+      adjustments$propstay <- adjustments$propstay * 
+        hivAdjustments$pstay_nsw
+      adjustments$propstay_lower <- adjustments$propstay_lower * 
+        hivAdjustments$pstay_nsw_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper * 
+        hivAdjustments$pstay_nsw_upper
+      
+      adjustments$deathrate <- adjustments$deathrate * 
+        hivAdjustments$drate_nsw
+      adjustments$deathrate_lower <- adjustments$deathrate_lower * 
+        hivAdjustments$drate_nsw_lower
+      adjustments$deathrate_upper <- adjustments$deathrate_upper * 
+        hivAdjustments$drate_nsw_upper
+      
+    } else if (targetState[1] == "vic") {
+      adjustments$propstay <- adjustments$propstay *
+        hivAdjustments$pstay_vic
+      adjustments$propstay_lower <- adjustments$propstay_lower *
+        hivAdjustments$pstay_vic_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper *
+        hivAdjustments$pstay_vic_upper
+      
+      adjustments$deathrate <- adjustments$deathrate *
+        hivAdjustments$drate_vic
+      adjustments$deathrate_lower <- adjustments$deathrate_lower *
+        hivAdjustments$drate_vic_lower
+      adjustments$deathrate_upper <- adjustments$deathrate_upper *
+        hivAdjustments$drate_vic_upper
+    } else {
+      # Same as Vic because assuming no movement outside NSW
+      adjustments$propstay <- adjustments$propstay *
+        hivAdjustments$pstay_vic
+      adjustments$propstay_lower <- adjustments$propstay_lower *
+        hivAdjustments$pstay_vic_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper *
+        hivAdjustments$pstay_vic_upper
+    }
   } 
-  
-  if (targetState[1] == "vic" && length(targetState) == 1) {
-    adjustments$propstay <- adjustments$propstay *
-      hivAdjustments$pstay_vic
-    adjustments$propstay_lower <- adjustments$propstay_lower *
-      hivAdjustments$pstay_vic_lower
-    adjustments$propstay_upper <- adjustments$propstay_upper *
-      hivAdjustments$pstay_vic_upper
-    
-    adjustments$deathrate <- adjustments$deathrate * 
-      hivAdjustments$drate_vic
-    adjustments$deathrate_lower <- adjustments$deathrate_lower * 
-      hivAdjustments$drate_vic_lower
-    adjustments$deathrate_upper <- adjustments$deathrate_upper * 
-      hivAdjustments$drate_vic_upper
-    
-  }
   
   # if (targetAtsi == "indigenous") {
   #   adjustments$propstay <- 1

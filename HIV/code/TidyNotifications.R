@@ -28,6 +28,17 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
   #   
   #-----------------------------------------------------------------------
   
+  # Fix up country codes for AUstralia from 2018-- Australia to be 1101 
+  # with old 1101 (Christmas Island, Cocos (Keeling) Island) becoming 
+  # Australia
+  if (analysisYear >= 2018) {
+    crCodes <- crCodes %>%
+      filter(COUNTRY_CODE != 1101) %>%
+      mutate(COUNTRY_CODE = ifelse(COUNTRY_NAME == "Australia", 1101, 
+        COUNTRY_CODE))
+    auscode <- 1101
+  }
+  
   hivData <- notificationsData
   
   # Setup standard extra columns for analysis
@@ -44,20 +55,20 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
   
   # Aboriginal group
   if (analysisYear < 2015) {
-    hivData$aboriggroup[hivData$cob!=1100|hivData$rob!=7] <- "othercob"
+    hivData$aboriggroup[hivData$cob != auscode|hivData$rob!=7] <- "othercob"
     hivData$aboriggroup[hivData$cob == 0] <- NA
-    hivData$aboriggroup[hivData$cob == 1100 & 
+    hivData$aboriggroup[hivData$cob == auscode & 
         hivData$indigenous == "Aboriginal"] <- "indigenous"
-    hivData$aboriggroup[hivData$cob == 1100 & 
+    hivData$aboriggroup[hivData$cob == auscode & 
         hivData$indigenous == "Non indigenous"] <- "non_indigenous" 
   } else if (analysisYear == 2015) {
     
-    hivData$aboriggroup[hivData$cob == 1100 & 
+    hivData$aboriggroup[hivData$cob == auscode & 
         hivData$indigenous == "Aboriginal"] <- "indigenous"
     hivData$aboriggroup[hivData$indigenous != "Aboriginal"] <- "non_indigenous"
     hivData$aboriggroup[is.na(hivData$aboriggroup)] <- "non_indigenous"
   } else {
-    hivData$aboriggroup[hivData$cob == 1100 & 
+    hivData$aboriggroup[hivData$cob == auscode & 
         hivData$indig == 1] <- "indigenous"
     hivData$aboriggroup[hivData$indig != 1] <- "non_indigenous"
     hivData$aboriggroup[is.na(hivData$aboriggroup)] <- "non_indigenous"
@@ -156,11 +167,11 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
     # Diagnosed with AIDS
     hivData$yearaids <- as.numeric(format(as.Date(hivData$dateaids), 
       "%Y"))
-    hivData$yearaids[is.na(hivData$yearaids)] <- -99
+    hivData$yearaids[is.na(hivData$yearaids)] <- NA
     
     # Add column with hiv, hivaids or aids
     hivData$typediagnosis <- "hiv"
-    hivData$typediagnosis[hivData$yearaids != -99] <- "aids"
+    hivData$typediagnosis[!is.na(hivData$yearaids)] <- "aids"
     
     indices <- hivData$yearhiv == hivData$yearaids
     hivData$typediagnosis[indices] <- "hivaids"

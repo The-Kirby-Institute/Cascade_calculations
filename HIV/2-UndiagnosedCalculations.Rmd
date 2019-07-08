@@ -35,10 +35,10 @@ LoadLibrary(readxl)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2017
+analysisYear <- 2018
 saveResults <- TRUE 
-projectFolder <- "ASR_2018"
-cascadeFlag <- "All"
+projectFolder <- "ASR_2019"
+cascadeFlag <- "All" # minus year
 # ecdcChart <- "Female" # ECDC group used for calculations
 ecdcResults <- "exposure"
 updateECDC <- FALSE
@@ -46,13 +46,14 @@ updateECDC <- FALSE
 getNewInfections <- TRUE
 
 # Produce cascadeName from the flag and analysis year. 
-if (analysisYear <= 2016) {
-  ecdcType <- ".xlsx" 
-} else {
-  ecdcType <- ".xlsm"
-}
+# if (analysisYear <= 2016) {
+#   ecdcType <- ".xlsx" 
+# } else {
+#   ecdcType <- ".xlsm"
+# }
+
 cascadeName <- paste0(cascadeFlag, "-", toString(analysisYear))
-ecdcChart <- paste0(cascadeFlag, "_Charts", ecdcType)
+ecdcChart <- paste0(cascadeFlag, "_ECDC")
 
 if (getNewInfections) {
   ecdcChartExclude <- paste0(cascadeFlag, "_Charts", "_exclude", ecdcType)
@@ -61,50 +62,36 @@ if (getNewInfections) {
 ```
 
 ```{r Copy ECDC output}
-# This chunk copies the appropriate ECDC file to the appropriate output 
-# file and renames the file.
-# Unfortunately have to manually open file and unhide rows. 
+# This chunk copies the appropriate ECDC files to the appropriate output 
+# files and renames the file.
 
 if (cascadeFlag == "Otherexp") {
   # Use overall undiagnosed
-  ecdcFile <- file.path(outputFolder, projectFolder, "ECDC_models",
-    paste0("All-", toString(analysisYear)), ecdcResults,
-    paste0("results/All_Charts", ecdcType))
-  if (getNewInfections) {
-    # Need excluded file as well
-    ecdcFileExclude <- file.path(outputFolder, projectFolder, "ECDC_models",
-      paste0("All-", toString(analysisYear)), 
-      paste0(ecdcResults, "_exclude"), 
-      paste0("results/All_Charts", ecdcType))
-  }
+  ecdcFile1 <- file.path(outputFolder, projectFolder, "ECDC_models",
+    paste0("All-", toString(analysisYear)), ecdcResults, "results",
+    "All_Result_main.csv")
+  
+  ecdcFile2 <- file.path(outputFolder, projectFolder, "ECDC_models",
+    paste0("All-", toString(analysisYear)), ecdcResults, "results",
+    "All_Result_main_ConfIntervals.csv")
 } else {
-  ecdcFile <- file.path(outputFolder, projectFolder, "ECDC_models",
-    cascadeName, ecdcResults, paste0("results/All_Charts", ecdcType))
-  if (getNewInfections) {
-    # Need excluded file as well
-    ecdcFileExclude <- file.path(outputFolder, projectFolder, "ECDC_models",
-      cascadeName, paste0(ecdcResults, "_exclude"), 
-      paste0("results/All_Charts", ecdcType))
-  }
+  ecdcFile1 <- file.path(outputFolder, projectFolder, "ECDC_models",
+    cascadeName, ecdcResults,  "results", "All_Result_main.csv")
+  
+  ecdcFile2 <- file.path(outputFolder, projectFolder, "ECDC_models",
+    cascadeName, ecdcResults,  "results", 
+    "All_Result_main_ConfIntervals.csv")
 }
 
-finalFile <- file.path(outputFolder, projectFolder, cascadeName,
-  ecdcChart)
-if (getNewInfections) {
-  finalFileExclude <- file.path(outputFolder, projectFolder, cascadeName,
-    ecdcChartExclude)
-}
+finalFile1 <- file.path(outputFolder, projectFolder, cascadeName,
+  paste0(ecdcChart, ".csv"))
+finalFile2 <- file.path(outputFolder, projectFolder, cascadeName,
+  paste0(ecdcChart, "_confIntervals.csv"))
 
-fileFlag <- FALSE
-
-if (!file.exists(finalFile) || updateECDC) {
-  file.copy(ecdcFile, finalFile, overwrite = TRUE)
-  if (getNewInfections) {
-    file.copy(ecdcFileExclude, finalFileExclude, overwrite = TRUE)
-  }
-  fileFlag <- TRUE
-  stop("You need to unhide hidden rows otherwise results are incorrect")
-} # else it exists so you can carry on
+if (!file.exists(finalFile1) || updateECDC) {
+  file.copy(ecdcFile1, finalFile1, overwrite = TRUE)
+  file.copy(ecdcFile2, finalFile2, overwrite = TRUE)
+} 
   
 ```
 
@@ -117,23 +104,42 @@ pldhiv <- read.csv(file.path(outputFolder, projectFolder, cascadeName,
   paste0("HIVpldhivEstimates-", toString(analysisYear), ".csv"))) %>%
   filter(stage == "pldhiv")
 
-numberUndiagnosed <- read_excel(file.path(outputFolder, projectFolder, 
-  cascadeName, ecdcChart), sheet = 2, col_names = FALSE, skip = 131) %>%
-  select(X__2, X__11, X__12, X__13) %>%
-  rename(year = X__2, undiagnosed = X__11, undiagnosed_lower = X__12,
-    undiagnosed_upper = X__13) %>%
-  slice(1:length(1980:analysisYear)) %>%
-  mutate(year = as.numeric(year))
+# numberUndiagnosed <- read_excel(file.path(outputFolder, projectFolder, 
+#   cascadeName, ecdcChart), sheet = 2, col_names = FALSE, skip = 131) %>%
+#   select(X__2, X__11, X__12, X__13) %>%
+#   rename(year = X__2, undiagnosed = X__11, undiagnosed_lower = X__12,
+#     undiagnosed_upper = X__13) %>%
+#   slice(1:length(1980:analysisYear)) %>%
+#   mutate(year = as.numeric(year))
 
-percentUndiagnosed <- read_excel(file.path(outputFolder, projectFolder, 
-  cascadeName, ecdcChart), sheet = 2, col_names = FALSE, skip = 195) %>%
-  select(X__2, X__3, X__4, X__5) %>%
-  rename(year = X__2, percent = X__3, percent_lower = X__4,
-    percent_upper = X__5) %>%
-  slice(1:length(1980:analysisYear))
+# Read in and tidy main ECDC results file - results for best fitting curve
+# Reported as the mean value in the ECDC model.
+mainUndiagnosed <- read_csv(file.path(outputFolder, projectFolder, 
+  cascadeName, paste0(ecdcChart, ".csv"))) %>%
+  select(year, N_Und, N_Und_Alive_p) %>%
+  rename(undiagnosed = N_Und, percent = N_Und_Alive_p)
 
-undiagnosed <- left_join(numberUndiagnosed, percentUndiagnosed, 
-  by = "year")
+# percentUndiagnosed <- read_excel(file.path(outputFolder, projectFolder, 
+#   cascadeName, ecdcChart), sheet = 2, col_names = FALSE, skip = 195) %>%
+#   select(X__2, X__3, X__4, X__5) %>%
+#   rename(year = X__2, percent = X__3, percent_lower = X__4,
+#     percent_upper = X__5) %>%
+#   slice(1:length(1980:analysisYear))
+
+# Read in and tidy ECDC confidence interval file - the bootstrapped 
+# confidence intervals are updated at teh end of each run so we take 
+# the lower and upper bound from the last run. 
+confIntervalUndiagnosed <- read_csv(file.path(outputFolder, projectFolder, 
+  cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) %>%
+  filter(run == max(.$run)) %>%
+  select(year, N_Und_LB, N_Und_UB, N_Und_Alive_p_LB, N_Und_Alive_p_UB) %>%
+  rename(undiagnosed_lower = N_Und_LB, percent_lower = N_Und_Alive_p_LB,
+    undiagnosed_upper = N_Und_UB, percent_upper = N_Und_Alive_p_UB)
+
+undiagnosed <- left_join(mainUndiagnosed, confIntervalUndiagnosed, 
+  by = "year") %>%
+  select(year, undiagnosed, undiagnosed_lower, undiagnosed_upper,
+    percent, percent_lower, percent_upper)
 
 # Merge undiagnosed data into one data frame
 mergedData <- pldhiv %>%
@@ -141,7 +147,8 @@ mergedData <- pldhiv %>%
   rename(pldhiv = value,
     pldhiv_lower = lower,
     pldhiv_upper = upper) %>%
-  left_join(., undiagnosed, by = "year")
+  left_join(., undiagnosed, by = "year") %>%
+  as_tibble()
 
 # population <- cascadeFlag
 
@@ -245,7 +252,7 @@ if (saveResults) {
   
 }
 
-if (fileFlag) {
-  stop("You need to unhide hidden rows otherwise results are incorrect")
-} 
+# if (fileFlag) {
+#   stop("You need to unhide hidden rows otherwise results are incorrect")
+# } 
 ```

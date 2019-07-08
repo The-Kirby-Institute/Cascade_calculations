@@ -24,13 +24,17 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
   allYears, doAge) {
   
   # analysisYear <- tail(allYears, 1)
-  
-  includeDiags <- hivSet %>% 
-    group_by(yeardiagnosis) %>%
-    summarise(included = n()) %>%
-    ungroup() %>%
-    rename(year = yeardiagnosis)
-  includeDiags <- FillDataFrame(allYears, includeDiags)
+  if (nrow(hivSet) == 0) {
+    includeDiags <- data_frame(year = allYears,
+      included = 0)
+  } else {
+    includeDiags <- hivSet %>% 
+      group_by(yeardiagnosis) %>%
+      summarise(included = n()) %>%
+      ungroup() %>%
+      rename(year = yeardiagnosis)
+    includeDiags <- FillDataFrame(allYears, includeDiags)
+  }
   
   # If excluded and unknown is empty replace with zeros
   if (nrow(hivSetExcluded) == 0) {
@@ -86,7 +90,10 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
     cumnotifications = cumsum(adjustDiags$adjusted_included),
     all_notifications = adjustDiags$all,
     all_cumnotifications = cumsum(adjustDiags$all),
-    include_notifications = adjustDiags$included)
+    ecdc_normalization = adjustDiags$included / 
+      adjustDiags$adjusted_included) %>%
+    mutate(ecdc_normalization = ifelse(is.nan(ecdc_normalization), 0, 
+      ecdc_normalization))
   
   # Proportion in each age group--------------------------------------------
   # For the known diagnoses calculate proportion by age bin, exposure group,
@@ -95,14 +102,6 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
   
   hivResultsAge <- NULL #initialize
   if (doAge) {
-    agedDiags <- hivSet %>%
-      group_by(yeardiagnosis, agebin) %>%
-      summarise(diags = n()) %>%
-      ungroup() %>%
-      spread(agebin, diags) %>%
-      rename(year = yeardiagnosis)
-    agedDiags[is.na(agedDiags)] <- 0
-  
     # Age and year specs
     nyears <- tail(allYears, 1) - allYears[1] + 1
     nages <- 18
@@ -113,37 +112,56 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
     
     yearList <- paste0("y", as.character(allYears))
     
-    # Fill missing years and ages
-    agedDiags <- FillDataFrame(allYears, agedDiags) %>%
-      FillMissingAge(ageList, .) %>%
-      select(c("year", ageList)) %>%
-      gather("agebin", "diagnoses", 2:ncol(.)) %>%
-      arrange(year) %>%
-      filter(agebin != "not_reported") %>%
-      group_by(year) %>%
-      mutate(propdiags = diagnoses / sum(diagnoses)) %>%
-      mutate(propdiags = ifelse(is.nan(propdiags), 0 , propdiags)) %>%
-      ungroup()
-    
-    # Adjust_included notifications by age and year and convert to matrix
-    hivResultsAge <- agedDiags %>% 
-      left_join(., hivResults, by = "year") %>% 
-      select(-diagnoses, -cumnotifications, -all_notifications,
-        -all_cumnotifications, -include_notifications) %>%
-      group_by(year, agebin) %>%
-      mutate(diags = propdiags * notifications) %>%
-      select(-propdiags, -notifications) %>%
-      spread(year, diags) %>%
-      ungroup() %>%
-      slice(c(1,10,2:9,11:18)) %>%
-      select(-agebin) %>%
-      as.matrix()
-    
-    colnames(hivResultsAge) <- yearList
-    rownames(hivResultsAge) <- ageList
+    if (nrow(hivSet) == 0) {
+      hivResultsAge <- matrix(0, ncol = length(yearList), 
+        nrow = length(ageList))
+      
+      colnames(hivResultsAge) <- yearList
+      rownames(hivResultsAge) <- ageList
+    } else {
+      
+      agedDiags <- hivSet %>%
+        group_by(yeardiagnosis, agebin) %>%
+        summarise(diags = n()) %>%
+        ungroup() %>%
+        spread(agebin, diags) %>%
+        rename(year = yeardiagnosis)
+      agedDiags[is.na(agedDiags)] <- 0
+      
+      
+      
+      # Fill missing years and ages
+      agedDiags <- FillDataFrame(allYears, agedDiags) %>%
+        FillMissingAge(ageList, .) %>%
+        select(c("year", ageList)) %>%
+        gather("agebin", "diagnoses", 2:ncol(.)) %>%
+        arrange(year) %>%
+        filter(agebin != "not_reported") %>%
+        group_by(year) %>%
+        mutate(propdiags = diagnoses / sum(diagnoses)) %>%
+        mutate(propdiags = ifelse(is.nan(propdiags), 0 , propdiags)) %>%
+        ungroup()
+      
+      # Adjust_included notifications by age and year and convert to matrix
+      hivResultsAge <- agedDiags %>% 
+        left_join(., hivResults, by = "year") %>% 
+        select(-diagnoses, -cumnotifications, -all_notifications,
+          -all_cumnotifications, -ecdc_normalization) %>%
+        group_by(year, agebin) %>%
+        mutate(diags = propdiags * notifications) %>%
+        select(-propdiags, -notifications) %>%
+        spread(year, diags) %>%
+        ungroup() %>%
+        slice(c(1,10,2:9,11:18)) %>%
+        select(-agebin) %>%
+        as.matrix()
+      
+      colnames(hivResultsAge) <- yearList
+      rownames(hivResultsAge) <- ageList
+    }
   }
-  
   # Return list of hiv results
   return(list(hivResults, hivResultsAge))
   
 }
+

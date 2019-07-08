@@ -22,18 +22,22 @@ source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
-analysisYear <- 2017
-projectName <-  "ASR_2018" #"ASR_2018" #"HIV_Cascade_Paper"
-cascadeNames <- "All" # specify cascades with project (without year)
+analysisYear <- 2018
+projectName <-  "ASR_2019" #"ASR_2018" #"HIV_Cascade_Paper"
+multipleCascades <- FALSE
 artNames <- NULL
 
 # If this is an ASR project already have specific populations
-if (projectName %in% c("ASR_2016", "ASR_2017", "ASR_2018")) {
+if (multipleCascades && projectName %in% c("ASR_2016", "ASR_2017", "ASR_2018")) {
   # cascadeNames <- c("All", "Male", "Female", "Atsi", "AusNonAtsi", "SSA",
   #   "SEA", "Othercob", "CALD", "MSM", "Hetero", "PWID", "Otherexp",
   #   "ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA")
   cascadeNames <- c("All", "Male", "Female", "Atsi", "AusNonAtsi", "MSM", 
-    "Hetero", "PWID", "Otherexp","ACT", "NSW", "SSA", "SEA", "Othercob")
+    "Hetero", "PWID", "Otherexp","ACT", "NSW", "VIC", "SSA", "SEA",
+    "Othercob")
+} else {
+  # Specify cascades manually (without year)
+  cascadeNames <- "All" # specify cascades with project 
 }
 
 if (is.null(artNames)) {
@@ -45,7 +49,7 @@ saveResults <- TRUE
 
 # Set ART string - "ATRAS", "NAPWAH", or  "PBS"
 # Use NAPWHA for ASR and ATRAS for HIV_Cascade_Paper
-if (projectName %in% c("ASR_2016", "ASR_2017", "ASR_2018")) {
+if (projectName %in% c("ASR_2016", "ASR_2017", "ASR_2018", "ASR_2019")) {
   artString <- "NAPWHA" 
 } else if (projectName == "HIV_Cascade_Paper") {
   artString <- "ATRAS"

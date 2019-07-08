@@ -7,29 +7,31 @@
 # EcdcCalculations to be loaded. 
 
 EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL,
-                      propKnown = NULL) {
+  propKnown = NULL, nDataSets = 1) {
   
   # All diagnoses----------------------------------------------------------
   
   # Incidence method
   hivcsvAll <- typeDiag(hivFrame, "hiv", exposure = FALSE, 
-                        adjustUnique = propUnique,
-                        normalize = propKnown)
+    adjustUnique = propUnique, normalize = propKnown,
+    dataSets = nDataSets)
   hivaidscsvAll <- typeDiag(hivFrame, "hivaids", exposure = FALSE, 
-                            adjustUnique = propUnique,
-                            normalize = propKnown)
+    adjustUnique = propUnique,
+    normalize = propKnown,
+    dataSets = nDataSets)
   aidscsvAll <- typeDiag(hivFrame, "aids", exposure = FALSE, 
-                         adjustUnique = propUnique,
-                         normalize = propKnown)
+    adjustUnique = propUnique,
+    normalize = propKnown,
+    dataSets = nDataSets)
   
   EcdcWrite(hivcsvAll, dataFolder[[1]], "hiv")
   EcdcWrite(hivaidscsvAll, dataFolder[[1]], "hivaids")
   EcdcWrite(aidscsvAll, dataFolder[[1]], "aids")
   
-  cd4All1 <- cd4All(hivFrame, "cg500")
-  cd4All2 <- cd4All(hivFrame, "c350_499")
-  cd4All3 <- cd4All(hivFrame, "c200_349")
-  cd4All4 <- cd4All(hivFrame, "cl200")
+  cd4All1 <- cd4All(hivFrame, "cg500", dataSets = nDataSets)
+  cd4All2 <- cd4All(hivFrame, "c350_499", dataSets = nDataSets)
+  cd4All3 <- cd4All(hivFrame, "c200_349", dataSets = nDataSets)
+  cd4All4 <- cd4All(hivFrame, "cl200", dataSets = nDataSets)
   
   EcdcWrite(cd4All1, dataFolder[[1]], "cg500")
   EcdcWrite(cd4All2, dataFolder[[1]], "c350_499")
@@ -37,16 +39,26 @@ EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL,
   EcdcWrite(cd4All4, dataFolder[[1]], "cl200")
   
   # London method
-  cd4LM10 <- cd4All(hivFrame, "not_reported", london = TRUE, lmset = TRUE)
-  cd4LM11 <- cd4All(hivFrame, "cl20", london = TRUE, lmset = TRUE)
-  cd4LM12 <- cd4All(hivFrame, "c20_49", london = TRUE, lmset = TRUE)
-  cd4LM13 <- cd4All(hivFrame, "c50_99", london = TRUE, lmset = TRUE)
-  cd4LM14 <- cd4All(hivFrame, "c100_149", london = TRUE, lmset = TRUE)
-  cd4LM15 <- cd4All(hivFrame, "c150_199", london = TRUE, lmset = TRUE)
-  cd4LM16 <- cd4All(hivFrame, "c200_249", london = TRUE, lmset = TRUE)
-  cd4LM17 <- cd4All(hivFrame, "c250_299", london = TRUE, lmset = TRUE)
-  cd4LM18 <- cd4All(hivFrame, "c300_349", london = TRUE, lmset = TRUE)
-  cd4LM19 <- cd4All(hivFrame, "cg350", london = TRUE, lmset = TRUE)
+  cd4LM10 <- cd4All(hivFrame, "not_reported", london = TRUE, lmset = TRUE, 
+    dataSets = nDataSets)
+  cd4LM11 <- cd4All(hivFrame, "cl20", london = TRUE, lmset = TRUE,
+    dataSets = nDataSets)
+  cd4LM12 <- cd4All(hivFrame, "c20_49", london = TRUE, lmset = TRUE,
+    dataSets = nDataSets)
+  cd4LM13 <- cd4All(hivFrame, "c50_99", london = TRUE, lmset = TRUE,
+    dataSets = nDataSets)
+  cd4LM14 <- cd4All(hivFrame, "c100_149", london = TRUE, lmset = TRUE,
+    dataSets = nDataSets)
+  cd4LM15 <- cd4All(hivFrame, "c150_199", london = TRUE, lmset = TRUE,
+    dataSets = nDataSets)
+  cd4LM16 <- cd4All(hivFrame, "c200_249", london = TRUE, lmset = TRUE,
+    dataSets = nDataSets)
+  cd4LM17 <- cd4All(hivFrame, "c250_299", london = TRUE, lmset = TRUE,
+    dataSets = nDataSets)
+  cd4LM18 <- cd4All(hivFrame, "c300_349", london = TRUE, lmset = TRUE,
+    dataSets = nDataSets)
+  cd4LM19 <- cd4All(hivFrame, "cg350", london = TRUE, lmset = TRUE,
+    dataSets = nDataSets)
   
   EcdcWrite(cd4LM10, dataFolder[[1]], "not_reported_1")
   EcdcWrite(cd4LM11, dataFolder[[1]], "cl20_1")
@@ -59,16 +71,26 @@ EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL,
   EcdcWrite(cd4LM18, dataFolder[[1]], "c300_349_1")
   EcdcWrite(cd4LM19, dataFolder[[1]], "cg350_1")
   
-  cd4LM20 <- cd4All(hivFrame, "not_reported", london = TRUE)
-  cd4LM21 <- cd4All(hivFrame, "cl20", london = TRUE)
-  cd4LM22 <- cd4All(hivFrame, "c20_49", london = TRUE)
-  cd4LM23 <- cd4All(hivFrame, "c50_99", london = TRUE)
-  cd4LM24 <- cd4All(hivFrame, "c100_149", london = TRUE)
-  cd4LM25 <- cd4All(hivFrame, "c150_199", london = TRUE)
-  cd4LM26 <- cd4All(hivFrame, "c200_249", london = TRUE)
-  cd4LM27 <- cd4All(hivFrame, "c250_299", london = TRUE)
-  cd4LM28 <- cd4All(hivFrame, "c300_349", london = TRUE)
-  cd4LM29 <- cd4All(hivFrame, "cg350", london = TRUE)
+  cd4LM20 <- cd4All(hivFrame, "not_reported", london = TRUE,
+    dataSets = nDataSets)
+  cd4LM21 <- cd4All(hivFrame, "cl20", london = TRUE,
+    dataSets = nDataSets)
+  cd4LM22 <- cd4All(hivFrame, "c20_49", london = TRUE,
+    dataSets = nDataSets)
+  cd4LM23 <- cd4All(hivFrame, "c50_99", london = TRUE,
+    dataSets = nDataSets)
+  cd4LM24 <- cd4All(hivFrame, "c100_149", london = TRUE,
+    dataSets = nDataSets)
+  cd4LM25 <- cd4All(hivFrame, "c150_199", london = TRUE,
+    dataSets = nDataSets)
+  cd4LM26 <- cd4All(hivFrame, "c200_249", london = TRUE, 
+    dataSets = nDataSets)
+  cd4LM27 <- cd4All(hivFrame, "c250_299", london = TRUE,
+    dataSets = nDataSets)
+  cd4LM28 <- cd4All(hivFrame, "c300_349", london = TRUE,
+    dataSets = nDataSets)
+  cd4LM29 <- cd4All(hivFrame, "cg350", london = TRUE,
+    dataSets = nDataSets)
   
   EcdcWrite(cd4LM20, dataFolder[[1]], "not_reported_2")
   EcdcWrite(cd4LM21, dataFolder[[1]], "cl20_2")
@@ -82,26 +104,22 @@ EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL,
   EcdcWrite(cd4LM29, dataFolder[[1]], "cg350_2")
   
   # Risk groups -----------------------------------------------------------
-  
   # Incidence method
   hivcsvExp <- typeDiag(hivFrame, "hiv",
-                        adjustUnique = propUnique,
-                        normalize = propKnown)
+    adjustUnique = propUnique, normalize = propKnown, dataSets = nDataSets)
   hivaidscsvExp <- typeDiag(hivFrame, "hivaids", 
-                            adjustUnique = propUnique,
-                            normalize = propKnown)
+    adjustUnique = propUnique, normalize = propKnown, dataSets = nDataSets)
   aidscsvExp <- typeDiag(hivFrame, "aids",
-                         adjustUnique = propUnique,
-                         normalize = propKnown)
+    adjustUnique = propUnique, normalize = propKnown, dataSets = nDataSets)
   
   EcdcWrite(hivcsvExp, dataFolder[[2]], "hiv")
   EcdcWrite(hivaidscsvExp, dataFolder[[2]], "hivaids")
   EcdcWrite(aidscsvExp, dataFolder[[2]], "aids")
   
-  cd4Exp1 <- cd4Exposure(hivFrame, "cg500")
-  cd4Exp2 <- cd4Exposure(hivFrame, "c350_499")
-  cd4Exp3 <- cd4Exposure(hivFrame, "c200_349")
-  cd4Exp4 <- cd4Exposure(hivFrame, "cl200")
+  cd4Exp1 <- cd4Exposure(hivFrame, "cg500", dataSets = nDataSets)
+  cd4Exp2 <- cd4Exposure(hivFrame, "c350_499", dataSets = nDataSets)
+  cd4Exp3 <- cd4Exposure(hivFrame, "c200_349", dataSets = nDataSets)
+  cd4Exp4 <- cd4Exposure(hivFrame, "cl200", dataSets = nDataSets)
   
   EcdcWrite(cd4Exp1, dataFolder[[2]], "cg500")
   EcdcWrite(cd4Exp2, dataFolder[[2]], "c350_499")
@@ -110,25 +128,26 @@ EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL,
   
   # London method
   cd4LMexp10 <- cd4Exposure(hivFrame, "not_reported", london = TRUE, 
-                            lmset = TRUE)
-  cd4LMexp11 <- cd4Exposure(hivFrame, "cl20", london = TRUE, lmset = TRUE)
+    lmset = TRUE, dataSets = nDataSets)
+  cd4LMexp11 <- cd4Exposure(hivFrame, "cl20", london = TRUE, lmset = TRUE,
+    dataSets = nDataSets)
   cd4LMexp12 <- cd4Exposure(hivFrame, "c20_49", london = TRUE, 
-                            lmset = TRUE)
+    lmset = TRUE, dataSets = nDataSets)
   cd4LMexp13 <- cd4Exposure(hivFrame, "c50_99", london = TRUE, 
-                            lmset = TRUE)
+    lmset = TRUE, dataSets = nDataSets)
   cd4LMexp14 <- cd4Exposure(hivFrame, "c100_149", london = TRUE, 
-                            lmset = TRUE)
+    lmset = TRUE, dataSets = nDataSets)
   cd4LMexp15 <- cd4Exposure(hivFrame, "c150_199", london = TRUE, 
-                            lmset = TRUE)
+    lmset = TRUE, dataSets = nDataSets)
   cd4LMexp16 <- cd4Exposure(hivFrame, "c200_249", london = TRUE, 
-                            lmset = TRUE)
+    lmset = TRUE, dataSets = nDataSets)
   cd4LMexp17 <- cd4Exposure(hivFrame, "c250_299", london = TRUE, 
-                            lmset = TRUE)
+    lmset = TRUE, dataSets = nDataSets)
   cd4LMexp18 <- cd4Exposure(hivFrame, "c300_349", london = TRUE, 
-                            lmset = TRUE)
+    lmset = TRUE, dataSets = nDataSets)
   
   cd4LMexp19 <- cd4Exposure(hivFrame, "cg350", london = TRUE, 
-                            lmset = TRUE)
+    lmset = TRUE, dataSets = nDataSets)
   
   EcdcWrite(cd4LMexp10, dataFolder[[2]], "not_reported_1")
   EcdcWrite(cd4LMexp11, dataFolder[[2]], "cl20_1")
@@ -141,16 +160,26 @@ EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL,
   EcdcWrite(cd4LMexp18, dataFolder[[2]], "c300_349_1")
   EcdcWrite(cd4LMexp19, dataFolder[[2]], "cg350_1")
   
-  cd4LMexp20 <- cd4Exposure(hivFrame, "not_reported", london = TRUE)
-  cd4LMexp21 <- cd4Exposure(hivFrame, "cl20", london = TRUE)
-  cd4LMexp22 <- cd4Exposure(hivFrame, "c20_49", london = TRUE)
-  cd4LMexp23 <- cd4Exposure(hivFrame, "c50_99", london = TRUE)
-  cd4LMexp24 <- cd4Exposure(hivFrame, "c100_149", london = TRUE)
-  cd4LMexp25 <- cd4Exposure(hivFrame, "c150_199", london = TRUE)
-  cd4LMexp26 <- cd4Exposure(hivFrame, "c200_249", london = TRUE)
-  cd4LMexp27 <- cd4Exposure(hivFrame, "c250_299", london = TRUE)
-  cd4LMexp28 <- cd4Exposure(hivFrame, "c300_349", london = TRUE)
-  cd4LMexp29 <- cd4Exposure(hivFrame, "cg350", london = TRUE)
+  cd4LMexp20 <- cd4Exposure(hivFrame, "not_reported", london = TRUE,
+    dataSets = nDataSets)
+  cd4LMexp21 <- cd4Exposure(hivFrame, "cl20", london = TRUE,
+    dataSets = nDataSets)
+  cd4LMexp22 <- cd4Exposure(hivFrame, "c20_49", london = TRUE,
+    dataSets = nDataSets)
+  cd4LMexp23 <- cd4Exposure(hivFrame, "c50_99", london = TRUE,
+    dataSets = nDataSets)
+  cd4LMexp24 <- cd4Exposure(hivFrame, "c100_149", london = TRUE,
+    dataSets = nDataSets)
+  cd4LMexp25 <- cd4Exposure(hivFrame, "c150_199", london = TRUE,
+    dataSets = nDataSets)
+  cd4LMexp26 <- cd4Exposure(hivFrame, "c200_249", london = TRUE,
+    dataSets = nDataSets)
+  cd4LMexp27 <- cd4Exposure(hivFrame, "c250_299", london = TRUE,
+    dataSets = nDataSets)
+  cd4LMexp28 <- cd4Exposure(hivFrame, "c300_349", london = TRUE,
+    dataSets = nDataSets)
+  cd4LMexp29 <- cd4Exposure(hivFrame, "cg350", london = TRUE,
+    dataSets = nDataSets)
   
   EcdcWrite(cd4LMexp20, dataFolder[[2]], "not_reported_2")
   EcdcWrite(cd4LMexp21, dataFolder[[2]], "cl20_2")

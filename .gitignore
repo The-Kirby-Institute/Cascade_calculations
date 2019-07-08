@@ -1,6 +1,7 @@
 *.url
 
 # Main directory
+admin/
 Archive/
 data/*
 OtherSTIs/
