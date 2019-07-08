@@ -32,6 +32,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   pldhivAllMaxFuture <- NULL
   hivDiagnosedFuture <- NULL
   
+  
   ## Error and option checking -------------------------------------------
   # Error checking and changes in options based on cascade parameters
   # Check lengths of all cascade variables and options
@@ -66,6 +67,10 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     # This is simply a proportion based on James McMahon's paper
     # which suggested 92-98% of PLDHIV were retained in care. 
     retainedYears <- 2013:analysisYear
+  }
+  if (targetGlobalRegion != "all") {
+    # Global region set then assume everyone is not born in Australia
+    targetCob <- "non-australia" 
   }
   
   # Settings for doing deduplication analysis-----------------------------
@@ -995,6 +1000,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   }
   
   ## ECDC outputs ---------------------------------------------------------
+
   if (ecdcData) {
     
     if (useImputed) {
@@ -1016,7 +1022,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       hivSetEcdc <- hivSet %>%
         mutate(expgroup = ifelse(is.na(expgroup), "unknown", expgroup))
     }
-    
+
     if (excludeOS) {
       # excluding OS diagnosis
       dataAll <- EcdcFolders(ecdcFolder, ecdcModel, 
@@ -1102,14 +1108,14 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       hivExpCum$msm[2] <- 1.0
     } 
 
-    expDeaths <- FillDataFrame(1980:analysisYear, hivExpCum, 
+    expDeaths <- FillDataFrame(1980:max(hivExpCum$year), hivExpCum, 
       cumulative = TRUE)
     expDeaths[, 2:5] <- expDeaths[, 2:5] * 
       matrix(rep(pldhivAll$deaths, 4), ncol = 4)
     
     EcdcWrite(expDeaths, dataAll[[2]], "deaths")
     
-    expEmig <- FillDataFrame(1980:analysisYear, hivExpCum, 
+    expEmig <- FillDataFrame(1980:max(hivExpCum$year), hivExpCum, 
       cumulative = TRUE)
     expEmig[, 2:5] <- expEmig[, 2:5] * 
       matrix(rep(emigrants$all, 4), ncol = 4)
