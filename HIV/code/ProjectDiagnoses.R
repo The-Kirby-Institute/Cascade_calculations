@@ -72,7 +72,7 @@ ProjectDiagnoses <- function(diagnoses, diagyears, decrease, projyears,
     
     if (option == "status-quo") {
       diagnosesAgeFuture <- cbind(diagnosesAge,
-        matrix(rep(diagnosesAge[,ncol(diagnosesAge-1)], nprojYears), 
+        matrix(rep(diagnosesAge[, ncol(diagnosesAge-1)], nprojYears), 
           ncol = nprojYears))
       colnames(diagnosesAgeFuture) <- paste0("y", 
         as.character(totalYears))

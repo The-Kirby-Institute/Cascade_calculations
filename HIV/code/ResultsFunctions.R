@@ -86,7 +86,7 @@ MergeAgeCascade <- function(pldhivage, agebins, agenames) {
   
   # Do some error checking
   if (length(agebins) != length(agenames)) {
-    stop("NUmber of age names is different to number of age groups")
+    stop("Number of age names is different to number of age groups")
   }
     
   # Sort out results
