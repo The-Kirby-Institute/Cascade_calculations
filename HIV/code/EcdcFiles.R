@@ -104,7 +104,6 @@ EcdcFiles <- function(hivFrame, dataFolder, propUnique = NULL,
   EcdcWrite(cd4LM29, dataFolder[[1]], "cg350_2")
   
   # Risk groups -----------------------------------------------------------
-  
   # Incidence method
   hivcsvExp <- typeDiag(hivFrame, "hiv",
     adjustUnique = propUnique, normalize = propKnown, dataSets = nDataSets)

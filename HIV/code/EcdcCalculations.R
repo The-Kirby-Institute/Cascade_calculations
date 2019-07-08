@@ -155,10 +155,14 @@ typeDiag <- function(hivData, type, minYear = 1980,
     # diagType <- arrange(diagType, year)
     
     if (!is.null(adjustUnique)) {
-      diagType$hetero <- AnnualUnique(diagType$hetero, adjustUnique)
-      diagType$msm <- AnnualUnique(diagType$msm, adjustUnique)
-      diagType$pwid <- AnnualUnique(diagType$pwid, adjustUnique)
-      diagType$otherexp <- AnnualUnique(diagType$otherexp, adjustUnique)
+      diagType$hetero <- AnnualUnique(diagType$hetero, 
+        adjustUnique[1:length(diagType$hetero)])
+      diagType$msm <- AnnualUnique(diagType$msm, 
+        adjustUnique[1:length(diagType$msm)])
+      diagType$pwid <- AnnualUnique(diagType$pwid, 
+        adjustUnique[1:length(diagType$pwid)])
+      diagType$otherexp <- AnnualUnique(diagType$otherexp, 
+        adjustUnique[1:length(diagType$otherexp)])
     } else {
       warning("Notifications not adjusted for duplicates")
     }
@@ -170,10 +174,10 @@ typeDiag <- function(hivData, type, minYear = 1980,
     # Assume AIDS cases are complete
     
     if (!is.null(normalize) && (type == "hiv")) {
-      diagType$hetero <- diagType$hetero/normalize
-      diagType$msm <- diagType$msm/normalize
-      diagType$pwid <- diagType$pwid/normalize
-      diagType$otherexp <- diagType$otherexp/normalize
+      diagType$hetero <- diagType$hetero/normalize[1:length(diagType$hetero)]
+      diagType$msm <- diagType$msm/normalize[1:length(diagType$msm)]
+      diagType$pwid <- diagType$pwid/normalize[1:length(diagType$pwid)]
+      diagType$otherexp <- diagType$otherexp/normalize[1:length(diagType$otherexp)]
     } 
     
     if (is.null(normalize)) {
@@ -216,7 +220,8 @@ typeDiag <- function(hivData, type, minYear = 1980,
     # diagType <- arrange(diagType, year)
     
     if (!is.null(adjustUnique)) {
-      diagType$all <- AnnualUnique(diagType$all, adjustUnique)
+      diagType$all <- AnnualUnique(diagType$all, 
+        adjustUnique[1:length(diagType$all)])
     } else {
       warning("Notifications not adjusted for duplicates")
     }
@@ -227,7 +232,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
     # Adjust HIV notifications to account for unknowns
     # Assume AIDS cases are complete
     if (!is.null(normalize) && (type == "hiv")) {
-      diagType$all <- diagType$all/normalize
+      diagType$all <- diagType$all/normalize[1:length(diagType$all)]
     }
     
     if (is.null(normalize)) {
@@ -403,10 +408,16 @@ cd4Exposure <- function(hivData, cd4binGroup,
   # Fill in missing years
   if(nrow(cd4ExpBin)!=0){
     allYears <- minYear:max(cd4ExpBin$year)
-  }else allYears <- minYear
-  requiredYears <- allYears[!(allYears %in% cd4ExpBin$year)]
-  cd4ExpBin <- FillDataFrame(requiredYears, cd4ExpBin) %>%
-    arrange(year)
+    requiredYears <- allYears[!(allYears %in% cd4ExpBin$year)]
+    cd4ExpBin <- FillDataFrame(requiredYears, cd4ExpBin) %>%
+      arrange(year)
+  } else { 
+    cd4ExpBin <- data_frame(year = minYear,
+      hetero = 0,
+      msm = 0,
+      otherexp = 0,
+      pwid = 0)
+  }
   
   if (!is.null(adjustUnique)) {
     cd4ExpBin$hetero <- AnnualUnique(cd4ExpBin$hetero , adjustUnique)
