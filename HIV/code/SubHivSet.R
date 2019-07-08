@@ -232,6 +232,16 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
       includeframe <- filter(includeframe, 
         !(globalregion %in% c("South-East Asia", "Sub-Saharan Africa")))
       
+    } else if (fGlobalRegion[1] == "rhca") {
+      # Category for countries with a reciprocal health agreement
+      excludeframe <- bind_rows(excludeframe,  
+        filter(includeframe, !(cob %in% c("Belgium", "Finland", "Italy", 
+          "Malta", "Netherlands", "New Zealand", "Norway", "Ireland", 
+          "Slovenia", "Sweden", "United Kingdom"))))
+      includeframe <- filter(includeframe, 
+        cob %in% c("Belgium", "Finland", "Italy", "Malta", "Netherlands",
+          "New Zealand", "Norway", "Ireland", "Slovenia", "Sweden", 
+          "United Kingdom"))  
     }else{
       excludeframe <- bind_rows(excludeframe, filter(includeframe, 
         !(globalregion %in% fGlobalRegion)))

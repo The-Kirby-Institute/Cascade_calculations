@@ -81,31 +81,31 @@ SubHivSetImpute <- function(hivdataframe, fAge, fGender, fExposure, fCob,
     }
   }
   
-  if(fAtsi[1] != 'all' && fCob[1] == "Australia" && length(fCob) == 1){
+  if (fAtsi[1] != 'all' && fCob[1] == "Australia" && length(fCob) == 1) {
     # Exclude ones we don't want and keep ones we want
     excludeframe <- bind_rows(excludeframe, 
       filter(includeframe, !(aboriggroup %in% fAtsi)))
     includeframe <- filter(includeframe, aboriggroup %in% fAtsi)
   }
   
-  if(fState[1] != 'all'){
+  if(fState[1] != 'all') {
     # Exclude ones we don't want and keep ones we want
     excludeframe <- bind_rows(excludeframe, 
       filter(includeframe, !(state %in% fState)))
     includeframe <- filter(includeframe, state %in% fState)
   }
   
-  if(fLocalRegion[1] != 'all'){
+  if (fLocalRegion[1] != 'all') {
     # Exclude ones we don't want and keep ones we want
     excludeframe <- bind_rows(excludeframe, 
       filter(includeframe, !(diag_region %in% fLocalRegion)))
     includeframe <- filter(includeframe, diag_region %in% fLocalRegion)
   }
   
-  if(fGlobalRegion[1] != "all"){
+  if (fGlobalRegion[1] != "all"){
     # Exclude ones we don't want and keep ones we want - note a number 
     # of special cases 
-    if(fGlobalRegion == "Other cob"){
+    if (fGlobalRegion[1] == "Other cob") {
       # Category for ASR for everyone not Australian, South-East Asia,
       # or Sub-Saharan Africa born 
       
@@ -120,7 +120,17 @@ SubHivSetImpute <- function(hivdataframe, fAge, fGender, fExposure, fCob,
       includeframe <- filter(includeframe, 
         !(globalregion %in% c("South-East Asia", "Sub-Saharan Africa")))
       
-    }else{
+    } else if (fGlobalRegion[1] == "rhca") {
+      # Category for countries with a reciprocal health agreement
+      excludeframe <- bind_rows(excludeframe,  
+        filter(includeframe, !(cob %in% c("Belgium", "Finland", "Italy", 
+          "Malta", "Netherlands", "New Zealand", "Norway", "Ireland", 
+          "Slovenia", "Sweden", "United Kingdom"))))
+      includeframe <- filter(includeframe, 
+        cob %in% c("Belgium", "Finland", "Italy", "Malta", "Netherlands",
+          "New Zealand", "Norway", "Ireland", "Slovenia", "Sweden", 
+          "United Kingdom"))
+    } else {
       excludeframe <- bind_rows(excludeframe, filter(includeframe, 
         !(globalregion %in% fGlobalRegion)))
       includeframe <- filter(includeframe, globalregion %in% fGlobalRegion)
