@@ -27,9 +27,7 @@ figuresFolder <- file.path(basePath, "output", "figures")
 
 # Notifications folder is a private secure folder 
 notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data", 
-  "National HIV Registry", "2017", "National", "Hamish & Richard")
-# tempImputeFolder <- file.path(dirname(dirname(basePath)), "data", "HIV", 
-#     "cascadeImputedHIVnotifications-2017")
+  "National HIV Registry", "Cascades")
 
 # Load standard libraries and options ------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"))
@@ -50,19 +48,19 @@ Report(ASR))
 
 ```{r Cascade and script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2017
-saveResults <- TRUE
+analysisYear <- 2018
+saveResults <- FALSE
 
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "Pldhiv_Mapping_2019" # "." for main output folder 
+projectOutput <- "ASR_2019" # "." for main output folder 
                                  # "HIV_Cascade_Paper" for paper
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entred via a file in projectOutput 
 # which need to exist
-paramsFile <-"ProjectParameters.csv"
+paramsFile <- NULL #"ProjectParameters.csv"
                             
 # Cascade options----------------------------------------------------------
 # The following variables specify the charactersitsics and hence the 
@@ -89,7 +87,7 @@ if (is.null(paramsFile)) {
   
   numCascades <- 1
   
-  cascadeName <- "Test-2017" # (single)
+  cascadeName <- "All-2017" # (single)
   targetGender <- rep("all", numCascades) # all, male, female (single)
   targetAge <- rep("all", numCascades) # all or split (single)
   # Note regarding ageing: The calculations don't specifically target 
@@ -99,7 +97,7 @@ if (is.null(paramsFile)) {
   # a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
   # split and then filter out age estimates as required essentially turns on 
   # doAge below. 
-  targetCob <- rep("all", numCascades) # all=including n/a, Thailand, etc.
+  targetCob <- rep("Australia", numCascades) # all=including n/a, Thailand, etc.
   # (combination). "Australia", "non-australia", "non-aus-nz"
   targetExposure <- rep("all", numCascades) #msm, hetero, pwid, otherexp 
   # (combination)
@@ -129,7 +127,7 @@ if (is.null(paramsFile)) {
   # Note: These are generally given the same value across all cascades in 
   # a project so use rep() by default. These can then be manually changed  
   # as required. 
-  excludeAborig <- rep(FALSE, numCascades) # FALSE be default to include 
+  excludeAborig <- rep(TRUE, numCascades) # FALSE be default to include 
                                            # indigenous
   doRetained <- rep(TRUE, numCascades) # TRUE for appending retained in care
   
@@ -139,7 +137,7 @@ if (is.null(paramsFile)) {
   saveUnique <- rep(FALSE, numCascades)
   
   # Settings for generating ECDC model inputs
-  ecdcData <- rep(TRUE, numCascades)
+  ecdcData <- rep(FALSE, numCascades)
   ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
   excludeOS <- rep(FALSE, numCascades) # Default FALSE but need to run with
                                        # TRUE for ASR as
@@ -155,7 +153,8 @@ if (is.null(paramsFile)) {
   # Specifiy projection option for future diagnoses - can project 
   # under the current "status-quo" level or follow trend over last 5 years
   # or project a relative reduction
-  projectOption <- rep("status-quo", numCascades) #status-quo, linear, reduce 
+  projectOption <- rep("status-quo", numCascades) # status-quo, linear,
+                                                  # reduce 
   projectDecrease <- 1 # 1 (0% reduction), 0.65 (35% reduction), 0.5 (50% 
                           # reduction), 0.35 (65% reduction) 
                           # relative reduction!
@@ -393,10 +392,9 @@ source(file.path(HIVcode, "CalculatePldhiv.R"))
 pldhivCalculations <- list()
 
 # Vector to store original number of notifications if imputation is used
-numNotificationsOrig <- c() 
-
+numNotificationsOrig <- c()
 for (ii in 1:numCascades) {
-  
+
   # Select correct data set
   if (useImputed[ii]) {
     pldhivData <- hivDataImputed
@@ -427,7 +425,7 @@ for (ii in 1:numCascades) {
   
   print(cascadeName[ii])
   
-  # Do the calulations - note uniaue notifications output is at the 
+  # Do the calulations - note unique notifications output is at the 
   # state level not local region level.
   if (!(targetLocalRegion[ii] == "all") & nrow(filter(absInterRegion, 
     region == targetLocalRegion[ii])) == 0) {

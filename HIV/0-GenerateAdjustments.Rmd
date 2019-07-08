@@ -25,7 +25,7 @@ basePath <- file.path(dirname(getwd()), "HIV")
 Rcode <- file.path(dirname(getwd()), "code") 
 HIVcode <- file.path(basePath, "code") 
 notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data",
-  "National HIV Registry", "2017", "National", "Hamish & Richard")
+  "National HIV Registry", "Cascades")
 dataFolder <- file.path(basePath, "data")
 
 # Load standard libraries and options ------------------------------------
@@ -44,7 +44,7 @@ source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2017
+analysisYear <- 2018
 startYear <- 1980 # First year in HIV registry is 1980
 
 allYears <- startYear:analysisYear 
@@ -380,8 +380,10 @@ if (analysisYear >= 2017) {
   absDeparts <- mutate(absDeparts, migrate = permanent / erp)
   mrate <- absDeparts$migrate
   
-  # At this stage use last years migration rate for 2017
-  mrate <- c(mrate, tail(mrate, 1))
+  # At this stage use 2016 migration rate for future years
+  
+  mrate <- c(mrate, rep(tail(mrate, 1), 
+    length(allYears) - length(startYear:2016)))
 
 } else {
   absDeparts <- mutate(absDeparts, migrate = permanent / erp)
@@ -960,6 +962,7 @@ hivInterstate$departures <- NA
 hivInterstate$departrate2 <- NA
 
 for (region in head(states, -1)) {
+  print(region)
   lmDepart <- lm(departures ~ year, data = filter(absInterstate, 
     state == region))
   departState <- predict(lmDepart, data.frame(year = allYears))

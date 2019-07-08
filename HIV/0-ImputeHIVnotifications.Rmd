@@ -32,7 +32,7 @@ dataFolder <- file.path(basePath, "data")
 
 # Notifications folder is a private secure folder 
 notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data", 
-  "National HIV Registry", "2017", "National", "Hamish & Richard")
+  "National HIV Registry", "Cascades")
 
 # Store imputed sets in the notifications folder
 outputFolder <- notificationsFolder
@@ -46,7 +46,7 @@ LoadLibrary(scales)
 source(file.path(Rcode, "FormatData.R"))
 
 # Script options
-dataYear <- 2017
+dataYear <- 2018
 
 runImpute <- TRUE
 saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 
@@ -94,7 +94,7 @@ countryCodes <- read_csv(file.path(dataFolder, "countryRegionCodes.csv"),
     REGION = col_character(),
     COUNTRY_CODE = col_integer(),
     REGION_CODE = col_integer()
-)) 
+  )) 
 
 # Read in location of diagnosis coding
 regionCodes <- read_csv(file.path(dataFolder, "postcodeRegionCodes.csv"),
@@ -102,7 +102,7 @@ regionCodes <- read_csv(file.path(dataFolder, "postcodeRegionCodes.csv"),
     postcode = col_integer(),
     SA3_code = col_integer(),
     SA3_name_2016 = col_character()
-))
+  ))
 
 # Tidy up notifications for calculations
 hivData <- TidyNotifications(origHivData, dataYear, countryCodes,
@@ -181,7 +181,10 @@ md.pattern(select(cascadeData, impVars))
 
 # One NA for state which should be NSW based on diag_region
 # filter(imputeData, is.na(state))  
-cascadeData[is.na(cascadeData$state), ]$state <- "nsw"
+# From 2018 no longer missing
+if (dataYear < 2018) {
+  cascadeData[is.na(cascadeData$state), ]$state <- "nsw"
+}
 
 # Check if any msm have missing or wrong gender - three msm are 
 # designated female - replace exposure with "pwid" as coded MSM-IDU
@@ -370,12 +373,12 @@ if (runImpute) {
     #Save imputeSets to file for loading later
     save(imputeSetsACT, imputeSetsNSW, imputeSetsNT, imputeSetsQLD,
       imputeSetsSA, imputeSetsTAS, imputeSetsVIC, imputeSetsWA,
-      file = file.path(setsPath, "ImputeSets.R"))
+      file = file.path(setsPath, "ImputeSets.Rda"))
   }
   
 } else {
   #Load already run imputeSets 
-  load(file.path(setsPath, "ImputeSets.R"))
+  load(file.path(setsPath, "ImputeSets.Rda"))
 }
 
 ```

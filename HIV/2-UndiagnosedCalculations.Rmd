@@ -35,9 +35,9 @@ LoadLibrary(readxl)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2017
+analysisYear <- 2018
 saveResults <- TRUE 
-projectFolder <- "ASR_2018"
+projectFolder <- "ASR_2019"
 cascadeFlag <- "All" # minus year
 # ecdcChart <- "Female" # ECDC group used for calculations
 ecdcResults <- "exposure"
