@@ -48,8 +48,14 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
   if (sum(c(fAge, fCob, fGender, fExposure, fAtsi, 
     fState, fGlobalRegion) != "all") > 1 || sum(c(fAge, fCob, fGender, 
       fExposure, fAtsi, fLocalRegion, fGlobalRegion) != "all") > 1) {
-    stop("SubSetHiv does not work for multiple categories. You need to use
+    if (targetAtsi != "all" && targetCob == "Australia") {
+      # We are okay so continue as is
+      print("Doing Australian born Indigenous or non-Indigenous so don't 
+        need imputed data set")
+    } else {
+      stop("SubSetHiv does not work for multiple categories. You need to use
           the imputed data set and subset version")
+    }
   }
   
   # Initialize data frames for storing results

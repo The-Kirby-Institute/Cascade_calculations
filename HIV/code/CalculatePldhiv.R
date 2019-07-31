@@ -40,10 +40,16 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   if (sum(c(targetGender, targetAge, targetCob, targetExposure, targetAtsi, 
     targetState, targetLocalRegion, targetGlobalRegion) != "all") > 1 && 
       useImputed == FALSE) {
-    warning("Multiple selections for subsetting non-imputed data set: 
-    SubHivSet() will not work correctly. Changed to imputed data set")
-    useImputed <- TRUE
-    nImputedSets <- 10 # use default
+    if (targetAtsi != "all" && targetCob == "Australia") {
+      # We are okay so continue as is
+      print("Doing Australian born Indigenous or non-Indigenous so don't 
+        need imputed data set")
+    } else {
+      warning("Multiple selections for subsetting non-imputed data set: 
+        SubHivSet() will not work correctly. Changed to imputed data set")
+      useImputed <- TRUE
+      nImputedSets <- 10 # use default
+    }
   }
   
   # TODO: check lengths of all the variables and make sure they equal 
@@ -126,6 +132,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     # Use the imputed notifications sets - loop through each set of 
     # notifications subsetting the required ones and at the end calculate 
     # the averages across the sets.
+    
+    hivDataImputed <- hivSetAll
     
     uniqueNotificationsSets <- data_frame()
     uniqueNotificationsAllSets <- data_frame()
@@ -490,8 +498,15 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     }
     
     # Annual notifications and proportions
-    annualDiags <- AnnualDiagnoses(hivSet, hivSetExcluded, 
-      hivSetUnknown, allYears, doAge)
+    if (targetAtsi == "indigenous") {
+      # Assume all indigenous notifications are accounted for
+      annualDiags <- AnnualDiagnoses(hivSet,  data_frame(), 
+        data_frame(), allYears, doAge)
+    } else {
+      annualDiags <- AnnualDiagnoses(hivSet, hivSetExcluded, 
+        hivSetUnknown, allYears, doAge)
+    }
+    
     
     hivResults <- annualDiags[[1]] 
     hivResultsAge <- annualDiags[[2]]
@@ -503,8 +518,15 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     hivResultsAgeMax <- hivResultsAge
     
     if (interState || doAge) {
-      annualDiagsAll <- AnnualDiagnoses(hivSetAll, 
-        hivSetExcludedAll, hivSetUnknownAll, allYears, doAge)
+      
+      if (targetAtsi == "indigenous") { 
+        # Assume all indigenous notifications are accounted for
+        annualDiagsAll <- AnnualDiagnoses(hivSetAll, 
+          data_frame(), data_frame(), allYears, doAge)
+      } else {
+        annualDiagsAll <- AnnualDiagnoses(hivSetAll, 
+          hivSetExcludedAll, hivSetUnknownAll, allYears, doAge)
+      }
       
       hivResultsAll <- annualDiagsAll[[1]]
       hivResultsAgeAll <- annualDiagsAll[[2]]
@@ -1000,9 +1022,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   }
   
   ## ECDC outputs ---------------------------------------------------------
-
   if (ecdcData) {
-    
     if (useImputed) {
       normalizeFactor <- rep(1, length(allYears))
       ecdcImputeSets <- nImputedSets

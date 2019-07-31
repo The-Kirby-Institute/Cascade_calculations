@@ -136,7 +136,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
     if (!("otherexp" %in% names(diagType))) diagType$otherexp <- 0
     if (!("pwid" %in% names(diagType))) diagType$pwid <- 0
     if (!("unknown" %in% names(diagType))) diagType$unknown <- 0
-    
+
     diagType <- diagType %>%
       mutate(known = hetero+msm+otherexp+pwid) %>%
       mutate(hetero = hetero + unknown * hetero/known,
@@ -211,7 +211,11 @@ typeDiag <- function(hivData, type, minYear = 1980,
         rename(year = yeardiagnosis)
       
     } 
+    
     diagType[is.na(diagType)] <- 0
+    
+    diagType <- diagType %>%
+      mutate(all = ifelse(is.nan(all), 0, all))
     
     # Fill in missing years
     allYears <- minYear:max(hivData$yeardiagnosis)

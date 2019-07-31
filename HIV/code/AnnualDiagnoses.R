@@ -92,7 +92,7 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
     all_cumnotifications = cumsum(adjustDiags$all),
     ecdc_normalization = adjustDiags$included / 
       adjustDiags$adjusted_included) %>%
-    mutate(ecdc_normalization = ifelse(is.nan(ecdc_normalization), 0, 
+    mutate(ecdc_normalization = ifelse(is.nan(ecdc_normalization), 1, 
       ecdc_normalization))
   
   # Proportion in each age group--------------------------------------------
