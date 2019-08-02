@@ -52,11 +52,28 @@ source(file.path(HIVcode, "ResultsFunctions.R"))
 savePlots <- TRUE
 
 # Set up project and cascade to analyse
-projectName <- "Ageing_Paper" #"ASR_2018_Ageing"  
+resultsYear <- 2018
+# For Bretana et al HIV Ageing paper 
+#   projectName <- "Ageing_Paper"
+# For 2018 ASR
+#   projectName <- "ASR_2018_Ageing"
+projectName <- "ASR_2019" 
 resultsFolder <- file.path(resultsFolder, projectName)
-cascadeNames <- c("All", "Male", "Female")
 
-asr <- FALSE # TRUE = numbers for ASR report; FALSE = paper
+# Set up cascades overall, male, female cascade names
+if (projectName %in% c("Ageing_Paper", "ASR_2018_Ageing")) {
+  cascadeNames <- paste0(c("All", "Male", "Female"), "-",
+    toString(resultsYear)) 
+} else {
+  cascadeNames <- paste0(c("All_age", "Male_age", "Female_age"), "-",
+    toString(resultsYear))
+} 
+names(cascadeNames) <- c("all", "male", "female")
+
+# Set up ASR vs Ageing_paper parameters
+asr <- ifelse(projectName == "Ageing_Paper", FALSE, TRUE) 
+resultsYear <- felse(projectName == "Ageing_Paper", 2017, resultsYear)
+  # TRUE = numbers for ASR report; FALSE = paper
 
 # Create output directory
 if (savePlots) {
@@ -75,45 +92,45 @@ figs <- captioner()
 # This chunk loads all the results we need and stores them in long form 
 # data frames
 
-baseFile <- "HIVpldhivEstimates-2017-age"
+baseFile <- paste0("HIVpldhivEstimates-", toString(resultsYear), "-age")
 
-# Load main results up to 2017
-allMain <- read_csv(file.path(resultsFolder, "All-2017",
-  paste0(baseFile, ".csv"))) %>%
+# Load main results up to results year
+allMain <- read_csv(file.path(resultsFolder, 
+  cascadeNames["all"], paste0(baseFile, ".csv"))) %>%
   mutate(set = "all")
-maleMain <- read_csv(file.path(resultsFolder, "Male-2017",
-  paste0(baseFile, ".csv"))) %>%
+maleMain <- read_csv(file.path(resultsFolder, 
+  cascadeNames["male"], paste0(baseFile, ".csv"))) %>%
   mutate(set = "male")
-femaleMain <- read_csv(file.path(resultsFolder, "Female-2017",
-  paste0(baseFile, ".csv"))) %>%
+femaleMain <- read_csv(file.path(resultsFolder, 
+  cascadeNames["female"], paste0(baseFile, ".csv"))) %>%
   mutate(set = "female")
 
 mainResults <- bind_rows(allMain, maleMain, femaleMain) %>%
   select(set, everything())
 
-# Load future projection results for main HIV cascade
 if (!asr) {
-sqResults <- read_csv(file.path(resultsFolder, "All-2017",
+  # Load future projection results for main HIV cascade
+sqResults <- read_csv(file.path(resultsFolder, cascadeNames["all"],
   paste0(baseFile, "-future_sq.csv"))) %>%
   mutate(set = "sq")
 
-linearResults <- read_csv(file.path(resultsFolder, "All-2017",
+linearResults <- read_csv(file.path(resultsFolder, cascadeNames["all"],
   paste0(baseFile, "-future_linear.csv"))) %>%
   mutate(set = "linear")
-linearResultsMale <- read_csv(file.path(resultsFolder, "Male-2017",
+linearResultsMale <- read_csv(file.path(resultsFolder, cascadeNames["male"],
   paste0(baseFile, "-future_linear.csv"))) %>%
   mutate(set = "linear")
-linearResultsFemale <- read_csv(file.path(resultsFolder, "Female-2017",
-  paste0(baseFile, "-future_linear.csv"))) %>%
+linearResultsFemale <- read_csv(file.path(resultsFolder,
+  cascadeNames["female"], paste0(baseFile, "-future_linear.csv"))) %>%
   mutate(set = "linear")
 
-reduce35Results <- read_csv(file.path(resultsFolder, "All-2017",
+reduce35Results <- read_csv(file.path(resultsFolder, cascadeNames["all"],
   paste0(baseFile, "-future_reduce35.csv"))) %>%
   mutate(set = "reduce35")
-reduce50Results <- read_csv(file.path(resultsFolder, "All-2017",
+reduce50Results <- read_csv(file.path(resultsFolder, cascadeNames["all"],
   paste0(baseFile, "-future_reduce50.csv"))) %>%
   mutate(set = "reduce50")
-reduce65Results <- read_csv(file.path(resultsFolder, "All-2017",
+reduce65Results <- read_csv(file.path(resultsFolder, cascadeNames["all"],
   paste0(baseFile, "-future_reduce65.csv"))) %>%
   mutate(set = "reduce65")
 
@@ -129,12 +146,12 @@ futureResults <- bind_rows(sqResults, linearResults, reduce35Results,
 # specific years
 
 # Main results
-AverageAge(allMain, 2007)
-AverageAge(allMain, 2017)
-AverageAge(maleMain, 2007)
-AverageAge(maleMain, 2017)
-AverageAge(femaleMain, 2007)
-AverageAge(femaleMain, 2017)
+AverageAge(allMain, resultsYear - 10 + 1)
+AverageAge(allMain, resultsYear)
+AverageAge(maleMain, resultsYear - 10 + 1)
+AverageAge(maleMain, resultsYear)
+AverageAge(femaleMain, resultsYear - 10 + 1)
+AverageAge(femaleMain, resultsYear)
 
 # Projection results
 if (!asr) {
@@ -145,18 +162,18 @@ if (!asr) {
   pldhivLinearFemale <- linearResultsFemale %>%
     rename(value = pldhiv) 
   
-  AverageAge(pldhivLinear, 2017)
-  AverageAge(pldhivLinear, 2027)
+  AverageAge(pldhivLinear, resultsYear)
+  AverageAge(pldhivLinear, resultsYear + 10)
   
   pldhivReduce35 <- reduce35Results %>%
     rename(value = pldhiv) 
-  AverageAge(pldhivReduce35, 2017)
-  AverageAge(pldhivReduce35, 2027)
+  AverageAge(pldhivReduce35, resultsYear)
+  AverageAge(pldhivReduce35, resultsYear + 10)
   
   pldhivReduce50 <- reduce50Results %>%
     rename(value = pldhiv) 
-  AverageAge(pldhivReduce50, 2017)
-  AverageAge(pldhivReduce50, 2027)
+  AverageAge(pldhivReduce50, resultsYear)
+  AverageAge(pldhivReduce50, resultsYear + 10)
 } 
 ```
 
@@ -174,14 +191,14 @@ allPlots <- PlotAgeCascade(allMain, agebins = ageBins)
 malePlots <- PlotAgeCascade(maleMain, agebins = ageBins)
 femalePlots <- PlotAgeCascade(femaleMain, agebins = ageBins)
 
-# Plot up to 2017 for males and females
+# Plot from 30 years ago up to furture projections
 if (!asr) {
-  all2027plots <- PlotAgeCascade(pldhivLinear, agebins = ageBins, 
-    startyear = 1987)
-  male2027plots <-PlotAgeCascade(pldhivLinearMale, agebins = ageBins, 
-    startyear = 1987)
-  female2027plots <-PlotAgeCascade(pldhivLinearFemale, agebins = ageBins, 
-    startyear = 1987)
+  allProjplots <- PlotAgeCascade(pldhivLinear, agebins = ageBins, 
+    startyear = resultsYear - 30)
+  maleProjplots <-PlotAgeCascade(pldhivLinearMale, agebins = ageBins, 
+    startyear = resultsYear - 30)
+  femaleProjplots <-PlotAgeCascade(pldhivLinearFemale, agebins = ageBins, 
+    startyear = resultsYear - 30)
 }
 
 # Save plots
@@ -193,23 +210,29 @@ if (savePlots) {
   units <- "cm"
   
   # Save all plots
-  SaveFigure(figFolder, "All-2017_number", allPlots[[1]],
+  SaveFigure(figFolder, paste0(cascadeNames["all"], "_number"), 
+    allPlots[[1]], format = saveFormat, width = width, height = height, 
+    units = units)
+  SaveFigure(figFolder, paste0(cascadeNames["all"], "_proportion"), 
+    allPlots[[2]], format = saveFormat, width = width, height = height, 
+    units = units)
+  SaveFigure(figFolder, paste0(cascadeNames["male"], "_number"), 
+    malePlots[[1]], format = saveFormat, width = width, height = height, 
+    units = units)
+  SaveFigure(figFolder, paste0(cascadeNames["male"], "_proportion"),
+    malePlots[[2]], format = saveFormat, width = width, height = height, 
+    units = units)
+  SaveFigure(figFolder, paste0(cascadeNames["female"], "_number"),
+    femalePlots[[1]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "All-2017_proportion", allPlots[[2]],
-    format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Male-2017_number", malePlots[[1]],
-    format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Male-2017_proportion", malePlots[[2]],
-    format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Female-2017_number", femalePlots[[1]],
-    format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Female-2017_proportion", femalePlots[[2]],
-    format = saveFormat, width = width, height = height, units = units)
+  SaveFigure(figFolder, paste0(cascadeNames["female"], "_proportion"),
+    femalePlots[[2]], format = saveFormat, width = width, height = height, 
+    units = units)
   
   if (!asr) {
-    SaveFigure(figFolder, "Male-2027_number", male2027plots[[1]],
+    SaveFigure(figFolder, "Male-Project_number", maleProjplots[[1]],
       format = saveFormat, width = width, height = height, units = units)
-    SaveFigure(figFolder, "Female-2027_number", female2027plots[[1]],
+    SaveFigure(figFolder, "Female-Project_number", femaleProjplots[[1]],
       format = saveFormat, width = width, height = height, units = units)
   }
   
@@ -241,23 +264,23 @@ if (asr) {
     grayscale = FALSE, agenames = asrNames)
   
   # Save the ASR estimates in he figures folder
-  write_csv(allAsr, file.path(figFolder, "pldhiv-2017-ASR-age-all.csv"))
-  write_csv(maleAsr, file.path(figFolder, "pldhiv-2017-ASR-age-males.csv"))
+  write_csv(allAsr, file.path(figFolder, "pldhiv-ASR-age-all.csv"))
+  write_csv(maleAsr, file.path(figFolder, "pldhiv-ASR-age-males.csv"))
   write_csv(femaleAsr, file.path(figFolder, 
-    "pldhiv-2017-ASR-age-female.csv"))
+    "pldhiv-ASR-age-female.csv"))
   
   # Save the ASR plots
-  SaveFigure(figFolder, "All-2017_ASR_number", allAsrPlots[[1]],
+  SaveFigure(figFolder, "All_ASR_number", allAsrPlots[[1]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "All-2017_ASR_proportion", allAsrPlots[[2]],
+  SaveFigure(figFolder, "All_ASR_proportion", allAsrPlots[[2]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Male-2017_ASR_number", maleAsrPlots[[1]],
+  SaveFigure(figFolder, "Male_ASR_number", maleAsrPlots[[1]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Male-2017_ASR_proportion", maleAsrPlots[[2]],
+  SaveFigure(figFolder, "Male_ASR_proportion", maleAsrPlots[[2]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Female-2017_ASR_number", femaleAsrPlots[[1]],
+  SaveFigure(figFolder, "Female_ASR_number", femaleAsrPlots[[1]],
     format = saveFormat, width = width, height = height, units = units)
-  SaveFigure(figFolder, "Female-2017_ASR_proportion", femaleAsrPlots[[2]],
+  SaveFigure(figFolder, "Female_ASR_proportion", femaleAsrPlots[[2]],
     format = saveFormat, width = width, height = height, units = units)
   
 }
@@ -266,10 +289,10 @@ if (asr) {
 ```{r Paper plot}
 # Create a combined plot for paper
 if (!asr) {
-  legend <- GetLegend(male2027plots[[1]])
-  paperFigureA <- male2027plots[[1]] + labs(title = "Males") +
+  legend <- GetLegend(maleProjplots[[1]])
+  paperFigureA <- maleProjplots[[1]] + labs(title = "Males") +
     theme(legend.position = "none")
-  paperFigureB <- female2027plots[[1]] + labs(title = "Females") +
+  paperFigureB <- femaleProjplots[[1]] + labs(title = "Females") +
     theme(legend.position = "none")
   
   paperFigure <- ggdraw() +
