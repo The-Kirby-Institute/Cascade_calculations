@@ -471,6 +471,10 @@ if (runChecks) {
       mutate(data = table(filter(dataSet, 
         !is.na(diag_region))$diag_region) / sum(table(filter(dataSet,
           !is.na(diag_region))$diag_region)),
+        pre2000data = table(filter(filter(dataSet, !is.na(diag_region)),
+            yeardiagnosis <= 2000)$diag_region) / 
+          sum(table(filter(filter(dataSet, !is.na(diag_region)), 
+            yeardiagnosis <= 2000)$diag_region)),
         overall = table(completeSet$diag_region) / 
           sum(table(completeSet$diag_region))) %>%
       mutate(ave_number =  table(completeSet$diag_region) / 10) %>%
@@ -489,6 +493,10 @@ if (runChecks) {
       mutate(average = rowMeans(select(., -sex), na.rm = TRUE)) %>%
       mutate(data = table(filter(dataSet, !is.na(sex))$sex) / 
           sum(table(filter(dataSet, !is.na(sex))$sex)),
+        pre2000data = table(filter(filter(dataSet, !is.na(sex)), 
+            yeardiagnosis <= 2000)$sex) / 
+          sum(table(filter(filter(dataSet, !is.na(sex)), 
+            yeardiagnosis <= 2000)$sex)),
         overall = table(completeSet$sex) / 
           sum(table(completeSet$sex)))
     
@@ -511,6 +519,10 @@ if (runChecks) {
       mutate(average = rowMeans(select(., -cob), na.rm = TRUE)) %>%
       mutate(data = table(filter(dataSet, !is.na(cob))$cob) / 
           sum(table(filter(dataSet, !is.na(cob))$cob)),
+        pre2000data = table(filter(filter(dataSet, !is.na(cob)), 
+            yeardiagnosis <= 2000)$cob) / 
+          sum(table(filter(filter(dataSet, !is.na(cob)), 
+            yeardiagnosis <= 2000)$cob)),
         overall = table(completeSet$cob) / 
           sum(table(completeSet$cob))) %>%
       mutate(ave_number =  table(completeSet$cob) / 10) %>%
@@ -528,6 +540,8 @@ if (runChecks) {
     meanAge <- meanAge %>%
       mutate(average = rowMeans(select(., -agehiv), na.rm = TRUE)) %>%
       mutate(data = mean(dataSet$agehiv, na.rm = TRUE),
+        pre2000data = mean(filter(dataSet, yeardiagnosis <= 2000)$agehiv, 
+          , na.rm = TRUE),
         overall = mean(completeSet$agehiv))
     
     # expgroup 
@@ -543,6 +557,10 @@ if (runChecks) {
       mutate(average = rowMeans(select(., -expgroup), na.rm = TRUE)) %>%
       mutate(data = table(filter(dataSet, !is.na(expgroup))$expgroup) / 
           sum(table(filter(dataSet, !is.na(expgroup))$expgroup)),
+        pre2000data = table(filter(filter(dataSet, !is.na(expgroup)), 
+            yeardiagnosis <= 2000)$expgroup) / 
+          sum(table(filter(filter(dataSet, !is.na(expgroup)), 
+            yeardiagnosis <= 2000)$expgroup)),
         overall = table(completeSet$expgroup) / 
           sum(table(completeSet$expgroup)))
     
