@@ -41,23 +41,20 @@ projectFolder <- "ASR_2019"
 cascadeFlag <- "All" # minus year
 # ecdcChart <- "Female" # ECDC group used for calculations
 ecdcResults <- "exposure"
-updateECDC <- FALSE
+updateECDC <- TRUE
 
-getNewInfections <- TRUE
+getNewInfections <- FALSE # can only be TRUE if include and exclude ECDC
+                          # have been run
 
 # Produce cascadeName from the flag and analysis year. 
-# if (analysisYear <= 2016) {
-#   ecdcType <- ".xlsx" 
-# } else {
-#   ecdcType <- ".xlsm"
-# }
+if (analysisYear <= 2016) {
+  ecdcType <- ".xlsx"
+} else {
+  ecdcType <- ".xlsm"
+}
 
 cascadeName <- paste0(cascadeFlag, "-", toString(analysisYear))
 ecdcChart <- paste0(cascadeFlag, "_ECDC")
-
-if (getNewInfections) {
-  ecdcChartExclude <- paste0(cascadeFlag, "_Charts", "_exclude", ecdcType)
-}
 
 ```
 
@@ -74,6 +71,10 @@ if (cascadeFlag == "Otherexp") {
   ecdcFile2 <- file.path(outputFolder, projectFolder, "ECDC_models",
     paste0("All-", toString(analysisYear)), ecdcResults, "results",
     "All_Result_main_ConfIntervals.csv")
+  
+  ecdcFileMain <- file.path(outputFolder, projectFolder, "ECDC_models",
+    paste0("All-", toString(analysisYear)), ecdcResults, "results",
+    paste0("All_Charts", ecdcType))
 } else {
   ecdcFile1 <- file.path(outputFolder, projectFolder, "ECDC_models",
     cascadeName, ecdcResults,  "results", "All_Result_main.csv")
@@ -81,16 +82,23 @@ if (cascadeFlag == "Otherexp") {
   ecdcFile2 <- file.path(outputFolder, projectFolder, "ECDC_models",
     cascadeName, ecdcResults,  "results", 
     "All_Result_main_ConfIntervals.csv")
+  
+  ecdcFileMain <- file.path(outputFolder, projectFolder, "ECDC_models",
+    cascadeName, ecdcResults,  "results", 
+    paste0("All_Charts", ecdcType))
 }
 
 finalFile1 <- file.path(outputFolder, projectFolder, cascadeName,
   paste0(ecdcChart, ".csv"))
 finalFile2 <- file.path(outputFolder, projectFolder, cascadeName,
   paste0(ecdcChart, "_confIntervals.csv"))
+finalFileMain <- file.path(outputFolder, projectFolder, cascadeName,
+  paste0(ecdcChart, "_Charts", ecdcType))
 
 if (!file.exists(finalFile1) || updateECDC) {
   file.copy(ecdcFile1, finalFile1, overwrite = TRUE)
   file.copy(ecdcFile2, finalFile2, overwrite = TRUE)
+  file.copy(ecdcFileMain, finalFileMain, overwrite = TRUE)
 } 
   
 ```
@@ -127,7 +135,7 @@ mainUndiagnosed <- read_csv(file.path(outputFolder, projectFolder,
 #   slice(1:length(1980:analysisYear))
 
 # Read in and tidy ECDC confidence interval file - the bootstrapped 
-# confidence intervals are updated at teh end of each run so we take 
+# confidence intervals are updated at the end of each run so we take 
 # the lower and upper bound from the last run. 
 confIntervalUndiagnosed <- read_csv(file.path(outputFolder, projectFolder, 
   cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) %>%
@@ -153,7 +161,8 @@ mergedData <- pldhiv %>%
 # population <- cascadeFlag
 
 if (getNewInfections) {
-  # Also grab the new infections estimates
+  # Also grab the new infections estimates - can only be done if include
+  # and exclude calculations have been done
   
   # For all diagnoses
   newInfections <- read_excel(file.path(outputFolder, projectFolder, 
@@ -243,13 +252,14 @@ if (saveResults) {
   # Write to csv
   write_csv(plhiv, paste0(saveStringUndiagnosed, ".csv"))
   
-  # Save new infections
-  saveStringInfections <- file.path(outputFolder, projectFolder, 
-    cascadeName, paste0("newInfectionsEstimates-", toString(analysisYear)))
-  
-  # Write to csv
-  write_csv(newInfections, paste0(saveStringInfections, ".csv"))
-  
+  if (getNewInfections) {
+    # Save new infections
+    saveStringInfections <- file.path(outputFolder, projectFolder, 
+      cascadeName, paste0("newInfectionsEstimates-", toString(analysisYear)))
+    
+    # Write to csv
+    write_csv(newInfections, paste0(saveStringInfections, ".csv"))
+  }
 }
 
 # if (fileFlag) {
