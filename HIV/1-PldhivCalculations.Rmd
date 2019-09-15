@@ -49,7 +49,7 @@ Report(ASR))
 ```{r Cascade and script parameters}
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2018
-saveResults <- FALSE
+saveResults <- TRUE
 
 # Set HIV cascade parameters----------------------------------
 
@@ -60,7 +60,7 @@ projectOutput <- "ASR_2019" # "." for main output folder
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entred via a file in projectOutput 
 # which need to exist
-paramsFile <- NULL #"ProjectParameters.csv"
+paramsFile <- "ProjectParametersAge.csv"
                             
 # Cascade options----------------------------------------------------------
 # The following variables specify the charactersitsics and hence the 
@@ -87,7 +87,7 @@ if (is.null(paramsFile)) {
   
   numCascades <- 1
   
-  cascadeName <- "All-2017" # (single)
+  cascadeName <- "All-2018" # (single)
   targetGender <- rep("all", numCascades) # all, male, female (single)
   targetAge <- rep("all", numCascades) # all or split (single)
   # Note regarding ageing: The calculations don't specifically target 
@@ -97,7 +97,7 @@ if (is.null(paramsFile)) {
   # a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
   # split and then filter out age estimates as required essentially turns on 
   # doAge below. 
-  targetCob <- rep("Australia", numCascades) # all=including n/a, Thailand, etc.
+  targetCob <- rep("all", numCascades) # all=including n/a, Thailand, etc.
   # (combination). "Australia", "non-australia", "non-aus-nz"
   targetExposure <- rep("all", numCascades) #msm, hetero, pwid, otherexp 
   # (combination)
@@ -127,7 +127,7 @@ if (is.null(paramsFile)) {
   # Note: These are generally given the same value across all cascades in 
   # a project so use rep() by default. These can then be manually changed  
   # as required. 
-  excludeAborig <- rep(TRUE, numCascades) # FALSE be default to include 
+  excludeAborig <- rep(FALSE, numCascades) # FALSE by default to include 
                                            # indigenous
   doRetained <- rep(TRUE, numCascades) # TRUE for appending retained in care
   
@@ -137,7 +137,7 @@ if (is.null(paramsFile)) {
   saveUnique <- rep(FALSE, numCascades)
   
   # Settings for generating ECDC model inputs
-  ecdcData <- rep(FALSE, numCascades)
+  ecdcData <- rep(TRUE, numCascades)
   ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
   excludeOS <- rep(FALSE, numCascades) # Default FALSE but need to run with
                                        # TRUE for ASR as
@@ -307,7 +307,7 @@ if (any(useImputed)) {
     yeardeath = col_double(),
     dateill = col_date(format = ""),
     previ_diag_overseas = col_integer()))
-}
+} 
 
 # Data checks-------------------------------------------------------------
 
@@ -332,10 +332,12 @@ hivAdjustments <- read.csv(file.path(dataFolder,
   paste0("HIVadjustments-",
     toString(analysisYear), ".csv")))
 
-# Load cleaned NOM data variable (cleanNom)
-load(file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
+# Load cleaned NOM data variable (cleanNom) - need to fix up age groups
+load(file = file.path(mainDataFolder, "cleaned_ABS_nom_data.Rda"))
+cleanNom$age[cleanNom$age == "a0_4"] <- "a00_04"
+cleanNom$age[cleanNom$age == "a5_9"] <- "a05_09"
 
-# Interstate movement
+# Interstate movement -- age categories need to be updated
 absInterstate <- read_csv(file.path(mainDataFolder, 
   paste0("ABS_interstate_age_sex_clean-", toString(analysisYear), ".csv")),
   col_types = cols(
@@ -345,7 +347,10 @@ absInterstate <- read_csv(file.path(mainDataFolder,
     age = col_character(),
     type = col_character(),
     value = col_integer()
-  ))
+  )) %>% 
+  mutate(age = ifelse(age == "a0_4", "a00_04", age)) %>%
+  mutate(age = ifelse(age == "a5_9", "a05_09", age))
+  
 
 # Inter-region movement
 absInterRegion <- read_csv(file.path(mainDataFolder, 
@@ -363,7 +368,7 @@ absInterRegion <- read_csv(file.path(mainDataFolder,
 # Specifications and deaths data by age only used if doAge = TRUE ---------
 
 # Set-up age matrix names
-ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
+ageList <- c("a00_04", "a05_09","a10_14", "a15_19", "a20_24", "a25_29", 
   "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
   "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
 
@@ -393,6 +398,7 @@ pldhivCalculations <- list()
 
 # Vector to store original number of notifications if imputation is used
 numNotificationsOrig <- c()
+
 for (ii in 1:numCascades) {
 
   # Select correct data set
@@ -448,7 +454,7 @@ for (ii in 1:numCascades) {
       # Data
       pldhivData, allYears, hivBase, hivAdjustments, cleanNom,
       absInterstate, absInterRegion, ageList, yearList, hivAgeDeath)
-  }
+   }
 }
 
 ```
