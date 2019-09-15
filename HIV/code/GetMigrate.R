@@ -187,7 +187,7 @@ GetMigrateAge <- function(year, nomData, targetGender, targetExposure,
   targetCob, targetAtsi,targetLocalRegion, targetState, 
   targetGlobalRegion, propMale = NULL) {
   
-  ages <- c("a0_4", "a5_9", "a10_14", "a15_19", "a20_24", "a25_29",
+  ages <- c("a00_04", "a05_09", "a10_14", "a15_19", "a20_24", "a25_29",
     "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", "a60_64", 
     "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
   

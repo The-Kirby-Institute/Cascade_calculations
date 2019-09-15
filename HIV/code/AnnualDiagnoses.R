@@ -106,7 +106,7 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
     nyears <- tail(allYears, 1) - allYears[1] + 1
     nages <- 18
     
-    ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
+    ageList <- c("a00_04", "a05_09","a10_14", "a15_19", "a20_24", "a25_29", 
       "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
       "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
     
@@ -152,7 +152,6 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
         select(-propdiags, -notifications) %>%
         spread(year, diags) %>%
         ungroup() %>%
-        slice(c(1,10,2:9,11:18)) %>%
         select(-agebin) %>%
         as.matrix()
       
