@@ -916,6 +916,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       # Calculate age group estimates 
       # NOTE: use base migration rate as mrate is calculated assuming 
       # people are aged > 15 years
+      
       pldhivAll <- LivingDiagnosedAge(hivResultsAge,
         subsetRates$annunique, 
         subsetRates$deathrate,
