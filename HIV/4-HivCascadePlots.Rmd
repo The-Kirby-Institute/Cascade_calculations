@@ -41,7 +41,7 @@ resultsFolder <- file.path(basePath, "output")
 
 # Notifications folder is a private secure folder 
 notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data", 
-  "National HIV Registry", "2017", "National", "Hamish & Richard")
+  "National HIV Registry", "Cascades")
 
 # Load standard libraries and options ----------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
@@ -88,7 +88,7 @@ excludeCare <- FALSE # Include linked and retained in care?
 
 # Setup based on specs
 asrcols <- PlotColors("hivcascade5")
-if (projectName %in% c("ASR_2018", "ASR_2017", "ASR_2016")) {
+if (projectName %in% c("ASR_2019", "ASR_2018", "ASR_2017", "ASR_2016")) {
   # ASR do many populations otherwise do the specified one
   cascadePop <- "all" 
   asrCascades <- TRUE
@@ -145,9 +145,15 @@ if (pubPlots) {
     paste0("cascadeHIVnotifications-clean-", toString(resultsYear), 
       ".csv"))) 
   
-  countryCodes <- read.csv(file.path(dataFolder, 
-    "countryRegionCodes.csv"))
-  hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes)
+  # Read in country code data
+  countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
+
+  # Read in location of diagnosis coding
+  regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
+
+  
+  hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes,
+    regionCodes)
   
   # Load the previously saved results for the national cascade
   cascadeFolder <- file.path(resultsFolder, paste0("All-",
