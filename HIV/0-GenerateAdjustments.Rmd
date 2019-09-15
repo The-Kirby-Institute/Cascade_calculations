@@ -580,11 +580,19 @@ hivAdjustments$pstay_non_indigenous <- (1 - (1- hivBaseRates$propstay) *
 
 hivAdjustments$non_aborig_migration <- nonAborigMigrationFactor
 
-# Specific NSW estimates
+# Specific NSW estimates -- based on 6 monthly follow-up data from NSW
+# Health cumulatively over 2013-2018. Data for 2013-2019 in file
+# ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_12Aug2019.xlsx.
+# The varaibles below store the cumulative emigration proportion for 
+# Australian born diagnosd and overseas born. 
+ausBornEmigrate <- 0.0086
+osBornEmigrate <- 0.093
+
 propAus <- hivCobCum$australia
-propStayNSW <- propAus * (1 - 0.0072) + (1 - propAus) * (1 - 0.1008)
-propStayLowerNSW <-  propAus * (1 - 2 * 0.0072) + (1 - propAus) * 
-  (1 - 2 * 0.1008)
+propStayNSW <- propAus * (1 - ausBornEmigrate) + (1 - propAus) * 
+  (1 - osBornEmigrate)
+propStayLowerNSW <-  propAus * (1 - 2 * ausBornEmigrate) + (1 - propAus) * 
+  (1 - 2 * osBornEmigrate)
 propStayUpperNSW <- rep(1, length(allYears))
 
 hivAdjustments$pstay_nsw <- propStayNSW / hivBaseRates$propstay
@@ -596,17 +604,17 @@ hivAdjustments$pstay_nsw_upper <- hivBaseRates$propstay_upper /
 # Specific population estimates for Australian born and overseas born.
 # Currently these are  in
 # NSW
-hivAdjustments$pstay_aus <- rep((1 - 0.0072), length(allYears)) / 
+hivAdjustments$pstay_aus <- rep((1 - ausBornEmigrate), length(allYears)) / 
   hivBaseRates$propstay
-hivAdjustments$pstay_aus_lower <- rep((1 - 2 * 0.0072), 
+hivAdjustments$pstay_aus_lower <- rep((1 - 2 * ausBornEmigrate), 
   length(allYears)) / 
   hivBaseRates$propstay_lower
 hivAdjustments$pstay_aus_upper <- rep(1, length(allYears)) / 
   hivBaseRates$propstay_upper
 
-hivAdjustments$pstay_os <- rep((1 - 0.1008), length(allYears)) / 
+hivAdjustments$pstay_os <- rep((1 - osBornEmigrate), length(allYears)) / 
   hivBaseRates$propstay
-hivAdjustments$pstay_os_lower <- rep((1 - 2 * 0.1008), 
+hivAdjustments$pstay_os_lower <- rep((1 - 2 * osBornEmigrate), 
   length(allYears)) / 
   hivBaseRates$propstay_lower
 hivAdjustments$pstay_os_upper <- rep(1, length(allYears)) / 
