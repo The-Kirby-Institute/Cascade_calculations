@@ -13,9 +13,12 @@ linkage1996-upperCI,0.0133,2003 linkage,Standardised mortality ratio HIV without
 linkage2003,0.0161,2003 linkage,Standardised mortality ratio HIV without AIDS up to 1997-2003,"Nakhaee F, Black D, Wand H, McDonald A, Law M. Changes in mortality following HIV and AIDS and estimation of the number of people living with diagnosed HIV/AIDS in Australia, 1981-2003. Sexual Health. CSIRO; 2009;6(2):129–34. ",
 linkage2003-lowerCI,0.0152,2003 linkage,Standardised mortality ratio HIV without AIDS up to 1997-2003 (lower CI),"Nakhaee F, Black D, Wand H, McDonald A, Law M. Changes in mortality following HIV and AIDS and estimation of the number of people living with diagnosed HIV/AIDS in Australia, 1981-2003. Sexual Health. CSIRO; 2009;6(2):129–34. ",
 linkage2003-upperCI,0.0171,2003 linkage,Standardised mortality ratio HIV without AIDS up to 1997-2003 (upperCI),"Nakhaee F, Black D, Wand H, McDonald A, Law M. Changes in mortality following HIV and AIDS and estimation of the number of people living with diagnosed HIV/AIDS in Australia, 1981-2003. Sexual Health. CSIRO; 2009;6(2):129–34. ",
-vicClinicRetained,0.95,2015 McMahon Paper,Proportion retained in care,"McMahon J, Moore R, Eu B, Tee B, Chen M, El-Hayek C, et al. Clinic Network Collaboration and Patient Tracing to Maximize Retention in HIV Care. PloS one 2015; 10:e0127726.",
-vicClinicRetainedLower,0.914,2015 McMahon Paper,Proportion retained in care (lower range),"McMahon J, Moore R, Eu B, Tee B, Chen M, El-Hayek C, et al. Clinic Network Collaboration and Patient Tracing to Maximize Retention in HIV Care. PloS one 2015; 10:e0127726.",
-vicClinicRetainedUpper,0.988,2015 McMahon Paper,Proportion retained in care (upper range),"McMahon J, Moore R, Eu B, Tee B, Chen M, El-Hayek C, et al. Clinic Network Collaboration and Patient Tracing to Maximize Retention in HIV Care. PloS one 2015; 10:e0127726.",
+vicClinicRetained2013,0.95,2015 McMahon Paper,Proportion retained in care,"McMahon J, Moore R, Eu B, Tee B, Chen M, El-Hayek C, et al. Clinic Network Collaboration and Patient Tracing to Maximize Retention in HIV Care. PloS one 2015; 10:e0127726.",
+vicClinicRetainedLower2013,0.914,2015 McMahon Paper,Proportion retained in care (lower range),"McMahon J, Moore R, Eu B, Tee B, Chen M, El-Hayek C, et al. Clinic Network Collaboration and Patient Tracing to Maximize Retention in HIV Care. PloS one 2015; 10:e0127726.",
+vicClinicRetainedUpper2013,0.988,2015 McMahon Paper,Proportion retained in care (upper range),"McMahon J, Moore R, Eu B, Tee B, Chen M, El-Hayek C, et al. Clinic Network Collaboration and Patient Tracing to Maximize Retention in HIV Care. PloS one 2015; 10:e0127726.",
+vicClinicRetained,0.9624,2019 McMahon ASHM Poster,Proportion retained in care,,Poster presentation at ASHM
+vicClinicRetainedLower,0.93,2019 McMahon ASHM Poster,Proportion retained in care (lower range),,Poster presentation at ASHM
+vicClinicRetainedUpper,0.99,2019 McMahon ASHM Poster,Proportion retained in care (upper range),,Poster presentation at ASHM
 ahodMortality,0.0108,,,,Annual rate of death per 100 person-years
 ahodMortalityLower,0.008,,,,
 ahodMortalityUpper,0.015,,,,

@@ -1150,11 +1150,19 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     # Perform and append retained in care calculations
     source(file.path(HIVcode, "RetainedCare.R"))
     
-    # Load retained in care data - Use McMahon et al data for 2013 onwards
-    # Hardcoded: value, lower, upper.  Lower and upper ranges correspond 
-    # to the range for the percentage retained after follow-up in McMahon 
-    # et al., Clinic Network Collaboration and Patient Tracing to Maximize 
-    # Retention in HIV Care, PLOS One, May 26, 2015.
+    # Load retained in care data - Use McMahon et al data for 2013 onwards. 
+    # Given by value, lower, upper. 
+    # Initial estimates from study conducted in 2013. Lower (91.4%) and 
+    # upper (98.8%) ranges correspond to the range for the percentage 
+    # retained after follow-up in McMahon et al., Clinic Network 
+    # Collaboration and Patient Tracing to Maximize Retention in HIV Care, 
+    # PLOS One, May 26, 2015.
+    # A repeat study in 2019 produced an estimate of 96.24% which is only 
+    # slightly than the previous estimate. We assume a range of 93% to 99%.
+    # 
+    # We assume a linear change form the 2013 to the latest value 
+    # (currently in 2019). 
+
     hivParameters <- read.csv(file.path(dataFolder, 
       "individualHIVparameters.csv"), as.is = 1)
     hivParameters <- select(hivParameters, parameter, value)
@@ -1163,9 +1171,12 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       assign(hivParameters$parameter[ii], hivParameters$value[ii])
     }
     
-    retained <- vicClinicRetained
-    retainedLower <- vicClinicRetainedLower
-    retainedUpper <- vicClinicRetainedUpper
+    retained <- seq(vicClinicRetained2013, vicClinicRetained, 
+      length.out = retainedYears)
+    retainedLower <- c(vicClinicRetainedLower2013, vicClinicRetainedLower,
+      length.out = retainedYears)
+    retainedUpper <- c(vicClinicRetainedUpper2013, vicClinicRetainedUpper,
+      length.out = retainedYears)
     
     hivRetained <- RetainedCare(hivDiagnosed, retained, retainedLower,
       retainedUpper, retainedYears)
