@@ -1,0 +1,10 @@
+"region","context","sex","year","diagnoses","retested","prop_retested","prop_lower","prop_upper"
+"regional","gp","female","2014",248,48,0.193548387096774,0.147410170815661,0.249414180269915
+"regional","gp","male","2014",130,13,0.1,0.0564734748532889,0.168134349136291
+"remote","gp","female","2014",NA,NA,NA,NA,NA
+"remote","gp","male","2014",NA,NA,NA,NA,NA
+"urban","gp","female","2014",NA,NA,NA,NA,NA
+"urban","gp","male","2014",NA,NA,NA,NA,NA
+"regional","gp","all","2014",378,61,0.161375661375661,0.126538234043038,0.20326721675457
+"remote","gp","all","2014",NA,NA,NA,NA,NA
+"urban","gp","all","2014",NA,NA,NA,NA,NA

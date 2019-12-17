@@ -44,14 +44,19 @@ source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2016 # year of cascade we will calculate and plot     
+resultsYear <- 2017 # year of cascade we will calculate and plot   
+dataYear <- 2017 # year data for estimates was generated (to handle updated 
+                 # data) this is the data output year as well.
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
 fileType <- ".tiff" # ".png" for documents; .tiff for paper
-retestRange <- TRUE # Calculate variations in retested
+retestRange <- FALSE # Calculate variations in retested
 msmSplit <- FALSE # For determining which retest variation file to use
 paper <- TRUE # Use results for paper 
 paper <- ifelse(resultsYear != 2016, FALSE, paper)
+
+# Update 
+dataFolder <- file.path(dataFolder, toString(dataYear))
 
 ```
 
@@ -70,7 +75,7 @@ if (paper) {
     "chlamnotifications_clean-2016-paper.csv")
 } else {
   notificationsFile <- file.path(dataFolder,
-    paste("chlamnotifications_clean-", toString(tail(resultsYear, 1)),
+    paste("chlamnotifications_clean-", toString(tail(dataYear, 1)),
       ".csv", sep = ""))
 } 
 
@@ -79,9 +84,10 @@ if (paper) {
     "chlamincidence-2016-paper.csv")
 } else {
   incidenceFile <- file.path(dataFolder, paste("chlamincidence",
-    toString(tail(resultsYear, 1)), ".csv", sep = ""))
+    toString(tail(dataYear, 1)), ".csv", sep = ""))
 }
 
+# Use results year for treatment file. 
 treatFile <- file.path(dataFolder, paste("chlamtreatment", 
   toString(tail(resultsYear, 1)), ".csv", sep = ""))
 
@@ -95,14 +101,14 @@ if (retestRange) {
   if (msmSplit) {
     retestVarFile <- file.path(dataFolder, 
       paste0("chlamRetestVariation_clean-",
-        toString(tail(resultsYear, 1)), "_MSM.csv"))
+        toString(tail(dataYear, 1)), "_MSM.csv"))
     
     retestPops <- c("all", "females", "msm", "non_msm")
     
   } else {
     retestVarFile <- file.path(dataFolder, 
       paste0("chlamRetestVariation_clean-",
-        toString(tail(resultsYear, 1)), ".csv")) 
+        toString(tail(dataYear, 1)), ".csv")) 
     
     retestPops <- c("all", "females", "males")
   }
@@ -709,14 +715,14 @@ if (saveCascade) {
   
   # Create output figures folder
   if (paper) {
-    dir.create(file.path(basePath, "output", paste0(toString(resultsYear),
+    dir.create(file.path(basePath, "output", paste0(toString(dataYear),
       "-paper")), showWarnings = FALSE)
     resultsFolder <- file.path(basePath, "output",
-      paste0(toString(resultsYear), "-paper"))
+      paste0(toString(dataYear), "-paper"))
   } else {
-    dir.create(file.path(basePath, "output", toString(resultsYear)), 
+    dir.create(file.path(basePath, "output", toString(dataYear)), 
       showWarnings = FALSE)
-    resultsFolder <- file.path(basePath, "output", toString(resultsYear))
+    resultsFolder <- file.path(basePath, "output", toString(dataYear))
   }
   
   # Cascade
