@@ -81,19 +81,29 @@ The following publications are associated with this project and used code in thi
 <br></br>
 - B Hajarizadeh, J Grebely, H McManus, C Estes, H Razavi, RT Gray, et al. Chronic hepatitis C burden and care cascade in Australia in the era of interferon-based treatment. Journal of gastroenterology and hepatology 2017; 32:229–236.
 <br></br>
+- RT Gray, DP Wilson, R Guy, M Stoove, M Hellard, G Prestage, T Lea, J de Wit, M Holt. Undiagnosed HIV infections among gay and bisexual men increasingly contribute to new infections in Australia. Journal of the International AIDS Society 2018, 21:e25104.
+    - This manuscript used cascade estimates for Australian gay and bisexual men produced using the HIV, viral hepatitis and sexually transmissible infections in Australia: 2015 Annual Surveillance Report code [version 1.0_2015_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v1.0_2015_ASR)
+    - Published paper repository: (leftygray/Cascade_Incidence)[https://github.com/leftygray/Cascade_Incidence]
+<br></br>
 - P keen et al. The 2016 HIV diagnosis and care cascade in New South Wales, Australia: meeting the UNAIDS 90-90-90 targets. Journal of the International AIDS Society 2018; 21:e25109.
-	- Published results generated using [version 3.0_2017_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR); doi:[10.5281/zenodo.998280](http://doi.org/10.5281/zenodo.998280)
+	- Published results produced using [version 3.0_2017_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR); doi:[10.5281/zenodo.998280](http://doi.org/10.5281/zenodo.998280)
 <br></br>
 - N Bretana RT Gray, M Law, R Guy. Aging of the HIV Population in Australia: A Modeling Study. JAIDS 2018;79:e115. 
-    - Published results generated using [version 3.5_HIV_ageing_paper-Final](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.5_HIV_ageing_paper-Final); doi:[10.5281/zenodo.1478452](https://doi.org/10.5281/zenodo.1478452)
+    - Submitted paper results produced using [version 3.3_HIV_ageing_paper](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.3_HIV_ageing_paper); doi:[10.5281/zenodo.1260377](http://doi.org/10.5281/zenodo.1260377)
+    - Published results produced using [version 3.5_HIV_ageing_paper-Final](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.5_HIV_ageing_paper-Final); doi:[10.5281/zenodo.1478452](https://doi.org/10.5281/zenodo.1478452)
 <br></br>
 - RT Gray, D Callander, J Hocking, S McGregor, H McManus, A Dyda, C Moreira, S Braat, B Hngel, J Ward, DP Wilson, B Donovan, J Kaldor, RJ Guy. population-level diagnosis and care cascade for genital chlamydia in Australia. Sexually Transmitted Infections 2020;96:131–36.
-    - Published results generated using [version v3.8_sti_cascade_paper-v2](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.8_sti_cascade_paper-v2); doi:[10.5281/zenodo.2402486](http://doi.org/10.5281/zenodo.2402486)
+    - Submitted paper results produced using [version 3.4_sti_cascade_paper](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.4_sti_cascade_paper); doi:[10.5281/zenodo.1283746](http://doi.org/10.5281/zenodo.998280)
+    - Published results produced using [version v3.8_sti_cascade_paper-v2](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.8_sti_cascade_paper-v2); doi:[10.5281/zenodo.2402486](http://doi.org/10.5281/zenodo.2402486)
 <br></br>
 - T Marukutira, RT Gray, C Douglass, C El-Hayek, C Moreira, J Asselin, B Donovan, et al. Gaps in the HIV Diagnosis and Care Cascade for Migrants in Australia, 2013–2017: A Cross-Sectional Study. PLOS Medicine 2020;17:e1003044. 
-    - Published results generated using [version v4.1_migrant_cascade_paper](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.1_migrant_cascade_paper); doi:[10.5281/zenodo.3600660](http://doi.org/10.5281/zenodo.3600660)
+    - Submitted manuscript based on results produced by 
+    - Published results produced using [version v4.1_migrant_cascade_paper](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.1_migrant_cascade_paper); doi:[10.5281/zenodo.3600660](http://doi.org/10.5281/zenodo.3600660)
 <br></br>
 - RT Gray et al. The Australia HIV cascade. _In preparation_ 
-    - Manuscript results generated using [version v3.6_2018_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.6_2018_ASR)
+    - Manuscript results produced using [version v3.6_2018_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.6_2018_ASR)
+
+
+
 
 
