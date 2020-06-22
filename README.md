@@ -97,7 +97,6 @@ The following publications are associated with this project and used code in thi
     - Published results produced using [version v3.8_sti_cascade_paper-v2](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.8_sti_cascade_paper-v2); doi:[10.5281/zenodo.2402486](http://doi.org/10.5281/zenodo.2402486)
 <br></br>
 - T Marukutira, RT Gray, C Douglass, C El-Hayek, C Moreira, J Asselin, B Donovan, et al. Gaps in the HIV Diagnosis and Care Cascade for Migrants in Australia, 2013–2017: A Cross-Sectional Study. PLOS Medicine 2020;17:e1003044. 
-    - Submitted manuscript based on results produced by 
     - Published results produced using [version v4.1_migrant_cascade_paper](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.1_migrant_cascade_paper); doi:[10.5281/zenodo.3600660](http://doi.org/10.5281/zenodo.3600660)
 <br></br>
 - RT Gray et al. The Australia HIV cascade. _In preparation_ 
