@@ -47,6 +47,7 @@ notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data",
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 source(file.path(Rcode, "Plotcolors.R"), echo=TRUE)
+LoadLibrary(knitr)
 LoadLibrary(tidyverse)
 LoadLibrary(scales)
 LoadLibrary(cowplot) # Note this masks ggsave with save_plot
@@ -71,7 +72,7 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters ------------------------------------------------------
 resultsYear <- 2018  # year of cascade we will plot
-minYear <- 14        # how long ago do we plot things (from 2004)
+minYear <- 15        # how long ago do we plot things (from 2004)
 startYear <- resultsYear - minYear + 1 
 
 # Set up project - If ASR_2017 plot all populations otherwise just plot 
@@ -746,8 +747,8 @@ if (asrCascades && pubPlots) {
   
   # Overall estimate of unique diagnoses
   propUnique <- hivResults$propunique
-  propUnique <- tail(propUnique, 14) # 14 because of use of diff()
-  # 2004-2016
+  propUnique <- tail(propUnique, 15) # 14 because of use of diff()
+  # 2004-2018
   
   # Create data frame for unique cases for each group
   expDiags <- hivSet %>% 
@@ -1244,7 +1245,7 @@ if (asrCascades) {
   modeNames <- c("MSM", "Heterosexual", "PWID", "Other exposure") 
   # pops <- c("non-indigenous", "indigenous", "bornssa",
   # "bornsea","othercob")
-  pops <- c("ausnonatsi", "atsi", "ssa", "sea","othercob")
+  pops <- c("ausnonindigenous", "indigenous", "ssa", "sea","othercob")
   popNames <- c("Non-indigenous \n Australians", 
     "Indigenous \n Australians", 
     "Born in \n Sub-Saharan \n Africa", 
@@ -1404,9 +1405,9 @@ if (asrCascades) {
   finalTable[finalTable$stage == "pldhiv",]$stage <- "Diagnosed"
   
   # Rename second column
-  finalTable[finalTable$population == "ausnonatsi",]$population <-
+  finalTable[finalTable$population == "ausnonindigenous",]$population <-
     "Australian born non-indigenous"
-  finalTable[finalTable$population == "atsi",]$population <- 
+  finalTable[finalTable$population == "indigenous",]$population <- 
     "Australian born indigenous"
   finalTable[finalTable$population == "sea",]$population <- 
     "Born in South East Asia"

@@ -31,7 +31,7 @@ resultsFolder <- file.path(basePath, "output")
 
 # Notifications folder is a private secure folder 
 notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data", 
-  "National HIV Registry", "2017", "National", "Hamish & Richard")
+  "National HIV Registry", "Cascades")
 
 # Set working directory to current directory
 #setwd(basePath)
@@ -51,15 +51,15 @@ LoadLibrary(gridExtra)
 source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
 
 # Script parameters
-resultsYear <- 2017  # year of cascade we will plot
-minYear <- 14        # how long ago do we plot things
+resultsYear <- 2018  # year of cascade we will plot
+minYear <- 15      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE
 
 # Set up project and cascade to analyse
 projectName <- "HIV_Cascade_Paper"  
 resultsFolder <- file.path(resultsFolder, projectName)
-cascadeName <- "All-2017" #"ASR-2016"
+cascadeName <- "All-2018"
 cascadePop <- "all"
 
 # New infections parameters

@@ -23,7 +23,9 @@ LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
 analysisYear <- 2018
-projectName <-  "ASR_2019" #"ASR_2018" #"HIV_Cascade_Paper"
+projectName <-  "ASR_2018" #"ASR_2018" 
+                           #"HIV_Cascade_Paper"
+                           #"Victorian_Estimates_2019"
 multipleCascades <- TRUE
 artNames <- NULL
 
@@ -43,6 +45,8 @@ if (multipleCascades && projectName %in% c("ASR_2016", "ASR_2017",
 } else {
   # Specify cascades manually (without year)
   cascadeNames <- "All" # specify cascades with project 
+  # cascadeNames <- c("Vic_All", "Vic_All-female", "Vic_All-male", 
+  #   "Vic_All-msm", "Vic_All-PWID", "Vic_nonAus")
 }
 
 if (is.null(artNames)) {

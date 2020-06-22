@@ -60,8 +60,8 @@ projectOutput <- "ASR_2019" # "." for main output folder
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entred via a file in projectOutput 
 # which need to exist
-paramsFile <- "ProjectParametersAge.csv"
-                            
+paramsFile <- NULL #"ProjectParameters.csv"
+                             
 # Cascade options----------------------------------------------------------
 # The following variables specify the charactersitsics and hence the 
 # notifications that will be included in the cascade. For some variables a 
@@ -129,7 +129,7 @@ if (is.null(paramsFile)) {
   # as required. 
   excludeAborig <- rep(FALSE, numCascades) # FALSE by default to include 
                                            # indigenous
-  doRetained <- rep(TRUE, numCascades) # TRUE for appending retained in care
+  doRetained <- rep(FALSE, numCascades) # TRUE for appending retained in care
   
   # Settings for doing deduplication analysis
   doUnique <- rep(TRUE, numCascades)
@@ -139,7 +139,7 @@ if (is.null(paramsFile)) {
   # Settings for generating ECDC model inputs
   ecdcData <- rep(TRUE, numCascades)
   ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
-  excludeOS <- rep(FALSE, numCascades) # Default FALSE but need to run with
+  excludeOS <- rep(TRUE, numCascades) # Default FALSE but need to run with
                                        # TRUE for ASR as
   
   # Leave projections chunk turned off so it is not called unless required. 
@@ -147,7 +147,7 @@ if (is.null(paramsFile)) {
   projectPldhiv <- rep(FALSE, numCascades) 
   
   # Manually set final year for projections and projection name
-  projectYear <- rep(analysisYear + 10, numCascades)  
+  projectYear <- 2030 #rep(analysisYear + 10, numCascades)  
   projectName <- rep("future_sq", numCascades)
   
   # Specifiy projection option for future diagnoses - can project 
