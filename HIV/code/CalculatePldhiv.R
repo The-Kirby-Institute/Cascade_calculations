@@ -1170,13 +1170,13 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     for (ii in 1:nrow(hivParameters)) {
       assign(hivParameters$parameter[ii], hivParameters$value[ii])
     }
-    
+
     retained <- seq(vicClinicRetained2013, vicClinicRetained, 
-      length.out = retainedYears)
-    retainedLower <- c(vicClinicRetainedLower2013, vicClinicRetainedLower,
-      length.out = retainedYears)
-    retainedUpper <- c(vicClinicRetainedUpper2013, vicClinicRetainedUpper,
-      length.out = retainedYears)
+      length.out = length(retainedYears))
+    retainedLower <- seq(vicClinicRetainedLower2013, vicClinicRetainedLower,
+      length.out = length(retainedYears))
+    retainedUpper <- seq(vicClinicRetainedUpper2013, vicClinicRetainedUpper,
+      length.out = length(retainedYears))
     
     hivRetained <- RetainedCare(hivDiagnosed, retained, retainedLower,
       retainedUpper, retainedYears)
