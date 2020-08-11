@@ -94,7 +94,7 @@ asrcols <- PlotColors("hivcascade5")
 # Load hiv cascade dataframe
 inputFile <- file.path(resultsFolder, cascadeName,
   paste0("HIVcascadeEstimates-", 
-  toString(resultsYear), ".csv"))
+    toString(resultsYear), ".csv"))
 hivCascade <- read.csv(inputFile)
 
 # Exclude linked and retained in care
@@ -120,7 +120,7 @@ hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes,
 # Load new infections estimates
 inputFileInfections <- file.path(resultsFolder, cascadeName,
   paste0("newInfectionsEstimates-", 
-  toString(resultsYear), ".csv"))
+    toString(resultsYear), ".csv"))
 hivNewInfections <- read.csv(inputFileInfections) 
 if (infectsCalculation == "include") {
   hivNewInfections <- hivNewInfections %>%
@@ -144,7 +144,7 @@ if (infectsCalculation == "include") {
         infectsExclude$infections) / 2,
     infections_lower = infectsExclude$infections_lower,
     infections_upper = infectsInclude$infections_upper)
-    
+  
 }
 
 ```
@@ -163,7 +163,7 @@ the rsq package https://cran.r-project.org/web/packages/rsq/index.html
 based on the calculation in the paper: Cameron & Windmeijer, An 
 R-squared measure of goodness of fit for some common nonlinear 
 regression model, Journal of Econometrics, 77 (1997) 329-342. 
- 
+
 Considered test for heteroscedasticity in the residuals using the 
 Breusch-Pagan test (P > 0.05 means it is okay) using bptest() from the 
 lmtest package https://cran.r-project.org/web/packages/rsq/index.html 
@@ -247,7 +247,7 @@ pseudoR2Infects <- rsq(trendInfects, type = "kl")
 infectsPlot <- ggplot(data = newInfects, aes(x = year, 
   y = infections)) +
   geom_ribbon(aes(ymin = infections_lower, ymax = infections_upper), 
-        fill = asrcols[2], alpha = 0.4) +
+    fill = asrcols[2], alpha = 0.4) +
   geom_line(aes(color = "infects")) + 
   geom_point(color = asrcols[2]) +
   geom_line(aes(y = predict(trendInfects, type = "response"), 
@@ -270,9 +270,9 @@ infectsPlot <- ggplot(data = newInfects, aes(x = year,
   geom_text(x = 2010, y = 300, label = paste("Pseudo-R^2 infections:",
     toString(round(rsq(trendInfects, type = "kl"), digits = 4))), 
     size = 3) #+ 
-  geom_text(x = 2010, y = 150, label = paste("Pseudo-R^2 notifications:",
-    toString(round(rsq(trendDiags, type = "kl"), digits = 4))),
-    size = 3)
+geom_text(x = 2010, y = 150, label = paste("Pseudo-R^2 notifications:",
+  toString(round(rsq(trendDiags, type = "kl"), digits = 4))),
+  size = 3)
 
 if (savePlots) {
   # Save the infects plot
@@ -523,7 +523,7 @@ trendData <- bind_rows(trendData, data_frame(year = year,
 
 if (savePlots) {
   write_csv(trendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
-         toString(startYear), "-", toString(resultsYear), ".csv")))
+    toString(startYear), "-", toString(resultsYear), ".csv")))
 }
 
 # Linear models -----------------------------------------------------------
@@ -568,17 +568,17 @@ pseudoR2lmoverall <- rsq(overalllmModel)
 
 diagnosedTrials <- cbind(round(filter(trendData, 
   stage == "pldhiv")$value), round(filter(trendData, 
-  stage == "undiagnosed")$value))
+    stage == "undiagnosed")$value))
 artTrials <- cbind(round(filter(trendData, 
   stage == "numART")$value), round(filter(trendData, 
-  stage == "noART")$value))
+    stage == "noART")$value))
 suppressedTrials <- cbind(round(filter(trendData, 
   stage == "suppressed")$value), round(filter(trendData, 
-  stage == "unsuppressed")$value))
+    stage == "unsuppressed")$value))
 overallTrials <- cbind(round(filter(trendData, 
   stage == "suppressed")$value), round(filter(trendData, 
-  stage == "infected")$value - filter(trendData, 
-  stage == "suppressed")$value))
+    stage == "infected")$value - filter(trendData, 
+      stage == "suppressed")$value))
 
 diagsModel <- glm(diagnosedTrials ~ year, 
   family = binomial(link = "logit"))
@@ -761,7 +761,7 @@ if (savePlots) {
   
   write_csv(trendCascade, file.path(figFolder, 
     paste0("HIVcascade_trends_", 
-    toString(startYear), "-", toString(resultsYear), ".csv")))
+      toString(startYear), "-", toString(resultsYear), ".csv")))
 }
 ```
 
@@ -991,7 +991,7 @@ for (ii in 1:length(modelNames)) {
 if (savePlots) {
   write_csv(breakTable, file.path(figFolder, 
     paste0("HIVcascade_", "breakpoints_", 
-    toString(startYear), "-", toString(resultsYear), ".csv")))
+      toString(startYear), "-", toString(resultsYear), ".csv")))
 }
 
 ```
@@ -1026,7 +1026,7 @@ segCI <- function(est, stdErr) {
 # Varying the initial guess of the breakpoint from 2007 to 2013 seems to 
 # produce no change in the fitted curve. 
 # 
-# Unsuppressed doesn't appear to have a single chnage point. 
+# Unsuppressed doesn't appear to have a single change point. 
 breakPoints <- c("undiagnosed" = 2010,
   "noART" = 2010, 
   "unsuppressed" = 2010)
@@ -1061,7 +1061,7 @@ for (ii in segmentStages) {
     } 
     
     segModels[[ii]] <<- segModel
-  
+    
     # Plot on top of trend plot
     segModelData <- data.frame(year = tempData$year, 
       segvalue = fitted(segModel))
@@ -1164,6 +1164,7 @@ summary(segModel)
 segModel$psi
 segCI(segModel$psi[, "Est."], segModel$psi[, "St.Err"])
 slope(segModel) 
+exp(slope(segModel)$year[,1]) # Rate ratios
 BIC(segModel)
 BIC(trendModels[[step]])
 
@@ -1177,7 +1178,10 @@ BIC(trendModels[[step]])
 
 # Specify initial breakpoints - use trial and error based on breakpoints()
 # results and to test for sensitivity. 
+
 breakPoints <- c(2008)
+# breakPoints <- c(2008, 2010) # Two breakpoints can be found at 2010 and
+# 2014
 
 # Recreate base model
 trendDiags <- glm(diags ~ year, data = diagsData, 
@@ -1211,15 +1215,8 @@ segDiagsPlot <- ggplot(data = diagsData,
     ylim = c(0, diagsmax)) + 
   ylab("Annual notifications") + xlab("Year") +  
   PlotOptions() +
-  geom_vline(xintercept = segDiags$psi[2], linetype = "dashed",
+  geom_vline(xintercept = segDiags$psi[,2], linetype = "dashed",
     colour = "blue") + 
-  geom_errorbarh(aes(y = 0.975 * diagsmax,
-    xmin = segCI(segDiags$psi[2],
-      segDiags$psi[3])[1],
-    xmax = segCI(segDiags$psi[2],
-      segDiags$psi[3])[2]),
-    colour = "blue",
-    height = 0.025 * diagsmax) +
   geom_text(x = 2010, y = 0.2 * diagsmax, 
     label = paste("Overall pseudo-R^2:",
       toString(round(filter(trendCascade, 
@@ -1230,11 +1227,24 @@ segDiagsPlot <- ggplot(data = diagsData,
       toString(round(rsq(segDiags, type = "kl"), digits = 4))),
     size = 3)
 
+if (length(breakPoints) == 1) {
+  segDiagsPlot <- segDiagsPlot +
+    geom_errorbarh(aes(y = 0.975 * diagsmax, 
+    xmin = segCI(segDiags$psi[,2],
+      segDiags$psi[,3])[1],
+    xmax = segCI(segDiags$psi[,2],
+      segDiags$psi[,3])[2]),
+    colour ="blue", 
+    height = 0.025 * diagsmax)
+}
+
+print(segDiagsPlot)
+
 # Summary: break points and slopes for diagnoses. Remember need to exp 
-# to get rate ratios. 
+# slope estimates to get rate ratios.
 summary(segDiags)
 segDiags$psi
-segCI(segDiags$psi[2], segDiags$psi[3])
+segCI(segDiags$psi[,2], segDiags$psi[,3]) 
 slope(segDiags)
 BIC(trendDiags)
 BIC(segDiags)
@@ -1278,14 +1288,7 @@ segInfectsPlot <- ggplot(data = newInfects,
   ylab("Annual new infections") + xlab("Year") +  
   PlotOptions() +
   geom_vline(xintercept = segInfects$psi[2], linetype = "dashed",
-    colour = "blue") + 
-  geom_errorbarh(aes(y = 0.975 * infectsmax,
-    xmin = segCI(segInfects$psi[2],
-      segInfects$psi[3])[1],
-    xmax = segCI(segInfects$psi[2],
-      segInfects$psi[3])[2]),
-    colour = "blue",
-    height = 0.025 * diagsmax) +
+    colour = "blue") +
   geom_text(x = 2010, y = 0.2 * infectsmax, 
     label = paste("Overall pseudo-R^2:",
       toString(round(filter(trendCascade, 
@@ -1295,6 +1298,19 @@ segInfectsPlot <- ggplot(data = newInfects,
     label = paste("Segmented pseudo-R^2:",
       toString(round(rsq(segInfects, type = "kl"), digits = 4))),
     size = 3)
+
+if (length(breakPointsInfects) == 1) {
+  segInfectsPlot <- segInfectsPlot +
+    geom_errorbarh(aes(y = 0.975 * infectsmax,
+    xmin = segCI(segInfects$psi[2],
+      segInfects$psi[3])[1],
+    xmax = segCI(segInfects$psi[2],
+      segInfects$psi[3])[2]),
+    colour = "blue",
+    height = 0.025 * diagsmax)
+}
+
+print(segInfectsPlot)
 
 # Summary: break points and slopes for infections. Remember need to exp 
 # to get rate ratios. 
@@ -1418,7 +1434,7 @@ pslopes <- function(overalldata, cutpoint) {
     data = interactData, 
     family = "poisson")
   
-
+  
   # Calculate the Wald ststatistic and p-value
   theta <- coef(intModel)[2:3] # KEEP AS COEFFICIENTS
   v <- vcov(intModel)[2:3, 2:3]
@@ -1487,7 +1503,7 @@ for (step in steps) {
   segModel <- outputs$segModel
   overallData <- outputs$overallData
   cutPoint <- outputs$cutPoint
-    
+  
   # Set up pre and post models
   splitModels <- prepostModels(overallData, cutPoint)
   segModelPre <- splitModels$premodel
@@ -1545,10 +1561,10 @@ for (step in steps) {
 
 # Save as table -----------------------------------------------------------
 if (savePlots) {
-
+  
   write_csv(modelTable, file.path(figFolder,
     paste0("HIVcascade_trends_models_", 
-    toString(startYear), "-", toString(resultsYear), ".csv")))
+      toString(startYear), "-", toString(resultsYear), ".csv")))
 }
 
 ```
@@ -1578,8 +1594,8 @@ noARTorig <- filter(resultsAll, stage == "pldhiv")$value -
 # the treatment data merging.
 addTempRes <- TRUE # Add estimates for temporary residents on ART
 atrasTRest <- TRUE # Use ATRAS estimates, FALSE = NAPWHA estimates
-                   # See 0-ArtAnalysis.Rmd for details
-                   # FALSE for ASR and TRUE for paper
+# See 0-ArtAnalysis.Rmd for details
+# FALSE for ASR and TRUE for paper
 
 if (addTempRes) {
   trString <- ifelse(atrasTRest,"ATRAS", "NAPWHA")
@@ -1591,7 +1607,7 @@ if (addTempRes) {
 
 artEstimates <- read.csv(file.path(resultsFolder,"..",
   paste0("ART_Estimates-2017-",
-  trString, ".csv")))
+    trString, ".csv")))
 
 # First test - replace 2011 ART value with fitted 2011 value
 artTest <- filter(resultsAll, stage == "numART")$value
