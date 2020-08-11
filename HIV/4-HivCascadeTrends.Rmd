@@ -174,7 +174,8 @@ So dropped these tests and just stuck with the pseudo-R^2.
 
 ```{r simple trends}
 # This chunk is used to do some simple trend analysis of the cascade
-# estimates over 2004-2016. 
+# estimates over 2004-2016. Throughout coefficients of Poisson models are
+# exponentiated to represent a rate ratio. 
 
 # Notifications ----------------------------------------------------------
 LoadLibrary(rsq) # load the rsq package for pseudo-R^2 calculation
@@ -320,10 +321,10 @@ for (ii in 1:7) {
   temp <- glm(round(value) ~ year, data = tempData, family = "poisson")
   
   trendCascade$stage[ii] <- steps[ii]
-  trendCascade$coeff[ii] <- coef(temp)[2]
+  trendCascade$coeff[ii] <- exp(coef(temp)[2])
   trendCascade$pvalue[ii] <- summary(temp)$coefficients["year",
     "Pr(>|z|)"]
-  tempInterval <- confint(temp, "year", type = "Wald")
+  tempInterval <- exp(confint(temp, "year", type = "Wald"))
   trendCascade$lower[ii] <- tempInterval[1]
   trendCascade$upper[ii] <- tempInterval[2]
   trendCascade$pseudoR2[ii] <- rsq(temp, type = "kl")
@@ -448,8 +449,8 @@ stagesDiffsPlot <- plot_grid(plotsTrend[[5]], plotsTrend[[6]],
   nrow = 2, align = "v")
 
 # Figure captions
-figs("cascadeTrends", "Trends in each step of the Australian HIV cascade over 2004-2016. The red discs show the best estimates for the cascade with the shading showing the range. The black lines show the estimatesfrom the fitted Poisson models.")
-figs("gapsTrends", "Trends in gaps between the steps of the Australian HIV cascade over 2004-2016. The red discs show the best estimates. The black lines show the estimates from the fitted Poisson models.")
+figs("cascadeTrends", "Trends in each step of the Australian HIV cascade over 2004-2018. The red discs show the best estimates for the cascade with the shading showing the range. The black lines show the estimatesfrom the fitted Poisson models.")
+figs("gapsTrends", "Trends in gaps between the steps of the Australian HIV cascade over 2004-2018. The red discs show the best estimates. The black lines show the estimates from the fitted Poisson models.")
 
 # Save the current plots
 if (savePlots) {
@@ -521,7 +522,7 @@ trendData <- bind_rows(trendData, data_frame(year = year,
   stage = "propoverall", value = overallProp, lower = NA, upper = NA))
 
 if (savePlots) {
-write_csv(trendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
+  write_csv(trendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
          toString(startYear), "-", toString(resultsYear), ".csv")))
 }
 
@@ -562,7 +563,8 @@ pseudoR2lmoverall <- rsq(overalllmModel)
 # Logistic models ---------------------------------------------------------
 # Fit logistic curve to each trend to see if it produces a better fit. Feel
 # a logistic curve is the best fit for proportions to account for 
-# saturation.
+# saturation, however, hard to interpret. Used here for comparison to the
+# linear and exponential models.
 
 diagnosedTrials <- cbind(round(filter(trendData, 
   stage == "pldhiv")$value), round(filter(trendData, 
@@ -602,44 +604,92 @@ pseudoR2overall <- rsq(overallModel, type = "kl")
 # Use a Poisson model with an offset to produce a rate ratio for the change 
 # in the proportion. 
 
+# Set-up data for Poisson/exponential models
+expTrendData <- trendData %>% 
+  select(year, stage, value) %>% 
+  mutate(value = round(value)) %>%
+  spread(stage, value)
+
+# Models - using denominator as an offset
+diagsExpModel <- glm(pldhiv ~ year, offset = log(infected), 
+  data = expTrendData, family = "poisson")
+treatedExpModel  <- glm(numART ~ year, offset = log(pldhiv), 
+  data = expTrendData, family = "poisson")
+suppressedExpModel  <- glm(suppressed ~ year, offset = log(numART), 
+  data = expTrendData, family = "poisson")
+overallExpModel  <- glm(suppressed ~ year, offset = log(infected), 
+  data = expTrendData, family = "poisson")
+
+# Coefficients for annual change (as rate ratio)
+coeffExpdiags <- exp(coef(diagsExpModel)["year"])
+coeffExpart <- exp(coef(treatedExpModel)["year"])
+coeffExpsuppressed <- exp(coef(suppressedExpModel)["year"])
+coeffExpoverall <- exp(coef(overallExpModel)["year"])
+
+# P-values for annual change
+p_valueExpdiags <- summary(diagsExpModel)$coefficients["year", "Pr(>|z|)"]
+p_valueExpart <- summary(treatedExpModel)$coefficients["year", "Pr(>|z|)"]
+p_valueExpsuppressed <- summary(suppressedExpModel)$coefficients["year",
+  "Pr(>|z|)"]
+p_valueExpoverall <- summary(overallExpModel)$coefficients["year",
+  "Pr(>|z|)"]
+
+# Confidence interval for annual change (as a rate ratio)
+intervalExpdiags <- exp(confint(diagsExpModel, "year", type = "Wald"))
+intervalExpart <- exp(confint(treatedExpModel, "year", type = "Wald"))
+intervalExpsuppressed <- exp(confint(suppressedExpModel, "year", 
+  type = "Wald"))
+intervalExpoverall <- exp(confint(overallExpModel, "year", type = "Wald"))
+
+# R2-values (unadjusted)
+pseudoR2Expdiags <- rsq(diagsExpModel)
+pseudoR2Expart <- rsq(treatedExpModel)
+pseudoR2Expsuppressed <- rsq(suppressedExpModel)
+pseudoR2Expoverall <- rsq(overallExpModel)
+
 # Plots of estimates and trends -------------------------------------------
 # Plot the proportion, linear model and logistic model
 # Function for plotting
-plotProp <- function(proportion, lmmodel, logmodel, label) {
+plotProp <- function(proportion, lmmodel, logmodel, expmodel, expoffset, label) {
   propPlot <- ggplot(data = data.frame(year = year), aes(x = year)) + 
     geom_line(aes(y = proportion, color = "prop")) + 
     geom_point(aes(y = proportion), color = asrcols[2]) +
     geom_line(aes(y = fitted(lmmodel), colour = "linear")) +
     geom_line(aes(y = fitted(logmodel), colour = "logistic")) +
+    geom_line(aes(y = fitted(expmodel)/expoffset, colour = "exponential")) +
     scale_colour_manual(name = "",
-      limits = c("prop", "linear", "logistic"), 
-      values = c(asrcols[2], "black", "blue"),
+      limits = c("prop", "linear", "logistic", "exponential"), 
+      values = c(asrcols[2], "black", "blue", "dark green"),
       labels = c("Estimated proportion", "Linear model", 
-        "Logistic model")) + 
+        "Logistic model", "Exponential model")) + 
     scale_x_continuous(breaks = seq(startYear,                        
       resultsYear, by = 3)) +
     scale_y_continuous(labels = percent) + 
     coord_cartesian(ylim = c(0,1)) +
     ylab(label) + xlab("Year") +  
     PlotOptions() + 
-    geom_text(x = 2010, y = 0.2, label = paste("Unadjusted R^2 (linear):",
+    geom_text(x = 2010, y = 0.3, label = paste("Unadjusted R^2 (linear):",
       toString(round(rsq(lmmodel, type = "kl"), digits = 4))), size = 3) +
-    geom_text(x = 2010, y = 0.1, label = paste("Pseudo-R^2 (logistic):",
-      toString(round(rsq(logmodel, type = "kl"), digits = 4))), size = 3)
+    geom_text(x = 2010, y = 0.2, label = paste("Pseudo-R^2 (logistic):",
+      toString(round(rsq(logmodel, type = "kl"), digits = 4))), size = 3) +
+    geom_text(x = 2010, y = 0.1, label = paste("Pseudo-R^2 (exponential):",
+      toString(round(rsq(expmodel, type = "kl"), digits = 4))), size = 3)
   return(propPlot)
 }
 
 # Produce plots
-diagsPropPlot <- plotProp(diagnosedProp, diagslmModel, diagsModel,
-  "Percentage of\nPLHIV diagnosed")
-treatedPropPlot <- plotProp(artProp, treatedlmModel, treatedModel,  
-  "Percentage diagnosed\non ART")
+diagsPropPlot <- plotProp(diagnosedProp, diagslmModel, diagsModel, 
+  diagsExpModel, expTrendData$infected, "Percentage of\nPLHIV diagnosed")
+treatedPropPlot <- plotProp(artProp, treatedlmModel, treatedModel,
+  treatedExpModel, expTrendData$pldhiv, "Percentage diagnosed\non ART")
 suppressedPropPlot <- plotProp(supProp, suppressedlmModel, 
-  suppressedModel, "Percentage on\nART suppressed")
+  suppressedModel, suppressedExpModel, expTrendData$numART,
+  "Percentage on\nART suppressed")
 overallPropPlot <- plotProp(overallProp, overalllmModel, 
-  overallModel, "Percentage on\nART suppressed")
+  overallModel, overallExpModel, expTrendData$infected, 
+  "Percentage on\nART suppressed")
 
-# Add linear model results to trendCascade
+# Add linear and Poisson model results to trendCascade
 propTrends <- data_frame(stage = c("propdiagnosed", "proptreated",
   "propsuppressed", "propoverall"),
   coeff = c(coefflmdiags, coefflmart, coefflmsuppressed, coefflmoverall),
@@ -652,6 +702,19 @@ propTrends <- data_frame(stage = c("propdiagnosed", "proptreated",
   pseudoR2 = c(pseudoR2lmdiags, pseudoR2lmart, pseudoR2lmsuppressed, 
     pseudoR2lmoverall),
   model = "linear")
+
+propTrendsExp <- data_frame(stage = c("propdiagnosed", "proptreated",
+  "propsuppressed", "propoverall"),
+  coeff = c(coeffExpdiags, coeffExpart, coeffExpsuppressed, coeffExpoverall),
+  pvalue = c(p_valueExpdiags, p_valueExpart, p_valueExpsuppressed,
+    p_valueExpoverall),
+  lower = c(intervalExpdiags[1], intervalExpart[1], intervalExpsuppressed[1],
+    intervalExpoverall[1]),
+  upper = c(intervalExpdiags[2], intervalExpart[2], intervalExpsuppressed[2],
+    intervalExpoverall[2]),
+  pseudoR2 = c(pseudoR2Expdiags, pseudoR2Expart, pseudoR2Expsuppressed, 
+    pseudoR2Expoverall),
+  model = "poisson")
 
 # Save plots --------------------------------------------------------------
 # Create a group 90-90-90 plot with trend lines
@@ -672,7 +735,7 @@ stagesPropPlot <- ggdraw() +
   draw_plot_label(c("A", "B", "C", "D"), c(0, 0.5, 0, 0.5),
     c(0.9, 0.9, 0.45, 0.45), size = 12)
 
-figs("unaidsTargets", "Trends in the UNAIDS 90-90-90 and overall targets over 2004-2016.")
+figs("unaidsTargets", "Trends in the UNAIDS 90-90-90 and overall targets over 2004-2018.")
 
 if (savePlots) {
   ggsave(file.path(figFolder,
@@ -694,7 +757,7 @@ print(stagesPropPlot)
 # Write the trends diagnostics to file
 if (savePlots) {
   trendCascade$model <- "poisson"
-  trendCascade <- bind_rows(trendCascade, propTrends)
+  trendCascade <- bind_rows(trendCascade, propTrends, propTrendsExp)
   
   write_csv(trendCascade, file.path(figFolder, 
     paste0("HIVcascade_trends_", 
