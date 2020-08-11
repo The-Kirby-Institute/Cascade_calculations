@@ -39,8 +39,9 @@ analysisYear <- 2018
 saveResults <- TRUE 
 projectFolder <- "ASR_2019"
 cascadeFlag <- "All" # minus year
-# ecdcChart <- "Female" # ECDC group used for calculations
 ecdcResults <- "exposure"
+ecdcGroup <- "All'" # Should be "All" by default but sometimes get tricky 
+                    # file name issues.
 updateECDC <- TRUE
 
 getNewInfections <- FALSE # can only be TRUE if include and exclude ECDC
@@ -77,15 +78,15 @@ if (cascadeFlag == "Otherexp") {
     paste0("All_Charts", ecdcType))
 } else {
   ecdcFile1 <- file.path(outputFolder, projectFolder, "ECDC_models",
-    cascadeName, ecdcResults,  "results", "All_Result_main.csv")
+    cascadeName, ecdcResults,  "results", ecdcGroup, "_Result_main.csv")
   
   ecdcFile2 <- file.path(outputFolder, projectFolder, "ECDC_models",
     cascadeName, ecdcResults,  "results", 
-    "All_Result_main_ConfIntervals.csv")
+    ecdcGroup, "_Result_main_ConfIntervals.csv")
   
   ecdcFileMain <- file.path(outputFolder, projectFolder, "ECDC_models",
     cascadeName, ecdcResults,  "results", 
-    paste0("All_Charts", ecdcType))
+    paste0(ecdcGroup, "_Charts", ecdcType))
 }
 
 finalFile1 <- file.path(outputFolder, projectFolder, cascadeName,
