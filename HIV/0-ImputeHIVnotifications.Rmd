@@ -46,7 +46,7 @@ LoadLibrary(scales)
 source(file.path(Rcode, "FormatData.R"))
 
 # Script options
-dataYear <- 2018
+dataYear <- 2019
 
 runImpute <- TRUE
 saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 
@@ -365,7 +365,7 @@ if (runImpute) {
     maxit = maxIterations, method = impMethod, seed = impSeed,
     visitSequence = imputeSequence, predictorMatrix = predictorMatrix)
   
-  # Imputed values are in the imp field stored as a matrix for each varaible.
+  # Imputed values are in the imp field stored as a matrix for each variable.
   # Each Row is the row number of the missing value and each column is the 
   # imputed value (number of columns equals the number of imputed sets).  
   
@@ -461,9 +461,16 @@ if (runChecks) {
     diagProp <- data_frame(diag_region = levels(completeSet$diag_region))
     
     for (ii in 1:10) {
-      diagProp[, paste0("set", toString(ii))] <- 
-        table(imputeSet$imp$diag_region[, ii]) / 
-        sum(table(imputeSet$imp$diag_region[, ii])) # imputed
+      # If no imputations done then just replace with data
+      if (nrow(imputeSet$imp$diag_region) != 0) {
+        diagProp[, paste0("set", toString(ii))] <- 
+          as.vector(table(imputeSet$imp$diag_region[, ii]) / 
+              sum(table(imputeSet$imp$diag_region[, ii]))) # imputed
+      } else {
+        diagProp[, paste0("set", toString(ii))] <- 
+          as.vector(table(dataSet$diag_region) / 
+              sum(table(dataSet$diag_region)))
+      }
     }
     
     diagProp <- diagProp %>%
@@ -472,7 +479,7 @@ if (runChecks) {
         !is.na(diag_region))$diag_region) / sum(table(filter(dataSet,
           !is.na(diag_region))$diag_region)),
         pre2000data = table(filter(filter(dataSet, !is.na(diag_region)),
-            yeardiagnosis <= 2000)$diag_region) / 
+          yeardiagnosis <= 2000)$diag_region) / 
           sum(table(filter(filter(dataSet, !is.na(diag_region)), 
             yeardiagnosis <= 2000)$diag_region)),
         overall = table(completeSet$diag_region) / 
@@ -484,9 +491,16 @@ if (runChecks) {
     sexProp <- data_frame(sex = levels(completeSet$sex))
     
     for (ii in 1:10) {
-      sexProp[, paste0("set", toString(ii))] <- 
-        table(imputeSet$imp$sex[, ii]) / 
-        sum(table(imputeSet$imp$sex[, ii])) # imputed
+      # If no imputations done then just replace with data
+      if (nrow(imputeSet$imp$sex) != 0) {
+        sexProp[, paste0("set", toString(ii))] <- 
+          as.vector(table(imputeSet$imp$sex[, ii]) / 
+              sum(table(imputeSet$imp$sex[, ii]))) # imputed
+      } else {
+        sexProp[, paste0("set", toString(ii))] <- 
+          as.vector(table(dataSet$sex) / 
+              sum(table(dataSet$sex)))
+      }
     }
     
     sexProp <- sexProp %>%
@@ -494,7 +508,7 @@ if (runChecks) {
       mutate(data = table(filter(dataSet, !is.na(sex))$sex) / 
           sum(table(filter(dataSet, !is.na(sex))$sex)),
         pre2000data = table(filter(filter(dataSet, !is.na(sex)), 
-            yeardiagnosis <= 2000)$sex) / 
+          yeardiagnosis <= 2000)$sex) / 
           sum(table(filter(filter(dataSet, !is.na(sex)), 
             yeardiagnosis <= 2000)$sex)),
         overall = table(completeSet$sex) / 
@@ -510,9 +524,16 @@ if (runChecks) {
     cobProp <- data_frame(cob = levels(completeSet$cob))
     
     for (ii in 1:10) {
-      cobProp[, paste0("set", toString(ii))] <- 
-        table(imputeSet$imp$cob[, ii]) / 
-        sum(table(imputeSet$imp$cob[, ii])) # imputed
+      # If no imputations done then just replace with data
+      if (nrow(imputeSet$imp$cob) != 0) {
+        cobProp[, paste0("set", toString(ii))] <- 
+          as.vector(table(imputeSet$imp$cob[, ii]) / 
+              sum(table(imputeSet$imp$cob[, ii]))) # imputed
+      } else {
+        cobProp[, paste0("set", toString(ii))] <- 
+          as.vector(table(dataSet$cob) / 
+              sum(table(dataSet$cob)))
+      }
     }
     
     cobProp <- cobProp %>%
@@ -528,29 +549,42 @@ if (runChecks) {
       mutate(ave_number =  table(completeSet$cob) / 10) %>%
       filter(cob %in% as.character(unique(completeSet$cob)))
     
-    # agehiv - calculate mean age of diagnosis. We do a desnity plot
+    # agehiv - calculate mean age of diagnosis. We do a density plot
     # later outsied the function
     meanAge <- data_frame(agehiv = "meanAge")
     
     for (ii in 1:10) {
-      meanAge[, paste0("set", toString(ii))] <- 
-        mean(imputeSet$imp$agehiv[, ii]) # imputed
+      # If no imputations done then just replace with data
+      if (nrow(imputeSet$imp$agehiv) != 0) {
+        meanAge[, paste0("set", toString(ii))] <- 
+          mean(imputeSet$imp$agehiv[, ii]) # imputed
+      } else {
+        meanAge[, paste0("set", toString(ii))] <- 
+          mean(dataSet$agehiv) # imputed  
+      }
     }
     
     meanAge <- meanAge %>%
       mutate(average = rowMeans(select(., -agehiv), na.rm = TRUE)) %>%
       mutate(data = mean(dataSet$agehiv, na.rm = TRUE),
-        pre2000data = mean(filter(dataSet, yeardiagnosis <= 2000)$agehiv, 
-          , na.rm = TRUE),
+        pre2000data = mean(filter(dataSet, yeardiagnosis <= 2000)$agehiv,
+          na.rm = TRUE),
         overall = mean(completeSet$agehiv))
     
     # expgroup 
     expProp <- data_frame(expgroup = levels(completeSet$expgroup))
     
     for (ii in 1:10) {
-      expProp[, paste0("set", toString(ii))] <- 
-        table(imputeSet$imp$expgroup[, ii]) / 
-        sum(table(imputeSet$imp$expgroup[, ii])) # imputed
+      # If no imputations done then just replace with data
+      if (nrow(imputeSet$imp$expgroup) != 0) {
+        expProp[, paste0("set", toString(ii))] <- 
+          as.vector(table(imputeSet$imp$expgroup[, ii]) / 
+              sum(table(imputeSet$imp$expgroup[, ii]))) # imputed
+      } else {
+        meanAge[, paste0("set", toString(ii))] <- 
+          as.vector(table(dataSet$expgroup) / 
+              sum(table(dataSet$expgroup)))
+      }
     }
     
     expProp <- expProp %>%
