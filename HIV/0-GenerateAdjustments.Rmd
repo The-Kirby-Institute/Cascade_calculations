@@ -44,7 +44,7 @@ source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2018
+analysisYear <- 2019
 startYear <- 1980 # First year in HIV registry is 1980
 
 allYears <- startYear:analysisYear 
@@ -438,7 +438,7 @@ cleanNom <- nomData %>%
     state = ifelse(state == "aus", "all", state),
     gender = ifelse(gender == "peron", "all", gender),
     cob = ifelse(cob == "Total", "all", cob)) %>%
-  tbl_df()
+  as_tibble()
 
 # Save cleaned data so it is quicker to load
 save(cleanNom, file = file.path(mainDataFolder, "cleaned_ABS_nom_data.R"))
@@ -581,12 +581,13 @@ hivAdjustments$pstay_non_indigenous <- (1 - (1- hivBaseRates$propstay) *
 hivAdjustments$non_aborig_migration <- nonAborigMigrationFactor
 
 # Specific NSW estimates -- based on 6 monthly follow-up data from NSW
-# Health cumulatively over 2013-2018. Data for 2013-2019 in file
-# ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_12Aug2019.xlsx.
-# The varaibles below store the cumulative emigration proportion for 
-# Australian born diagnosd and overseas born. 
-ausBornEmigrate <- 0.0086
-osBornEmigrate <- 0.093
+# Health cumulatively over 2013-2018. Data for 2013-2018 in file
+# ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_12Aug2018.xlsx.
+# The variables below store the cumulative emigration proportion for 
+# Australian born diagnosed and overseas born to end 2019. This estimate was
+# obtained by fitting trend lines to the 2013-2018 data as shown in the file. 
+ausBornEmigrate <- 0.0093
+osBornEmigrate <- 0.0855
 
 propAus <- hivCobCum$australia
 propStayNSW <- propAus * (1 - ausBornEmigrate) + (1 - propAus) * 
@@ -966,8 +967,8 @@ hivInterstate <- hivInterstate %>%
   mutate(intererp = allErp - erp)
 
 # Calculate departure rate
-hivInterstate$departures <- NA
-hivInterstate$departrate2 <- NA
+hivInterstate$departures <- as.numeric(NA)
+hivInterstate$departrate2 <- as.numeric(NA)
 
 for (region in head(states, -1)) {
   print(region)
@@ -999,8 +1000,8 @@ hivInterstate <- hivInterstate %>%
  
   
 # Calculate arrival rate
-hivInterstate$arrivals <- NA
-hivInterstate$arriverate2 <- NA
+hivInterstate$arrivals <- as.numeric(NA)
+hivInterstate$arriverate2 <- as.numeric(NA)
 
 for (region in head(states, -1)) {
   lmArrive <- lm(arrivals ~ year, data = filter(absInterstate, 
@@ -1239,6 +1240,8 @@ for (ii in 1:nyears) {
 # Load cleaned NOM data variable (cleanNom)
 load(file = file.path(dirname(basePath),
   "data", "cleaned_ABS_nom_data.R"))
+cleanNom$age[cleanNom$age == "a0_4"] <- "a00_04"
+cleanNom$age[cleanNom$age == "a5_9"] <- "a05_09"
 
 # Relative migration rates
 source(file.path(HIVcode, "GetMigrate.R"))
