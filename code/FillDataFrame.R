@@ -14,14 +14,22 @@ FillDataFrame <- function(years, df, cumulative = FALSE) {
   # -----------------------------------------------------------------------
   
   insertRow <- function(existingDF, newrow, r) {
+    # To insert newrow it appears you need existingDF to be a data frame
+    # not a tibble
+    newDF <- as.data.frame(existingDF)
     if (r == (nrow(existingDF)+1)) {
-      existingDF <- rbind(existingDF, newrow)
+      newDF <- rbind(existingDF, newrow)
     } else {
-      existingDF[seq(r+1, nrow(existingDF) + 1), ] <- 
+      newDF[seq(r+1, nrow(existingDF) + 1), ] <- 
         existingDF[seq(r, nrow(existingDF)), ]
-      existingDF[r, ] <- newrow
+      newDF[r, ] <- newrow 
     }
-    return(existingDF)
+    
+    if (is_tibble(existingDF)) {
+      newDF <- as_tibble(newDF)
+    }
+    
+    return(newDF)
   }
   
   # Initialize output dataframe
