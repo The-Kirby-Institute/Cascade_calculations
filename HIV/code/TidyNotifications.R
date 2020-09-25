@@ -185,7 +185,7 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
       -cobcode) 
   }
   
-  hivData <- hivData %>% tbl_df()
+  hivData <- hivData %>% as_tibble()
   
   return(hivData)
 }

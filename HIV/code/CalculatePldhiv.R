@@ -135,25 +135,25 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     
     hivDataImputed <- hivSetAll
     
-    uniqueNotificationsSets <- data_frame()
-    uniqueNotificationsAllSets <- data_frame()
+    uniqueNotificationsSets <- tibble()
+    uniqueNotificationsAllSets <- tibble()
     
-    hivResultsSets <- data_frame()
-    hivResultsAgeSets <- data_frame()
-    hivResultsAllSets <- data_frame()
-    hivResultsAgeAllSets <- data_frame()
+    hivResultsSets <- tibble()
+    hivResultsAgeSets <- tibble()
+    hivResultsAllSets <- tibble()
+    hivResultsAgeAllSets <- tibble()
     
     if (targetGender == "all") {
-      propDiagsMaleSets <- data_frame()
-      propDiagsMaleAllSets <- data_frame()
+      propDiagsMaleSets <- tibble()
+      propDiagsMaleAllSets <- tibble()
       if (doAge) {
-        propDiagsAgeMaleSets <- data_frame()
-        propDiagsAgeMaleAllSets <- data_frame()
+        propDiagsAgeMaleSets <- tibble()
+        propDiagsAgeMaleAllSets <- tibble()
       }
     }
     
     if (ecdcData) {
-      imputeHivSet <- data_frame()
+      imputeHivSet <- tibble()
     }
     
     for (ii in 1:nImputedSets) {
@@ -176,7 +176,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       
       tempHivSet <- tempHivSetReturn[[1]]
       tempHivSetExcluded <- tempHivSetReturn[[2]]
-      tempHivSetUnknown <- data_frame() # Empty
+      tempHivSetUnknown <- tibble() # Empty
       
       if (ecdcData) {
         # Need to save all notifications 
@@ -196,7 +196,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         
         tempHivSetAll <- tempHivSetReturnAll[[1]]
         tempHivSetExcludedAll <- tempHivSetReturnAll[[2]]
-        tempHivSetUnknownAll <- data_frame() # Empty
+        tempHivSetUnknownAll <- tibble() # Empty
         
         # HivSetUnknown outputs should be empty
         if (nrow(tempHivSetUnknownAll) != 0) {
@@ -500,8 +500,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     # Annual notifications and proportions
     if (targetAtsi == "indigenous") {
       # Assume all indigenous notifications are accounted for
-      annualDiags <- AnnualDiagnoses(hivSet,  data_frame(), 
-        data_frame(), allYears, doAge)
+      annualDiags <- AnnualDiagnoses(hivSet,  tibble(), 
+        tibble(), allYears, doAge)
     } else {
       annualDiags <- AnnualDiagnoses(hivSet, hivSetExcluded, 
         hivSetUnknown, allYears, doAge)
@@ -522,7 +522,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       if (targetAtsi == "indigenous") { 
         # Assume all indigenous notifications are accounted for
         annualDiagsAll <- AnnualDiagnoses(hivSetAll, 
-          data_frame(), data_frame(), allYears, doAge)
+          tibble(), tibble(), allYears, doAge)
       } else {
         annualDiagsAll <- AnnualDiagnoses(hivSetAll, 
           hivSetExcludedAll, hivSetUnknownAll, allYears, doAge)
