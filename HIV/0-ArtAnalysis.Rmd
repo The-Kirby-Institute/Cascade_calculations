@@ -7,16 +7,20 @@ output:
     pandoc_args: --output="docs/ART_analysis.docx"
 ---
 
-This script explores the number of people taking antiretroviral terapy 
-(ART) in Australia over 2000-2017. It estimates the number taking ART 
+This script explores the number of people taking antiretroviral therapy 
+(ART) in Australia over 2000-2019. It estimates the number taking ART 
 during each year by merging and fitting to two data sources. 
 
 1. Australian HIV Observational Database (AHOD) which provides estimates 
 for ART use up to 2012. The estimates over 2010-2012 are actually 
 projections rather than estimates from raw data.
 2. The Pharmaceutical Benefits Scheme (PBS) 10% longitudinal sample 
-provided by the company Prospection. This data is only avaliable since
-2013. It is considered a more reliable as it is a more direct estimate. 
+provided by the company Prospection. This data is only available since
+2013. It is considered a more reliable as it is a more direct estimate. As 
+the PBS data does not include people who are ineligible for Medicare there 
+is the option to add the estimates for the number of PLHIV ineligible for 
+Medicare from the NAPWHA and KI report
+(from: https://napwha.org.au/medicare-ineligibles/) to the PBS data.  
 
 The primary purpose of this analysis is to explore how to cover the 
 change over period from the AHOD estimates to the PBS data. The results
@@ -53,10 +57,12 @@ LoadLibrary(captioner)
 
 
 # Script parameters
-analysisYear <- 2019
+dataYear <- 2019
+analysisYear <- 2019 # If want to do fits for data prior to dataYear
 saveResults <- TRUE
 
-# -------------------------------------------------------------------------
+filterSamples <- TRUE # Filter samples which go outside the PBS error 
+                       # bounds for analysisYear
 
 # Add temporary residents - Prior to 2018 we had two estimates one from the
 # ATRAS study which has been published and one based on personal 
@@ -65,75 +71,10 @@ saveResults <- TRUE
 # number of temporary residents (Medicare ineligible) taking ART. The results 
 # from this report were used in the 2018 estimates and updated for the 2019 
 # estimates.
+# 
+# The report is available from: https://napwha.org.au/medicare-ineligibles/
 
 addTempResidents <- TRUE 
-atrasTRest <- FALSE # TRUE if using the ATRAS estimate, False if using the 
-                   # NAPWHA estimate. Use NAPWHA estimate for ASR and 
-                   # ATRAS estimate for the paper as it is citable
-if (addTempResidents) {
-  tempResData <- tibble(population = NA, 
-    year = 2013:analysisYear,
-    value = NA,
-    lower = NA,
-    upper = NA)
-  
-  tempResData$population = "all"
-  
-  if (analysisYear <= 2017) { 
-    if (atrasTRest) {
-      # ATRAS estimate using a weighted calculation
-      # Estimated 450 Medicare ineligible HIV+ temporary residents in 
-      # Australia of which ~76% are on treatment (~340 people, calculated 
-      # using a weighted proportion: 0.94*180 + 0.63*270 = 339.3. Assuming 
-      # 63% of people not in ATRAS are on ART (percentage on ART at start 
-      # of ATRAS) and 94% of people in ATRAS are on ART (percentage on ART 
-      # at end of ATRAS). 
-      # Range isassumed to be 300 to 400.
-      # Citation: Petoumenos, Kathy, Jo Watson, Bill Whittaker, Jennifer Hoy, 
-      # Don Smith, Lisa Bastian, Robert Finlayson, et al. "Subsidized Optimal 
-      # ART for HIV-Positive Temporary Residents of Australia Improves
-      # Virological Outcomes: Results from the Australian HIV Observational
-      # Database Temporary Residents Access Study." Journal of the 
-      # International AIDS Society 18, no. 1 (2015).
-      
-      # tempResData <- c(340, 300, 400)
-      tempResData$value <- 340
-      tempResData$lower <- 300
-      tempResData$upper <- 400
-      
-    } else {
-      # NAPWHA estimate from Aaron Cogle (used in 2017 ASR)
-      # Citation: Personal communication, Aaron Cogle, National Association 
-      # of People with HIV Australia, 7th July 2017. Survey of Medicare
-      # ineligible people living with HIV and ART access, 2016. National
-      # Association of People with HIV Australia (NAPWHA), Sydney. 
-      # tempResData <- c(450, 500, 550)
-      tempResData$value <- 450
-      tempResData$lower <- 500
-      tempResData$upper <- 550
-    }
-  } else if (analysisYear == 2018) {
-    # Load file
-    if (atrasTRest) {
-      tempResData <- read.csv(file.path(dataFolder,
-        "ART_medicare_ineligible-ATRAS.csv"))
-    } else {
-      tempResData <- read.csv(file.path(dataFolder,
-        "ART_medicare_ineligible-NAPHWA.csv"))
-    }
-  } else {
-  # Load from file ATRAS estimates merged with NAPHWA estimates in March 
-  # 2019 report.
-  tempResData <- read.csv(file.path(dataFolder,
-    "ART_medicare_ineligible-2019.csv"))
-  
-  }
-} else {
-  tempResData$value <- 0
-  tempResData$lower <- 0
-  tempResData$upper <- 0
-}
-
 
 ```
 
@@ -141,15 +82,27 @@ if (addTempResidents) {
 # Load the ART data
 artEstimates <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
 prospectionData <- read.csv(file.path(dataFolder,
-  paste("pharmdash_HIVpatients_clean-", toString(analysisYear),
-    ".csv", sep = "")), as.is = c(1, 2))
+  paste0("pharmdash_HIVpatients_clean-", dataYear,
+    ".csv")), as.is = c(1, 2))
+
+if (addTempResidents) {
+  # Load from file ATRAS estimates merged with NAPHWA estimates in March 
+  # 2019 report.
+  tempResData <- read.csv(file.path(dataFolder,
+    "ART_medicare_ineligible-2019.csv"))
+  
+} else {
+  tempResData$value <- 0
+  tempResData$lower <- 0
+  tempResData$upper <- 0
+}
 
 # Clean ART data ---------------------------------------------------------
 
 # First simplify column names
 colnames(artEstimates) <- c("year", "ahod")
 
-# Add national pbs data
+# Add national PBS data
 tempPbs <- prospectionData %>% 
   filter(gender == "all", state == "all") %>%
   gather("year", "pbs", 3:ncol(prospectionData)) %>%
@@ -163,10 +116,10 @@ tempPbs$year <- unlist(lapply(tempPbs$year, function(x)
 artEstimates <- full_join(artEstimates, tempPbs, by = "year")
 
 # Add upper and lower bounds for the PBS data
-if (analysisYear < 2019) {
-popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
-                                "ABS_population_sizes.xlsx"),
-                      sheet = 2)
+if (dataYear < 2019) {
+  popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
+    "ABS_population_sizes.xlsx"),
+    sheet = 2)
 } else {
   popData <- read_csv(file.path(dirname(dirname(dataFolder)), "data",
     "ABS_population_sizes_PharmDash-2019.csv"))
@@ -175,17 +128,17 @@ popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
 source(file.path(HIVcode, "pharmDashError.R"), echo=TRUE)
 
 # Loop through years appending lower and upper PBS estimates
-prospectionYears <- 2013:analysisYear 
+prospectionYears <- 2013:dataYear 
 
 for (nyear in prospectionYears) {
- 
-   numArt <- filter(artEstimates, year == nyear)$pbs
-   numPop <- filter(popData, year == nyear, population == "all")$erp
-   
-   error <- PharmDashError(numPop, numArt)
-   
-   artEstimates$pbslower[artEstimates$year == nyear] <- error$lower
-   artEstimates$pbsupper[artEstimates$year == nyear] <- error$upper
+  
+  numArt <- filter(artEstimates, year == nyear)$pbs
+  numPop <- filter(popData, year == nyear, population == "all")$erp
+  
+  error <- PharmDashError(numPop, numArt)
+  
+  artEstimates$pbslower[artEstimates$year == nyear] <- error$lower
+  artEstimates$pbsupper[artEstimates$year == nyear] <- error$upper
 }
 
 # Add temporary residents to PBS data
@@ -208,6 +161,12 @@ artEstimates$ahodraw[1:11] <- artEstimates$ahod[1:11] # trust AHOD up to 2010
 artEstimates$all[1:13] <- artEstimates$ahod[1:13]
 artEstimates$all[14:nrow(artEstimates)] <- 
   artEstimates$pbs[14:nrow(artEstimates)]
+
+# Filter out data for fitting ---------------------------------------------
+artEstimates <- artEstimates %>%
+  filter(year <= analysisYear)
+prospectionYears <- prospectionYears[prospectionYears <= analysisYear]
+
 ```
 
 ## Fitting 
@@ -244,7 +203,7 @@ artEstimates$fitwlm <- predict(fitWlm, xdata = xdata)
 
 # First try a poisson regression
 fitGlmPois <- glm(all ~ year, data = artEstimates, 
-              family = poisson(link = "log"), weights = weights)
+  family = poisson(link = "log"), weights = weights)
 artEstimates$fitglmpois <- predict(fitGlmPois, type="response")
 
 # Now try a binomial regression
@@ -256,7 +215,7 @@ artEstimates$diffbin <- saturationCoverage - artEstimates$all
 
 # Now do a binomial fit
 fitGlmBin <- glm(cbind(all, diffbin) ~ year, data = artEstimates, 
-              family = binomial(link = "logit"), weights = weights)
+  family = binomial(link = "logit"), weights = weights)
 artEstimates$fitglmbin <- predict(fitGlmBin, type="response") * 
   saturationCoverage
 
@@ -279,8 +238,8 @@ if (analysisYear == 2014) {
   # For 2014 data it appears to be insensitive to a value greater than 2015. 
   inflectionYear <- 2020
   fitLog <- nls(ydata ~ fitFunc(xdata, a, b, inflectionYear, d),
-  start = list(a = 5000, b = 30000, d = 0.1),
-  weights = weights)
+    start = list(a = 5000, b = 30000, d = 0.1),
+    weights = weights)
   
   # Note: best fit from Matlab for comparison for AnalysisYear = 2014. 
   # a = 5270, b = 30200, c = 2014.7 d = 0.207) 
@@ -295,9 +254,9 @@ if (analysisYear == 2014) {
   
   inflectionYear <- coef(fitLog4)["c"]
   fitLog <- nls(ydata ~ fitFunc(xdata, a, b, inflectionYear, d),
-  start = list(a = 5000, b = 30000, d = 0.1),
-  weights = weights)
-
+    start = list(a = 5000, b = 30000, d = 0.1),
+    weights = weights)
+  
 } else {
   fitLog <- nls(ydata ~ fitFunc(xdata, a, b, c, d),
     start = list(a = 5000, b = 30000, c = 2015, d = 0.1),
@@ -314,8 +273,8 @@ fitFuncExp <- function(x, a, b, c) {
 }
 
 fitExp <- nls(ydata ~ fitFuncExp(xdata, a, b, 2000),
-           start = list(a = 6233, b = 0.07),
-           weights = weights)
+  start = list(a = 6233, b = 0.07),
+  weights = weights)
 
 
 # Add the fits to dataframe 
@@ -336,7 +295,7 @@ bRange <- confint(fitLog)[2,]
 dRange <- confint(fitLog)[3,]
 
 nsamples <- 10000  # ensure big enough to get enough samples out after 
-                   # filtering
+# filtering
 simMatrix <- matrix(0,nsamples, length(xdata))
 
 aSample <- runif(nsamples, aRange[1], aRange[2])
@@ -345,19 +304,20 @@ dSample <- runif(nsamples, dRange[1], dRange[2])
 
 for (ii in 1:nsamples) {
   simMatrix[ii,] <- fitFunc(xdata,aSample[ii], bSample[ii], 
-                            inflectionYear, dSample[ii])
+    inflectionYear, dSample[ii])
   
 }
 
-# Filter samples which go outside the PBS error bounds for 2017 
-goodRows <- apply(simMatrix, 1,
-      function(x) any(x[length(xdata)] <
-                        artEstimates$pbsupper[length(xdata)]
-                      && x[length(xdata)] >
-                        artEstimates$pbslower[length(xdata)]))
-
-simMatrix <- simMatrix[goodRows, ]
-
+if (filterSamples) {
+  # Filter samples which go outside the PBS error bounds for analysisYear
+  goodRows <- apply(simMatrix, 1,
+    function(x) any(x[length(xdata)] <
+        artEstimates$pbsupper[length(xdata)]
+      && x[length(xdata)] >
+        artEstimates$pbslower[length(xdata)]))
+  
+  simMatrix <- simMatrix[goodRows, ]
+}
 
 # Use function to generate lower and upper bounds for ART numbers for best 
 # fitting function
@@ -393,55 +353,55 @@ artEstimates$relupper <- artEstimates$fitmax /
 ```{r plotanalysis}
 figs <- captioner()
 
-# Adjust plotOpts
+# Adjust plot options
 plotOpts <- PlotOptions() + theme(legend.position = "right",
   legend.text = element_text(size = 8),
   legend.title = element_text(size = 9, face = "bold"))
 
-#Setup colours, labels and shapes for legend aesthetics
+#Set-up colours, labels and shapes for legend aesthetics
 cols <- c("ahod" = "blue", "pbs" = "red", "all" = "black", 
-          "reg1" = "#99CCFF", "reg2" = "#663399", "reg3" = "#006699",
-          "fitreg" = "#003300", "fitexp" = "#006699",
-          "fitlog" = "#993333")
+  "reg1" = "#99CCFF", "reg2" = "#663399", "reg3" = "#006699",
+  "fitreg" = "#003300", "fitexp" = "#006699",
+  "fitlog" = "#993333")
 
 labels <- c("ahod" = "AHOD data", 
-            "pbs" = "PBS data", 
-            "all" = "ART data", 
-            "reg1" = "Regression AHOD\n2000-2010",
-            "reg2" = "Regression AHOD\n2000-2013", 
-            "reg3" = "Regression all data", 
-            "fitreg" = "Regression\nweighted", 
-            "fitexp" = "Exponential fit",
-            "fitlog" = "Logistic fit")
+  "pbs" = "PBS data", 
+  "all" = "ART data", 
+  "reg1" = "Regression AHOD\n2000-2010",
+  "reg2" = "Regression AHOD\n2000-2013", 
+  "reg3" = "Regression all data", 
+  "fitreg" = "Regression\nweighted", 
+  "fitexp" = "Exponential fit",
+  "fitlog" = "Logistic fit")
 
 shapes <- c("ahod" = 18, "pbs" = 18, "all" = 18, 
-            "reg1" = NA, "reg2" = NA, "reg3" = NA, 
-            "fitreg" = NA, "fitexp" = NA, "fitlog" = NA)
-            
-# Create a plot for comparing the regression analysis
+  "reg1" = NA, "reg2" = NA, "reg3" = NA, 
+  "fitreg" = NA, "fitexp" = NA, "fitlog" = NA)
+
+# Create a plot for comparing the regression analyses
 aesLabels <- c("ahod", "pbs", "fitreg", "reg3", "reg2", "reg1")
 
 regressionPlot <- ggplot(data = artEstimates, aes(x = year, y = ahod)) + 
   geom_point(aes(colour = "ahod", shape = "ahod"), 
-             na.rm = TRUE) + 
+    na.rm = TRUE) + 
   geom_point(aes(y = pbs, colour = "pbs", shape = "pbs"), na.rm = TRUE) +
   geom_smooth(aes(y = ahodraw, colour = "reg1", shape = "reg1"),
-              method = "lm", se = FALSE, na.rm = TRUE, fullrange = TRUE) + 
+    method = "lm", se = FALSE, na.rm = TRUE, fullrange = TRUE) + 
   geom_smooth(aes(colour = "reg2", shape = "reg2"), 
-              method = "lm", se = FALSE, na.rm = TRUE, fullrange = TRUE) + 
+    method = "lm", se = FALSE, na.rm = TRUE, fullrange = TRUE) + 
   geom_smooth(aes(y = all, colour = "reg3", shape = "reg3"), 
-              method = "lm",  se = FALSE, na.rm = TRUE, fullrange = TRUE) +
+    method = "lm",  se = FALSE, na.rm = TRUE, fullrange = TRUE) +
   geom_line(aes(y = fitwlm, colour = "fitreg", shape = "fitreg")) + 
   scale_colour_manual(name = "", values = cols,
-                      labels = labels[aesLabels],
-                      breaks = aesLabels,
-                      guide = guide_legend(override.aes = list(
-                         linetype = c("blank", "blank", 
-                                      rep("solid", 4))))) +
+    labels = labels[aesLabels],
+    breaks = aesLabels,
+    guide = guide_legend(override.aes = list(
+      linetype = c("blank", "blank", 
+        rep("solid", 4))))) +
   scale_shape_manual(name = "", values = shapes,
-                     breaks = aesLabels, 
-                     labels = labels[aesLabels]) +
-  ylim(c(0,25000)) + 
+    breaks = aesLabels, 
+    labels = labels[aesLabels]) +
+  ylim(c(0, NA)) + 
   ylab("Number on ART") + 
   xlab("Year") + 
   plotOpts
@@ -451,46 +411,46 @@ fitPlot <- ggplot(data = artEstimates, aes(x = year)) +
   geom_line(aes(y = fitexp, colour = "fitexp", shape = "fitexp")) +
   geom_line(aes(y = fitlog, colour = "fitlog", shape = "fitlog")) +
   scale_colour_manual(name = "", values = cols,
-                      labels = labels[c("all", "fitexp", "fitlog")],
-                      breaks = c("all", "fitexp", "fitlog"),
-                      guide = guide_legend(override.aes = list(
-                         linetype = c("blank", "solid", "solid")))) +
+    labels = labels[c("all", "fitexp", "fitlog")],
+    breaks = c("all", "fitexp", "fitlog"),
+    guide = guide_legend(override.aes = list(
+      linetype = c("blank", "solid", "solid")))) +
   scale_shape_manual(name = "", values = shapes,
-                     breaks = c("all", "fitexp", "fitlog"), 
-                     labels = labels[c("all", "fitexp", "fitlog")]) +
-  ylim(c(0,NA)) +
+    breaks = c("all", "fitexp", "fitlog"), 
+    labels = labels[c("all", "fitexp", "fitlog")]) +
+  ylim(c(0, NA)) +
   ylab("Number on ART") +
   xlab("Year") +
   plotOpts
 
 logPlot <- ggplot(data = artEstimates, aes(x = year)) + 
   geom_ribbon(aes(ymin = fitmin, ymax = fitmax, 
-                  fill = "fitlog1", alpha = "fitlog1")) + 
+    fill = "fitlog1", alpha = "fitlog1")) + 
   geom_ribbon(aes(ymin = fitlwr95, ymax = fitupr95,
-                  fill = "fitlog2", alpha = "fitlog2")) +
+    fill = "fitlog2", alpha = "fitlog2")) +
   geom_ribbon(aes(ymin = fitlwriqr, ymax = fitupriqr,
-                  fill = "fitlog3", alpha = "fitlog3")) +
+    fill = "fitlog3", alpha = "fitlog3")) +
   geom_point(aes(y = all, colour = "all", shape = "all"), na.rm = TRUE) +
   geom_errorbar(aes(ymin = pbslower, ymax = pbsupper), width = 0.3, 
-                color = "black", size = 0.8, na.rm = TRUE) + 
+    color = "black", size = 0.8, na.rm = TRUE) + 
   geom_line(aes(y = fitlog, colour = "fitlog", shape = "fitlog")) +
   scale_colour_manual(name = "Fit", values = cols, 
-                      breaks = c("all", "fitlog"),
-                      labels = labels[c("all", "fitlog")],
-                      guide = guide_legend(override.aes = list(
-                         linetype = c("blank", "solid")))) +
+    breaks = c("all", "fitlog"),
+    labels = labels[c("all", "fitlog")],
+    guide = guide_legend(override.aes = list(
+      linetype = c("blank", "solid")))) +
   scale_shape_manual(name = "Fit", values = shapes[c("all", "fitlog")], 
-                     breaks = c("all", "fitlog"),
-                     labels = labels[c("all", "fitlog")]) +
+    breaks = c("all", "fitlog"),
+    labels = labels[c("all", "fitlog")]) +
   scale_fill_manual(name = "Range",
-                    values = c("#993333", "#993333", "#993333"),
-                    breaks = c("fitlog1", "fitlog2", "fitlog3"),
-                    labels = c("Range", "95% interval", "IQR")) +
+    values = c("#993333", "#993333", "#993333"),
+    breaks = c("fitlog1", "fitlog2", "fitlog3"),
+    labels = c("Range", "95% interval", "IQR")) +
   scale_alpha_manual(name =  "Range",
-                    values = c(0.2, 0.35, 0.5),
-                    breaks = c("fitlog1", "fitlog2", "fitlog3"),
-                    labels = c("Range", "95% interval", "IQR")) +
-  ylim(c(0,NA)) +
+    values = c(0.2, 0.35, 0.5),
+    breaks = c("fitlog1", "fitlog2", "fitlog3"),
+    labels = c("Range", "95% interval", "IQR")) +
+  ylim(c(0, NA)) +
   ylab("Number on ART") +
   xlab("Year") +
   plotOpts
@@ -502,11 +462,11 @@ plotUnits <- "cm"
 
 # Create a combined figure
 fitsFigure <- ggdraw() +
-    draw_plot(regressionPlot, 0, 0.5, 0.5, 0.5) +
-    draw_plot(fitPlot, 0.5, 0.5, 0.5, 0.5) +
-    draw_plot(logPlot, 0.2, 0, 0.6, 0.5) +
-    draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0.2), c(1, 1, 0.5),
-      size = 12)
+  draw_plot(regressionPlot, 0, 0.5, 0.5, 0.5) +
+  draw_plot(fitPlot, 0.5, 0.5, 0.5, 0.5) +
+  draw_plot(logPlot, 0.2, 0, 0.6, 0.5) +
+  draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0.2), c(1, 1, 0.5),
+    size = 12)
 
 figs("fitsFigure", "(A) Linear regression fits to ART data. (B) Comparison 
 of exponential and logistic curve fits to ART data. (C) Logistic function
@@ -522,36 +482,36 @@ fitsFigure
 
 ```{r Save results}
 if (saveResults) {
- 
+  
   # String tag
   if (addTempResidents) {
-    trString <- ifelse(atrasTRest,"ATRAS", "NAPWHA")
+    trString <- "PBS-Ineligible"
   } else {
     trString <- "PBS"
   }
   
   # Save plots
   ggsave(file.path(figFolder, paste0("Regression_Comparision-", 
-    toString(analysisYear), "-", trString, ".png")), plot = regressionPlot,
+    analysisYear, "-", trString, ".png")), plot = regressionPlot,
     width = plotWidth, height = plotHeight, units = plotUnits)
   ggsave(file.path(figFolder, paste0("Fit_Comparison-", 
-    toString(analysisYear), "-", trString, ".png")), plot = fitPlot, 
+    analysisYear, "-", trString, ".png")), plot = fitPlot, 
     width = plotWidth, height = plotHeight, units = plotUnits)
   ggsave(file.path(figFolder, paste0("Logistic_Fit-", 
-    toString(analysisYear), "-", trString, ".png")), plot = logPlot,
+    analysisYear, "-", trString, ".png")), plot = logPlot,
     width = plotWidth, height = plotHeight, units = plotUnits)
   
   ggsave(file.path(figFolder, paste0("ART_Fitting_Figure-", 
-    toString(analysisYear), "-", trString, ".png")), plot = fitsFigure,
+    analysisYear, "-", trString, ".png")), plot = fitsFigure,
     width = 8, height = 6, units = "in")
   
   # File directory and file name
   saveString <- file.path(resultsFolder, paste0("ART_Estimates-", 
-    toString(analysisYear), "-", trString))
+    analysisYear, "-", trString))
   
   # Write to csv
-   write.csv(artEstimates, file = paste0(saveString, ".csv"), 
-            row.names = FALSE)
+  write.csv(artEstimates, file = paste0(saveString, ".csv"), 
+    row.names = FALSE)
 }
 
 ```
