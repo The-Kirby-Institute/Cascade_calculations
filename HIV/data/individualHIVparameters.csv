@@ -22,6 +22,6 @@ vicClinicRetainedUpper,0.99,2019 McMahon ASHM Poster,Proportion retained in care
 ahodMortality,0.0108,,,,Annual rate of death per 100 person-years
 ahodMortalityLower,0.008,,,,
 ahodMortalityUpper,0.015,,,,
-aborigMortality,1.75,ABS,Overall relative mortality ratio compared to non-Indigenous population,http://www.abs.gov.au/ausstats/abs@.nsf/mf/3302.0,Assumption based on 10/5.4 ~ 1.8 in 2013
+aborigMortality,1.7,ABS,Overall relative mortality ratio compared to non-Indigenous population,http://www.abs.gov.au/ausstats/abs@.nsf/mf/3302.0,Assumption based on average ratio for standardised  death rate ration Indigenous:non'Indigenous for 2012-2019 from series 33020DO007 ~1.7
 aborigMortalityMin,1.5,,,,Assumption
-aborigMortalityMax,2,,,,Assumption
+aborigMortalityMax,1.9,,,,Assumption
