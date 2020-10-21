@@ -1,12 +1,12 @@
 HIV Treatment and Suppression
 =============================
-  
+
 Neil Arvin Bretana and Richard T. Gray
 
 For this script to work the following data files are required or need 
 updating:
 - pharmdash_HIVpatientsYEAR.csv
-- ~/project_care_cascades/data/ABS_population_sizes.xlsx
+- ~/project_care_cascades/data/ABS_population_sizes_PharmDash.xlsx
 
 ```{r initialization}
 # Chunk to setup everything
@@ -28,28 +28,19 @@ LoadLibrary(tidyverse)
 LoadLibrary(readxl)
 
 # Primary script parameters
-analysisYear <- 2018
+analysisYear <- 2019
 replaceValues <- TRUE
 saveResults <- TRUE
-addTempRes <- TRUE # Add estimates for temporary residents on ART
-atrasTRest <- FALSE # Use ATRAS estimates, FALSE = NAPWHA estimates
-                   # See 0-ArtAnalysis.Rmd for details
-                   # FALSE for ASR and TRUE for paper
-                   
-# ART Estimates analysis year 2014 or 2017
-if (analysisYear < 2017) {
-  fitYear <- 2017   
-} else {  
-  fitYear <- 2017    
-}
 
+fitYear <- 2019 # ART Estimates analysis year 2014, 2017, or 2019
+
+addTempRes <- TRUE # Add estimates for temporary residents on ART
 usePercent <- TRUE # To add temporary residents for subpopulations
 
 ```
 
 ```{r Functions}
 source(file.path(HIVcode, "pharmDashError.R"), echo=TRUE)
-
 source(file.path(HIVcode, "ReplaceEstimates.R"), echo=TRUE)
 
 ```
@@ -60,38 +51,37 @@ source(file.path(HIVcode, "ReplaceEstimates.R"), echo=TRUE)
 # the  national overall estimates we use previously generated estimates
 # produced by the script 0-ArtAnalysis.Rmd. 
 
-# Note values are all data estimates except for the year 2012 for the 
-# national data which is replaced by a fitted value
+# Note values are all data estimates except for the year 2011:2012 for the 
+# national data which is replaced by a fitted value. Load up to 
+# 2000-fitYear ART estimates to get the estimates
 
-# Load up to 2000-2014 ART estimates -- we will use other data for
-# >= 2013
 # String tag
 if (addTempRes) {
-  trString <- ifelse(atrasTRest,"ATRAS", "NAPWHA")
+  trString <- "PBS-Ineligible"
 } else {
   trString <- "PBS"
 }
 
 artEstimates <- read.csv(file.path(outputFolder, 
-  paste0("ART_Estimates-", toString(fitYear), "-", trString, ".csv")))
+  paste0("ART_Estimates-", fitYear, "-", trString, ".csv")))
 
 # Reload Prospection PBS data to get gender and state estimates
 prospectionData <- read.csv(file.path(dataFolder,
-                                      paste0("pharmdash_HIVpatients_clean-",
-                                             toString(analysisYear),
-                                             ".csv")), as.is = c(1, 2))
+  paste0("pharmdash_HIVpatients_clean-",
+    toString(analysisYear),
+    ".csv")), as.is = c(1, 2))
 
 # Tidy up the prospection data
 hivTreatedPbs <- prospectionData %>%
   filter(gender == "all") %>%
   select(-gender) %>%
-  tbl_df()
+  as_tibble()
 
 yearNames <- strsplit(toString(2013:analysisYear), ", ")[[1]]
 
 colnames(hivTreatedPbs) <- c("population", yearNames)
 hivTreatedPbs <- gather(hivTreatedPbs,"year", "value",
-                        2:ncol(hivTreatedPbs))
+  2:ncol(hivTreatedPbs))
 hivTreatedPbs$year <- as.numeric(as.character(hivTreatedPbs$year))
 
 # Append overall gender data 
@@ -99,12 +89,12 @@ genderTreatedPbs <- prospectionData %>%
   filter(gender %in% c("m", "f"), state == "all") %>%
   select(-state) %>%
   mutate(gender = c("male", "female")) %>%
-  tbl_df()
+  as_tibble()
 
 colnames(genderTreatedPbs) <- c("population", yearNames)
 
 genderTreatedPbs <- gather(genderTreatedPbs,"year", "value",
-                        2:ncol(genderTreatedPbs))
+  2:ncol(genderTreatedPbs))
 genderTreatedPbs$year <- as.numeric(as.character(genderTreatedPbs$year))
 
 hivTreatedPbs <- bind_rows(hivTreatedPbs, genderTreatedPbs)
@@ -117,15 +107,15 @@ hivTreatedPbs$upper <- NA
 artEstimates <- artEstimates %>%
   select(year, alladjust, fitmin, fitmax, rel, rellower, relupper) %>%
   rename(value = alladjust, lower = fitmin, upper = fitmax, 
-         trend = rel, trendlwr = rellower, trendupr = relupper) %>%
+    trend = rel, trendlwr = rellower, trendupr = relupper) %>%
   mutate(population = "all") %>%
   select(population, everything())
 
 # Bind all our ART data together
 hivTreated <- rbind(filter(select(artEstimates, -contains("trend")), 
-                           year <= 2012), 
-                    filter(hivTreatedPbs, population == "all"),
-                    filter(hivTreatedPbs, population != "all"))
+  year <= 2012), 
+  filter(hivTreatedPbs, population == "all"),
+  filter(hivTreatedPbs, population != "all"))
 
 # Add stage column
 hivTreated$stage <- "numART"
@@ -135,7 +125,7 @@ hivTreated$stage <- "numART"
 # Use the relative rates to number in states
 
 populations <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act", 
-            "male", "female")
+  "male", "female")
 
 # Estimate state values for 2000-2012 using artEstimate trends (up to 
 # 2014)
@@ -148,8 +138,8 @@ for (pop in populations) {
   
   # Extract final year data 
   treatFinal <- filter(hivTreated, population == pop,
-                       year %in% c(2013:2014))
-
+    year %in% c(2013:2014))
+  
   # Calculate estimates and ranges
   tempFit <- treatFinal$value[nrow(treatFinal)] * 
     artEstimates$trend[1:indexFinal]
@@ -158,9 +148,9 @@ for (pop in populations) {
   tempUpr <- tempFit * artEstimates$trendupr[1:indexFinal]
   
   # Create a data frame 
-  tempDf <- data_frame(population = pop, year = 2000:2014,
-                       value = tempFit, lower = tempLwr, upper = tempUpr, 
-                       stage = "numART")
+  tempDf <- tibble(population = pop, year = 2000:2014,
+    value = tempFit, lower = tempLwr, upper = tempUpr, 
+    stage = "numART")
   
   # Append data prior to 2013 
   hivTreated <- rbind(hivTreated, filter(tempDf, year <= 2012))
@@ -173,44 +163,42 @@ hivTreated <- hivTreated %>%
 
 
 # Calculate uncertainty in Prospection data ------------------------------
-popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
-                                "ABS_population_sizes_PharmDash.xlsx"),
-                      sheet = 2)
-
+if (analysisYear < 2019) { 
+  popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
+    "ABS_population_sizes_PharmDash.xlsx"),
+    sheet = 2)
+} else {
+  popData <- read_csv(file.path(dirname(dirname(dataFolder)), "data",
+    paste0("ABS_population_sizes_PharmDash-", analysisYear, ".csv")))
+}
 
 # Loop through years and regions appending lower and upper
-prospectionYears <- 2013:analysisYear #c(2013, 2014, 2015, 2016, 2017)
+prospectionYears <- 2013:analysisYear #2013:2019
 regions <- c(populations, "all")
 
 for (nyear in prospectionYears) {
- for (pop in regions) {
-   numArt <- filter(hivTreated, year == nyear, population == pop)$value
-   numPop <- filter(popData, year == nyear, population == pop)$erp
-   
-   error <- PharmDashError(numPop, numArt)
-   
-   hivTreated[(hivTreated$year == nyear & 
-                 hivTreated$population == pop) , ]$lower <- error$lower
-   hivTreated[(hivTreated$year == nyear & 
-                 hivTreated$population == pop) , ]$upper <- error$upper
-   
-   } 
+  for (pop in regions) {
+    numArt <- filter(hivTreated, year == nyear, population == pop)$value
+    numPop <- filter(popData, year == nyear, population == pop)$erp
+    
+    error <- PharmDashError(numPop, numArt)
+    
+    hivTreated[(hivTreated$year == nyear & 
+        hivTreated$population == pop) , ]$lower <- error$lower
+    hivTreated[(hivTreated$year == nyear & 
+        hivTreated$population == pop) , ]$upper <- error$upper
+    
+  } 
 }
 
 # Add medicare ineligibles
 if (addTempRes) {
+  # Load from file ATRAS estimates merged with NAPHWA estimates in March 
+  # 2019 report.
+  tempResData <- read.csv(file.path(dataFolder,
+    paste0("ART_medicare_ineligible-", analysisYear, ".csv")))
   
-  # Load the temporary resident estimates
-  if (atrasTRest) {
-    tempResArt <- read.csv(file.path(dataFolder,
-                                     "ART_medicare_ineligible-ATRAS.csv"))
-  } else {
-    tempResArt <- read.csv(file.path(dataFolder,
-      paste0("ART_medicare_ineligible-NAPWHA.csv")))
-  }
-  
-  tempResArt <- filter(tempResArt, year <= analysisYear)
-  
+  tempResArt <- filter(tempResData, year <= analysisYear)
   
   if (usePercent) {
     # Use percentage Medicare ineligible to inflate past treatment
@@ -234,10 +222,10 @@ if (addTempRes) {
     atrasFemale <- 47/180
     
     # States
-  
+    
     # Do adjustments for all subpopulations
-    pops <- c("act", "all", "female", "male", "nsw", "nt", "qld", "sa", "tas",
-              "vic", "wa")
+    pops <- c("act", "all", "female", "male", "nsw", "nt", "qld", "sa", 
+      "tas", "vic", "wa")
     # treatFactor <- c(1, 1, atrasFemale, atrasMale, 1, 1, 1, 1, 1, 1, 1)
     
     pbsIndices <- 14:(analysisYear - 2000 + 1) #2013:analysisYear
@@ -266,7 +254,7 @@ if (addTempRes) {
       tempPropMin <- tempResMin/(tempResMin + tempEnd)
       tempPropMax <- tempResMax/(tempResMax + tempEnd)
       
-    
+      
       hivTreated$value[hivTreated$population == pops[ii]][pbsIndices] <- 
         tempTreated$value[pbsIndices] /(1-tempProp)
       hivTreated$lower[hivTreated$population == pops[ii]][pbsIndices] <- 
@@ -282,20 +270,20 @@ if (addTempRes) {
     for (ii in 1:nrow(tempResArt)) {
       hivTreated <- hivTreated %>%
         mutate(value = ifelse(population == tempResArt$population[ii] &
-                                year == tempResArt$year[ii] &
-                                stage == "numART", 
-                              value + tempResArt$value[ii],
-                              value),
-               lower = ifelse(population == tempResArt$population[ii] &
-                                year == tempResArt$year[ii] &
-                                stage == "numART", 
-                              lower + tempResArt$lower[ii],
-                              lower),
-               upper = ifelse(population == tempResArt$population[ii] &
-                                year == tempResArt$year[ii] &
-                                stage == "numART", 
-                              upper + tempResArt$upper[ii],
-                              upper))
+            year == tempResArt$year[ii] &
+            stage == "numART", 
+          value + tempResArt$value[ii],
+          value),
+          lower = ifelse(population == tempResArt$population[ii] &
+              year == tempResArt$year[ii] &
+              stage == "numART", 
+            lower + tempResArt$lower[ii],
+            lower),
+          upper = ifelse(population == tempResArt$population[ii] &
+              year == tempResArt$year[ii] &
+              stage == "numART", 
+            upper + tempResArt$upper[ii],
+            upper))
     }
   }
 }
@@ -305,7 +293,7 @@ if (addTempRes) {
 #                                      "Hard_coded_estimates.csv"))
 if (replaceValues) {
   hardCodeValues <- read.csv(file.path(dataFolder,
-                                       "Hard_coded_estimates.csv"), as.is = 1:3)
+    "Hard_coded_estimates.csv"), as.is = 1:3)
   tempHardCode <- filter(hardCodeValues, stage == "numART")
   if (nrow(tempHardCode) > 0) {
     hivTreated <- ReplaceEstimates(hivTreated, tempHardCode)
@@ -316,34 +304,34 @@ if (replaceValues) {
 
 ```{r suppressed}
 # Calculate the number on ART with suppressed virus during the year. This uses 
-# data from AHOD data and the number of people recieving treatment. 
+# data from AHOD data and the number of people receiving treatment. 
 
 # Initialize final results data frame
 hivSuppressed <- data.frame(stage = character(), 
-                            year = double(),
-                            population = character(),
-                            value = double(),
-                            lower = double(),
-                            upper = double())
+  year = double(),
+  population = character(),
+  value = double(),
+  lower = double(),
+  upper = double())
 
 # Load all the data we need
 ahodData <- read.csv(file.path(dataFolder, 
-  paste0("ahod", toString(analysisYear), ".csv"))) 
+  paste0("ahod", analysisYear, ".csv"))) 
 
 # Extract the viral suppression data
 propSuppressedState <- ahodData %>%
-# filter(state == "all") %>%
+  # filter(state == "all") %>%
   select(one_of(c("year", "state", "population", "n_id")), 
-         starts_with("n_rx"), -n_rx) %>% 
+    starts_with("n_rx"), -n_rx) %>% 
   group_by(year, state) %>%
   summarise(n = sum(n_id),
-            n200 = sum(n_rx200)) %>%
+    n200 = sum(n_rx200)) %>%
   mutate(prop200 = n200/n) %>%
   # Added 95% confidence interval
   mutate(prop200lower = prop200 - qnorm(0.975) * 
-           sqrt(prop200 * (1 - prop200) / n),
-         prop200upper = prop200 + qnorm(0.975) * 
-           sqrt(prop200 * (1 - prop200) / n)) %>%
+      sqrt(prop200 * (1 - prop200) / n),
+    prop200upper = prop200 + qnorm(0.975) * 
+      sqrt(prop200 * (1 - prop200) / n)) %>%
   filter(year <= analysisYear) %>%
   ungroup() %>%
   rename(population = state)
@@ -351,31 +339,31 @@ propSuppressedState <- ahodData %>%
 # Append male and female data
 propSuppressedGender <- ahodData %>%
   select(one_of(c("year", "state", "population", "n_id")), 
-         starts_with("n_rx"), -n_rx) %>% 
+    starts_with("n_rx"), -n_rx) %>% 
   filter(population %in% c("male", "female"), state == "all") %>%
   mutate(population = tolower(population)) %>%
   select(-state) %>%
   group_by(year, population) %>%
   summarise(n = sum(n_id),
-            n200 = sum(n_rx200)) %>%
+    n200 = sum(n_rx200)) %>%
   mutate(prop200 = n200/n) %>%
   # Added 95% confidence interval
   mutate(prop200lower = prop200 - qnorm(0.975) * 
-           sqrt(prop200 * (1 - prop200) / n),
-         prop200upper = prop200 + qnorm(0.975) * 
-           sqrt(prop200 * (1 - prop200) / n)) %>%
+      sqrt(prop200 * (1 - prop200) / n),
+    prop200upper = prop200 + qnorm(0.975) * 
+      sqrt(prop200 * (1 - prop200) / n)) %>%
   filter(year <= analysisYear) 
 
 propSuppressedState$population <-
   as.character(propSuppressedState$population)
 propSuppressed <- rbind(as.data.frame(propSuppressedState),
-                        as.data.frame(propSuppressedGender))
+  as.data.frame(propSuppressedGender))
 
 dataStart <- min(propSuppressed$year) 
 
 # Loop through populations and calculate number suppressed. 
 populations <- c("act", "nsw", "vic", "qld", "nt", "wa", "sa", "tas",
-                 "all", "male", "female")
+  "all", "male", "female")
 availablePops <- c("all", "nsw", "vic", "qld", "male", "female")
 
 for (pop in populations) {
@@ -392,7 +380,7 @@ for (pop in populations) {
   
   # Number treated 
   treatDf <- filter(hivTreated, stage == "numART", 
-                    population == pop, year >= dataStart)
+    population == pop, year >= dataStart)
   tempTreat <- treatDf$value
   tempTreatMin <- treatDf$lower
   tempTreatMax <- treatDf$upper
@@ -401,12 +389,12 @@ for (pop in populations) {
   
   # Number suppressed
   hivSuppressed <- rbind(hivSuppressed, 
-                         data.frame(stage = "suppressed",  
-                         year = tempDf$year,
-                         population = pop,
-                         value = tempTreat * tempProp,
-                         lower = tempTreatMin * tempPropMin,
-                         upper = tempTreatMax * tempPropMax)) 
+    data.frame(stage = "suppressed",  
+      year = tempDf$year,
+      population = pop,
+      value = tempTreat * tempProp,
+      lower = tempTreatMin * tempPropMin,
+      upper = tempTreatMax * tempPropMax)) 
 }
 
 # Replace values with hard coded if necessary
@@ -433,7 +421,7 @@ if (saveResults) {
   
   # Write to csv
   write.csv(finalResults, file = paste0(saveString, ".csv"), 
-            row.names = FALSE)
+    row.names = FALSE)
 }
 
 ```
