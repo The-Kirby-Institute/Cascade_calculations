@@ -48,46 +48,90 @@ source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 source(file.path(Rcode, "TidyLongitudinal.R"), echo=TRUE)
 source(file.path(Rcode, "AgeCat.R"), echo=TRUE)
+LoadLibrary(cowplot)
+LoadLibrary(captioner)
+
 
 # Script parameters
-analysisYear <- 2017
+analysisYear <- 2019
 saveResults <- TRUE
 
-# Add temporary residents - we have two estimates one from the ATRAS study 
-# which has been published and one based on personal communication with 
-# Aaron Cogle who did a survey for NAPWHA. 
-addTempResidents <- FALSE
+# -------------------------------------------------------------------------
+
+# Add temporary residents - Prior to 2018 we had two estimates one from the
+# ATRAS study which has been published and one based on personal 
+# communication with Aaron Cogle who did a survey for NAPWHA. In March 2019, 
+# NAPHWA and KI produced a report providing more detailed estimates of the 
+# number of temporary residents (Medicare ineligible) taking ART. The results 
+# from this report were used in the 2018 estimates and updated for the 2019 
+# estimates.
+
+addTempResidents <- TRUE 
 atrasTRest <- FALSE # TRUE if using the ATRAS estimate, False if using the 
                    # NAPWHA estimate. Use NAPWHA estimate for ASR and 
                    # ATRAS estimate for the paper as it is citable
 if (addTempResidents) {
-  if (atrasTRest) {
-    # ATRAS estimate using a weighted calculation
-    # Estimated 450 Medicare ineligible HIV+ temporary residents in 
-    # Australia of which ~76% are on treatment (~340 people, calculated 
-    # using a weighted proportion: 0.94*180 + 0.63*270 = 339.3. Assuming 63% of
-    # people not in ATRAS are on ART (percentage on ART at start of ATRAS) and 
-    # 94% of people in ATRAS are on ART (percentage on ART at end of ATRAS). 
-    # Range isassumed to be 300 to 400.
-    # Citation: Petoumenos, Kathy, Jo Watson, Bill Whittaker, Jennifer Hoy, 
-    # Don Smith, Lisa Bastian, Robert Finlayson, et al. "Subsidized Optimal 
-    # ART for HIV-Positive Temporary Residents of Australia Improves
-    # Virological Outcomes: Results from the Australian HIV Observational
-    # Database Temporary Residents Access Study." Journal of the 
-    # International AIDS Society 18, no. 1 (2015).
-
-    tempResData <- c(340, 300, 400)
-    
+  tempResData <- tibble(population = NA, 
+    year = 2013:analysisYear,
+    value = NA,
+    lower = NA,
+    upper = NA)
+  
+  tempResData$population = "all"
+  
+  if (analysisYear <= 2017) { 
+    if (atrasTRest) {
+      # ATRAS estimate using a weighted calculation
+      # Estimated 450 Medicare ineligible HIV+ temporary residents in 
+      # Australia of which ~76% are on treatment (~340 people, calculated 
+      # using a weighted proportion: 0.94*180 + 0.63*270 = 339.3. Assuming 
+      # 63% of people not in ATRAS are on ART (percentage on ART at start 
+      # of ATRAS) and 94% of people in ATRAS are on ART (percentage on ART 
+      # at end of ATRAS). 
+      # Range isassumed to be 300 to 400.
+      # Citation: Petoumenos, Kathy, Jo Watson, Bill Whittaker, Jennifer Hoy, 
+      # Don Smith, Lisa Bastian, Robert Finlayson, et al. "Subsidized Optimal 
+      # ART for HIV-Positive Temporary Residents of Australia Improves
+      # Virological Outcomes: Results from the Australian HIV Observational
+      # Database Temporary Residents Access Study." Journal of the 
+      # International AIDS Society 18, no. 1 (2015).
+      
+      # tempResData <- c(340, 300, 400)
+      tempResData$value <- 340
+      tempResData$lower <- 300
+      tempResData$upper <- 400
+      
+    } else {
+      # NAPWHA estimate from Aaron Cogle (used in 2017 ASR)
+      # Citation: Personal communication, Aaron Cogle, National Association 
+      # of People with HIV Australia, 7th July 2017. Survey of Medicare
+      # ineligible people living with HIV and ART access, 2016. National
+      # Association of People with HIV Australia (NAPWHA), Sydney. 
+      # tempResData <- c(450, 500, 550)
+      tempResData$value <- 450
+      tempResData$lower <- 500
+      tempResData$upper <- 550
+    }
+  } else if (analysisYear == 2018) {
+    # Load file
+    if (atrasTRest) {
+      tempResData <- read.csv(file.path(dataFolder,
+        "ART_medicare_ineligible-ATRAS.csv"))
+    } else {
+      tempResData <- read.csv(file.path(dataFolder,
+        "ART_medicare_ineligible-NAPHWA.csv"))
+    }
   } else {
-    # NAPWHA estimate from Aaron Cogle (used in 2017 ASR)
-    # Citation: Personal communication, Aaron Cogle, National Association 
-    # of People with HIV Australia, 7th July 2017. Survey of Medicare
-    # ineligible people living with HIV and ART access, 2016. National
-    # Association of People with HIV Australia (NAPWHA), Sydney. 
-    tempResData <- c(450, 500, 550)
+  # Load from file ATRAS estimates merged with NAPHWA estimates in March 
+  # 2019 report.
+  tempResData <- read.csv(file.path(dataFolder,
+    "ART_medicare_ineligible-2019.csv"))
+  
   }
 } else {
-  tempResData <- c(0, 0, 0)
+  tempResData$value <- 0
+  tempResData$lower <- 0
+  tempResData$upper <- 0
 }
 
 
@@ -119,13 +163,19 @@ tempPbs$year <- unlist(lapply(tempPbs$year, function(x)
 artEstimates <- full_join(artEstimates, tempPbs, by = "year")
 
 # Add upper and lower bounds for the PBS data
+if (analysisYear < 2019) {
 popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
                                 "ABS_population_sizes.xlsx"),
                       sheet = 2)
+} else {
+  popData <- read_csv(file.path(dirname(dirname(dataFolder)), "data",
+    "ABS_population_sizes_PharmDash-2019.csv"))
+}
+
 source(file.path(HIVcode, "pharmDashError.R"), echo=TRUE)
 
-# Loop through years appending lower and upper pbs estimates
-prospectionYears <- 2013:analysisYear #c(2013, 2014)
+# Loop through years appending lower and upper PBS estimates
+prospectionYears <- 2013:analysisYear 
 
 for (nyear in prospectionYears) {
  
@@ -141,13 +191,13 @@ for (nyear in prospectionYears) {
 # Add temporary residents to PBS data
 artEstimates$pbs[artEstimates$year %in% prospectionYears] <-
   artEstimates$pbs[artEstimates$year %in% prospectionYears] +
-  tempResData[1]
+  tempResData$value
 artEstimates$pbslower[artEstimates$year %in% prospectionYears] <-
   artEstimates$pbslower[artEstimates$year %in% prospectionYears] +
-  tempResData[2]
+  tempResData$lower
 artEstimates$pbsupper[artEstimates$year %in% prospectionYears] <-
   artEstimates$pbsupper[artEstimates$year %in% prospectionYears] +
-  tempResData[3]
+  tempResData$upper
 
 # Add other variables ----------------------------------------------------
 
@@ -197,7 +247,7 @@ fitGlmPois <- glm(all ~ year, data = artEstimates,
               family = poisson(link = "log"), weights = weights)
 artEstimates$fitglmpois <- predict(fitGlmPois, type="response")
 
-# No try a binomial regression
+# Now try a binomial regression
 
 saturationCoverage <- 30000 # estimate of saturation coverage
 
@@ -235,11 +285,10 @@ if (analysisYear == 2014) {
   # Note: best fit from Matlab for comparison for AnalysisYear = 2014. 
   # a = 5270, b = 30200, c = 2014.7 d = 0.207) 
   
-} else if (analysisYear == 2017) {
-  # For 2017 data a four paramater fit can be done but confident 
-  # intervals are problematic and messes up code below
-  # Do a 4 parameter fit first and then fix inflectionYear value and
-  # refit
+} else if (analysisYear >= 2017) {
+  # For 2017 data and after a four parameter fit can be done but confident 
+  # intervals are problematic and mess up code below. We do a 4 parameter 
+  # fit first and then fix the inflectionYear value and then refit
   fitLog4 <- nls(ydata ~ fitFunc(xdata, a, b, c, d),
     start = list(a = 5000, b = 30000, c = 2015, d = 0.1),
     weights = weights)
@@ -253,6 +302,8 @@ if (analysisYear == 2014) {
   fitLog <- nls(ydata ~ fitFunc(xdata, a, b, c, d),
     start = list(a = 5000, b = 30000, c = 2015, d = 0.1),
     weights = weights)
+  
+  inflectionYear <- coef(fitLog)["c"]
   warning("fitLog needs to beasssessed for Fit")
 }
 
@@ -299,7 +350,7 @@ for (ii in 1:nsamples) {
 }
 
 # Filter samples which go outside the PBS error bounds for 2017 
-goodRows <- apply(simMatrix, 1, 
+goodRows <- apply(simMatrix, 1,
       function(x) any(x[length(xdata)] <
                         artEstimates$pbsupper[length(xdata)]
                       && x[length(xdata)] >
@@ -340,8 +391,10 @@ artEstimates$relupper <- artEstimates$fitmax /
 
 
 ```{r plotanalysis}
+figs <- captioner()
+
 # Adjust plotOpts
-plotOpts <- plotOpts + theme(legend.position = "right",
+plotOpts <- PlotOptions() + theme(legend.position = "right",
   legend.text = element_text(size = 8),
   legend.title = element_text(size = 9, face = "bold"))
 
@@ -388,7 +441,7 @@ regressionPlot <- ggplot(data = artEstimates, aes(x = year, y = ahod)) +
   scale_shape_manual(name = "", values = shapes,
                      breaks = aesLabels, 
                      labels = labels[aesLabels]) +
-  ylim(c(0,20000)) + 
+  ylim(c(0,25000)) + 
   ylab("Number on ART") + 
   xlab("Year") + 
   plotOpts
