@@ -32,15 +32,16 @@ notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data",
 # Load standard libraries and options ------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"))
 LoadLibrary(tidyverse)
+options(dplyr.summarise.inform = FALSE) 
 ```
 
-The following chunck specifies all the parameters for producing the
+The following chunk specifies all the parameters for producing the
 estimates of PLHIV previously diagnosed. Result files are saved to the
 specified project folder and have a cascade file handle. 
 
 *Current projects*
-- ASR_2016, ASR_2017, ASR_2018 (cascades for the Annual Surveillance 
-Report(ASR))
+- ASR_2016, ASR_2017, ASR_2018, ASR_2019, ASR_2020 (cascades for the Annual 
+  Surveillance Report(ASR))
 - ASR_2018_Ageing (age estimates of PLDHIV for ASR)
 - CALD_Cascades
 - HIV_Cascade_Paper
@@ -48,30 +49,30 @@ Report(ASR))
 
 ```{r Cascade and script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2018
+analysisYear <- 2019
 saveResults <- TRUE
 
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "ASR_2019" # "." for main output folder 
+projectOutput <- "ASR_2020" # "." for main output folder 
                                  # "HIV_Cascade_Paper" for paper
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
-# otherwise cascade parameters are entred via a file in projectOutput 
+# otherwise cascade parameters are entered via a file in projectOutput 
 # which need to exist
-paramsFile <- NULL #"ProjectParameters.csv"
+paramsFile <- "ProjectParameters.csv"
                              
 # Cascade options----------------------------------------------------------
-# The following variables specify the charactersitsics and hence the 
+# The following variables specify the characteristics and hence the 
 # notifications that will be included in the cascade. For some variables a 
 # combination of categories can used by specifying a vector. Other 
 # variables can only be specified as a single value.
 # 
 # When calculating multiple cascades these are entered as a list (of 
 # vectors) for variables that can be combined or as vectors for single
-# variables. All lists and vectors need to be the same length (equal to
-# numCascades).
+# variables. All lists and vectors need to be the same length (equal
+# to numCascades).
 # 
 # Note: These often have same value across all cascades in 
 # a project so use rep() by default. These can then be manually changed as 
@@ -87,7 +88,7 @@ if (is.null(paramsFile)) {
   
   numCascades <- 1
   
-  cascadeName <- "All-2018" # (single)
+  cascadeName <- "All-2019" # (single)
   targetGender <- rep("all", numCascades) # all, male, female (single)
   targetAge <- rep("all", numCascades) # all or split (single)
   # Note regarding ageing: The calculations don't specifically target 
@@ -277,7 +278,7 @@ if (any(projectPldhiv)) {
 
 ```{r Load notifications}
 # This chunk loads the national notifications subset and imputed sets 
-# based on the specified criteria in Script paramaters
+# based on the specified criteria in Script parameters
 
 # Load cascade notifications data from storage
 hivData <- read_csv(file.path(notificationsFolder, 
