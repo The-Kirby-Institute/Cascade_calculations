@@ -338,13 +338,13 @@ propSuppressedState <- ahodData %>%
 
 # Append male and female data
 propSuppressedGender <- ahodData %>%
-  select(one_of(c("year", "state", "population", "n_id")), 
+  select(one_of(c("year", "state", "population", "num_viro")), 
     starts_with("n_rx"), -n_rx) %>% 
   filter(population %in% c("male", "female"), state == "all") %>%
   mutate(population = tolower(population)) %>%
   select(-state) %>%
   group_by(year, population) %>%
-  summarise(n = sum(n_id),
+  summarise(n = sum(num_viro),
     n200 = sum(n_rx200)) %>%
   mutate(prop200 = n200/n) %>%
   # Added 95% confidence interval
