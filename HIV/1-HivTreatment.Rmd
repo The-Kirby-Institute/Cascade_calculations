@@ -322,76 +322,86 @@ ahodData <- read_csv(file.path(dataFolder,
 
 
 if (analysisYear < 2019) {
-propSuppressedState <- ahodData %>%
-  select(one_of(c("year", "state", "population", "n_id")), 
-    starts_with("n_rx"), -n_rx) %>% 
-  filter(population == "all") %>%
-  group_by(year, state) %>%
-  summarise(n = sum(n_id),
-    n200 = sum(n_rx200)) %>%
-  mutate(prop200 = n200/n) %>%
-  # Added 95% confidence interval
-  mutate(prop200lower = prop200 - qnorm(0.975) * 
-      sqrt(prop200 * (1 - prop200) / n),
-    prop200upper = prop200 + qnorm(0.975) * 
-      sqrt(prop200 * (1 - prop200) / n)) %>%
-  filter(year <= analysisYear) %>%
-  ungroup() %>%
-  rename(population = state)
-
-# Append male and female data
-propSuppressedGender <- ahodData %>%
-  select(one_of(c("year", "state", "population", "n_id")), 
-    starts_with("n_rx"), -n_rx) %>% 
-  filter(population %in% c("male", "female"), state == "all") %>%
-  mutate(population = tolower(population)) %>%
-  select(-state) %>%
-  group_by(year, population) %>%
-  summarise(n = sum(n_id),
-    n200 = sum(n_rx200)) %>%
-  mutate(prop200 = n200/n) %>%
-  # Added 95% confidence interval
-  mutate(prop200lower = prop200 - qnorm(0.975) * 
-      sqrt(prop200 * (1 - prop200) / n),
-    prop200upper = prop200 + qnorm(0.975) * 
-      sqrt(prop200 * (1 - prop200) / n)) %>%
-  filter(year <= analysisYear) 
+  propSuppressedState <- ahodData %>%
+    select(one_of(c("year", "state", "population", "n_id")), 
+      starts_with("n_rx"), -n_rx) %>% 
+    filter(population == "all") %>%
+    group_by(year, state) %>%
+    summarise(n = sum(n_id),
+      n200 = sum(n_rx200)) %>%
+    mutate(prop200 = n200/n) %>%
+    # Added 95% confidence interval
+    mutate(prop200lower = prop200 - qnorm(0.975) * 
+        sqrt(prop200 * (1 - prop200) / n),
+      prop200upper = prop200 + qnorm(0.975) * 
+        sqrt(prop200 * (1 - prop200) / n)) %>%
+    mutate(prop200lower = ifelse(prop200lower < 0, 0, prop200lower),
+      prop200upper = ifelse(prop200upper < 0, 0, prop200upper)) %>%
+    filter(year <= analysisYear) %>%
+    ungroup() %>%
+    rename(population = state)
+  
+  # Append male and female data
+  propSuppressedGender <- ahodData %>%
+    select(one_of(c("year", "state", "population", "n_id")), 
+      starts_with("n_rx"), -n_rx) %>% 
+    filter(population %in% c("male", "female"), state == "all") %>%
+    mutate(population = tolower(population)) %>%
+    select(-state) %>%
+    group_by(year, population) %>%
+    summarise(n = sum(n_id),
+      n200 = sum(n_rx200)) %>%
+    mutate(prop200 = n200/n) %>%
+    # Added 95% confidence interval
+    mutate(prop200lower = prop200 - qnorm(0.975) * 
+        sqrt(prop200 * (1 - prop200) / n),
+      prop200upper = prop200 + qnorm(0.975) * 
+        sqrt(prop200 * (1 - prop200) / n)) %>%
+    mutate(prop200lower = ifelse(prop200lower < 0, 0, prop200lower),
+      prop200upper = ifelse(prop200upper < 0, 0, prop200upper)) %>%
+    filter(year <= analysisYear) %>%
+    ungroup()
 } else {
   # num_viro added to reflect viral load testing
   propSuppressedState <- ahodData %>%
-  select(one_of(c("year", "state", "population", "num_viro")), 
-    starts_with("n_rx"), -n_rx) %>% 
-  filter(population == "all") %>%
-  group_by(year, state) %>%
-  summarise(n = sum(num_viro),
-    n200 = sum(n_rx200)) %>%
-  mutate(prop200 = n200/n) %>%
-  # Added 95% confidence interval
-  mutate(prop200lower = prop200 - qnorm(0.975) * 
-      sqrt(prop200 * (1 - prop200) / n),
-    prop200upper = prop200 + qnorm(0.975) * 
-      sqrt(prop200 * (1 - prop200) / n)) %>%
-  filter(year <= analysisYear) %>%
-  ungroup() %>%
-  rename(population = state)
+    select(one_of(c("year", "state", "population", "num_viro")), 
+      starts_with("n_rx"), -n_rx) %>% 
+    filter(population == "all") %>%
+    group_by(year, state) %>%
+    summarise(n = sum(num_viro),
+      n200 = sum(n_rx200)) %>%
+    mutate(prop200 = n200/n) %>%
+    # Added 95% confidence interval
+    mutate(prop200lower = prop200 - qnorm(0.975) * 
+        sqrt(prop200 * (1 - prop200) / n),
+      prop200upper = prop200 + qnorm(0.975) * 
+        sqrt(prop200 * (1 - prop200) / n)) %>%
+    mutate(prop200lower = ifelse(prop200lower < 0, 0, prop200lower),
+      prop200upper = ifelse(prop200upper < 0, 0, prop200upper)) %>%
+    filter(year <= analysisYear) %>%
+    ungroup() %>%
+    rename(population = state)
 
-# Append male and female data
-propSuppressedGender <- ahodData %>%
-  select(one_of(c("year", "state", "population", "num_viro")), 
-    starts_with("n_rx"), -n_rx) %>% 
-  filter(population %in% c("male", "female"), state == "all") %>%
-  mutate(population = tolower(population)) %>%
-  select(-state) %>%
-  group_by(year, population) %>%
-  summarise(n = sum(num_viro),
-    n200 = sum(n_rx200)) %>%
-  mutate(prop200 = n200/n) %>%
-  # Added 95% confidence interval
-  mutate(prop200lower = prop200 - qnorm(0.975) * 
-      sqrt(prop200 * (1 - prop200) / n),
-    prop200upper = prop200 + qnorm(0.975) * 
-      sqrt(prop200 * (1 - prop200) / n)) %>%
-  filter(year <= analysisYear) 
+  # Append male and female data
+  propSuppressedGender <- ahodData %>%
+    select(one_of(c("year", "state", "population", "num_viro")), 
+      starts_with("n_rx"), -n_rx) %>% 
+    filter(population %in% c("male", "female"), state == "all") %>%
+    mutate(population = tolower(population)) %>%
+    select(-state) %>%
+    group_by(year, population) %>%
+    summarise(n = sum(num_viro),
+      n200 = sum(n_rx200)) %>%
+    mutate(prop200 = n200/n) %>%
+    # Added 95% confidence interval
+    mutate(prop200lower = prop200 - qnorm(0.975) * 
+        sqrt(prop200 * (1 - prop200) / n),
+      prop200upper = prop200 + qnorm(0.975) * 
+        sqrt(prop200 * (1 - prop200) / n)) %>%
+    mutate(prop200lower = ifelse(prop200lower < 0, 0, prop200lower),
+      prop200upper = ifelse(prop200upper < 0, 0, prop200upper)) %>%
+    filter(year <= analysisYear) %>%
+    ungroup() 
 }
 
 propSuppressedState$population <-
