@@ -55,8 +55,9 @@ saveResults <- TRUE
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "ASR_2020" # "." for main output folder 
-                                 # "HIV_Cascade_Paper" for paper
+projectOutput <- "ASR_2020" # "." for main output folder
+                            # "ASR_2020"
+                            # "HIV_Cascade_Paper" for paper
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entered via a file in projectOutput 
@@ -130,17 +131,17 @@ if (is.null(paramsFile)) {
   # as required. 
   excludeAborig <- rep(FALSE, numCascades) # FALSE by default to include 
                                            # indigenous
-  doRetained <- rep(FALSE, numCascades) # TRUE for appending retained in care
+  doRetained <- rep(TRUE, numCascades) # TRUE for appending retained in care
   
   # Settings for doing deduplication analysis
   doUnique <- rep(TRUE, numCascades)
   yearUnique <- rep(2017, numCascades) #Use NULL or year 2100 to turn off
-  saveUnique <- rep(FALSE, numCascades)
+  saveUnique <- rep(TRUE, numCascades)
   
   # Settings for generating ECDC model inputs
   ecdcData <- rep(TRUE, numCascades)
   ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
-  excludeOS <- rep(TRUE, numCascades) # Default FALSE but need to run with
+  excludeOS <- rep(FALSE, numCascades) # Default FALSE but need to run with
                                        # TRUE for ASR as
   
   # Leave projections chunk turned off so it is not called unless required. 

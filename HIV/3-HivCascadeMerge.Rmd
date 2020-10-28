@@ -22,11 +22,11 @@ source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
-analysisYear <- 2018
-projectName <-  "ASR_2018" #"ASR_2018" 
+analysisYear <- 2019
+projectName <-  "ASR_2020" #"ASR_2018" 
                            #"HIV_Cascade_Paper"
-                           #"Victorian_Estimates_2019"
-multipleCascades <- TRUE
+                           
+multipleCascades <- FALSE
 artNames <- NULL
 
 # If this is an ASR project already have specific populations
@@ -63,7 +63,7 @@ if (projectName %in% c("ASR_2016", "ASR_2017", "ASR_2018", "ASR_2019")) {
 } else if (projectName == "HIV_Cascade_Paper") {
   artString <- "ATRAS"
 } else {
-  artString <- "NAPWHA"
+  artString <- "PBS-Ineligible"
   warning("Non-standard project make sure artString is set correctly")
 }
 
