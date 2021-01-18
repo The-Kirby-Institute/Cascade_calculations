@@ -8,7 +8,8 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   # Calculate the number of people living with diagnosed HIV.
   #
   # Args:
-  #   cumdiagnoses: A numeric vector of cumulative diagnoses. 
+  #   annualdiags: A numeric vector of annual diagnoses. 
+  #   propunique: 
   #   deathrate: A numeric vector of deathrates.
   #   migration: A numeric vector of rates of migration overseas.
   #   propstay: A numeric vector with percentage who stay post diagnosis.

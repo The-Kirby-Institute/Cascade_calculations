@@ -177,6 +177,7 @@ NumUnique <- function(dobframe, years, ignore, file = NULL) {
   numcases <- rep(NA,length(years))
   for (ii in seq(along=years)) {
     dobvector <- filter(dobframe,yeardiagnosis <= years[ii])$dob
+    dobvector <- dobvector[!is.na(dobvector)] 
     if (length(dobvector) != 0 && !is.na(dobvector)) {
       # Make sure our dobvector isn't empty or an NA
       numcases[ii] <- RemoveDuplicates(dobvector,ignore)
@@ -212,7 +213,7 @@ ProportionUnique <- function(notificationsData, cumNotifications,
   # proportion maybe slightly higher than one. In those cases round down to
   # 1.
   propunique <- numberUniqueAll / cumNotifications
-  propunique[is.na(propunique)] <- 0
+  propunique[is.nan(propunique)] <- 0
   propunique[propunique > 1] <- 1
   
   return(propunique)

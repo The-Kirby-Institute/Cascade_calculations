@@ -60,7 +60,7 @@ projectOutput <- "ASR_2020" # "." for main output folder
                             # "HIV_Cascade_Paper" for paper
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
-# otherwise cascade parameters are entered via a file in projectOutput 
+# otherwise cascade parameters are entered via a file in project Output 
 # which need to exist
 paramsFile <- "ProjectParameters.csv"
                              
@@ -89,7 +89,7 @@ if (is.null(paramsFile)) {
   
   numCascades <- 1
   
-  cascadeName <- "All-2019" # (single)
+  cascadeName <- "Test-2019-age" # (single)
   targetGender <- rep("all", numCascades) # all, male, female (single)
   targetAge <- rep("all", numCascades) # all or split (single)
   # Note regarding ageing: The calculations don't specifically target 
@@ -131,12 +131,12 @@ if (is.null(paramsFile)) {
   # as required. 
   excludeAborig <- rep(FALSE, numCascades) # FALSE by default to include 
                                            # indigenous
-  doRetained <- rep(TRUE, numCascades) # TRUE for appending retained in care
+  doRetained <- rep(FALSE, numCascades) # TRUE for appending retained in care
   
   # Settings for doing deduplication analysis
   doUnique <- rep(TRUE, numCascades)
   yearUnique <- rep(2017, numCascades) #Use NULL or year 2100 to turn off
-  saveUnique <- rep(TRUE, numCascades)
+  saveUnique <- rep(FALSE, numCascades)
   
   # Settings for generating ECDC model inputs
   ecdcData <- rep(TRUE, numCascades)

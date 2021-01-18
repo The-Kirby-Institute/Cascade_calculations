@@ -129,26 +129,27 @@ populations <- c("nsw", "vic", "qld", "nt",  "wa",  "sa",  "tas", "act",
 
 # Estimate state values for 2000-2012 using artEstimate trends (up to 
 # 2014)
+
 for (pop in populations) {
   
   # index positions
-  index2013 <- nrow(filter(artEstimates, year <= 2013))
-  indexFinal <- index2013 + 1
+  # index2013 <- nrow(filter(artEstimates, year <= 2013))
+  # indexFinal <- index2013 + 1
   
   
   # Extract final year data 
-  treatFinal <- filter(hivTreated, population == pop,
-    year %in% c(2013:2014))
+  treatFinal <- filter(hivTreated, population == pop) #,
+    # year %in% c(2013:analysisYear))
   
   # Calculate estimates and ranges
-  tempFit <- treatFinal$value[nrow(treatFinal)] * 
-    artEstimates$trend[1:indexFinal]
-  tempFit[index2013:indexFinal] <- treatFinal$value
-  tempLwr <- tempFit * artEstimates$trendlwr[1:indexFinal]
-  tempUpr <- tempFit * artEstimates$trendupr[1:indexFinal]
+  tempFit <- tail(treatFinal$value, 1) * 
+    artEstimates$trend #[1:indexFinal] 
+  # tempFit[index2013:indexFinal] <- treatFinal$value
+  tempLwr <- tempFit * artEstimates$trendlwr #[1:indexFinal]
+  tempUpr <- tempFit * artEstimates$trendupr #[1:indexFinal]
   
   # Create a data frame 
-  tempDf <- tibble(population = pop, year = 2000:2014,
+  tempDf <- tibble(population = pop, year = 2000:analysisYear,
     value = tempFit, lower = tempLwr, upper = tempUpr, 
     stage = "numART")
   

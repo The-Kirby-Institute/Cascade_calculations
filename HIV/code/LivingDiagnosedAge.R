@@ -151,7 +151,7 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
         nliving[jj, ii - 1] * ageRate[jj] + ageUp
       
       # For low numbers the previous calculation could give number less
-      # than zero. In this case repalce with zero
+      # than zero. In this case replace with zero
       if (nliving[jj, ii] < 0) {
         nliving[jj, ii] <- 0
       }

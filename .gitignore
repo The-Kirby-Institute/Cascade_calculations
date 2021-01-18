@@ -49,6 +49,8 @@ HIV/hivageing.Rmd
 HIV/1-PldhivCalculations.R
 HIV/1-PldhivSingle.Rmd
 
+HIV/code/TempSetupPLDHIV.R
+
 # Chlamydia directory
 Chlamydia/data/CT notifications_2015_National_Estimate-2016-09-27.xlsx
 Chlamydia/data/chlamRetestVariation*.csv

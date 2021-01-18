@@ -1186,7 +1186,7 @@ ageDiagFemale <- hivGenderAgeCum %>%
   slice(c(1,10,2:9,11:18)) %>%
   select(-agebin) %>%
   as.matrix()
-rownames(ageDiagFemale) <- c(ageList, "not_reported")
+rownames(ageDiagFemale) <- c(ageList) #, "not_reported")
 colnames(ageDiagFemale) <- yearList
 
 ageDeathFemale <- matrix(0, nages, nyears)
@@ -1259,11 +1259,11 @@ absDeathRates <- read.csv(file.path(dirname(basePath),
 
 # Use male deathrates for overall
 absDeathRatesAll <- filter(absDeathRates, gender == "males", 
-                           state == "all") %>% tbl_df()
+                           state == "all") %>% as_tibble()
 absDeathRatesMale <- filter(absDeathRates, gender == "males",
-                            state == "all") %>% tbl_df()
+                            state == "all") %>% as_tibble()
 absDeathRatesFemale <- filter(absDeathRates, gender == "females",
-                              state == "all") %>% tbl_df()
+                              state == "all") %>% as_tibble()
 
 yearsVec <- 1980:analysisYear
 
@@ -1330,16 +1330,16 @@ for (ii in 2:nyears) {
   deathsABSrate <- absDeaths * agePldhiv[, ii - 1]
   deathsABSrateMale <- absDeathsMale * agePldhivMale[, ii - 1]
   deathsABSrateFemale <- absDeathsFemale * agePldhivFemale[, ii - 1]
-  
+
   # Determine the difference in deaths between the estimate using the 
   # overall deathrate and the known deaths from notifications - if there
   # are negative numbers it is okay because we will end
   # up adding people instead of removing them below to ensure total deaths
-  # are consistant with the overall estimate of deaths. (TODO): This does 
+  # are consistent with the overall estimate of deaths. (TODO): This does 
   # raise questions about using AHOD rates if there are less deaths than
   # recorded! 
   #
-  # Calculate adjustment factor so deaths across age groups matchs
+  # Calculate adjustment factor so deaths across age groups matches
   # unknown deaths - can be negative if unknownDeaths is negative equates
   # to adding people rather than removing them. This keeps things 
   # consistent with estimated total deaths.
@@ -1351,6 +1351,7 @@ for (ii in 2:nyears) {
   unknownFemale <- sum(agePldhivFemale[, ii-1]) * 
     hivBaseRates$deathrate[ii-1] * hivAdjustments$drate_female[ii-1] -
     sum(ageDeathFemale[, ii-1])
+
   
   if (sum(deathsABSrate) !=0) {
     adjustFactor <- unknownAll / sum(deathsABSrate)
@@ -1373,6 +1374,7 @@ for (ii in 2:nyears) {
     unknownAgeDeathsFemale <- rep(0, nages)
   }
   
+    
   for (jj in 1:nages) {
     
     # Calculate number of people moving up in age
@@ -1399,10 +1401,10 @@ for (ii in 2:nyears) {
         relAgeMigrate[jj, ii - 1] - 
       agePldhiv[jj, ii - 1] * ageRate[jj] + ageUp  
     
-    ageMortality[jj, ii-1] <- ageDeath[jj, ii-1] + unknownAgeDeaths[jj]
+    ageMortality[jj, ii-1] <- ageDeath[jj, ii-1] + abs(unknownAgeDeaths[jj])
     
     # For low numbers the previous calculation could give number less
-    # than zero. In this case repalce with zero
+    # than zero. In this case replace with zero
     if (agePldhiv[jj, ii] < 0) {
       agePldhiv[jj, ii] <- 0
     }
@@ -1418,7 +1420,7 @@ for (ii in 2:nyears) {
       agePldhivMale[jj, ii - 1] * ageRate[jj] + ageUpMale 
     
     ageMortalityMale[jj, ii-1] <- ageDeathMale[jj, ii-1] +
-      unknownAgeDeathsMale[jj]
+      abs(unknownAgeDeathsMale[jj])
     
     if (agePldhivMale[jj, ii] < 0) {
       agePldhivMale[jj, ii] <- 0
@@ -1435,16 +1437,15 @@ for (ii in 2:nyears) {
       agePldhivFemale[jj, ii - 1] * ageRate[jj] + ageUpFemale 
     
     ageMortalityFemale[jj, ii-1] <- ageDeathFemale[jj, ii-1] +
-      unknownAgeDeathsFemale[jj]
+      abs(unknownAgeDeathsFemale[jj])
     
     if (agePldhivFemale[jj, ii] < 0) {
       agePldhivFemale[jj, ii] <- 0
     }
-    
   }
 }
 
-# Put everything in a big data frame and calculate mortlaity rates
+# Put everything in a big data frame and calculate mortality rates
 agePldhivDf <- as.data.frame(agePldhiv) %>%
   mutate(age = ageList) %>%
   select(age, everything()) %>%

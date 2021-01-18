@@ -26,7 +26,7 @@ analysisYear <- 2019
 projectName <-  "ASR_2020" #"ASR_2018" 
                            #"HIV_Cascade_Paper"
                            
-multipleCascades <- FALSE
+multipleCascades <- TRUE
 artNames <- NULL
 
 # If this is an ASR project already have specific populations
@@ -42,6 +42,10 @@ if (multipleCascades && projectName %in% c("ASR_2016", "ASR_2017",
    cascadeNames <- c("All", "Male", "Female", "Indigenous", 
      "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "ACT", "NSW",
      "NT", "QLD", "SA", "TAS", "VIC", "WA", "SSA", "SEA", "Othercob")
+} else if (multipleCascades && projectName == "ASR_2020") {  
+   cascadeNames <- c("All", "Male", "Female", "Indigenous", 
+     "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "SSA", "SEA",
+     "Othercob")
 } else {
   # Specify cascades manually (without year)
   cascadeNames <- "All" # specify cascades with project 
