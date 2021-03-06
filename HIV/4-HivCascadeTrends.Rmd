@@ -51,15 +51,15 @@ LoadLibrary(gridExtra)
 source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
 
 # Script parameters
-resultsYear <- 2018  # year of cascade we will plot
-minYear <- 15      # how long ago do we plot things
+resultsYear <- 2019  # year of cascade we will plot
+minYear <- 16      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE
 
 # Set up project and cascade to analyse
 projectName <- "HIV_Cascade_Paper"  
 resultsFolder <- file.path(resultsFolder, projectName)
-cascadeName <- "All-2018"
+cascadeName <- "All-2019"
 cascadePop <- "all"
 
 # New infections parameters
@@ -77,7 +77,7 @@ stageNamesNeat <- c("Living \n with HIV", "Diagnosed",
 # Create output directory
 if (savePlots) {
   saveFormat <- ".png"
-  figFolder <- file.path(resultsFolder, "figures")
+  figFolder <- file.path(resultsFolder, "figures", resultsYear)
   dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
 }
 
@@ -126,7 +126,7 @@ if (infectsCalculation == "include") {
   hivNewInfections <- hivNewInfections %>%
     filter(exclude == "no") %>% 
     select(-exclude)
-} else if (infectsCalculation == "include") {
+} else if (infectsCalculation == "exclude") {
   hivNewInfections <- hivNewInfections %>%
     filter(exclude == "yes") %>% 
     select(-exclude)
@@ -139,7 +139,7 @@ if (infectsCalculation == "include") {
     filter(exclude == "yes") %>% 
     select(-exclude)
   
-  hivNewInfections <- data_frame(year = infectsInclude$year,
+  hivNewInfections <- tibble(year = infectsInclude$year,
     infections = (infectsInclude$infections + 
         infectsExclude$infections) / 2,
     infections_lower = infectsExclude$infections_lower,
@@ -285,7 +285,7 @@ if (savePlots) {
 }
 
 # Trends in between steps ------------------------------------------------
-diffsData <- data.frame(year = diagsData$year)
+diffsData <- tibble(year = diagsData$year)
 diffsData$undiagnosed <- filter(resultsAll, stage == "infected")$value - 
   filter(resultsAll, stage == "pldhiv")$value
 diffsData$noART <- filter(resultsAll, stage == "pldhiv")$value - 
@@ -305,7 +305,7 @@ trendData <- bind_rows(dplyr::select(resultsAll, year, stage, value,
 
 # HIV cascade trends ----------------------------------------------------
 steps <- c(stages[stages != "retained"], diffSteps)
-trendCascade <- data_frame(stage = character(9), 
+trendCascade <- tibble(stage = character(9), 
   coeff = numeric(9),
   pvalue = numeric(9),
   lower = numeric(9),
@@ -354,11 +354,11 @@ trendCascade$pseudoR2[9] <- pseudoR2Infects
 PlotTrend <- function(data, models, indicator) {
   model <- models[[indicator]]
   tempData <- filter(data, stage == indicator)
-  ggplot(data = data.frame(year = tempData$year),                                  aes(x = year)) +
+  ggplot(data = data.frame(year = tempData$year), aes(x = year)) +
     geom_point(aes(y = tempData$value), colour = "black") +
     geom_line(aes(y = predict(model, type = "response")),
       colour = "red") +
-    scale_x_discrete(breaks = tempData$year,
+    scale_x_continuous(breaks = tempData$year,
       limits =  tempData$year) +
     ylab(paste0("Number of ", tempData$stage[1])) +
     expand_limits(y = 0) +
@@ -509,16 +509,16 @@ supProp <- filter(trendData, stage == "suppressed")$value /
 overallProp <- filter(trendData, stage == "suppressed")$value / 
   filter(trendData, stage == "infected")$value
 
-year <- 2004:resultsYear
+year <- startYear:resultsYear
 
 # Add to trend data and save
-trendData <- bind_rows(trendData, data_frame(year = year,
+trendData <- bind_rows(trendData, tibble(year = year,
   stage = "propdiagnosed", value = diagnosedProp, lower = NA, upper = NA))
-trendData <- bind_rows(trendData, data_frame(year = year,
+trendData <- bind_rows(trendData, tibble(year = year,
   stage = "proptreated", value = artProp, lower = NA, upper = NA))
-trendData <- bind_rows(trendData, data_frame(year = year,
+trendData <- bind_rows(trendData, tibble(year = year,
   stage = "propsuppressed", value = supProp, lower = NA, upper = NA))
-trendData <- bind_rows(trendData, data_frame(year = year,
+trendData <- bind_rows(trendData, tibble(year = year,
   stage = "propoverall", value = overallProp, lower = NA, upper = NA))
 
 if (savePlots) {
@@ -690,7 +690,7 @@ overallPropPlot <- plotProp(overallProp, overalllmModel,
   "Percentage on\nART suppressed")
 
 # Add linear and Poisson model results to trendCascade
-propTrends <- data_frame(stage = c("propdiagnosed", "proptreated",
+propTrends <- tibble(stage = c("propdiagnosed", "proptreated",
   "propsuppressed", "propoverall"),
   coeff = c(coefflmdiags, coefflmart, coefflmsuppressed, coefflmoverall),
   pvalue = c(p_valuelmdiags, p_valuelmart, p_valuelmsuppressed,
@@ -703,7 +703,7 @@ propTrends <- data_frame(stage = c("propdiagnosed", "proptreated",
     pseudoR2lmoverall),
   model = "linear")
 
-propTrendsExp <- data_frame(stage = c("propdiagnosed", "proptreated",
+propTrendsExp <- tibble(stage = c("propdiagnosed", "proptreated",
   "propsuppressed", "propoverall"),
   coeff = c(coeffExpdiags, coeffExpart, coeffExpsuppressed, coeffExpoverall),
   pvalue = c(p_valueExpdiags, p_valueExpart, p_valueExpsuppressed,
@@ -1115,7 +1115,6 @@ for (ii in segmentStages) {
         toString(resultsYear),
         saveFormat)),
         plot = segPlots[[ii]], width = 7.5, height = 6, units = "cm")
-      
     }
   })
 }
@@ -1190,6 +1189,7 @@ trendDiags <- glm(diags ~ year, data = diagsData,
 # Now run segmented to produce a segmented Poisson model. 
 segDiags <- segmented(trendDiags, seg.Z = ~year, 
   psi = list(year = breakPoints))
+segModels$diagnoses <- segDiags
 
 segDiagsData <- data.frame(year = diagsData$year, 
   segvalue = fitted(segDiags))
@@ -1230,12 +1230,12 @@ segDiagsPlot <- ggplot(data = diagsData,
 if (length(breakPoints) == 1) {
   segDiagsPlot <- segDiagsPlot +
     geom_errorbarh(aes(y = 0.975 * diagsmax, 
-    xmin = segCI(segDiags$psi[,2],
-      segDiags$psi[,3])[1],
-    xmax = segCI(segDiags$psi[,2],
-      segDiags$psi[,3])[2]),
-    colour ="blue", 
-    height = 0.025 * diagsmax)
+      xmin = segCI(segDiags$psi[,2],
+        segDiags$psi[,3])[1],
+      xmax = segCI(segDiags$psi[,2],
+        segDiags$psi[,3])[2]),
+      colour ="blue", 
+      height = 0.025 * diagsmax)
 }
 
 print(segDiagsPlot)
@@ -1262,6 +1262,7 @@ trendInfects <- glm(round(infections) ~ year, data = newInfects,
 # Now run segmented to produce a segmented Poisson model. 
 segInfects <- segmented(trendInfects, seg.Z = ~year, 
   psi = list(year = breakPointsInfects))
+segModels$infections <- segInfects
 
 segInfectsData <- data.frame(year = newInfects$year, 
   segvalue = fitted(segInfects))
@@ -1302,12 +1303,12 @@ segInfectsPlot <- ggplot(data = newInfects,
 if (length(breakPointsInfects) == 1) {
   segInfectsPlot <- segInfectsPlot +
     geom_errorbarh(aes(y = 0.975 * infectsmax,
-    xmin = segCI(segInfects$psi[2],
-      segInfects$psi[3])[1],
-    xmax = segCI(segInfects$psi[2],
-      segInfects$psi[3])[2]),
-    colour = "blue",
-    height = 0.025 * diagsmax)
+      xmin = segCI(segInfects$psi[2],
+        segInfects$psi[3])[1],
+      xmax = segCI(segInfects$psi[2],
+        segInfects$psi[3])[2]),
+      colour = "blue",
+      height = 0.025 * diagsmax)
 }
 
 print(segInfectsPlot)
@@ -1375,7 +1376,7 @@ print(stagesDiffsPlot3)
 
 # Chow and interaction tests of detected change points
 
-Thi section applies some statistical tests for the segmented model to test 
+This section applies some statistical tests for the segmented model to test 
 for the robustness of any change points and produces a number of summary 
 results. 
 
@@ -1390,7 +1391,7 @@ slope parameters is different to zero as decribed here:
 https://andrewpwheeler.wordpress.com/2016/10/19/testing-the-equality-of-two-regression-coefficients/
 
 ```{r Chow and interaction tests}
-# This chunck runs chow and interaction tests for each intermediate
+# This chunk runs chow and interaction tests for each intermediate
 # cascade step. 
 LoadLibrary(aod)
 
@@ -1493,7 +1494,7 @@ modelString <- c("diagnoses" = "Annual diagnoses",
 
 steps <- c("diagnoses", "infections", "undiagnosed", "noART",
   "unsuppressed")
-modelTable <- data_frame()
+modelTable <- tibble()
 
 for (step in steps) {
   outputs <- selectModel(step)
@@ -1602,8 +1603,6 @@ if (addTempRes) {
 } else {
   trString <- "PBS"
 }
-
-
 
 artEstimates <- read.csv(file.path(resultsFolder,"..",
   paste0("ART_Estimates-2017-",
@@ -1745,5 +1744,313 @@ if (savePlots) {
 `r figs("trendSensitivity")`
 ```{r, include = TRUE, fig.width = 8, fig.height = 6.7}
 print(stagesDiffsPlot4)
+```
+
+# Non-linear model 
+
+After all the exploration of segmented trends I realized that a segmented 
+Poisson model might not be appropriate for describing the change in trends 
+seen in the cascade gaps. Also it is difficult to decide which estimates
+are most appropriate to use for the gaps trends analysis, particualrly for
+the noART gap where the changepoint could be spurious due to changes in 
+data source over time. 
+
+In this section we use non-linear least squares fitting of a non-linear 
+model which allows for an increase and decrease in values over time. 
+Fitting the model allows us to report a rise and decay rate ratio and time 
+where the max of peak value occurs. 
+
+The model is based on the following formula:
+$$
+f(t) = \frac {ake^{(g-d)t}} {(k-a)+ae^{gt}}.
+$$
+where $a$ is the initial value at $x = 0$, $g$ is the growth rate, $d$ is 
+the decay rate, and $k$ is a threshold parameter which specifies the 
+maximum value the grwoth can achieve (when $d = 0$). This function has been 
+used previously in: 
+
+> RT Gray, et al. Modeling the Impact of Potential Vaccines on Epidemics of 
+> Sexually Transmitted Chlamydia Trachomatis Infection.
+> JID 2009;199(11):1680-88. https://doi.org/10.1086/598983.
+
+and
+
+> AJ Shattock, et al. In the Interests of Time: Improving HIV Allocative 
+> Efficiency Modelling via Optimal Time-Varying Allocations.
+> JIAS 2016;19(1):20627. http://dx.doi.org/10.7448/IAS.19.1.20627.
+
+The function is a combination of a logistic graowth function and an 
+exponential decay function. For $t \approx 0$, $f(t) \approx ae^{(g-d)t}$ and the 
+growth is proportional to $e^{(g-d)t}$. Similarly, when x is large $f(t)$
+is proportional to $e^{-dt}$. This means we can describe a rate ratio (RR) 
+for the growth and decay of the function when $t$ represents time. With the 
+the growth RR equal to $e^{g-d}$ and the decay RR $e^{-d}$. 
+
+Though algebraic manipulation functional forms for the maximum (minimum)
+value and the corresponding $t$ value $t_p$ can be obtained:
+$$
+t_p = \frac {1} {g} ln{\Big[ \frac {(g-d)(k-a)} {da}\Big]}.
+$$
+
+To fit the model to the annual data for `r startYear` to `r resultsYear` we 
+use non-linear least squares via the `nls()` function with $t$ starting at 
+zero and then being mapped to the years. Using `nls()` requires careful 
+specification of the initial values which is done via guess and check and
+visual inspection. From the resulting model we obtain the standard 
+statistics though we can't generate an $R^2$ estimate by rights for a 
+non-linear model. We assess goodness of fit using the BIC. To produce 
+uncertainty in the model fits and results we sample from the 95% CIs for 
+the parameters and simulate. From the simulations we obtain IQRs and 95% 
+ranges for the fits and RRs. 
+
+```{r Non-linear model}
+# This chunk uses nls() to fit the model to the gaps as well as diagnoses
+# and infections. 
+
+# Options
+addSegment <- TRUE
+
+# Set-up the functions we will use ----------------------------------------
+
+# Main model
+FitModel <- function(x, a, g, d, k) {
+  return(k * a * exp((g-d) * x) / ((k - a) +
+      a*exp(g * x)))
+}
+
+# Time to peak in model
+TP <- function(a, g, d, k) {
+  return((1/g) * log((g-d)*(k-a)/(d*a)))
+}
+
+fitIndicators <- c("undiagnosed", "noART", "unsuppressed", "diagnoses", 
+  "infections")
+
+xseq <- years - years[1] # time points
+
+yLabels <- c(yLabels, 
+  "diagnoses" = "Number of diagnoses", 
+  "infections" = "Number of new infections")
+
+# Estimates for plots for each stage---------------------------------------
+fitPlots <- list()
+fitModels <- list()
+
+ymax <- c("undiagnosed" = 3500, 
+  "noART" = 6500, 
+  "unsuppressed" = 4500,
+  "diagnoses" = 1200,
+  "infections" = 1200)
+
+fitData <- trendData %>%
+  select(year, stage, value)
+
+# Add diagnoses and infections
+fitDiagsData <- diagsData %>%
+  select(-overseas) %>%
+  mutate(stage = "diagnoses") %>%
+  select(year, stage, value = diags)
+
+fitInfectsData <- newInfects %>%
+  select(year, infections) %>%
+  mutate(stage = "infections") %>%
+  select(year, stage, value = infections)
+
+fitData <- bind_rows(fitData, fitDiagsData, fitInfectsData)
+
+# Set-up initial values for fits ------------------------------------------
+
+# Guess and check 
+ydataTest <- filter(fitData, stage == "infections")$value
+qplot(xseq, FitModel(xseq,900, 0.3, 0.01, 1100), 
+  geom = "line", 
+  ylim = c(0, NA), 
+  ylab = "Value") + 
+  geom_point(aes(y = ydataTest), colour = "black") +
+  PlotOptions()
+
+# Store initial values
+initialParList <- list(
+  "undiagnosed" = list(b= 2900, g = 0.2, d = 0.007, h = 3250),
+  "noART" = list(b = 5800, g = 0.2, d = 0.133, h = 20000), 
+  "unsuppressed" = list(b = 3000, g = 0.001, d = 0.05, h = 200),
+  "diagnoses" = list(b= 900, g = 0.3, d = 0.01, h = 1100),
+  "infections" = list(b= 900, g = 0.3, d = 0.01, h = 1100))
+
+# Run fits
+for (ii in fitIndicators) { 
+  # Need to use local to prevent scope issues with predicted values
+  local({
+    print(ii)
+    ii <- ii
+    tempData <- filter(fitData, stage == ii)
+    
+    # Regenerate original Poisson model in case of scope issues
+    pmodel <- glm(round(value) ~ year, data = tempData, 
+      family = "poisson")
+    
+    # Now run nls() to produce a non-linear model. Use try in
+    # case fit does not converge (which occurs for unsuppressed). 
+    plotModel <- TRUE
+    fitModel <- try( nls(tempData$value ~ FitModel(xseq, b, g, d, h),
+      start = initialParList[[ii]],
+      control = nls.control(maxiter = 1000)))
+    
+    if ("try-error" %in% class(fitModel)) {
+      fitModel <- pmodel #trendModels[[ii]]
+      plotModel <- FALSE
+    } 
+    
+    fitModels[[ii]] <<- fitModel
+    
+    # Plot on top of trend plot
+    fitModelData <- data.frame(year = tempData$year,
+      fitvalue = fitted(fitModel))
+    
+    fitPlot <- ggplot(data = tempData,
+      aes(x = year, y = value)) +
+      geom_line(aes(color = "estimates")) +
+      geom_point(color = asrcols[2]) +
+      geom_line(aes(y = fitted(pmodel),
+        colour = "overall")) +
+      geom_line(data = fitModelData, aes(y = fitvalue,
+        colour = "fit")) +
+      scale_x_continuous(breaks = seq(startYear,
+        resultsYear, by = 3)) +
+      scale_y_continuous(labels = comma) +
+      scale_colour_manual("", values = c(asrcols[2], "black", "blue"),
+        limits = c("estimates", "overall", "fit"),
+        labels = c("Estimates", "Overall model",
+          "Fitted model")) +
+      coord_cartesian(ylim = c(0, ymax[ii])) +
+      ylab(yLabels[ii]) + xlab("Year") +
+      PlotOptions() #+
+    # geom_text(x = 2010, y = 0.2 * ymax[ii],
+    #   label = paste("Overall BIC:",
+    #     toString(round(BIC(pmodel), digits = 4))), size = 3) +
+    # geom_text(x = 2010, y = 0.1 * ymax[ii],
+    #   label = paste("Fitted BIC:",
+    #     toString(round(BIC(fitModel), digits = 4))), size = 3)
+    
+    # if (plotModel) {
+    #   pars <- unname(coef(fitModel))
+    #   fitPlot <- fitPlot +
+    #     geom_vline(xintercept =  years[1] + TP(pars[1], pars[2], pars[3],
+    #      pars[4]), 
+    #       linetype = "dashed",
+    #       colour = "blue")
+    # }
+    
+    if (addSegment) {
+      # Add Segment model plot for comparison
+      segmentModel <- segModels[[ii]]
+      
+      segModelData <- data.frame(year = tempData$year,
+        segvalue = fitted(segmentModel))
+      
+      fitPlot <- fitPlot +
+        geom_line(data = segModelData, aes(y = segvalue,
+          colour = "segment")) +
+        scale_colour_manual("", values = c(asrcols[2], "black", 
+          "dark green", "blue"),
+          limits = c("estimates", "overall", "segment", "fit"),
+          labels = c("Estimates", "Overall model",
+            "Segmented model", "Fitted model")) +
+        geom_text(x = 2010, y = 0.3 * ymax[ii],
+          label = paste("Overall BIC:",
+            toString(round(BIC(pmodel), digits = 4))), size = 3) +
+        geom_text(x = 2010, y = 0.2 * ymax[ii],
+          label = paste("Segmented BIC:",
+            toString(round(BIC(segmentModel), digits = 4))), size = 3) +
+        geom_text(x = 2010, y = 0.1 * ymax[ii],
+          label = paste("Fitted BIC:",
+            toString(round(BIC(fitModel), digits = 4))), size = 3)
+      
+      if (plotModel) {
+        pars <- unname(coef(fitModel))
+        fitPlot <- fitPlot +
+          geom_vline(xintercept =  years[1] + TP(pars[1], pars[2], 
+            pars[3], pars[4]), 
+            linetype = "dashed",
+            colour = "blue") +
+          geom_vline(xintercept = segmentModel$psi[2], linetype = "dotted",
+            colour = "dark green")
+      }
+      
+    } else {
+      fitPlot <- fitPlot +
+        geom_text(x = 2010, y = 0.2 * ymax[ii],
+          label = paste("Overall BIC:",
+            toString(round(BIC(pmodel), digits = 4))), size = 3) +
+        geom_text(x = 2010, y = 0.1 * ymax[ii],
+          label = paste("Fitted BIC:",
+            toString(round(BIC(fitModel), digits = 4))), size = 3)
+      
+      if (plotModel) {
+        pars <- unname(coef(fitModel))
+        fitPlot <- fitPlot +
+          geom_vline(xintercept =  years[1] + TP(pars[1], pars[2], 
+            pars[3], pars[4]), 
+            linetype = "dashed",
+            colour = "blue")
+      }
+    }
+    
+    fitPlots[[ii]] <<- fitPlot
+    
+    if (savePlots) {
+      # Save the current plot
+      ggsave(file.path(figFolder, paste0("HIVcascade-Trends-", ii,
+        "-Fitted_",
+        toString(startYear), "-",
+        toString(resultsYear),
+        saveFormat)),
+        plot = fitPlots[[ii]], width = 7.5, height = 6, units = "cm")
+    }
+  })
+}
+
+# Figure caption
+figs("fittedTrends", "")
+
+legend <- get_legend(fitPlots[[1]])
+
+# Update group plot
+combinedPlot <- grid.arrange(legend, 
+  fitPlots[[1]] + theme(legend.position="none"), 
+  fitPlots[[2]] + theme(legend.position="none"),
+  fitPlots[[3]] + theme(legend.position="none"), 
+  ncol = 2, nrow = 3, 
+  layout_matrix = rbind(c(1, 1), c(2, 3), c(4, 5)),
+  widths = c(4, 4), heights = c(0.8, 3.1, 3.1))
+
+stagesDiffsPlot3 <- ggdraw() +
+  draw_plot(combinedPlot, 0, 0, 1, 1) +
+  draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0),
+    c(0.9, 0.9, 0.45), size = 12)
+
+# Save combined plot-------------------------------------------------------
+if (savePlots) {
+  if (addSegment) {
+    plotFile <- "HIVcascade-Differences-Trends_Segment-Fitted"
+  } else {
+    plotFile <- "HIVcascade-Differences-Trends_Fitted"
+  }
+  
+  ggsave(file.path(figFolder,
+    paste(plotFile,
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = stagesDiffsPlot3, width = 18, height = 15, units = "cm")
+}
+```
+
+```{r Generate uncertainty}
+# In this chunk we generate ranges for the fitted model parameters, 
+# simulate and produce a clean plot. 
+
+
+
 ```
 
