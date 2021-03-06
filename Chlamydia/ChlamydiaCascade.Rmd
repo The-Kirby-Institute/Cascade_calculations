@@ -44,8 +44,8 @@ source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2017 # year of cascade we will calculate and plot   
-dataYear <- 2017 # year data for estimates was generated (to handle updated 
+resultsYear <- 2019 # year of cascade we will calculate and plot   
+dataYear <- 2019 # year data for estimates was generated (to handle updated 
                  # data) this is the data output year as well.
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
@@ -64,7 +64,7 @@ dataFolder <- file.path(dataFolder, toString(dataYear))
 # Some information on the packages and versions used to generate the 
 # results
 source(file.path(Rcode, "FrontMatter.R"))
-fmStr <- FrontMatter(packages = "all", rstudio = "1.1.423")
+fmStr <- FrontMatter(packages = "all", rstudio = "1.3.1093")
 cat(fmStr)
 ```
 
@@ -791,6 +791,9 @@ if (resultsYear == 2014) {
 plotcascade <- chlamcascade
 plotcascade$sex <- factor(plotcascade$sex, 
   levels = c("male", "female", "all"))
+plotcascade$stage <- factor(plotcascade$stage, 
+  levels = c("infections", "notifications", "treated", "retested"))
+
 
 # Overall cascade
 cascadeAll <- filter(plotcascade, year == resultsYear, 
