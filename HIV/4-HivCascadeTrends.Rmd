@@ -714,7 +714,11 @@ propTrendsExp <- tibble(stage = c("propdiagnosed", "proptreated",
     intervalExpoverall[2]),
   pseudoR2 = c(pseudoR2Expdiags, pseudoR2Expart, pseudoR2Expsuppressed, 
     pseudoR2Expoverall),
-  model = "poisson")
+  model = "poisson-offset")
+
+trendCascade <- trendCascade %>% 
+  mutate(model = "poisson") %>%
+  bind_rows(propTrends, propTrendsExp)
 
 # Save plots --------------------------------------------------------------
 # Create a group 90-90-90 plot with trend lines
@@ -1871,11 +1875,11 @@ qplot(xseq, FitModel(xseq,900, 0.3, 0.01, 1100),
 
 # Store initial values
 initialParList <- list(
-  "undiagnosed" = list(b= 2900, g = 0.2, d = 0.007, h = 3250),
-  "noART" = list(b = 5800, g = 0.2, d = 0.133, h = 20000), 
-  "unsuppressed" = list(b = 3000, g = 0.001, d = 0.05, h = 200),
-  "diagnoses" = list(b= 900, g = 0.3, d = 0.01, h = 1100),
-  "infections" = list(b= 900, g = 0.3, d = 0.01, h = 1100))
+  "undiagnosed" = list(a= 2900, g = 0.2, d = 0.007, k = 3250),
+  "noART" = list(a = 5800, g = 0.2, d = 0.133, k = 20000), 
+  "unsuppressed" = list(a = 3000, g = 0.001, d = 0.05, k = 3000),
+  "diagnoses" = list(a = 900, g = 0.3, d = 0.01, k = 1100),
+  "infections" = list(a = 900, g = 0.3, d = 0.01, k = 1100))
 
 # Run fits
 for (ii in fitIndicators) { 
@@ -1892,7 +1896,7 @@ for (ii in fitIndicators) {
     # Now run nls() to produce a non-linear model. Use try in
     # case fit does not converge (which occurs for unsuppressed). 
     plotModel <- TRUE
-    fitModel <- try( nls(tempData$value ~ FitModel(xseq, b, g, d, h),
+    fitModel <- try(nls(tempData$value ~ FitModel(xseq, a, g, d, k),
       start = initialParList[[ii]],
       control = nls.control(maxiter = 1000)))
     
@@ -2050,7 +2054,66 @@ if (savePlots) {
 # In this chunk we generate ranges for the fitted model parameters, 
 # simulate and produce a clean plot. 
 
+# Generate ensemble of curves based on variation in 95% confidence interval
+# of estimated parameters values
+aRange <- confint(fitModels[["noART"]])[1,]
+gRange <- confint(fitModels[["noART"]])[2,]
+dRange <- confint(fitModels[["noART"]])[3,]
+kRange <- confint(fitModels[["noART"]])[4,]
 
+nsamples <- 1000000  # ensure big enough to get enough samples 
+simMatrix <- matrix(0,nsamples, length(years))
+
+aSample <- runif(nsamples, aRange[1], aRange[2])
+gSample <- runif(nsamples, gRange[1], gRange[2])
+dSample <- runif(nsamples, dRange[1], dRange[2])
+kSample <- runif(nsamples, kRange[1], kRange[2])
+
+
+coeffs <- coef(fitModels[["noART"]])
+rr <- exp(coeffs[2] - coeffs[3])
+rrSample <- exp(gSample - dSample)
+mean(rrSample)
+median(rrSample)
+quantile(rrSample, probs = 0.025)
+quantile(rrSample, probs = 0.975)
+
+for (ii in 1:nsamples) {
+  simMatrix[ii,] <- FitModel(xseq, aSample[ii], gSample[ii], 
+    dSample[ii], kSample[ii])
+}
+
+# Use function to generate lower and upper bounds for models numbers for 
+# best fitting function
+estimates <- tibble(fitmin = apply(simMatrix, 2, min))
+estimates$fitlwr95 <- apply(simMatrix, 2, quantile, probs = 0.025)
+estimates$fitlwriqr <- apply(simMatrix, 2, quantile, probs = 0.25)
+estimates$fitupriqr <- apply(simMatrix, 2, quantile, probs = 0.75)
+estimates$fitupr95 <- apply(simMatrix, 2, quantile, probs = 0.975)
+estimates$fitmax <- apply(simMatrix, 2, max)
+
+# Plot
+tempData <- filter(fitData, stage == "noART")
+fitModelData <- data.frame(year = tempData$year,
+      fitvalue = fitted(fitModels[["noART"]]))
+
+estimates$year <- tempData$year
+estimates$value <- tempData$value
+estimates$fitted <- fitModelData$fitvalue
+
+ggplot(data = estimates,
+  aes(x = year, y = value)) +
+  # geom_ribbon(data = estimates, aes(ymin = fitmin, ymax = fitmax), 
+  #   fill = "blue", alpha = 0.2) + 
+  #   geom_ribbon(data = estimates, aes(ymin = fitlwr95, ymax = fitupr95), 
+  #   fill = "blue", alpha = 0.3) +
+  geom_ribbon(data = estimates, aes(ymin = fitlwriqr, ymax = fitupriqr), 
+    fill = "blue", alpha = 0.5) + 
+  geom_line(aes(color = "estimates")) +
+  geom_point(color = asrcols[2]) +
+  geom_line(data = fitModelData, aes(y = fitvalue,
+    colour = "fit")) + 
+  PlotOptions()
 
 ```
 
