@@ -311,7 +311,7 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
   
   # Select what we want
   cd4Diags <- cd4DiagsAll %>%
-    select_("year", cd4binSelect)
+    select("year", all_of(cd4binSelect))
   colnames(cd4Diags)[2] <- c("all")
   
   if (useprop) {
@@ -416,7 +416,7 @@ cd4Exposure <- function(hivData, cd4binGroup,
     cd4ExpBin <- FillDataFrame(requiredYears, cd4ExpBin) %>%
       arrange(year)
   } else { 
-    cd4ExpBin <- data_frame(year = minYear,
+    cd4ExpBin <- tibble(year = minYear,
       hetero = 0,
       msm = 0,
       otherexp = 0,

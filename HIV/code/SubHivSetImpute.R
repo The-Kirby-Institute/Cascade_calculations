@@ -37,7 +37,7 @@ SubHivSetImpute <- function(hivdataframe, fAge, fGender, fExposure, fCob,
   # Initialize data frames for storing results
   # subframe <- hivdataframe
   includeframe <- hivdataframe
-  excludeframe <- data_frame()
+  excludeframe <- tibble()
   
   # Start collating the notifications 
   if (fAge[1] != 'all') {

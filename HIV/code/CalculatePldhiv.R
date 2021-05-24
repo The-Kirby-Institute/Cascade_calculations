@@ -301,12 +301,12 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     if (doUnique) {
       uniqueNotifications <- uniqueNotificationsSets %>%
         group_by(year) %>%
-        summarise_all(funs(mean)) %>%
+        summarise_all(list(mean)) %>%
         ungroup()
       if (interState) {
         uniqueNotificationsAll <- uniqueNotificationsAllSets %>%
           group_by(year) %>%
-          summarise_all(funs(mean)) %>%
+          summarise_all(list(mean)) %>%
           ungroup()
       }
     }
@@ -315,14 +315,14 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     if (targetGender == "all") {
       propDiagsMale <- propDiagsMaleSets %>%
         group_by(year) %>%
-        summarise_all(funs(mean)) %>%
+        summarise_all(list(mean)) %>%
         ungroup() %>%
         select(value) %>%
         as.matrix() %>%
         as.vector 
       propDiagsMaleAll <- propDiagsMaleAllSets %>%
         group_by(year) %>%
-        summarise_all(funs(mean)) %>%
+        summarise_all(list(mean)) %>%
         ungroup() %>%
         select(value) %>%
         as.matrix() %>%
@@ -331,12 +331,12 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       if (doAge) {
         propDiagsAgeMale <- propDiagsAgeMaleSets %>%
           group_by(year) %>%
-          summarise_all(funs(mean)) %>%
+          summarise_all(list(mean)) %>%
           ungroup() %>%
           as.matrix
         propDiagsAgeMaleAll <- propDiagsAgeMaleAllSets %>%
           group_by(year) %>%
-          summarise_all(funs(mean)) %>%
+          summarise_all(list(mean)) %>%
           ungroup() %>%
           as.matrix
       }
@@ -357,7 +357,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         
     hivResults <- hivResultsSets %>%
       group_by(year) %>%
-      summarise_all(funs(mean)) %>%
+      summarise_all(list(mean)) %>%
       ungroup() %>%
       left_join(hivResultsRange, by = "year") %>%
       select(year, notifications, notifications_min, notifications_max,
@@ -365,7 +365,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     
     hivResultsAge <- hivResultsAgeSets %>%
       group_by(agegroup) %>%
-      summarise_all(funs(mean)) %>%
+      summarise_all(list(mean)) %>%
       as.data.frame() %>%
       column_to_rownames(var = "agegroup") %>%
       ungroup() %>% 
@@ -373,7 +373,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     
     hivResultsAgeMin <- hivResultsAgeSets %>%
       group_by(agegroup) %>%
-      summarise_all(funs(min)) %>%
+      summarise_all(list(min)) %>%
       as.data.frame() %>%
       column_to_rownames(var = "agegroup") %>%
       ungroup() %>% 
@@ -381,7 +381,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     
     hivResultsAgeMax <- hivResultsAgeSets %>%
       group_by(agegroup) %>%
-      summarise_all(funs(min)) %>%
+      summarise_all(list(min)) %>%
       as.data.frame() %>%
       column_to_rownames(var = "agegroup") %>%
       ungroup() %>% 
@@ -396,7 +396,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       
       hivResultsAll <- hivResultsAllSets %>%
         group_by(year) %>%
-        summarise_all(funs(mean)) %>%
+        summarise_all(list(mean)) %>%
         ungroup() %>%
         left_join(hivResultsAllRange, by = "year") %>%
         select(year, notifications, notifications_min, notifications_max,
@@ -404,7 +404,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       
       hivResultsAgeAll <- hivResultsAgeAllSets %>%
         group_by(agegroup) %>%
-        summarise_all(funs(mean)) %>%
+        summarise_all(list(mean)) %>%
         as.data.frame() %>%
         column_to_rownames(var = "agegroup") %>%
         ungroup() %>% 
@@ -412,7 +412,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       
       hivResultsAgeAllMin <- hivResultsAgeAllSets %>%
         group_by(agegroup) %>%
-        summarise_all(funs(min)) %>%
+        summarise_all(list(min)) %>%
         as.data.frame() %>%
         column_to_rownames(var = "agegroup") %>%
         ungroup() %>% 
@@ -420,7 +420,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       
       hivResultsAgeAllMax <- hivResultsAgeAllSets %>%
         group_by(agegroup) %>%
-        summarise_all(funs(max)) %>%
+        summarise_all(list(max)) %>%
         as.data.frame() %>%
         column_to_rownames(var = "agegroup") %>%
         ungroup() %>% 

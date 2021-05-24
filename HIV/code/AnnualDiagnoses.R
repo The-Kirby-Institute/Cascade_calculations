@@ -25,7 +25,7 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
   
   # analysisYear <- tail(allYears, 1)
   if (nrow(hivSet) == 0) {
-    includeDiags <- data_frame(year = allYears,
+    includeDiags <- tibble(year = allYears,
       included = 0)
   } else {
     includeDiags <- hivSet %>% 
@@ -38,7 +38,7 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
   
   # If excluded and unknown is empty replace with zeros
   if (nrow(hivSetExcluded) == 0) {
-    excludedDiags <- data_frame(year = allYears,
+    excludedDiags <- tibble(year = allYears,
       excluded = 0)
   } else {
     excludedDiags <- hivSetExcluded %>%
@@ -50,7 +50,7 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
   excludedDiags <- FillDataFrame(allYears, excludedDiags)
   
   if (nrow(hivSetUnknown) == 0) {
-    unknownDiags <- data_frame(year = allYears,
+    unknownDiags <- tibble(year = allYears,
       unknown = 0)
   } else {
     unknownDiags <- hivSetUnknown %>%
@@ -85,7 +85,7 @@ AnnualDiagnoses <- function(hivSet, hivSetExcluded, hivSetUnknown,
     mutate(adjusted_included = included  + unknown * prop_included,
       adjusted_excluded = excluded + unknown * prop_excluded)
   
-  hivResults <- data_frame(year = adjustDiags$year,
+  hivResults <- tibble(year = adjustDiags$year,
     notifications = adjustDiags$adjusted_included,
     cumnotifications = cumsum(adjustDiags$adjusted_included),
     all_notifications = adjustDiags$all,

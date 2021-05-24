@@ -62,7 +62,7 @@ projectOutput <- "ASR_2020" # "." for main output folder
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entered via a file in project Output 
 # which need to exist
-paramsFile <- "ProjectParameters.csv"
+paramsFile <- NULL #"ProjectParametersTemp.csv"
                              
 # Cascade options----------------------------------------------------------
 # The following variables specify the characteristics and hence the 
