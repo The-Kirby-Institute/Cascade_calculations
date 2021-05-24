@@ -55,6 +55,7 @@ resultsYear <- 2019  # year of cascade we will plot
 minYear <- 16      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE
+years <- startYear:resultsYear
 
 # Set up project and cascade to analyse
 projectName <- "HIV_Cascade_Paper"  
@@ -716,9 +717,7 @@ propTrendsExp <- tibble(stage = c("propdiagnosed", "proptreated",
     pseudoR2Expoverall),
   model = "poisson-offset")
 
-trendCascade <- trendCascade %>% 
-  mutate(model = "poisson") %>%
-  bind_rows(propTrends, propTrendsExp)
+trendCascadeProp <- bind_rows(propTrends, propTrendsExp)
 
 # Save plots --------------------------------------------------------------
 # Create a group 90-90-90 plot with trend lines
@@ -748,6 +747,8 @@ if (savePlots) {
       toString(resultsYear),
       saveFormat, sep = "")),
     plot = stagesPropPlot, width = 18, height = 15, units = "cm")
+  
+ 
 }
 
 ```
@@ -755,6 +756,15 @@ if (savePlots) {
 `r figs("unaidsTargets")`
 ```{r, include = TRUE, fig.width = 8, fig.height = 6.7}
 print(stagesPropPlot)
+```
+
+```{r Save trends objects}
+# Save main trend storage variables for ease of loading later
+save(trendData, diagsData, newInfects, 
+  file = file.path(resultsFolder, cascadeName, "CascadeTrendData.Rda"))
+save(trendCascade, trendModels, trendCascadeProp, 
+  file = file.path(resultsFolder, cascadeName, "CascadeTrendModels.Rda"))
+
 ```
 
 ```{r Trends table}
@@ -823,7 +833,6 @@ data <- cbind(diagsts, infectsts, undiagnosedts, noartts, unsuppressedts)
 colnames(data) <- c("diagnoses", "infections", "undiagnosed", "noart",
   "unsuppressed")
 data <- window(data, start = c(startYear, 1), end = c(resultsYear, 1))
-years <- startYear:resultsYear
 
 # Search for changepoints -------------------------------------------------
 # Using the changepoint package. 
@@ -1141,6 +1150,9 @@ stagesDiffsPlot2 <- ggdraw() +
   draw_plot(combinedPlot, 0, 0, 1, 1) +
   draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0),
     c(0.9, 0.9, 0.45), size = 12)
+
+save(trendCascade, trendModels, trendCascadeProp, segModels,  
+  file = file.path(resultsFolder, cascadeName, "CascadeTrendModels.Rda"))
 
 # Save combined plot-------------------------------------------------------
 if (savePlots) {
@@ -1811,6 +1823,10 @@ ranges for the fits and RRs.
 # This chunk uses nls() to fit the model to the gaps as well as diagnoses
 # and infections. 
 
+# Load results from previous chunck 
+# load(file.path(resultsFolder, cascadeName, "CascadeTrendData.Rda"))
+# load(file.path(resultsFolder, cascadeName, "CascadeTrendModels.Rda"))
+
 # Options
 addSegment <- TRUE
 
@@ -1901,6 +1917,7 @@ for (ii in fitIndicators) {
       control = nls.control(maxiter = 1000)))
     
     if ("try-error" %in% class(fitModel)) {
+      print(paste("Unable to fit nls to",ii))
       fitModel <- pmodel #trendModels[[ii]]
       plotModel <- FALSE
     } 
