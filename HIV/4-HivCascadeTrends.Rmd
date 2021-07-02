@@ -1882,7 +1882,7 @@ fitData <- bind_rows(fitData, fitDiagsData, fitInfectsData)
 
 # Guess and check 
 ydataTest <- filter(fitData, stage == "infections")$value
-qplot(xseq, FitModel(xseq,900, 0.3, 0.01, 1100), 
+qplot(xseq, FitModel(xseq, 900, 0.3, 0.01, 1100), 
   geom = "line", 
   ylim = c(0, NA), 
   ylab = "Value") + 
@@ -2068,69 +2068,204 @@ if (savePlots) {
 ```
 
 ```{r Generate uncertainty}
-# In this chunk we generate ranges for the fitted model parameters, 
-# simulate and produce a clean plot. 
+# In this chunk we generate ranges for the nls fits to the gaps using 
+# boot-strapping. This allows us to estimate the peak from the 
+# boot-strapped parameters. 
 
-# Generate ensemble of curves based on variation in 95% confidence interval
-# of estimated parameters values
-aRange <- confint(fitModels[["noART"]])[1,]
-gRange <- confint(fitModels[["noART"]])[2,]
-dRange <- confint(fitModels[["noART"]])[3,]
-kRange <- confint(fitModels[["noART"]])[4,]
+library(tidymodels)
 
-nsamples <- 1000000  # ensure big enough to get enough samples 
-simMatrix <- matrix(0,nsamples, length(years))
+# Set-up indicator fitting 
+set.seed(2653)
+fitIndicators <- c("undiagnosed", "noART", "unsuppressed")
 
-aSample <- runif(nsamples, aRange[1], aRange[2])
-gSample <- runif(nsamples, gRange[1], gRange[2])
-dSample <- runif(nsamples, dRange[1], dRange[2])
-kSample <- runif(nsamples, kRange[1], kRange[2])
+modelFits <- list()
+bootModelFits <- list()
+bootstrapPlots <- list()
+modelFits <- list()
 
+# Run fits
+for (ii in fitIndicators) { 
+  # Need to use local to prevent scope issues with predicted values
+  local({
+    print(ii)
+    ii <- ii
+    tempData <- filter(fitData, stage == ii) %>%
+      mutate(xseq = seq(0,length(years)-1))
 
-coeffs <- coef(fitModels[["noART"]])
-rr <- exp(coeffs[2] - coeffs[3])
-rrSample <- exp(gSample - dSample)
-mean(rrSample)
-median(rrSample)
-quantile(rrSample, probs = 0.025)
-quantile(rrSample, probs = 0.975)
-
-for (ii in 1:nsamples) {
-  simMatrix[ii,] <- FitModel(xseq, aSample[ii], gSample[ii], 
-    dSample[ii], kSample[ii])
+    modelFit <- tryCatch(nls(value ~ FitModel(xseq, a, g, d, k), tempData, 
+      start = initialParList[[ii]],
+      control = nls.control(maxiter = 1000)), 
+      error = function(cond) {
+        glm(round(value) ~ xseq, data = tempData, 
+          family = "poisson")})
+    
+    # summary(modelFit)
+    # ggplot(tempData, aes(year, value)) +
+    # geom_point() +
+    #   geom_line(aes(y = predict(modelFit, type = "response")))
+    
+    tempboots <- bootstraps(tempData, times = 10000, apparent = TRUE)
+    
+    tempFit_on_bootstrap <- function(split) {
+      # Uses a tryCatch() call to return a model for each boot split given nls
+      # won't work for some cascade gaps. 
+      # Need to be careful with scope in tryCatch() and what it returns.
+      modelFitSplit <- tryCatch(nls(value ~ FitModel(xseq, a, g, d, k),
+        analysis(split), 
+        start = initialParList[[ii]],
+        control = nls.control(maxiter = 1000)), 
+        error = function(err) {
+          # nls doesn't work
+          fitData <- analysis(split)
+          errModelSplit <- glm(round(value) ~ xseq, data = analysis(split), 
+            family = "poisson")
+          # Return alternative model
+          return(errModelSplit)})
+      
+      # Return final model for split
+      return(modelFitSplit)
+    }
+    
+    temp_boot_models <- tempboots %>% 
+      mutate(model = map(splits, tempFit_on_bootstrap),
+        coef_info = map(model, tidy),
+        predictions = map(model, augment))
+    
+    # New data for smoothing
+    new_preds <- tempData %>%
+      do(., data.frame(xseq = seq(min(.$xseq), max(.$xseq), 
+        length.out = 250), stringsAsFactors = FALSE))
+    
+    preds <- augment(modelFit, newdata = new_preds, 
+      type.predict = "response")
+    
+    # Create smoother predictions for bootstrapped replicate
+    preds <- temp_boot_models %>%
+      mutate(new_predictions = map(model, augment, newdata = new_preds, 
+        type.predict = "response")) %>%
+      unnest(new_predictions) %>%
+      # group by each value of xseq and get quantiles
+      group_by(., xseq) %>%
+      summarise(lwr_CI = quantile(.fitted, 0.025),
+        lwr_IRQ = quantile(.fitted, 0.25),
+        upr_IQR = quantile(.fitted, 0.75),
+        upr_CI = quantile(.fitted, 0.975)) %>%
+      ungroup() %>%
+      merge(., preds, by = 'xseq')
+    
+    # Plot model fit and bootstrap ranges
+    bootstrapPlot <- ggplot() + 
+      geom_ribbon(data = preds, aes(x = xseq, ymin = lwr_CI, ymax = upr_CI,
+        fill = "ci",  alpha = "ci")) +
+      geom_ribbon(data = preds, aes(x = xseq, ymin = lwr_IRQ, ymax = upr_IQR, 
+        fill = "iqr",  alpha = "iqr")) +
+      geom_point(data = tempData, aes(xseq, value, colour = "data")) +
+      geom_line(data = tempData, aes(xseq, value), colour = asrcols[2]) +
+      geom_line(data = preds, aes(x = xseq, y = .fitted, colour = "fit")) +
+      ylab(yLabels[ii]) +
+      xlab('Year') +
+      scale_colour_manual(NULL, values = c(asrcols[2], "black"),
+        limits = c("data", "fit"),
+        labels = c("Estimates", "Fitted values")) +
+      scale_alpha_manual(NULL, values = c(0.4, 0.1),
+        limits = c("iqr", "ci"),
+        labels = c("Fitted IQR", "Fitted 95% CI")) +
+      scale_fill_manual(NULL, values = c("black", "black"),
+        limits = c("iqr", "ci"),
+        labels = c("Fitted IQR", "Fitted 95% CI")) +
+      scale_x_continuous(breaks = seq(0, length(years)-1, by = 3), 
+        labels = seq(startYear, resultsYear, by = 3)) +
+      scale_y_continuous(labels = comma) +
+      expand_limits(y = 0) +
+      PlotOptions() + theme(legend.position = "right",
+        legend.spacing = unit(0, "cm"),
+         legend.margin = margin(0, 0, 0, 0, "cm")) +
+      guides(colour = guide_legend(order = 1),
+        alpha = guide_legend(order = 2),
+        fill = FALSE)
+    
+    modelFits[[ii]] <<- modelFit
+    bootModelFits[[ii]] <<- temp_boot_models
+    bootstrapPlots[[ii]] <<- bootstrapPlot
+    
+    if (savePlots) {
+      # Save the current plot
+      ggsave(file.path(figFolder, paste0("HIVcascade-Trends-", ii,
+        "-Bootstrap_Fit_",
+        toString(startYear), "-",
+        toString(resultsYear),
+        saveFormat)),
+        plot = bootstrapPlots[[ii]] + theme(legend.position = "none"), 
+          width = 7.5, height = 6, units = "cm")
+    }
+  })
 }
 
-# Use function to generate lower and upper bounds for models numbers for 
-# best fitting function
-estimates <- tibble(fitmin = apply(simMatrix, 2, min))
-estimates$fitlwr95 <- apply(simMatrix, 2, quantile, probs = 0.025)
-estimates$fitlwriqr <- apply(simMatrix, 2, quantile, probs = 0.25)
-estimates$fitupriqr <- apply(simMatrix, 2, quantile, probs = 0.75)
-estimates$fitupr95 <- apply(simMatrix, 2, quantile, probs = 0.975)
-estimates$fitmax <- apply(simMatrix, 2, max)
+# Figure caption
+figs("fittedTrends2", "")
 
-# Plot
-tempData <- filter(fitData, stage == "noART")
-fitModelData <- data.frame(year = tempData$year,
-      fitvalue = fitted(fitModels[["noART"]]))
+legend <- get_legend(bootstrapPlots[[1]])
 
-estimates$year <- tempData$year
-estimates$value <- tempData$value
-estimates$fitted <- fitModelData$fitvalue
+# Update group plot
+combinedBootsPlot <- grid.arrange(
+  bootstrapPlots[[1]] + theme(legend.position = "none"), 
+  bootstrapPlots[[2]] + theme(legend.position = "none"),
+  bootstrapPlots[[3]] + theme(legend.position = "none"),
+  legend,
+  ncol = 2, nrow = 2, 
+  widths = c(4, 4), heights = c(4,4))
 
-ggplot(data = estimates,
-  aes(x = year, y = value)) +
-  # geom_ribbon(data = estimates, aes(ymin = fitmin, ymax = fitmax), 
-  #   fill = "blue", alpha = 0.2) + 
-  #   geom_ribbon(data = estimates, aes(ymin = fitlwr95, ymax = fitupr95), 
-  #   fill = "blue", alpha = 0.3) +
-  geom_ribbon(data = estimates, aes(ymin = fitlwriqr, ymax = fitupriqr), 
-    fill = "blue", alpha = 0.5) + 
-  geom_line(aes(color = "estimates")) +
-  geom_point(color = asrcols[2]) +
-  geom_line(data = fitModelData, aes(y = fitvalue,
-    colour = "fit")) + 
-  PlotOptions()
+finalBootsPlot <- ggdraw() +
+  draw_plot(combinedBootsPlot, 0, 0, 1, 1) +
+  draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0),
+    c(1, 1, 0.5), size = 12) 
+
+# Save combined plot-------------------------------------------------------
+if (savePlots) {
+  plotFile <- "HIVcascade-Differences-Trends-Bootstrap_Fitted"
+  
+  ggsave(file.path(figFolder,
+    paste(plotFile,
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = finalBootsPlot, width = 18, height = 15, units = "cm")
+}
 
 ```
+
+```{r Non-linear stats}
+# In this chuck we save the stats for the fitted and bootstrapped nls 
+# results
+
+
+
+
+# boot_coefs <- boot_models_test %>% 
+    #   unnest(coef_info)
+    
+    # boot_coefs
+    
+    # percentile_intervals <- int_pctl(temp_boot_models, coef_info)
+    # percentile_intervals
+    
+    # ggplot(boot_coefs, aes(estimate)) +
+    #   geom_histogram(bins = 30) +
+    #   facet_wrap( ~ term, scales = "free") +
+    #   geom_vline(aes(xintercept = .lower), data = percentile_intervals, col = "blue") +
+    #   geom_vline(aes(xintercept = .upper), data = percentile_intervals, col = "blue")
+    # 
+    # boot_aug <- boot_models_test %>% 
+    #   sample_n(200) %>% 
+    #   unnest(predictions)
+    # 
+    # ggplot(boot_aug, aes(xseq, value)) +
+    #   geom_line(aes(y = .fitted, group = id), alpha = .2, col = "blue") +
+    #   geom_point()
+
+
+
+```
+
+
 
