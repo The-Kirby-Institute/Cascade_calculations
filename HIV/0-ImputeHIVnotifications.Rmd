@@ -46,7 +46,7 @@ LoadLibrary(scales)
 source(file.path(Rcode, "FormatData.R"))
 
 # Script options
-dataYear <- 2019
+dataYear <- 2020
 
 runImpute <- TRUE
 saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 
@@ -475,16 +475,16 @@ if (runChecks) {
     
     diagProp <- diagProp %>%
       mutate(average = rowMeans(select(., -diag_region), na.rm = TRUE)) %>%
-      mutate(data = table(filter(dataSet, 
+      mutate(data = as.vector(table(filter(dataSet, 
         !is.na(diag_region))$diag_region) / sum(table(filter(dataSet,
-          !is.na(diag_region))$diag_region)),
-        pre2000data = table(filter(filter(dataSet, !is.na(diag_region)),
+          !is.na(diag_region))$diag_region))),
+        pre2000data = as.vector(table(filter(filter(dataSet, !is.na(diag_region)),
           yeardiagnosis <= 2000)$diag_region) / 
           sum(table(filter(filter(dataSet, !is.na(diag_region)), 
-            yeardiagnosis <= 2000)$diag_region)),
-        overall = table(completeSet$diag_region) / 
-          sum(table(completeSet$diag_region))) %>%
-      mutate(ave_number =  table(completeSet$diag_region) / 10) %>%
+            yeardiagnosis <= 2000)$diag_region))),
+        overall = as.vector(table(completeSet$diag_region) / 
+          sum(table(completeSet$diag_region)))) %>%
+      mutate(ave_number =  as.vector(table(completeSet$diag_region) / 10)) %>%
       filter(diag_region %in% as.character(unique(completeSet$diag_region)))
     
     # sex
@@ -505,14 +505,14 @@ if (runChecks) {
     
     sexProp <- sexProp %>%
       mutate(average = rowMeans(select(., -sex), na.rm = TRUE)) %>%
-      mutate(data = table(filter(dataSet, !is.na(sex))$sex) / 
-          sum(table(filter(dataSet, !is.na(sex))$sex)),
-        pre2000data = table(filter(filter(dataSet, !is.na(sex)), 
+      mutate(data = as.vector(table(filter(dataSet, !is.na(sex))$sex) / 
+          sum(table(filter(dataSet, !is.na(sex))$sex))),
+        pre2000data = as.vector(table(filter(filter(dataSet, !is.na(sex)), 
           yeardiagnosis <= 2000)$sex) / 
           sum(table(filter(filter(dataSet, !is.na(sex)), 
-            yeardiagnosis <= 2000)$sex)),
-        overall = table(completeSet$sex) / 
-          sum(table(completeSet$sex)))
+            yeardiagnosis <= 2000)$sex))),
+        overall = as.vector(table(completeSet$sex) / 
+          sum(table(completeSet$sex))))
     
     # cob - this is a variable with substantial amount of missing data
     # Here we calculate the proportions and see the average overall number
@@ -538,15 +538,15 @@ if (runChecks) {
     
     cobProp <- cobProp %>%
       mutate(average = rowMeans(select(., -cob), na.rm = TRUE)) %>%
-      mutate(data = table(filter(dataSet, !is.na(cob))$cob) / 
-          sum(table(filter(dataSet, !is.na(cob))$cob)),
-        pre2000data = table(filter(filter(dataSet, !is.na(cob)), 
+      mutate(data = as.vector(table(filter(dataSet, !is.na(cob))$cob) / 
+          sum(table(filter(dataSet, !is.na(cob))$cob))),
+        pre2000data = as.vector(table(filter(filter(dataSet, !is.na(cob)), 
             yeardiagnosis <= 2000)$cob) / 
           sum(table(filter(filter(dataSet, !is.na(cob)), 
-            yeardiagnosis <= 2000)$cob)),
-        overall = table(completeSet$cob) / 
-          sum(table(completeSet$cob))) %>%
-      mutate(ave_number =  table(completeSet$cob) / 10) %>%
+            yeardiagnosis <= 2000)$cob))),
+        overall = as.vector(table(completeSet$cob) / 
+          sum(table(completeSet$cob)))) %>%
+      mutate(ave_number =  as.vector(table(completeSet$cob) / 10)) %>%
       filter(cob %in% as.character(unique(completeSet$cob)))
     
     # agehiv - calculate mean age of diagnosis. We do a density plot
@@ -589,14 +589,14 @@ if (runChecks) {
     
     expProp <- expProp %>%
       mutate(average = rowMeans(select(., -expgroup), na.rm = TRUE)) %>%
-      mutate(data = table(filter(dataSet, !is.na(expgroup))$expgroup) / 
-          sum(table(filter(dataSet, !is.na(expgroup))$expgroup)),
-        pre2000data = table(filter(filter(dataSet, !is.na(expgroup)), 
+      mutate(data = as.vector(table(filter(dataSet, !is.na(expgroup))$expgroup) / 
+          sum(table(filter(dataSet, !is.na(expgroup))$expgroup))),
+        pre2000data = as.vector(table(filter(filter(dataSet, !is.na(expgroup)), 
             yeardiagnosis <= 2000)$expgroup) / 
           sum(table(filter(filter(dataSet, !is.na(expgroup)), 
-            yeardiagnosis <= 2000)$expgroup)),
-        overall = table(completeSet$expgroup) / 
-          sum(table(completeSet$expgroup)))
+            yeardiagnosis <= 2000)$expgroup))),
+        overall = as.vector(table(completeSet$expgroup) / 
+          sum(table(completeSet$expgroup))))
     
     # Save tables to csv files if file is specified
     if (!is.null(file)) {
