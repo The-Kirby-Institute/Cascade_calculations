@@ -3,7 +3,7 @@ Generate HIV cascade death and migration adjustments
 
 Author: Richard T. Gray
 
-This scripts calculates the overseas migration rate and death rate 
+This script calculates the overseas migration rate and death rate 
 adjustments for specific populations of PLHIV. The results of these 
 calculations are stored as files which are read in by the main HIV cascade
 calculations scripts and functions. 
@@ -44,7 +44,7 @@ source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2019
+analysisYear <- 2020
 startYear <- 1980 # First year in HIV registry is 1980
 
 allYears <- startYear:analysisYear 
@@ -64,8 +64,7 @@ saveEstimates <- TRUE
 
 # Load cleaned notifications data
 rawNotifications <- read.csv(file.path(notificationsFolder,
-  paste0("cascadeHIVnotifications-clean-", toString(analysisYear),
-    ".csv"))) 
+  paste0("cascadeHIVnotifications-clean-", analysisYear, ".csv"))) 
 
 # Read in country code data
 countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
@@ -357,7 +356,7 @@ hivBaseRates$annunique_all <- annPropUnique
 mainDataFolder <- file.path(dirname(getwd()), "data")
 
 absMigration <- read.csv(file.path(mainDataFolder, 
-  paste0("ABS_migration_clean-", toString(analysisYear), ".csv")), 
+  paste0("ABS_migration_clean-", analysisYear, ".csv")), 
   as.is = 1)
 if (analysisYear >= 2017) {
   # Given issues with 2017 data for permanent removals use 2016 data
@@ -366,12 +365,13 @@ if (analysisYear >= 2017) {
     as.is = 1)
 } else {
   absDeparts <- read.csv(file.path(mainDataFolder, 
-    paste0("ABS_departures_clean-", toString(analysisYear), ".csv")),
+    paste0("ABS_departures_clean-", analysisYear, ".csv")),
     as.is = 1)
 }
 absInterstate <- read.csv(file.path(mainDataFolder, 
-  paste0("ABS_interstate_clean-", toString(analysisYear), ".csv")), 
-  as.is = 1)
+  paste0("ABS_interstate_clean-", analysisYear, ".csv")), 
+  as.is = 1) %>%
+  filter(year <= 2020)
 
 # Base migration rate ----------------------------------------------------
 
@@ -562,6 +562,8 @@ for (region in states) {
 
 # Initial post-diagnosis migration ---------------------------------------
 
+# TODO: NEED double check and make time varying to match NSW data
+
 hivBaseRates$propstay <- rep(0.98, length(allYears))
 hivBaseRates$propstay_lower <- rep(0.96, length(allYears))
 hivBaseRates$propstay_upper <- rep(1, length(allYears))
@@ -642,9 +644,11 @@ hivAdjustments$pstay_vic_upper <- propStayUpperVic /
 # To calculate the number of deaths each year we calculate an overall 
 # deathrate with an uncertainty range. This is used to work out the number
 # of people diagnosed with HIV. The estimate of the death rate uses a
-# number of methods. Firstly uses the 
-# 2003 linkage results and the number of known deaths to estimate the
-# deathrate up to 2003. It then uses AHOD mortality rates from 2003.
+# number of methods. Firstly uses the 2003 linkage results and the number 
+# of known deaths to estimate the deathrate up to 2003. It then uses AHOD 
+# mortality rates from 2003.
+#
+# USER NEEDS TO MANUALLY UPDATE THE FILE: HIV_Gender_Deathrates.xlsx
 
 # Overall deathrate ------------------------------------------------------
 
@@ -660,10 +664,9 @@ for (ii in 1:nrow(hivParams)) {
 
 # Load AHOD data to calculate mortality and do some simple cleaning
 ahodData <- read.csv(file.path(dataFolder, 
-  paste0("ahod", toString(analysisYear), 
-    ".csv")))
+  paste0("ahod", analysisYear, ".csv")))
 
-# Load gender deathrate ratios
+# Load gender deathrate ratios - NNED TO UPDATE THE ESTIMATES IN THIS FILE
 sexDrates <- read_excel(file.path(dataFolder,
   "HIV_Gender_Deathrates.xlsx"),
   sheet = 2) %>%
