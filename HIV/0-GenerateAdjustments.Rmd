@@ -568,9 +568,12 @@ for (region in states) {
 # such people should not be included in the HIV registry as they are 
 # supposed to be excluded if they plan to leave. We have no data for other
 # jurisdictions or longer periods. We therefore only assume this movement 
-# occurs in NSW and has been constant for the whole epidemic. NSW has had 
-# slightly less than 50% of all notifications in Australia. We then assume 
-# around 2% of all notifications move overseas.  
+# occurs in NSW and has been mostly constant for the whole epidemic though
+# less in the early stages of the epidemic as there were less overseas born
+# diagnosed. NSW has had slightly less than 50% of all notifications in 
+# Australia. There is lots of uncertainty and limited data but 
+# We assume around 2% of all notifications move overseas which results in 
+# reasonble estimates overall.   
 
 hivBaseRates$propstay <- rep(0.98, length(allYears))
 hivBaseRates$propstay_lower <- rep(0.96, length(allYears))
