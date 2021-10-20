@@ -40,29 +40,29 @@ estimates of PLHIV previously diagnosed. Result files are saved to the
 specified project folder and have a cascade file handle. 
 
 *Current projects*
-- ASR_2016, ASR_2017, ASR_2018, ASR_2019, ASR_2020 (cascades for the Annual 
-  Surveillance Report(ASR))
-- ASR_2018_Ageing (age estimates of PLDHIV for ASR)
+- ASR_2016, ..., ASR_2021 (cascades for the Annual Surveillance Report(ASR))
+- ASR_2018_Ageing (age estimates of PLDHIV for ASR and paper)
 - CALD_Cascades
 - HIV_Cascade_Paper
+- Diagnosed_Fraction_2021
+- Taipan_Study_Estimates
 - Ageing_Paper
 
 ```{r Cascade and script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2019
+analysisYear <- 2020
 saveResults <- TRUE
 
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "ASR_2020" # "." for main output folder
-                            # "ASR_2020"
+projectOutput <- "ASR_2021" # "." for main output folder
                             # "HIV_Cascade_Paper" for paper
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entered via a file in project Output 
 # which need to exist
-paramsFile <- NULL #"ProjectParametersTemp.csv"
+paramsFile <- "ProjectParameters.csv"
                              
 # Cascade options----------------------------------------------------------
 # The following variables specify the characteristics and hence the 
@@ -89,9 +89,9 @@ if (is.null(paramsFile)) {
   
   numCascades <- 1
   
-  cascadeName <- "Test" # (single)
+  cascadeName <- "Ageing" # (single)
   targetGender <- rep("all", numCascades) # all, male, female (single)
-  targetAge <- rep("all", numCascades) # all or split (single)
+  targetAge <- rep("split", numCascades) # all or split (single)
   # Note regarding ageing: The calculations don't specifically target 
   # specific ages.  Rather this simply chooses whether age is considered or 
   # not."all" means there is no division by age whereas "split" means teh 
@@ -139,14 +139,14 @@ if (is.null(paramsFile)) {
   saveUnique <- rep(FALSE, numCascades)
   
   # Settings for generating ECDC model inputs
-  ecdcData <- rep(TRUE, numCascades)
+  ecdcData <- rep(FALSE, numCascades)
   ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
   excludeOS <- rep(FALSE, numCascades) # Default FALSE but need to run with
                                        # TRUE for ASR as
   
   # Leave projections chunk turned off so it is not called unless required. 
   # Simply run projections from within the chunk. 
-  projectPldhiv <- rep(FALSE, numCascades) 
+  projectPldhiv <- rep(TRUE, numCascades) 
   
   # Manually set final year for projections and projection name
   projectYear <- 2030 #rep(analysisYear + 10, numCascades)  
