@@ -27,7 +27,7 @@ extractData <- function(data, fcob, fage, fstate, fgender) {
       summarise(departures = sum(nom),
         erp = sum(erp))
      
-     subData <- data_frame(year = subDataOz$year,
+     subData <- tibble(year = subDataOz$year,
        departures = subDataAll$departures - subDataOz$departures,
        erp = subDataAll$erp - subDataOz$erp) %>%
       mutate(migrate = departures / erp)
@@ -61,7 +61,7 @@ extractData <- function(data, fcob, fage, fstate, fgender) {
       summarise(departures = sum(nom),
         erp = sum(erp))
     
-     subData <- data_frame(year = subDataOz$year,
+     subData <- tibble(year = subDataOz$year,
        departures = subDataAll$departures - subDataOz$departures - 
          subDataNz$departures,
        erp = subDataAll$erp - subDataOz$erp - subDataNz$erp) %>%
