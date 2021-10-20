@@ -562,7 +562,15 @@ for (region in states) {
 
 # Initial post-diagnosis migration ---------------------------------------
 
-# TODO: NEED double check and make time varying to match NSW data
+# NSW Health 6-monthly follow-up data for people diagnosed suggests 4 to 5% 
+# of newly diagnosed people over 2013-2018 left for overseas within 6 months
+# of diagnosis. These are predominantly overseas born people. Technically 
+# such people should not be included in the HIV registry as they are 
+# supposed to be excluded if they plan to leave. We have no data for other
+# jurisdictions or longer periods. We therefore only assume this movement 
+# occurs in NSW and has been constant for the whole epidemic. NSW has had 
+# slightly less than 50% of all notifications in Australia. We then assume 
+# around 2% of all notifications move overseas.  
 
 hivBaseRates$propstay <- rep(0.98, length(allYears))
 hivBaseRates$propstay_lower <- rep(0.96, length(allYears))
@@ -582,7 +590,7 @@ hivAdjustments$pstay_non_indigenous <- (1 - (1- hivBaseRates$propstay) *
 
 hivAdjustments$non_aborig_migration <- nonAborigMigrationFactor
 
-# Specific NSW estimates -- based on 6 monthly follow-up data from NSW
+# Specific NSW estimates -- based on 6-monthly follow-up data from NSW
 # Health cumulatively over 2013-2018. Data for 2013-2018 in file
 # ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_12Aug2018.xlsx.
 # The variables below store the cumulative emigration proportion for 
