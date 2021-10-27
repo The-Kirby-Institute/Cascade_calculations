@@ -458,7 +458,7 @@ if (runChecks) {
     
     # Set-up data frame - note levels contain all regions across Australia
     # so have to filter later
-    diagProp <- data_frame(diag_region = levels(completeSet$diag_region))
+    diagProp <- tibble(diag_region = levels(completeSet$diag_region))
     
     for (ii in 1:10) {
       # If no imputations done then just replace with data
@@ -488,7 +488,7 @@ if (runChecks) {
       filter(diag_region %in% as.character(unique(completeSet$diag_region)))
     
     # sex
-    sexProp <- data_frame(sex = levels(completeSet$sex))
+    sexProp <- tibble(sex = levels(completeSet$sex))
     
     for (ii in 1:10) {
       # If no imputations done then just replace with data
@@ -521,7 +521,7 @@ if (runChecks) {
     # 
     # Set-up data frame - note levels contain all countries across 
     # Australia so have to filter later
-    cobProp <- data_frame(cob = levels(completeSet$cob))
+    cobProp <- tibble(cob = levels(completeSet$cob))
     
     for (ii in 1:10) {
       # If no imputations done then just replace with data
@@ -551,7 +551,7 @@ if (runChecks) {
     
     # agehiv - calculate mean age of diagnosis. We do a density plot
     # later outsied the function
-    meanAge <- data_frame(agehiv = "meanAge")
+    meanAge <- tibble(agehiv = "meanAge")
     
     for (ii in 1:10) {
       # If no imputations done then just replace with data
@@ -572,7 +572,7 @@ if (runChecks) {
         overall = mean(completeSet$agehiv))
     
     # expgroup 
-    expProp <- data_frame(expgroup = levels(completeSet$expgroup))
+    expProp <- tibble(expgroup = levels(completeSet$expgroup))
     
     for (ii in 1:10) {
       # If no imputations done then just replace with data
