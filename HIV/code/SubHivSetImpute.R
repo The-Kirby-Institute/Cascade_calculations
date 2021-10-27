@@ -130,6 +130,11 @@ SubHivSetImpute <- function(hivdataframe, fAge, fGender, fExposure, fCob,
         cob %in% c("Belgium", "Finland", "Italy", "Malta", "Netherlands",
           "New Zealand", "Norway", "Ireland", "Slovenia", "Sweden", 
           "United Kingdom"))
+    } else if (fGlobalRegion[1] == "South and Central America"){
+      excludeframe <- bind_rows(excludeframe,  
+        filter(includeframe, !(globalregion %in% c("South America", "Central America", "Caribbean"))))
+      includeframe <- filter(includeframe, 
+        globalregion %in% c("South America", "Central America", "Caribbean"))
     } else {
       excludeframe <- bind_rows(excludeframe, filter(includeframe, 
         !(globalregion %in% fGlobalRegion)))
