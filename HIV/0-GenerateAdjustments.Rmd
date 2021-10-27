@@ -595,12 +595,11 @@ hivAdjustments$non_aborig_migration <- nonAborigMigrationFactor
 
 # Specific NSW estimates -- based on 6-monthly follow-up data from NSW
 # Health cumulatively over 2013-2018. Data for 2013-2018 in file
-# ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_12Aug2018.xlsx.
+# ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_27Oct2021.xlsx.
 # The variables below store the cumulative emigration proportion for 
-# Australian born diagnosed and overseas born to end 2019. This estimate was
-# obtained by fitting trend lines to the 2013-2018 data as shown in the file. 
-ausBornEmigrate <- 0.0093
-osBornEmigrate <- 0.0855
+# Australian born diagnosed and overseas born to end 2020. 
+ausBornEmigrate <- 0.00702
+osBornEmigrate <- 0.0857
 
 propAus <- hivCobCum$australia
 propStayNSW <- propAus * (1 - ausBornEmigrate) + (1 - propAus) * 
