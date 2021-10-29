@@ -8,8 +8,8 @@ output:
 ---
 
 This script explores the number of people taking antiretroviral therapy 
-(ART) in Australia over 2000-2019. It estimates the number taking ART 
-during each year by merging and fitting to two data sources. 
+(ART) in Australia over 2000-2020. It estimates the number taking ART 
+during each year by merging and fitting to multiple data sources. 
 
 1. Australian HIV Observational Database (AHOD) which provides estimates 
 for ART use up to 2012. The estimates over 2010-2012 are actually 
@@ -21,6 +21,12 @@ the PBS data does not include people who are ineligible for Medicare there
 is the option to add the estimates for the number of PLHIV ineligible for 
 Medicare from the NAPWHA and KI report
 (from: https://napwha.org.au/medicare-ineligibles/) to the PBS data.  
+3. The Pharmaceutical Benefits Scheme (PBS) 100% longitudinal sample 
+provided to the Kirby Institute directly from the department of Health.
+This data is only available from 2014. This data is considered to be the
+most reliable and direct estimate. Though there is uncertainty given the 
+difficulties in cleaning the data to remove ART drug scripts used for 
+other purposes such as Hep B, HIV PrEP and PEP. 
 
 The primary purpose of this analysis is to explore how to cover the 
 change over period from the AHOD estimates to the PBS data. The results
@@ -58,11 +64,17 @@ LoadLibrary(captioner)
 
 # Script parameters
 dataYear <- 2019
-analysisYear <- 2019 # If want to do fits for data prior to dataYear
+analysisYear <- 2020 # If want to do fits for data prior to dataYear
+
+# For analysisYear == 2020 the data used is AHOD prior 2013, Prospection 
+# 10% for 2013, and PBS 100% after 2013. We only consider the uncertainty in 
+# the Prospection data in 2013. 
+
 saveResults <- TRUE
 
-filterSamples <- TRUE # Filter samples which go outside the PBS error 
-                       # bounds for analysisYear
+filterSamples <- FALSE # Filter samples which go outside the PBS error 
+                       # bounds for pharmDash data. Only used for 2013
+                       # Prospection data. 
 
 # Add temporary residents - Prior to 2018 we had two estimates one from the
 # ATRAS study which has been published and one based on personal 
@@ -81,9 +93,18 @@ addTempResidents <- TRUE
 ```{r loaddata}
 # Load the ART data
 artEstimates <- read.csv(file.path(dataFolder, "AHOD_ART_estimates.csv"))
-prospectionData <- read.csv(file.path(dataFolder,
-  paste0("pharmdash_HIVpatients_clean-", dataYear,
-    ".csv")), as.is = c(1, 2))
+
+if (analysisYear < 2020) {
+  pbsFile <- file.path(dataFolder,
+    paste0("pharmdash_HIVpatients_clean-", dataYear,
+      ".csv"))
+} else {
+  pbsFile <- file.path(dataFolder,
+    paste0("pbs_art_clean-", analysisYear,
+      ".csv"))
+}
+
+pbsData <- read.csv(pbsFile, as.is = c(1, 2))
 
 if (addTempResidents) {
   # Load from file ATRAS estimates merged with NAPHWA estimates in March 
@@ -103,9 +124,9 @@ if (addTempResidents) {
 colnames(artEstimates) <- c("year", "ahod")
 
 # Add national PBS data
-tempPbs <- prospectionData %>% 
+tempPbs <- pbsData %>% 
   filter(gender == "all", state == "all") %>%
-  gather("year", "pbs", 3:ncol(prospectionData)) %>%
+  gather("year", "pbs", 3:ncol(pbsData)) %>%
   select(year, pbs)
 
 # Replace year strings with year values
@@ -116,7 +137,7 @@ tempPbs$year <- unlist(lapply(tempPbs$year, function(x)
 artEstimates <- full_join(artEstimates, tempPbs, by = "year")
 
 # Add upper and lower bounds for the PBS data
-if (dataYear < 2019) {
+if (analysisYear < 2019) {
   popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
     "ABS_population_sizes.xlsx"),
     sheet = 2)
@@ -128,28 +149,37 @@ if (dataYear < 2019) {
 source(file.path(HIVcode, "pharmDashError.R"), echo=TRUE)
 
 # Loop through years appending lower and upper PBS estimates
-prospectionYears <- 2013:dataYear 
+if (analysisYear < 2020) {
+  pbsYears <- 2013:dataYear 
+  prospectionYears <- pbsYears
+} else {
+  # Prospection data only used for 2013 rest is PBS 100% data
+  pbsYears <- 2013:dataYear 
+  prospectionYears <- 2013
+}
 
-for (nyear in prospectionYears) {
+for (nyear in pbsYears) {
   
   numArt <- filter(artEstimates, year == nyear)$pbs
   numPop <- filter(popData, year == nyear, population == "all")$erp
   
-  error <- PharmDashError(numPop, numArt)
-  
-  artEstimates$pbslower[artEstimates$year == nyear] <- error$lower
-  artEstimates$pbsupper[artEstimates$year == nyear] <- error$upper
+  if (nyear %in% prospectionYears) {
+    error <- PharmDashError(numPop, numArt)
+    
+    artEstimates$pbslower[artEstimates$year == nyear] <- error$lower
+    artEstimates$pbsupper[artEstimates$year == nyear] <- error$upper
+  }
 }
 
 # Add temporary residents to PBS data
-artEstimates$pbs[artEstimates$year %in% prospectionYears] <-
-  artEstimates$pbs[artEstimates$year %in% prospectionYears] +
+artEstimates$pbs[artEstimates$year %in% pbsYears] <-
+  artEstimates$pbs[artEstimates$year %in% pbsYears] +
   tempResData$value
-artEstimates$pbslower[artEstimates$year %in% prospectionYears] <-
-  artEstimates$pbslower[artEstimates$year %in% prospectionYears] +
+artEstimates$pbslower[artEstimates$year %in% pbsYears] <-
+  artEstimates$pbslower[artEstimates$year %in% pbsYears] +
   tempResData$lower
-artEstimates$pbsupper[artEstimates$year %in% prospectionYears] <-
-  artEstimates$pbsupper[artEstimates$year %in% prospectionYears] +
+artEstimates$pbsupper[artEstimates$year %in% pbsYears] <-
+  artEstimates$pbsupper[artEstimates$year %in% pbsYears] +
   tempResData$upper
 
 # Add other variables ----------------------------------------------------
@@ -164,8 +194,8 @@ artEstimates$all[14:nrow(artEstimates)] <-
 
 # Filter out data for fitting ---------------------------------------------
 artEstimates <- artEstimates %>%
-  filter(year <= analysisYear)
-prospectionYears <- prospectionYears[prospectionYears <= analysisYear]
+  filter(year <= dataYear)
+pbsYears <- pbsYears[pbsYears <= dataYear]
 
 ```
 
@@ -189,7 +219,7 @@ xdata <- artEstimates$year
 # Set weights to reflect PBS data is likely to be more accurate
 # With first 11 AHOD estimates accurate, the next two (2011-2012) AHOD 
 # estimates inaccurate.  
-weights <- c(rep(0.66, 11), rep(0.33, 2), rep(1, length(prospectionYears)))
+weights <- c(rep(0.66, 11), rep(0.33, 2), rep(1, length(pbsYears)))
 
 # Weighted logistic regression -------------------------------------------
 
