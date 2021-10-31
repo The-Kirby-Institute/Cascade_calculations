@@ -22,8 +22,8 @@ source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
-analysisYear <- 2019
-projectName <-  "ASR_2020" #"ASR_2018" 
+analysisYear <- 2020
+projectName <-  "ASR_2021" #"ASR_2018" 
                            #"HIV_Cascade_Paper"
                            
 multipleCascades <- TRUE
@@ -46,6 +46,11 @@ if (multipleCascades && projectName %in% c("ASR_2016", "ASR_2017",
    cascadeNames <- c("All", "Male", "Female", "Indigenous", 
      "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "SSA", "SEA",
      "Othercob")
+} else if (multipleCascades && projectName == "ASR_2021") {  
+   cascadeNames <- c("All", "Male", "Female", "Indigenous", 
+     "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "ACT", "NSW",
+     "NT", "QLD", "SA", "TAS", "VIC", "WA", "CALD", "SSA", "SEA", "SCA", 
+     "Othercob")   
 } else {
   # Specify cascades manually (without year)
   cascadeNames <- "All" # specify cascades with project 
@@ -68,7 +73,7 @@ if (projectName %in% c("ASR_2016", "ASR_2017", "ASR_2018", "ASR_2019")) {
   artString <- "ATRAS"
 } else {
   artString <- "PBS-Ineligible"
-  warning("Non-standard project make sure artString is set correctly")
+  # warning("Non-standard project make sure artString is set correctly")
 }
 
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
