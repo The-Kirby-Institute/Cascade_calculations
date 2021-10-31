@@ -1,4 +1,4 @@
-PLHIV and Unidagnosed
+PLHIV and Undiagnosed
 =====================
 
 Neil Bretana and Richard T. Gray
@@ -35,9 +35,9 @@ LoadLibrary(readxl)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2019
+analysisYear <- 2020
 saveResults <- TRUE 
-projectFolder <- "ASR_2020"
+projectFolder <- "ASR_2021"
 cascadeFlag <- "All" # minus year
 ecdcResults <- "exposure"
 ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky 
