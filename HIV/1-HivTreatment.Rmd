@@ -28,11 +28,12 @@ LoadLibrary(tidyverse)
 LoadLibrary(readxl)
 
 # Primary script parameters
-analysisYear <- 2019
+analysisYear <- 2020
 replaceValues <- TRUE
 saveResults <- TRUE
 
-fitYear <- 2019 # ART Estimates analysis year 2014, 2017, or 2019
+fitYear <- 2019 # ART Estimates analysis year 2014, 2017, or 2019 for 
+# replacing 2011-2013 values
 
 addTempRes <- TRUE # Add estimates for temporary residents on ART
 usePercent <- TRUE # To add temporary residents for subpopulations
@@ -65,16 +66,30 @@ if (addTempRes) {
 artEstimates <- read.csv(file.path(outputFolder, 
   paste0("ART_Estimates-", fitYear, "-", trString, ".csv")))
 
-# Reload Prospection PBS data to get gender and state estimates
-prospectionData <- read.csv(file.path(dataFolder,
-  paste0("pharmdash_HIVpatients_clean-",
-    toString(analysisYear),
-    ".csv")), as.is = c(1, 2))
+if (analysisYear < 2020) {
+  pbsFile <- file.path(dataFolder, paste0("pharmdash_HIVpatients_clean-",
+    analysisYear, ".csv"))
+} else {
+  pbsFile <- file.path(dataFolder, paste0("pbs_art_clean-",
+    analysisYear, ".csv"))
+  pbsFile_lower <- file.path(dataFolder, paste0("pbs_art-lower_clean-",
+    analysisYear, ".csv"))
+}
+
+# Load PBS data to get gender and state estimates
+pbsData <- read.csv(pbsFile, as.is = c(1, 2))
 
 # Tidy up the prospection data
-hivTreatedPbs <- prospectionData %>%
+hivTreatedPbs <- pbsData %>%
   filter(gender == "all") %>%
   select(-gender) %>%
+  as_tibble()
+
+# Append overall gender data 
+genderTreatedPbs <- pbsData %>%
+  filter(gender %in% c("m", "f"), state == "all") %>%
+  select(-state) %>%
+  mutate(gender = c("male", "female")) %>%
   as_tibble()
 
 yearNames <- strsplit(toString(2013:analysisYear), ", ")[[1]]
@@ -84,13 +99,6 @@ hivTreatedPbs <- gather(hivTreatedPbs,"year", "value",
   2:ncol(hivTreatedPbs))
 hivTreatedPbs$year <- as.numeric(as.character(hivTreatedPbs$year))
 
-# Append overall gender data 
-genderTreatedPbs <- prospectionData %>%
-  filter(gender %in% c("m", "f"), state == "all") %>%
-  select(-state) %>%
-  mutate(gender = c("male", "female")) %>%
-  as_tibble()
-
 colnames(genderTreatedPbs) <- c("population", yearNames)
 
 genderTreatedPbs <- gather(genderTreatedPbs,"year", "value",
@@ -98,6 +106,37 @@ genderTreatedPbs <- gather(genderTreatedPbs,"year", "value",
 genderTreatedPbs$year <- as.numeric(as.character(genderTreatedPbs$year))
 
 hivTreatedPbs <- bind_rows(hivTreatedPbs, genderTreatedPbs)
+
+if (analysisYear >= 2020) {
+  # Need to do lower estimates as well
+  pbsDataLower <- read.csv(pbsFile_lower, as.is = c(1, 2))
+  
+  hivTreatedPbsLower <- pbsDataLower %>%
+  filter(gender == "all") %>%
+  select(-gender) %>%
+  as_tibble()
+  
+  # Append overall gender data 
+  genderTreatedPbsLower <- pbsDataLower %>%
+    filter(gender %in% c("m", "f"), state == "all") %>%
+    select(-state) %>%
+    mutate(gender = c("male", "female")) %>%
+    as_tibble()
+  
+  colnames(hivTreatedPbsLower) <- c("population", yearNames)
+  hivTreatedPbsLower <- gather(hivTreatedPbsLower,"year", "value",
+    2:ncol(hivTreatedPbsLower))
+  hivTreatedPbsLower$year <- as.numeric(as.character(hivTreatedPbsLower$year))
+  
+  colnames(genderTreatedPbsLower) <- c("population", yearNames)
+  
+  genderTreatedPbsLower <- gather(genderTreatedPbsLower,"year", "value",
+    2:ncol(genderTreatedPbsLower))
+  genderTreatedPbsLower$year <- as.numeric(as.character(genderTreatedPbsLower$year))
+  
+  hivTreatedLower <- bind_rows(hivTreatedPbsLower, genderTreatedPbsLower)
+  
+}
 
 # Set-up range columns
 hivTreatedPbs$lower <- NA
@@ -112,10 +151,12 @@ artEstimates <- artEstimates %>%
   select(population, everything())
 
 # Bind all our ART data together
+uncertainYear <- 2012
 hivTreated <- rbind(filter(select(artEstimates, -contains("trend")), 
-  year <= 2012), 
-  filter(hivTreatedPbs, population == "all"),
-  filter(hivTreatedPbs, population != "all"))
+  year <= uncertainYear), # AHOD data to 2012, Prospection data 2013 for all
+  filter(hivTreatedPbs, population == "all", year > uncertainYear),
+  # All other populations since end of 2012
+  filter(hivTreatedPbs, population != "all", year > uncertainYear))
 
 # Add stage column
 hivTreated$stage <- "numART"
@@ -136,10 +177,9 @@ for (pop in populations) {
   # index2013 <- nrow(filter(artEstimates, year <= 2013))
   # indexFinal <- index2013 + 1
   
-  
   # Extract final year data 
   treatFinal <- filter(hivTreated, population == pop) #,
-    # year %in% c(2013:analysisYear))
+  # year %in% c(2013:analysisYear))
   
   # Calculate estimates and ranges
   tempFit <- tail(treatFinal$value, 1) * 
@@ -149,12 +189,12 @@ for (pop in populations) {
   tempUpr <- tempFit * artEstimates$trendupr #[1:indexFinal]
   
   # Create a data frame 
-  tempDf <- tibble(population = pop, year = 2000:analysisYear,
+  tempDf <- tibble(population = pop, year = 2000:fitYear,
     value = tempFit, lower = tempLwr, upper = tempUpr, 
     stage = "numART")
   
   # Append data prior to 2013 
-  hivTreated <- rbind(hivTreated, filter(tempDf, year <= 2012))
+  hivTreated <- rbind(hivTreated, filter(tempDf, year <= uncertainYear))
 }
 
 # Order by state and year
@@ -162,34 +202,71 @@ hivTreated <- hivTreated %>%
   arrange(population, year) %>%
   filter(year <= analysisYear)
 
-
-# Calculate uncertainty in Prospection data ------------------------------
-if (analysisYear < 2019) { 
-  popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
-    "ABS_population_sizes_PharmDash.xlsx"),
-    sheet = 2)
+if (analysisYear < 2020) {
+  # Calculate uncertainty in Prospection data 
+  if (analysisYear < 2019) { 
+    popData <- read_excel(file.path(dirname(dirname(dataFolder)), "data",
+      "ABS_population_sizes_PharmDash.xlsx"),
+      sheet = 2)
+  } else {
+    
+    popData <- read_csv(file.path(dirname(dirname(dataFolder)), "data",
+      paste0("ABS_population_sizes_PharmDash-", analysisYear, ".csv")))
+  }
+  
+  # Loop through years and regions appending lower and upper
+  prospectionYears <- 2013:analysisYear #2013:2019
+  regions <- c(populations, "all")
+  
+  for (nyear in prospectionYears) {
+    for (pop in regions) {
+      numArt <- filter(hivTreated, year == nyear, population == pop)$value
+      numPop <- filter(popData, year == nyear, population == pop)$erp
+      
+      error <- PharmDashError(numPop, numArt)
+      
+      hivTreated[(hivTreated$year == nyear & 
+          hivTreated$population == pop) , ]$lower <- error$lower
+      hivTreated[(hivTreated$year == nyear & 
+          hivTreated$population == pop) , ]$upper <- error$upper
+      
+    } 
+  }
 } else {
+  # Add lower and upper bounds - prospection data for 2013 and directly 
+  # afterwards.  
+  
   popData <- read_csv(file.path(dirname(dirname(dataFolder)), "data",
-    paste0("ABS_population_sizes_PharmDash-", analysisYear, ".csv")))
-}
-
-# Loop through years and regions appending lower and upper
-prospectionYears <- 2013:analysisYear #2013:2019
-regions <- c(populations, "all")
-
-for (nyear in prospectionYears) {
+      paste0("ABS_population_sizes_PharmDash-", analysisYear, ".csv")))
+  
+  prospectionYears <- 2013
+  regions <- c(populations, "all")
+  
+  for (nyear in prospectionYears) {
+    for (pop in regions) {
+      numArt <- filter(hivTreated, year == nyear, population == pop)$value
+      numPop <- filter(popData, year == nyear, population == pop)$erp
+      
+      error <- PharmDashError(numPop, numArt)
+      
+      hivTreated[(hivTreated$year == nyear & 
+          hivTreated$population == pop) , ]$lower <- error$lower
+      hivTreated[(hivTreated$year == nyear & 
+          hivTreated$population == pop) , ]$upper <- error$upper
+      
+    } 
+  }
+  
+  pbsYears <- 2014:analysisYear
+  
   for (pop in regions) {
-    numArt <- filter(hivTreated, year == nyear, population == pop)$value
-    numPop <- filter(popData, year == nyear, population == pop)$erp
     
-    error <- PharmDashError(numPop, numArt)
+    hivTreated[(hivTreated$year %in% pbsYears & hivTreated$population == pop),
+      ]$lower <- filter(hivTreatedLower, year %in% pbsYears, population == pop)$value
     
-    hivTreated[(hivTreated$year == nyear & 
-        hivTreated$population == pop) , ]$lower <- error$lower
-    hivTreated[(hivTreated$year == nyear & 
-        hivTreated$population == pop) , ]$upper <- error$upper
-    
-  } 
+    hivTreated[(hivTreated$year %in% pbsYears & hivTreated$population == pop),
+      ]$upper <- filter(hivTreated, year %in% pbsYears, population == pop)$value
+  }
 }
 
 # Add medicare ineligibles
@@ -382,7 +459,7 @@ if (analysisYear < 2019) {
     filter(year <= analysisYear) %>%
     ungroup() %>%
     rename(population = state)
-
+  
   # Append male and female data
   propSuppressedGender <- ahodData %>%
     select(one_of(c("year", "state", "population", "num_viro")), 
