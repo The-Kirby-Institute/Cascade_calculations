@@ -52,22 +52,26 @@ source(file.path(HIVcode, "ResultsFunctions.R"))
 savePlots <- TRUE
 
 # Set up project and cascade to analyse
-resultsYear <- 2019
+resultsYear <- 2020
 # For Bretana et al HIV Ageing paper 
 #   projectName <- "Ageing_Paper"
 # For 2018 ASR
 #   projectName <- "ASR_2018_Ageing"
-projectName <- "NSW_Cascade_2020" 
+projectName <- "ASR_2021" 
 resultsFolder <- file.path(resultsFolder, projectName)
 
 # Set up cascades overall, male, female cascade names
 if (projectName %in% c("Ageing_Paper", "ASR_2018_Ageing")) {
   cascadeNames <- paste0(c("All", "Male", "Female"), "-",
     toString(resultsYear)) 
+} else if (projectName %in% c("ASR_2020", "ASR_2021")) {
+  cascadeNames <-  c(paste0("All-", resultsYear, "_Ageing"), 
+    paste0("Male-", resultsYear,"_Ageing"), 
+    paste0("Female-", resultsYear,"_Ageing")) 
 } else {
   cascadeNames <- paste0(c("Nsw_All_age", "Nsw_Male_age", "Nsw_Female_age"), "-",
     toString(resultsYear))
-} 
+}
 names(cascadeNames) <- c("all", "male", "female")
 
 # Set up ASR vs Ageing_paper parameters

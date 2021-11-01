@@ -1,0 +1,192 @@
+# Script to calculate undiagnosed, YDF and CDR
+# ============================================
+
+```{r Set-up}
+# Restart R and set working directory to source file location
+
+# Load packages
+require(tidyverse, quietly = TRUE)
+require(LeftysRpkg, quietly = TRUE)
+require(scales, quietly = TRUE)
+
+# Setup directories
+basePath <- file.path(dirname(getwd()), "HIV")
+outputFolder <- file.path(basePath, "output")
+
+```
+
+```{r Options}
+projectName <- "ASR_2021" #"Diagnosed_Fraction_2021"
+project <- file.path(basePath, "output", projectName)
+
+# cascadeList <- c("Hetero-2019", "Hetero-female-2019",
+  # "Hetero-female-Aus-2019", "Hetero-female-Othercob-2019",
+  # "Hetero-female-SEA-2019", "Hetero-female-SSA-2019",
+  # "Hetero-male-2019", "Hetero-male-Aus-2019", "Hetero-male-Othercob-2019",
+  # "Hetero-male-SEA-2019", "Hetero-male-SSA-2019",
+  # "Indigenous-2019", "MSM-2019", "MSM-Othercob-2019", "MSM-SEA-2019", 
+  # "MSM-SSA-2019", "MSM-nonAus-2019")
+
+cascadeList <- c("All-2020")
+ 
+# Result files and specifications
+resultsYear <- 2020
+infectionsFile <- paste0("newInfectionsEstimates-", resultsYear,".csv")
+undiagnosedFile <- paste0("plhivEstimates-", resultsYear, ".csv")
+diagnosesFile <- paste0("pldhiv-", resultsYear, "-all.csv")
+
+startYear <- 2000
+
+```
+
+```{r extract results function}
+
+IndicatorResults <- function(cascadeName) {
+  # Read in associated cascade files and extract key columns
+  infections <- read_csv(file.path(project, cascadeName, infectionsFile),
+    show_col_types = FALSE)
+  undiagnosed <- read_csv(file.path(project, cascadeName, undiagnosedFile),
+    col_types = cols(.default = "d")) %>%
+    select(year, undiag, undiag_lower, undiag_upper, undiag_percent, uplower,
+      upupper) 
+  diagnoses <- read_csv(file.path(project, cascadeName, diagnosesFile),
+    col_types = cols(.default = "d"), show_col_types = FALSE) %>%
+    select(year, diagnoses)
+  
+  # Tidy up new infections estimates
+  infectionsInclude <- filter(infections, exclude == "no")
+  infectionsExclude <- filter(infections, exclude == "yes")
+  
+  infectionsResults <- tibble(year = infectionsInclude$year,
+    infections = (infectionsInclude$infections + infectionsExclude$infections)/2,
+    infections_lower = infectionsExclude$infections_lower,
+    infections_upper = infectionsInclude$infections_upper)
+  
+  # Merge results
+  results <- diagnoses %>%
+    left_join(undiagnosed, by = "year") %>%
+    left_join(infectionsResults, by = "year")
+  
+  return(results)
+}
+
+
+# Calculate ydf and cdr
+AddResults <- function(results) {
+  newResults <- results %>%
+    mutate(ydf = diagnoses/(diagnoses + undiag),
+      ydf_lower = diagnoses/(diagnoses + undiag_upper),
+      ydf_upper = diagnoses/(diagnoses + undiag_lower),
+      cdr = diagnoses/infections,
+      cdr_lower = diagnoses/infections_upper,
+      cdr_upper = diagnoses/infections_lower)
+  
+  return(newResults)
+  
+}
+
+```
+
+```{r Extract cascade results and calculate YDF and CDR}
+
+results <- list()
+for (cascade in cascadeList) {
+  
+  tempResults <- IndicatorResults(cascade) %>%
+    AddResults() %>%
+    filter(year >= startYear) %>%
+    replace(is.na(.), 0) %>%
+    mutate_all(function(x) ifelse(is.infinite(x), 0, x)) %>%
+    mutate_all(function(x) ifelse(is.nan(x), 0, x))
+  
+  results[[cascade]] <- tempResults  
+  
+  write_csv(results[[cascade]], file.path(project, cascade, 
+    "cascadeIndicators.csv"))
+  
+}
+
+```
+
+```{r Plotting function}
+cols <- unname(PlotColors()[c("Blue", "Red")])
+
+plotUndiag <- function(df, title, ymax, indicator) {
+  if (indicator == "infections") {
+    # New infections
+    plot <- ggplot(df, aes(x = year)) + 
+      geom_ribbon(aes(ymin = infections_lower, ymax = infections_upper), 
+        fill = cols[1], alpha = 0.2) +
+      geom_line(aes(y=infections), colour = cols[1]) +
+      labs(y = "New Infections", x = "Year", title = title) +
+      scale_y_continuous(limits = c(0, ymax), 
+        label = comma)
+  } else if (indicator == "percent") {
+    # Undiagnosed percentage - Values rescaled to proportions
+    plot <- ggplot(df, aes(x = year)) + 
+      geom_ribbon(aes(ymin = uplower/100, ymax = upupper/100), 
+        fill = cols[1], alpha = 0.2) +
+      geom_line(aes(y=undiag_percent/100), colour = cols[1]) +
+      labs(y = "Percentage undiagnosed", x = "Year", title = title) +
+      scale_y_continuous(limits = c(0, ymax), 
+        label = percent)
+  } else if (indicator == "ydf") {
+    # YDF and CDR plots combined
+    plot <- ggplot(df, aes(x = year)) +
+      geom_ribbon(aes(ymin = cdr_lower, ymax = cdr_upper), 
+        fill = cols[1], alpha = 0.2) +
+      geom_line(aes(y=cdr, colour = "cdr")) +
+      geom_ribbon(aes(ymin = ydf_lower, ymax = ydf_upper), 
+        fill = cols[2], alpha = 0.2) +
+      geom_line(aes(y=ydf, colour = "ydf")) +
+      labs(y = "Value", x = "Year", title = title) +
+      scale_colour_manual("", labels = c("CDR", "YDF"),
+        breaks = c("cdr", "ydf"), values = cols) + 
+      ylim(0, ymax) +
+      theme(legend.position = "right")
+  } else {
+    stop("Unknown Indicator") 
+  }
+  
+  plot <- plot +
+    scale_x_continuous(limits = c(2010, resultsYear), 
+      breaks = seq(2010,resultsYear,2)) +
+    PlotOptions() 
+  
+  return(plot)
+}
+
+```
+
+```{r Produce and save all the plots}
+
+plots <- list()
+for (cascade in cascadeList) {
+  
+  print(cascade)
+  
+  # New infections
+  tempPlot1 <- plotUndiag(results[[cascade]], cascade, 
+    ceiling(max(results[[cascade]]$infections_upper)), "infections")
+  
+  # % Undiagnosed
+  tempPlot2 <- plotUndiag(results[[cascade]], cascade, 
+    ceiling(max(results[[cascade]]$upupper))/100, "percent")
+  
+  # YDF and CDR
+  tempPlot3 <- plotUndiag(results[[cascade]], cascade, 
+    ceiling(max(results[[cascade]]$cdr_upper)), "ydf")
+  
+  
+  SaveFigure(file.path(project, cascade), "new_infections", tempPlot1, 
+    width = 16, height = 9)
+  SaveFigure(file.path(project, cascade), "percent_undiagnosed", tempPlot2, 
+    width = 16, height = 9)
+  SaveFigure(file.path(project, cascade), "ydf", tempPlot3, 
+    width = 16, height = 9)
+  
+}
+
+```
+
+
