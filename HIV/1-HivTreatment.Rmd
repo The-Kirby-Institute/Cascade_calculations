@@ -89,7 +89,7 @@ hivTreatedPbs <- pbsData %>%
 genderTreatedPbs <- pbsData %>%
   filter(gender %in% c("m", "f"), state == "all") %>%
   select(-state) %>%
-  mutate(gender = c("male", "female")) %>%
+  mutate(gender = ifelse(gender == "m", "male", "female")) %>%
   as_tibble()
 
 yearNames <- strsplit(toString(2013:analysisYear), ", ")[[1]]
@@ -120,7 +120,7 @@ if (analysisYear >= 2020) {
   genderTreatedPbsLower <- pbsDataLower %>%
     filter(gender %in% c("m", "f"), state == "all") %>%
     select(-state) %>%
-    mutate(gender = c("male", "female")) %>%
+    mutate(gender = ifelse(gender == "m", "male", "female")) %>%
     as_tibble()
   
   colnames(hivTreatedPbsLower) <- c("population", yearNames)
