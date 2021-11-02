@@ -44,8 +44,8 @@ source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2019 # year of cascade we will calculate and plot   
-dataYear <- 2019 # year data for estimates was generated (to handle updated 
+resultsYear <- 2020 # year of cascade we will calculate and plot   
+dataYear <- 2020 # year data for estimates was generated (to handle updated 
                  # data) this is the data output year as well.
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
