@@ -51,8 +51,8 @@ LoadLibrary(gridExtra)
 source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
 
 # Script parameters
-resultsYear <- 2019  # year of cascade we will plot
-minYear <- 16      # how long ago do we plot things
+resultsYear <- 2020  # year of cascade we will plot
+minYear <- 17      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE
 years <- startYear:resultsYear
@@ -60,7 +60,7 @@ years <- startYear:resultsYear
 # Set up project and cascade to analyse
 projectName <- "HIV_Cascade_Paper"  
 resultsFolder <- file.path(resultsFolder, projectName)
-cascadeName <- "All-2019"
+cascadeName <- "All-2020"
 cascadePop <- "all"
 
 # New infections parameters
@@ -179,7 +179,7 @@ So dropped these tests and just stuck with the pseudo-R^2.
 # exponentiated to represent a rate ratio. 
 
 # Notifications ----------------------------------------------------------
-LoadLibrary(rsq) # load the rsq package for pseudo-R^2 calculation
+# LoadLibrary(rsq) # load the rsq package for pseudo-R^2 calculation
 
 # Notifications excluding people previously diagnosed overseas -
 # also explored including those diagnosed overseas and from 1999 the 
@@ -208,10 +208,10 @@ diagsPlot <- ggplot(data = diagsData, aes(x = year, y = diags)) +
   expand_limits(y = 0) +
   scale_y_continuous(labels = comma) +
   ylab("Annual notifications") + xlab("Year") +
-  PlotOptions() +
-  geom_text(x = 2010, y = 200, label = paste("Pseudo-R^2:",
-    toString(round(rsq(trendDiags, type = "kl"), digits = 4))), 
-    size = 3)
+  PlotOptions() # +
+  # geom_text(x = 2010, y = 200, label = paste("Pseudo-R^2:",
+  #   toString(round(rsq(trendDiags, type = "kl"), digits = 4))), 
+    # size = 3)
 
 if (savePlots) {
   # Save the diagnoses plot
@@ -224,7 +224,7 @@ if (savePlots) {
 }
 
 # Diagnostics
-pseudoR2 <- rsq(trendDiags, type = "kl")
+# pseudoR2 <- rsq(trendDiags, type = "kl")
 
 # Trends in new infections------------------------------------------------
 
@@ -242,7 +242,7 @@ p_valueInfects <- summary(trendInfects)$coefficients["year", "Pr(>|z|)"]
 
 
 # Diagnostics
-pseudoR2Infects <- rsq(trendInfects, type = "kl")
+# pseudoR2Infects <- rsq(trendInfects, type = "kl")
 
 # Infections plot with diagnoses added
 infectsPlot <- ggplot(data = newInfects, aes(x = year, 
@@ -267,13 +267,13 @@ infectsPlot <- ggplot(data = newInfects, aes(x = year,
     values = c(asrcols[2], "black", asrcols[5], "blue"),
     limits = c("infects", "infectsTrend","diags","diagsTrend"),
     guide = guide_legend(nrow = 2)) +
-  PlotOptions() +
-  geom_text(x = 2010, y = 300, label = paste("Pseudo-R^2 infections:",
-    toString(round(rsq(trendInfects, type = "kl"), digits = 4))), 
-    size = 3) #+ 
-geom_text(x = 2010, y = 150, label = paste("Pseudo-R^2 notifications:",
-  toString(round(rsq(trendDiags, type = "kl"), digits = 4))),
-  size = 3)
+  PlotOptions() #+
+#   geom_text(x = 2010, y = 300, label = paste("Pseudo-R^2 infections:",
+#     toString(round(rsq(trendInfects, type = "kl"), digits = 4))), 
+#     size = 3) #+ 
+# geom_text(x = 2010, y = 150, label = paste("Pseudo-R^2 notifications:",
+#   toString(round(rsq(trendDiags, type = "kl"), digits = 4))),
+#   size = 3)
 
 if (savePlots) {
   # Save the infects plot
@@ -328,7 +328,7 @@ for (ii in 1:7) {
   tempInterval <- exp(confint(temp, "year", type = "Wald"))
   trendCascade$lower[ii] <- tempInterval[1]
   trendCascade$upper[ii] <- tempInterval[2]
-  trendCascade$pseudoR2[ii] <- rsq(temp, type = "kl")
+  # trendCascade$pseudoR2[ii] <- rsq(temp, type = "kl")
   
   trendModels[[steps[ii]]] <- temp
 }
@@ -339,7 +339,7 @@ trendCascade$coeff[8] <- coeff
 trendCascade$pvalue[8] <- p_value
 trendCascade$lower[8] <- interval[1]
 trendCascade$upper[8] <- interval[2]
-trendCascade$pseudoR2[8] <- pseudoR2
+# trendCascade$pseudoR2[8] <- pseudoR2
 
 trendModels[["diagnoses"]] <- trendDiags
 
@@ -349,7 +349,7 @@ trendCascade$coeff[9] <- coeffInfects
 trendCascade$pvalue[9] <- p_valueInfects
 trendCascade$lower[9] <- intervalInfects[1]
 trendCascade$upper[9] <- intervalInfects[2]
-trendCascade$pseudoR2[9] <- pseudoR2Infects
+# trendCascade$pseudoR2[9] <- pseudoR2Infects
 
 # Store plots ------------------------------------------------------------
 PlotTrend <- function(data, models, indicator) {
@@ -556,10 +556,10 @@ intervallmsuppressed <- confint(suppressedlmModel, "year", type = "Wald")
 intervallmoverall <- confint(overalllmModel, "year", type = "Wald")
 
 # R2-values (unadjusted)
-pseudoR2lmdiags <- rsq(diagslmModel)
-pseudoR2lmart <- rsq(treatedlmModel)
-pseudoR2lmsuppressed <- rsq(suppressedlmModel)
-pseudoR2lmoverall <- rsq(overalllmModel)
+# pseudoR2lmdiags <- rsq(diagslmModel)
+# pseudoR2lmart <- rsq(treatedlmModel)
+# pseudoR2lmsuppressed <- rsq(suppressedlmModel)
+# pseudoR2lmoverall <- rsq(overalllmModel)
 
 # Logistic models ---------------------------------------------------------
 # Fit logistic curve to each trend to see if it produces a better fit. Feel
@@ -597,9 +597,9 @@ p_suppressed <- summary(suppressedModel)$coefficients["year", "Pr(>|z|)"]
 p_overall <- summary(overallModel)$coefficients["year", "Pr(>|z|)"]
 
 # Calculate the pseudo-R^2 
-pseudoR2art <- rsq(treatedModel, type = "kl")
-pseudoR2suppressed <- rsq(suppressedModel, type = "kl")
-pseudoR2overall <- rsq(overallModel, type = "kl")
+# pseudoR2art <- rsq(treatedModel, type = "kl")
+# pseudoR2suppressed <- rsq(suppressedModel, type = "kl")
+# pseudoR2overall <- rsq(overallModel, type = "kl")
 
 # Poisson models ----------------------------------------------------------
 # Use a Poisson model with an offset to produce a rate ratio for the change 
@@ -609,7 +609,7 @@ pseudoR2overall <- rsq(overallModel, type = "kl")
 expTrendData <- trendData %>% 
   select(year, stage, value) %>% 
   mutate(value = round(value)) %>%
-  spread(stage, value)
+  tidyr::spread(stage, value)
 
 # Models - using denominator as an offset
 diagsExpModel <- glm(pldhiv ~ year, offset = log(infected), 
@@ -643,10 +643,10 @@ intervalExpsuppressed <- exp(confint(suppressedExpModel, "year",
 intervalExpoverall <- exp(confint(overallExpModel, "year", type = "Wald"))
 
 # R2-values (unadjusted)
-pseudoR2Expdiags <- rsq(diagsExpModel)
-pseudoR2Expart <- rsq(treatedExpModel)
-pseudoR2Expsuppressed <- rsq(suppressedExpModel)
-pseudoR2Expoverall <- rsq(overallExpModel)
+# pseudoR2Expdiags <- rsq(diagsExpModel)
+# pseudoR2Expart <- rsq(treatedExpModel)
+# pseudoR2Expsuppressed <- rsq(suppressedExpModel)
+# pseudoR2Expoverall <- rsq(overallExpModel)
 
 # Plots of estimates and trends -------------------------------------------
 # Plot the proportion, linear model and logistic model
@@ -668,13 +668,13 @@ plotProp <- function(proportion, lmmodel, logmodel, expmodel, expoffset, label) 
     scale_y_continuous(labels = percent) + 
     coord_cartesian(ylim = c(0,1)) +
     ylab(label) + xlab("Year") +  
-    PlotOptions() + 
-    geom_text(x = 2010, y = 0.3, label = paste("Unadjusted R^2 (linear):",
-      toString(round(rsq(lmmodel, type = "kl"), digits = 4))), size = 3) +
-    geom_text(x = 2010, y = 0.2, label = paste("Pseudo-R^2 (logistic):",
-      toString(round(rsq(logmodel, type = "kl"), digits = 4))), size = 3) +
-    geom_text(x = 2010, y = 0.1, label = paste("Pseudo-R^2 (exponential):",
-      toString(round(rsq(expmodel, type = "kl"), digits = 4))), size = 3)
+    PlotOptions() # + 
+    # geom_text(x = 2010, y = 0.3, label = paste("Unadjusted R^2 (linear):",
+    #   toString(round(rsq(lmmodel, type = "kl"), digits = 4))), size = 3) +
+    # geom_text(x = 2010, y = 0.2, label = paste("Pseudo-R^2 (logistic):",
+    #   toString(round(rsq(logmodel, type = "kl"), digits = 4))), size = 3) +
+    # geom_text(x = 2010, y = 0.1, label = paste("Pseudo-R^2 (exponential):",
+    #   toString(round(rsq(expmodel, type = "kl"), digits = 4))), size = 3)
   return(propPlot)
 }
 
@@ -700,8 +700,8 @@ propTrends <- tibble(stage = c("propdiagnosed", "proptreated",
     intervallmoverall[1]),
   upper = c(intervallmdiags[2], intervallmart[2], intervallmsuppressed[2],
     intervallmoverall[2]),
-  pseudoR2 = c(pseudoR2lmdiags, pseudoR2lmart, pseudoR2lmsuppressed, 
-    pseudoR2lmoverall),
+  # pseudoR2 = c(pseudoR2lmdiags, pseudoR2lmart, pseudoR2lmsuppressed, 
+  #   pseudoR2lmoverall),
   model = "linear")
 
 propTrendsExp <- tibble(stage = c("propdiagnosed", "proptreated",
@@ -713,8 +713,8 @@ propTrendsExp <- tibble(stage = c("propdiagnosed", "proptreated",
     intervalExpoverall[1]),
   upper = c(intervalExpdiags[2], intervalExpart[2], intervalExpsuppressed[2],
     intervalExpoverall[2]),
-  pseudoR2 = c(pseudoR2Expdiags, pseudoR2Expart, pseudoR2Expsuppressed, 
-    pseudoR2Expoverall),
+  # pseudoR2 = c(pseudoR2Expdiags, pseudoR2Expart, pseudoR2Expsuppressed, 
+    # pseudoR2Expoverall),
   model = "poisson-offset")
 
 trendCascadeProp <- bind_rows(propTrends, propTrendsExp)
@@ -1040,8 +1040,8 @@ segCI <- function(est, stdErr) {
 # produce no change in the fitted curve. 
 # 
 # Unsuppressed doesn't appear to have a single change point. 
-breakPoints <- c("undiagnosed" = 2010,
-  "noART" = 2010, 
+breakPoints <- list("undiagnosed" = 2010,
+  "noART" = c(2007,2016), 
   "unsuppressed" = 2010)
 
 # Estimates for plots for each stage---------------------------------------
@@ -1096,27 +1096,27 @@ for (ii in segmentStages) {
           "Segmented model")) +
       coord_cartesian(ylim = c(0, ymax[ii])) + 
       ylab(yLabels[ii]) + xlab("Year") +  
-      PlotOptions() + 
-      geom_text(x = 2010, y = 0.2 * ymax[ii], 
-        label = paste("Overall pseudo-R^2:",
-          toString(round(filter(trendCascade, stage == ii)$pseudoR2, 
-            digits = 4))), size = 3) +
-      geom_text(x = 2010, y = 0.1 * ymax[ii], 
-        label = paste("Segmented pseudo-R^2:",
-          toString(round(rsq(segModel, type = "kl"), digits = 4))), 
-        size = 3) 
-    if (plotModel) {
-      segPlot <- segPlot +
-        geom_vline(xintercept = segModel$psi[2], linetype = "dashed",
-          colour = "blue") + 
-        geom_errorbarh(aes(y = 0.975 * ymax[ii],
-          xmin = segCI(segModel$psi[2],
-            segModel$psi[3])[1],
-          xmax = segCI(segModel$psi[2],
-            segModel$psi[3])[2]),
-          colour = "blue",
-          height = 0.025 * ymax[ii]) 
-    }
+      PlotOptions() #+ 
+      # geom_text(x = 2010, y = 0.2 * ymax[ii], 
+      #   label = paste("Overall pseudo-R^2:",
+      #     toString(round(filter(trendCascade, stage == ii)$pseudoR2, 
+      #       digits = 4))), size = 3) +
+      # geom_text(x = 2010, y = 0.1 * ymax[ii], 
+      #   label = paste("Segmented pseudo-R^2:",
+      #     toString(round(rsq(segModel, type = "kl"), digits = 4))), 
+      #   size = 3) 
+    # if (plotModel) {
+    #   segPlot <- segPlot +
+    #     geom_vline(xintercept = segModel$psi[2], linetype = "dashed",
+    #       colour = "blue") + 
+    #     geom_errorbarh(aes(y = 0.975 * ymax[ii],
+    #       xmin = segCI(segModel$psi[2],
+    #         segModel$psi[3])[1],
+    #       xmax = segCI(segModel$psi[2],
+    #         segModel$psi[3])[2]),
+    #       colour = "blue",
+    #       height = 0.025 * ymax[ii]) 
+    # }
     
     segPlots[[ii]] <<- segPlot
     
@@ -1127,7 +1127,7 @@ for (ii in segmentStages) {
         toString(startYear), "-",
         toString(resultsYear),
         saveFormat)),
-        plot = segPlots[[ii]], width = 7.5, height = 6, units = "cm")
+        plot = segPlots[[ii]], width = 12, height = 8, units = "cm")
     }
   })
 }
@@ -1232,16 +1232,16 @@ segDiagsPlot <- ggplot(data = diagsData,
   ylab("Annual notifications") + xlab("Year") +  
   PlotOptions() +
   geom_vline(xintercept = segDiags$psi[,2], linetype = "dashed",
-    colour = "blue") + 
-  geom_text(x = 2010, y = 0.2 * diagsmax, 
-    label = paste("Overall pseudo-R^2:",
-      toString(round(filter(trendCascade, 
-        stage == "diagnoses")$pseudoR2,
-        digits = 4))), size = 3) +
-  geom_text(x = 2010, y = 0.1 * diagsmax, 
-    label = paste("Segmented pseudo-R^2:",
-      toString(round(rsq(segDiags, type = "kl"), digits = 4))),
-    size = 3)
+    colour = "blue") # + 
+  # geom_text(x = 2010, y = 0.2 * diagsmax, 
+  #   label = paste("Overall pseudo-R^2:",
+  #     toString(round(filter(trendCascade, 
+  #       stage == "diagnoses")$pseudoR2,
+  #       digits = 4))), size = 3) +
+  # geom_text(x = 2010, y = 0.1 * diagsmax, 
+  #   label = paste("Segmented pseudo-R^2:",
+  #     toString(round(rsq(segDiags, type = "kl"), digits = 4))),
+  #   size = 3)
 
 if (length(breakPoints) == 1) {
   segDiagsPlot <- segDiagsPlot +
@@ -1305,16 +1305,16 @@ segInfectsPlot <- ggplot(data = newInfects,
   ylab("Annual new infections") + xlab("Year") +  
   PlotOptions() +
   geom_vline(xintercept = segInfects$psi[2], linetype = "dashed",
-    colour = "blue") +
-  geom_text(x = 2010, y = 0.2 * infectsmax, 
-    label = paste("Overall pseudo-R^2:",
-      toString(round(filter(trendCascade, 
-        stage == "infections")$pseudoR2,
-        digits = 4))), size = 3) +
-  geom_text(x = 2010, y = 0.1 * infectsmax, 
-    label = paste("Segmented pseudo-R^2:",
-      toString(round(rsq(segInfects, type = "kl"), digits = 4))),
-    size = 3)
+    colour = "blue") #+
+  # geom_text(x = 2010, y = 0.2 * infectsmax, 
+  #   label = paste("Overall pseudo-R^2:",
+  #     toString(round(filter(trendCascade, 
+  #       stage == "infections")$pseudoR2,
+  #       digits = 4))), size = 3) +
+  # geom_text(x = 2010, y = 0.1 * infectsmax, 
+  #   label = paste("Segmented pseudo-R^2:",
+  #     toString(round(rsq(segInfects, type = "kl"), digits = 4))),
+  #   size = 3)
 
 if (length(breakPointsInfects) == 1) {
   segInfectsPlot <- segInfectsPlot +
@@ -1536,7 +1536,7 @@ for (step in steps) {
     type = "Wald")[2])
   tempTable$pvalue <- summary(overallModel)$coefficients["year",
     "Pr(>|z|)"]
-  tempTable$pseudoR2 <- rsq(overallModel, type = "kl")
+  # tempTable$pseudoR2 <- rsq(overallModel, type = "kl")
   tempTable$bic <- BIC(overallModel)
   
   tempTable$cpt <-  segModel$psi[, "Est."]
@@ -1699,14 +1699,14 @@ for (ii in 1:3) {
           segModeltest$psi[3])[2]),
         colour = "blue",
         height = 0.025 * plotMax) +
-      geom_text(x = 2010, y = 0.2 * plotMax, 
-        label = paste("Overall pseudo-R^2:",
-          toString(round(rsq(artmodel, type = "kl"), digits = 4))), 
-        size = 3) + 
-      geom_text(x = 2010, y = 0.1 * plotMax, 
-        label = paste("Segmented pseudo-R^2:",
-          toString(round(rsq(segModeltest, type = "kl"), digits = 4))), 
-        size = 3) +
+      # geom_text(x = 2010, y = 0.2 * plotMax, 
+      #   label = paste("Overall pseudo-R^2:",
+      #     toString(round(rsq(artmodel, type = "kl"), digits = 4))), 
+      #   size = 3) + 
+      # geom_text(x = 2010, y = 0.1 * plotMax, 
+      #   label = paste("Segmented pseudo-R^2:",
+      #     toString(round(rsq(segModeltest, type = "kl"), digits = 4))), 
+      #   size = 3) +
       ggtitle(testCaption[ii]) +
       theme(plot.title = element_text(hjust = 0.5, size = 10))
     
@@ -1795,7 +1795,7 @@ and
 > Efficiency Modelling via Optimal Time-Varying Allocations.
 > JIAS 2016;19(1):20627. http://dx.doi.org/10.7448/IAS.19.1.20627.
 
-The function is a combination of a logistic graowth function and an 
+The function is a combination of a logistic growth function and an 
 exponential decay function. For $t \approx 0$, $f(t) \approx ae^{(g-d)t}$ and the 
 growth is proportional to $e^{(g-d)t}$. Similarly, when x is large $f(t)$
 is proportional to $e^{-dt}$. This means we can describe a rate ratio (RR) 
@@ -1838,19 +1838,23 @@ FitModel <- function(x, a, g, d, k) {
       a*exp(g * x)))
 }
 
+FitModel2 <- function(x, a, g, d) {
+  return(10 * a * exp((g-d) * x) / ((10 - a) +
+      a*exp(g * x)))
+}
+
 # Time to peak in model
 TP <- function(a, g, d, k) {
   return((1/g) * log((g-d)*(k-a)/(d*a)))
 }
 
-fitIndicators <- c("undiagnosed", "noART", "unsuppressed", "diagnoses", 
-  "infections")
+fitIndicators <- c("undiagnosed", "noART", "unsuppressed", "infections",
+  "diagnoses")
 
 xseq <- years - years[1] # time points
 
-yLabels <- c(yLabels, 
-  "diagnoses" = "Number of diagnoses", 
-  "infections" = "Number of new infections")
+yLabels[["diagnoses"]] <- "Annual diagnoses"
+yLabels[["infections"]] <- "Annual new infections"
 
 # Estimates for plots for each stage---------------------------------------
 fitPlots <- list()
@@ -1881,8 +1885,8 @@ fitData <- bind_rows(fitData, fitDiagsData, fitInfectsData)
 # Set-up initial values for fits ------------------------------------------
 
 # Guess and check 
-ydataTest <- filter(fitData, stage == "infections")$value
-qplot(xseq, FitModel(xseq, 900, 0.3, 0.01, 1100), 
+ydataTest <- filter(fitData, stage == "noART")$value
+qplot(xseq, FitModel(xseq, 5800, 0.2, 0.135, 20000), 
   geom = "line", 
   ylim = c(0, NA), 
   ylab = "Value") + 
@@ -1894,8 +1898,8 @@ initialParList <- list(
   "undiagnosed" = list(a= 2900, g = 0.2, d = 0.007, k = 3250),
   "noART" = list(a = 5800, g = 0.2, d = 0.133, k = 20000), 
   "unsuppressed" = list(a = 3000, g = 0.001, d = 0.05, k = 3000),
-  "diagnoses" = list(a = 900, g = 0.3, d = 0.01, k = 1100),
-  "infections" = list(a = 900, g = 0.3, d = 0.01, k = 1100))
+  "infections" = list(a = 900, g = 0.3, d = 0.01, k = 1100),
+  "diagnoses" = list(a = 900, g = 0.43, d = 0.41, k = 1500000))
 
 # Run fits
 for (ii in fitIndicators) { 
@@ -1922,6 +1926,11 @@ for (ii in fitIndicators) {
       plotModel <- FALSE
     } 
     
+     fitModel2 <- nls(value ~ FitModel2(xseq, a, g, d), tempData, 
+      start = initialParList[[ii]][1:3],
+      control = nls.control(maxiter = 1000))
+    
+    
     fitModels[[ii]] <<- fitModel
     
     # Plot on top of trend plot
@@ -1946,22 +1955,7 @@ for (ii in fitIndicators) {
       coord_cartesian(ylim = c(0, ymax[ii])) +
       ylab(yLabels[ii]) + xlab("Year") +
       PlotOptions() #+
-    # geom_text(x = 2010, y = 0.2 * ymax[ii],
-    #   label = paste("Overall BIC:",
-    #     toString(round(BIC(pmodel), digits = 4))), size = 3) +
-    # geom_text(x = 2010, y = 0.1 * ymax[ii],
-    #   label = paste("Fitted BIC:",
-    #     toString(round(BIC(fitModel), digits = 4))), size = 3)
-    
-    # if (plotModel) {
-    #   pars <- unname(coef(fitModel))
-    #   fitPlot <- fitPlot +
-    #     geom_vline(xintercept =  years[1] + TP(pars[1], pars[2], pars[3],
-    #      pars[4]), 
-    #       linetype = "dashed",
-    #       colour = "blue")
-    # }
-    
+  
     if (addSegment) {
       # Add Segment model plot for comparison
       segmentModel <- segModels[[ii]]
@@ -2034,28 +2028,31 @@ for (ii in fitIndicators) {
 # Figure caption
 figs("fittedTrends", "")
 
+# Create combined plot
 legend <- get_legend(fitPlots[[1]])
 
-# Update group plot
-combinedPlot <- grid.arrange(legend, 
-  fitPlots[[1]] + theme(legend.position="none"), 
-  fitPlots[[2]] + theme(legend.position="none"),
-  fitPlots[[3]] + theme(legend.position="none"), 
-  ncol = 2, nrow = 3, 
-  layout_matrix = rbind(c(1, 1), c(2, 3), c(4, 5)),
-  widths = c(4, 4), heights = c(0.8, 3.1, 3.1))
-
 stagesDiffsPlot3 <- ggdraw() +
-  draw_plot(combinedPlot, 0, 0, 1, 1) +
-  draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0),
-    c(0.9, 0.9, 0.45), size = 12)
+  draw_plot(legend, 0, 0.93, 1, 0.07) + 
+  draw_plot(fitPlots[[1]] + theme(legend.position="none"), 
+    0, 0.62, 0.5, 0.31) +
+  draw_plot(fitPlots[[2]] + theme(legend.position="none"),
+    0, 0.32, 0.5, 0.31) +
+  draw_plot(fitPlots[[3]] + theme(legend.position="none"),
+    0, 0, 0.5, 0.31) +
+  draw_plot(fitPlots[[4]] + theme(legend.position="none"),
+    0.5, 0.62, 0.5, 0.31) +
+  draw_plot(fitPlots[[5]] + theme(legend.position="none"),
+    0.5, 0.31, 0.5, 0.31) +
+  draw_plot_label(c("A", "B", "C", "D", "E"), c(0, 0, 0, 0.5, 0.5),
+    c(0.93, 0.62, 0.31, 0.93, 0.62), size = 12)
+
 
 # Save combined plot-------------------------------------------------------
 if (savePlots) {
   if (addSegment) {
-    plotFile <- "HIVcascade-Differences-Trends_Segment-Fitted"
+    plotFile <- "HIVcascade-Differences-Trends_Segment-Fitted_"
   } else {
-    plotFile <- "HIVcascade-Differences-Trends_Fitted"
+    plotFile <- "HIVcascade-Differences-Trends_Fitted_"
   }
   
   ggsave(file.path(figFolder,
@@ -2063,7 +2060,7 @@ if (savePlots) {
       toString(startYear), "-",
       toString(resultsYear),
       saveFormat, sep = "")),
-    plot = stagesDiffsPlot3, width = 18, height = 15, units = "cm")
+    plot = stagesDiffsPlot3, width = 18, height = 25, units = "cm")
 }
 ```
 
@@ -2076,12 +2073,14 @@ library(tidymodels)
 
 # Set-up indicator fitting 
 set.seed(2653)
-fitIndicators <- c("undiagnosed", "noART", "unsuppressed")
+numBoots <- 10000
+
+fitIndicators <- c("undiagnosed", "noART", "unsuppressed", "infections",
+  "diagnoses")
 
 modelFits <- list()
 bootModelFits <- list()
 bootstrapPlots <- list()
-modelFits <- list()
 
 # Run fits
 for (ii in fitIndicators) { 
@@ -2099,12 +2098,7 @@ for (ii in fitIndicators) {
         glm(round(value) ~ xseq, data = tempData, 
           family = "poisson")})
     
-    # summary(modelFit)
-    # ggplot(tempData, aes(year, value)) +
-    # geom_point() +
-    #   geom_line(aes(y = predict(modelFit, type = "response")))
-    
-    tempboots <- bootstraps(tempData, times = 10000, apparent = TRUE)
+    tempboots <- bootstraps(tempData, times = numBoots, apparent = TRUE)
     
     tempFit_on_bootstrap <- function(split) {
       # Uses a tryCatch() call to return a model for each boot split given nls
@@ -2113,8 +2107,10 @@ for (ii in fitIndicators) {
       modelFitSplit <- tryCatch(nls(value ~ FitModel(xseq, a, g, d, k),
         analysis(split), 
         start = initialParList[[ii]],
-        control = nls.control(maxiter = 1000)), 
+        control = nls.control(maxiter = 1000, warnOnly = TRUE, 
+          minFactor = 1/4096)), 
         error = function(err) {
+          print("Using glm")
           # nls doesn't work
           fitData <- analysis(split)
           errModelSplit <- glm(round(value) ~ xseq, data = analysis(split), 
@@ -2177,9 +2173,8 @@ for (ii in fitIndicators) {
         labels = seq(startYear, resultsYear, by = 3)) +
       scale_y_continuous(labels = comma) +
       expand_limits(y = 0) +
-      PlotOptions() + theme(legend.position = "right",
-        legend.spacing = unit(0, "cm"),
-         legend.margin = margin(0, 0, 0, 0, "cm")) +
+      PlotOptions() + theme(legend.spacing = unit(0, "cm"),
+        legend.margin = margin(0, 0, 0, 0, "cm")) +
       guides(colour = guide_legend(order = 1),
         alpha = guide_legend(order = 2),
         fill = FALSE)
@@ -2202,35 +2197,36 @@ for (ii in fitIndicators) {
 }
 
 # Figure caption
-figs("fittedTrends2", "")
+figs("bootTrends", "")
 
+# Create combined plot
 legend <- get_legend(bootstrapPlots[[1]])
 
-# Update group plot
-combinedBootsPlot <- grid.arrange(
-  bootstrapPlots[[1]] + theme(legend.position = "none"), 
-  bootstrapPlots[[2]] + theme(legend.position = "none"),
-  bootstrapPlots[[3]] + theme(legend.position = "none"),
-  legend,
-  ncol = 2, nrow = 2, 
-  widths = c(4, 4), heights = c(4,4))
-
-finalBootsPlot <- ggdraw() +
-  draw_plot(combinedBootsPlot, 0, 0, 1, 1) +
-  draw_plot_label(c("A", "B", "C"), c(0, 0.5, 0),
-    c(1, 1, 0.5), size = 12) 
+combinedBootsPlot <- ggdraw() +
+  draw_plot(legend, 0, 0.93, 1, 0.07) + 
+  draw_plot(bootstrapPlots[[1]] + theme(legend.position="none"), 
+    0, 0.62, 0.5, 0.31) +
+  draw_plot(bootstrapPlots[[2]] + theme(legend.position="none"),
+    0, 0.32, 0.5, 0.31) +
+  draw_plot(bootstrapPlots[[3]] + theme(legend.position="none"),
+    0, 0, 0.5, 0.31) +
+  draw_plot(bootstrapPlots[[4]] + theme(legend.position="none"),
+    0.5, 0.62, 0.5, 0.31) +
+  draw_plot(bootstrapPlots[[5]] + theme(legend.position="none"),
+    0.5, 0.31, 0.5, 0.31) +
+  draw_plot_label(c("A", "B", "C", "D", "E"), c(0, 0, 0, 0.5, 0.5),
+    c(0.93, 0.62, 0.31, 0.93, 0.62), size = 12)
 
 # Save combined plot-------------------------------------------------------
 if (savePlots) {
   plotFile <- "HIVcascade-Differences-Trends-Bootstrap_Fitted"
   
   ggsave(file.path(figFolder,
-    paste(plotFile,
-      toString(startYear), "-",
-      toString(resultsYear),
-      saveFormat, sep = "")),
-    plot = finalBootsPlot, width = 18, height = 15, units = "cm")
+    paste0(plotFile, startYear, "-", resultsYear, saveFormat)),
+    plot = combinedBootsPlot, width = 18, height = 25, units = "cm")
 }
+
+# set.seed(NULL)
 
 ```
 
@@ -2238,13 +2234,61 @@ if (savePlots) {
 # In this chuck we save the stats for the fitted and bootstrapped nls 
 # results
 
+# First save results so we can load later if necessay
+# save(numBoots, fitIndicators, fitModels, fitPlots, modelFits, bootModelFits,
+#   bootstrapPlots,
+#   file = file.path(figFolder, paste0("HIV_Cascade_nls_trends_", 
+#     startYear, "-", resultsYear, ".Rda")))
+load(file.path(figFolder, paste0("HIV_Cascade_nls_trends_",
+    startYear, "-", resultsYear, ".Rda")))
 
+fitIndicators <- c("undiagnosed", "noART", "unsuppressed", "infections",
+  "diagnoses")
 
+# Fitted estimates
+numRows <- length(fitIndicators)*5*2
+nlsStats <- tibble(
+  indicator = character(numRows),
+  fitting = character(numRows),
+  parameter = character(numRows),
+  estimate = numeric(numRows),
+  lower = numeric(numRows),
+  upper = numeric(numRows))
 
-# boot_coefs <- boot_models_test %>% 
-    #   unnest(coef_info)
-    
-    # boot_coefs
+for (ii in 1:length(fitIndicators)) {
+  
+  indicator <- fitIndicators[[ii]]
+  print(indicator)
+  pars <- unname(coef(fitModels[[ii]]))
+  confIntervals <- tryCatch(confint(fitModels[[ii]]),
+    error = function (err) {
+      # Doesn't converge for diagnoses for some reason
+      return(matrix(0, nrow = 4, ncol = 2))})
+  
+  if (indicator == "unsuppressed") {
+    peak <- NA
+    pars <- c(pars[1], NA, pars[2], NA)
+    temp <- matrix(0, nrow= 4, ncol = 2)
+    temp[c(1,3),] <- confIntervals
+    confIntervals <- temp
+  } else { 
+    peak <- years[1] + TP(pars[1], pars[2], pars[3], pars[4])
+  }
+  
+  indices <- (5*(ii-1)+1):(5*ii)
+  
+  nlsStats$indicator[indices] <- rep(indicator,5)
+  nlsStats$fitting[indices] <- rep("fit",5)
+  nlsStats$parameter[indices] <- c("a", "g", "d", "k", "TP")
+  nlsStats$estimate[indices] <- c(pars, peak)
+  nlsStats$lower[indices] <- c(confIntervals[,1], 0)
+  nlsStats$upper[indices] <- c(confIntervals[,2], 0)
+}
+
+boot_coefs <- bootModelFits[[1]]%>%
+  unnest(coef_info)
+mean(filter(boot_coefs, term == "g")$estimate)
+
     
     # percentile_intervals <- int_pctl(temp_boot_models, coef_info)
     # percentile_intervals
