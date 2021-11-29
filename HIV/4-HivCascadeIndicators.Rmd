@@ -19,18 +19,25 @@ outputFolder <- file.path(basePath, "output")
 projectName <- "ASR_2021" #"Diagnosed_Fraction_2021"
 project <- file.path(basePath, "output", projectName)
 
-# cascadeList <- c("Hetero-2019", "Hetero-female-2019",
-  # "Hetero-female-Aus-2019", "Hetero-female-Othercob-2019",
-  # "Hetero-female-SEA-2019", "Hetero-female-SSA-2019",
-  # "Hetero-male-2019", "Hetero-male-Aus-2019", "Hetero-male-Othercob-2019",
-  # "Hetero-male-SEA-2019", "Hetero-male-SSA-2019",
-  # "Indigenous-2019", "MSM-2019", "MSM-Othercob-2019", "MSM-SEA-2019", 
-  # "MSM-SSA-2019", "MSM-nonAus-2019")
-
 cascadeList <- c("All-2020")
- 
+
+# List for YDF paper
+# cascadeList <- c("Hetero-2019", "Hetero-female-2019",
+#   "Hetero-female-Aus-2019", "Hetero-female-Othercob-2019",
+#   "Hetero-female-SEA-2019", "Hetero-female-SSA-2019",
+#   "Hetero-male-2019", "Hetero-male-Aus-2019", "Hetero-male-Othercob-2019",
+#   "Hetero-male-SEA-2019", "Hetero-male-SSA-2019",
+#   "Indigenous-2019", "MSM-2019", "MSM-Othercob-2019", "MSM-SEA-2019",
+#   "MSM-SSA-2019", "MSM-nonAus-2019")
+
+# List for IPR paper
+# cascadeList <- c("All-2020", "Hetero-2020", "Male-2020", "Female-2020",
+#   "MSM-2020", "Pwid-2020",  "SEA-2020", "SCA-2020", 
+#   "SSA-2020", "Othercob-2020", "Otherexp-IPR-2020")
+
 # Result files and specifications
 resultsYear <- 2020
+cascadeFile <- paste0("HIVcascadeEstimates-", resultsYear,".csv")
 infectionsFile <- paste0("newInfectionsEstimates-", resultsYear,".csv")
 undiagnosedFile <- paste0("plhivEstimates-", resultsYear, ".csv")
 diagnosesFile <- paste0("pldhiv-", resultsYear, "-all.csv")
@@ -52,6 +59,10 @@ IndicatorResults <- function(cascadeName) {
   diagnoses <- read_csv(file.path(project, cascadeName, diagnosesFile),
     col_types = cols(.default = "d"), show_col_types = FALSE) %>%
     select(year, diagnoses)
+  plhiv <- read_csv(file.path(project, cascadeName, cascadeFile),
+    show_col_types = FALSE) %>%
+    filter(stage == "infected") %>%
+    select(year, value, lower, upper) 
   
   # Tidy up new infections estimates
   infectionsInclude <- filter(infections, exclude == "no")
@@ -62,10 +73,19 @@ IndicatorResults <- function(cascadeName) {
     infections_lower = infectionsExclude$infections_lower,
     infections_upper = infectionsInclude$infections_upper)
   
+  # For PLHIV create start year values by shifting
+  plhiv$start_plhiv <- c(plhiv$value[1], plhiv$value[1:(nrow(plhiv)-1)])
+  plhiv$start_plhiv_lower <- c(plhiv$lower[1], plhiv$lower[1:(nrow(plhiv)-1)])
+  plhiv$start_plhiv_upper <- c(plhiv$upper[1], plhiv$upper[1:(nrow(plhiv)-1)])
+
+  plhiv <- plhiv %>%
+    select(year, start_plhiv, start_plhiv_lower, start_plhiv_upper)
+  
   # Merge results
   results <- diagnoses %>%
     left_join(undiagnosed, by = "year") %>%
-    left_join(infectionsResults, by = "year")
+    left_join(infectionsResults, by = "year") %>%
+    left_join(plhiv, by = "year")
   
   return(results)
 }
@@ -79,7 +99,10 @@ AddResults <- function(results) {
       ydf_upper = diagnoses/(diagnoses + undiag_lower),
       cdr = diagnoses/infections,
       cdr_lower = diagnoses/infections_upper,
-      cdr_upper = diagnoses/infections_lower)
+      cdr_upper = diagnoses/infections_lower,
+      ipr = infections/start_plhiv,
+      ipr_lower = infections_lower/start_plhiv_upper,
+      ipr_upper = infections_upper/start_plhiv_lower)
   
   return(newResults)
   
@@ -144,6 +167,16 @@ plotUndiag <- function(df, title, ymax, indicator) {
         breaks = c("cdr", "ydf"), values = cols) + 
       ylim(0, ymax) +
       theme(legend.position = "right")
+    
+  } else if (indicator == "ipr") {
+    # IPR plot
+    plot <- ggplot(df, aes(x = year)) + 
+      geom_ribbon(aes(ymin = ipr_lower, ymax = ipr_upper), 
+        fill = cols[1], alpha = 0.2) +
+      geom_line(aes(y=ipr), colour = cols[1]) +
+      labs(y = "Incidence prevalence ratio", x = "Year", title = title) +
+      scale_y_continuous(limits = c(0, ymax), 
+        label = comma)
   } else {
     stop("Unknown Indicator") 
   }
@@ -177,12 +210,17 @@ for (cascade in cascadeList) {
   tempPlot3 <- plotUndiag(results[[cascade]], cascade, 
     ceiling(max(results[[cascade]]$cdr_upper)), "ydf")
   
+  tempPlot4 <- plotUndiag(results[[cascade]], cascade, 
+    max(results[[cascade]]$ipr_upper), "ipr")
+  
   
   SaveFigure(file.path(project, cascade), "new_infections", tempPlot1, 
     width = 16, height = 9)
   SaveFigure(file.path(project, cascade), "percent_undiagnosed", tempPlot2, 
     width = 16, height = 9)
   SaveFigure(file.path(project, cascade), "ydf", tempPlot3, 
+    width = 16, height = 9)
+  SaveFigure(file.path(project, cascade), "ipr", tempPlot4, 
     width = 16, height = 9)
   
 }
