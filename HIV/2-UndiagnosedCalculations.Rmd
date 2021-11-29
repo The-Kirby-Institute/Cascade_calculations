@@ -22,7 +22,7 @@ HIVcode <- file.path(basePath, "code")
 dataFolder <- file.path(basePath, "data")
 outputFolder <- file.path(basePath, "output")
 
-# Set working directory to source file loaction
+# Set working directory to source file location
 
 # Load standard libraries and options ----------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
@@ -79,17 +79,17 @@ if (cascadeFlag == "Otherexp") {
   
   if (getNewInfections) {
     # Copy exclude o/s results as well
-    ecdcFile1 <- file.path(outputFolder, projectFolder, "ECDC_models",
+    ecdcFile1Exclude <- file.path(outputFolder, projectFolder, "ECDC_models",
       paste0("All-", toString(analysisYear)), 
       paste0(ecdcResults, "_exclude"), 
       "results", "All_Result_main.csv")
     
-    ecdcFile2 <- file.path(outputFolder, projectFolder, "ECDC_models",
+    ecdcFile2Exclude <- file.path(outputFolder, projectFolder, "ECDC_models",
       paste0("All-", toString(analysisYear)), 
       paste0(ecdcResults, "_exclude"), "results",
       "All_Result_main_ConfIntervals.csv")
     
-    ecdcFileMain <- file.path(outputFolder, projectFolder, "ECDC_models",
+    ecdcFileMainExclude <- file.path(outputFolder, projectFolder, "ECDC_models",
       paste0("All-", toString(analysisYear)), 
       paste0(ecdcResults, "_exclude"), "results",
       paste0("All_Charts", ecdcType))
@@ -110,15 +110,15 @@ if (cascadeFlag == "Otherexp") {
   
   if (getNewInfections) {
     # Copy exclude o/s results as well
-    ecdcFile1 <- file.path(outputFolder, projectFolder, "ECDC_models",
+    ecdcFile1Exclude <- file.path(outputFolder, projectFolder, "ECDC_models",
       cascadeName, paste0(ecdcResults, "_exclude"),  "results", 
       paste0(ecdcGroup, "_Result_main.csv"))
     
-    ecdcFile2 <- file.path(outputFolder, projectFolder, "ECDC_models",
+    ecdcFile2Exclude <- file.path(outputFolder, projectFolder, "ECDC_models",
       cascadeName, paste0(ecdcResults, "_exclude"),  "results", 
       paste0(ecdcGroup, "_Result_main_ConfIntervals.csv"))
     
-    ecdcFileMain <- file.path(outputFolder, projectFolder, "ECDC_models",
+    ecdcFileMainExclude <- file.path(outputFolder, projectFolder, "ECDC_models",
       cascadeName, paste0(ecdcResults, "_exclude"),  "results", 
       paste0(ecdcGroup, "_Charts", ecdcType))
   }
@@ -146,9 +146,9 @@ if (!file.exists(finalFile1) || updateECDC) {
   file.copy(ecdcFileMain, finalFileMain, overwrite = TRUE)
   
   if (getNewInfections) {
-    file.copy(ecdcFile1, finalFile1Exclude, overwrite = TRUE)
-    file.copy(ecdcFile2, finalFile2Exclude, overwrite = TRUE)
-    file.copy(ecdcFileMain, finalFileMainExclude, overwrite = TRUE)
+    file.copy(ecdcFile1Exclude, finalFile1Exclude, overwrite = TRUE)
+    file.copy(ecdcFile2Exclude, finalFile2Exclude, overwrite = TRUE)
+    file.copy(ecdcFileMainExclude, finalFileMainExclude, overwrite = TRUE)
   }
 } 
 
