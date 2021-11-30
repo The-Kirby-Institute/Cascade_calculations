@@ -261,6 +261,31 @@ hivCobCum <- hivSet %>%
   spread(countrygroup, propnotifications) %>%
   rename(year = yeardiagnosis) 
 
+# Do cumulative country of birth by state as well for state cascades
+hivCobCumState <- hivSet %>% 
+  group_by(countrygroup, yeardiagnosis, state) %>% 
+  summarise(notifications = n()) %>% 
+  ungroup() %>% 
+  group_by(countrygroup, state) %>% 
+  mutate(cumnotifications = cumsum(notifications)) %>%
+  ungroup() %>% 
+  select(-notifications) %>%
+  group_by(state) %>%
+  spread(countrygroup, cumnotifications) %>%
+  select(-`<NA>`) %>%
+  gather("countrygroup", "cumnotifications", 3:6) %>%
+  mutate(cumnotifications = ifelse(is.na(cumnotifications), 0, 
+    cumnotifications)) %>%
+  group_by(yeardiagnosis, state) %>% 
+  mutate(propnotifications = cumnotifications / sum(cumnotifications)) %>%
+  mutate(propnotifications = ifelse(is.na(propnotifications), 0, 
+    propnotifications)) %>%
+  select(-cumnotifications) %>%
+  ungroup() %>% 
+  spread(countrygroup, propnotifications) %>%
+  rename(year = yeardiagnosis) 
+
+
 ```
 
 ```{r Annual proportion unique}
@@ -567,19 +592,32 @@ for (region in states) {
 # of diagnosis. These are predominantly overseas born people. Technically 
 # such people should not be included in the HIV registry as they are 
 # supposed to be excluded if they plan to leave. We have no data for other
-# jurisdictions or longer periods. We therefore only assume this movement 
-# occurs in NSW and has been mostly constant for the whole epidemic though
-# less in the early stages of the epidemic as there were less overseas born
-# diagnosed. NSW has had slightly less than 50% of all notifications in 
-# Australia. There is lots of uncertainty and limited data but 
-# We assume around 2% of all notifications move overseas which results in 
-# reasonble estimates overall.   
+# jurisdictions or longer periods. We assume this movement has occurred in 
+# other jurisdictions and been mostly constant for the whole epidemic though 
+# less in the early stages of the epidemic as there were less overseas born 
+# diagnosed. There is lots of uncertainty and limited data but we use the
+# data for Australian born and overseas born from NSW to estimate this
+# post-diagnosis movement for east state and territory and Australia overall. 
+  
+# Specific NSW estimates (hardcodede) -- based on 6-monthly follow-up data 
+# from NSW Health cumulatively over 2013-2018. Data for 2013-2018 in the 
+# local file 
+# ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_27Oct2021.xlsx.
+# The variables below store the cumulative emigration proportion for 
+# Australian born diagnosed and overseas born to end 2020. 
+ausBornEmigrate <- 0.00702
+osBornEmigrate <- 0.0857
 
-hivBaseRates$propstay <- rep(0.98, length(allYears))
-hivBaseRates$propstay_lower <- rep(0.96, length(allYears))
+# Overall estimates
+propAus <- hivCobCum$australia
+
+hivBaseRates$propstay <- propAus * (1 - ausBornEmigrate) + (1 - propAus) * 
+  (1 - osBornEmigrate)
+hivBaseRates$propstay_lower <- propAus * (1 - 2 * ausBornEmigrate) + (1 - propAus) * 
+  (1 - 2 * osBornEmigrate)
 hivBaseRates$propstay_upper <- rep(1, length(allYears))
 
-# Indigenous vs non-Indigenous
+# Adjust overall reates for Indigenous vs non-Indigenous
 nonAborigDiags <- hivResults$totalnotifications *
   hivAborigCum$non_indigenous
 aborigDiags <- hivResults$totalnotifications *
@@ -593,30 +631,7 @@ hivAdjustments$pstay_non_indigenous <- (1 - (1- hivBaseRates$propstay) *
 
 hivAdjustments$non_aborig_migration <- nonAborigMigrationFactor
 
-# Specific NSW estimates -- based on 6-monthly follow-up data from NSW
-# Health cumulatively over 2013-2018. Data for 2013-2018 in file
-# ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_27Oct2021.xlsx.
-# The variables below store the cumulative emigration proportion for 
-# Australian born diagnosed and overseas born to end 2020. 
-ausBornEmigrate <- 0.00702
-osBornEmigrate <- 0.0857
-
-propAus <- hivCobCum$australia
-propStayNSW <- propAus * (1 - ausBornEmigrate) + (1 - propAus) * 
-  (1 - osBornEmigrate)
-propStayLowerNSW <-  propAus * (1 - 2 * ausBornEmigrate) + (1 - propAus) * 
-  (1 - 2 * osBornEmigrate)
-propStayUpperNSW <- rep(1, length(allYears))
-
-hivAdjustments$pstay_nsw <- propStayNSW / hivBaseRates$propstay
-hivAdjustments$pstay_nsw_lower <- propStayLowerNSW /
-  hivBaseRates$propstay_lower
-hivAdjustments$pstay_nsw_upper <- hivBaseRates$propstay_upper /
-  hivBaseRates$propstay_upper
-
 # Specific population estimates for Australian born and overseas born.
-# Currently these are  in
-# NSW
 hivAdjustments$pstay_aus <- rep((1 - ausBornEmigrate), length(allYears)) / 
   hivBaseRates$propstay
 hivAdjustments$pstay_aus_lower <- rep((1 - 2 * ausBornEmigrate), 
@@ -633,11 +648,29 @@ hivAdjustments$pstay_os_lower <- rep((1 - 2 * osBornEmigrate),
 hivAdjustments$pstay_os_upper <- rep(1, length(allYears)) / 
   hivBaseRates$propstay_upper
 
-# Specific estimates for non-NSW states - assume no post-diagnosis
-# movement Based on the NSW data compared to our national assumption
-# almost all the post-diagnosis movement must come from NSW
-propStayVic <- rep(1, length(allYears))
-propStayLowerVic <- rep(1, length(allYears))
+# NSW estimates
+propAusNSW <- filter(hivCobCumState, state == "nsw")$australia 
+
+propStayNSW <- propAusNSW * (1 - ausBornEmigrate) + (1 - propAusNSW) * 
+  (1 - osBornEmigrate)
+propStayLowerNSW <-  propAusNSW * (1 - 2 * ausBornEmigrate) + (1 - propAusNSW) * 
+  (1 - 2 * osBornEmigrate)
+propStayUpperNSW <- rep(1, length(allYears))
+
+hivAdjustments$pstay_nsw <- propStayNSW / hivBaseRates$propstay
+hivAdjustments$pstay_nsw_lower <- propStayLowerNSW /
+  hivBaseRates$propstay_lower
+hivAdjustments$pstay_nsw_upper <- hivBaseRates$propstay_upper /
+  hivBaseRates$propstay_upper
+
+# Victorian estimates - Victoria had no notifications in 1981 and 1982
+propAusVic <- FillDataFrame(1980:2020, filter(hivCobCumState, state == "vic"), 
+  cumulative = TRUE)$australia 
+
+propStayVic <- propAusVic * (1 - ausBornEmigrate) + (1 - propAusVic) * 
+  (1 - osBornEmigrate)
+propStayLowerVic <-  propAusVic * (1 - 2 * ausBornEmigrate) + (1 - propAusVic) * 
+  (1 - 2 * osBornEmigrate)
 propStayUpperVic <- rep(1, length(allYears))
 
 hivAdjustments$pstay_vic <- propStayVic / hivBaseRates$propstay
@@ -645,7 +678,6 @@ hivAdjustments$pstay_vic_lower <- propStayLowerVic /
   hivBaseRates$propstay_lower
 hivAdjustments$pstay_vic_upper <- propStayUpperVic /
   hivBaseRates$propstay_upper
-
 
 ```
 
