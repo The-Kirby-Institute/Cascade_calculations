@@ -37,8 +37,8 @@ LoadLibrary(readxl)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2020
 saveResults <- TRUE 
-projectFolder <- "ASR_2021"
-cascadeFlag <- "All" # minus year
+projectFolder <- "Victorian_Estimates_2020"
+cascadeFlag <- "Vic" # minus year
 ecdcResults <- "exposure"
 ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky 
 # file name issues.

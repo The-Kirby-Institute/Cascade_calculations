@@ -56,7 +56,7 @@ saveResults <- TRUE
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "ASR_2021" # "." for main output folder
+projectOutput <- "Victorian_Estimates_2020" # "." for main output folder
                             # "HIV_Cascade_Paper" for paper
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
