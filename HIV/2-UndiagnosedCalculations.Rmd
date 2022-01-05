@@ -37,15 +37,15 @@ LoadLibrary(readxl)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2020
 saveResults <- TRUE 
-projectFolder <- "Victorian_Estimates_2020"
-cascadeFlag <- "Vic" # minus year
+projectFolder <- "ASR_2021"
+cascadeFlag <- "All" # minus year
 ecdcResults <- "exposure"
 ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky 
-# file name issues.
+                   # file name issues.
 updateECDC <- TRUE
 
 getNewInfections <- FALSE # can only be TRUE if include and exclude ECDC
-# have been run
+                          # have been run
 
 # Produce cascadeName from the flag and analysis year. 
 if (analysisYear <= 2016) {
