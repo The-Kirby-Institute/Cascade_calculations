@@ -6,8 +6,7 @@ This project repository contains all the code and cleaned (publicly available) i
 
 This repository currently contains materials for two separate cascades: the Australian HIV cascade and the Australian Chlamydia cascade. This project also provides estimates for a viral hepatitis C (HCV) cascade but materials for this cascade are stored locally and not available in this online repository. Cascade estimates obtained from this project have been reported in the ASR since 2015. Additional calculations related to these cascades have also been used to produce a number of publications listed below. 
 
-All calculations are primarily conducted using R (currently version 3.4.3) with associated packages (forcats 0.3.0; stringr 1.3.0; dplyr 0.7.4; purrr 0.2.4; readr 1.1.1; readxl 1.0.0; tidyr 0.8.0; tibble 1.4.2; ggplot2 2.2.1; 
-tidyverse 1.2.1; Hmisc 4.1.1; Formula 1.2.2; survival 2.41.3; lattice 0.20.35; gridExtra 2.3; RColorBrewer 1.1.2; scales 0.5.0; captioner 2.2.3; cowplot 0.9.2). Some simple calculations are conducted using Microsoft Excel. Many of the data files required to run the scripts are not publicly available and have been excluded from the repository (but can be available on Request). Please report an issue if you want to run the code or contact Rgray@kirby.unsw.edu.au. 
+All calculations are primarily conducted using R (currently version 4.1.1) with associated packages (RColorBrewer 1.1.2; mice 3.13.0; gridExtra 2.3; captioner 2.2.3; cowplot 1.1.1; knitr 1.36; scales 1.1.1; readxl 1.3.1; forcats 0.5.1; stringr 1.4.0; dplyr 1.0.7; purrr 0.3.4; readr 2.0.2; tidyr 1.1.4; tibble 3.1.5; ggplot2 3.3.5; tidyverse 1.3.1). Some simple calculations are conducted using Microsoft Excel. Many of the data files required to run the scripts are not publicly available and have been excluded from the repository (but can be available on Request). Please report an issue if you want to run the code or contact Rgray@kirby.unsw.edu.au. 
 
 **Repository owner:** Richard T. Gray 
 
@@ -76,8 +75,8 @@ Contains all the code and materials used for the Australian HIV diagnosis and ca
 The following publications are associated with this project and used code in this repository to generate the results and figures. 
 
 - The Kirby Institute. HIV, viral hepatitis and sexually transmissible infections in Australia: Annual Surveillance Report. The Kirby Institute, UNSW Australia, Sydney NSW 2052.
-	- For the years 2015-2018. Available from the [Kirby Institute website](https://kirby.unsw.edu.au/report-type/annual-surveillance-reports)
-	- The HIV and Chlamydia cascade estimates were produced using [version 1.0_2015_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v1.0_2015_ASR) in 2015, [version v2.0_2016_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v2.0_2016_ASR) in 2016, [version 3.0_2017_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR) in 2017, and [version v3.6_2018_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.6_2018_ASR) in 2018. 
+	- For the years 2015-2020. Available from the [Kirby Institute website](https://kirby.unsw.edu.au/report-type/annual-surveillance-reports)
+	- The HIV and Chlamydia cascade estimates were produced using [version 1.0_2015_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v1.0_2015_ASR) in 2015, [version v2.0_2016_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v2.0_2016_ASR) in 2016, [version 3.0_2017_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR) in 2017, [version v3.6_2018_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.6_2018_ASR) in 2018, [version v4.15_ASR_2019](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.15_ASR_2019) in 2019, [version v4.2_ASR_2020](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.2_ASR_2020) in 2020, and [v4.3_ASR_2021](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.3_ASR_2021) in 2021. 
 <br></br>
 - B Hajarizadeh, J Grebely, H McManus, C Estes, H Razavi, RT Gray, et al. Chronic hepatitis C burden and care cascade in Australia in the era of interferon-based treatment. Journal of gastroenterology and hepatology 2017; 32:229–236.
 <br></br>
@@ -94,15 +93,14 @@ The following publications are associated with this project and used code in thi
 <br></br>
 - RT Gray, D Callander, J Hocking, S McGregor, H McManus, A Dyda, C Moreira, S Braat, B Hngel, J Ward, DP Wilson, B Donovan, J Kaldor, RJ Guy. population-level diagnosis and care cascade for genital chlamydia in Australia. Sexually Transmitted Infections 2020;96:131–36.
     - Submitted paper results produced using [version 3.4_sti_cascade_paper](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.4_sti_cascade_paper); doi:[10.5281/zenodo.1283746](http://doi.org/10.5281/zenodo.998280)
-    - Published results produced using [version v3.8_sti_cascade_paper-v2](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.8_sti_cascade_paper-v2); doi:[10.5281/zenodo.2402486](http://doi.org/10.5281/zenodo.2402486)
+- Published results produced using [version v3.8_sti_cascade_paper-v2](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.8_sti_cascade_paper-v2); doi:[10.5281/zenodo.2402486](http://doi.org/10.5281/zenodo.2402486)
 <br></br>
 - T Marukutira, RT Gray, C Douglass, C El-Hayek, C Moreira, J Asselin, B Donovan, et al. Gaps in the HIV Diagnosis and Care Cascade for Migrants in Australia, 2013–2017: A Cross-Sectional Study. PLOS Medicine 2020;17:e1003044. 
     - Published results produced using [version v4.1_migrant_cascade_paper](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.1_migrant_cascade_paper); doi:[10.5281/zenodo.3600660](http://doi.org/10.5281/zenodo.3600660)
 <br></br>
-- RT Gray et al. The Australia HIV cascade. _In preparation_ 
-    - Manuscript results produced using [version v3.6_2018_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.6_2018_ASR)
-
-
-
-
+PG Patel, P Keen, H McManus, T Duck, D Callander, C Selvey, C Power, et al. Increased Targeted HIV Testing and Reduced Undiagnosed HIV Infections among Gay and Bisexual Men. HIV Medicine 2021;22:605–16. https://doi.org/10.1111/hiv.13102.
+    - Results produced using [version v4.15_ASR_2019](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.15_ASR_2019) 
+<br></br>
+JH Stephens,RT Gray, R Guy, T Vickers, J Ward. A HIV Diagnosis and Treatment Cascade for Aboriginal and Torres Strait Islander Peoples of Australia. AIDS Care 2021. https://doi.org/10.1080/09540121.2021.2001416.
+    - Results produced using [version v4.15_ASR_2019](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.15_ASR_2019) 
 
