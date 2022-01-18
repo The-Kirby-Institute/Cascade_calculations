@@ -384,7 +384,8 @@ absMigration <- read.csv(file.path(mainDataFolder,
   paste0("ABS_migration_clean-", analysisYear, ".csv")), 
   as.is = 1)
 if (analysisYear >= 2017) {
-  # Given issues with 2017 data for permanent removals use 2016 data
+  # Given issues with >= 2017 data for permanent removals use 2016 data and
+  # then add estimates up to the current year
   absDeparts <- read.csv(file.path(mainDataFolder, 
     paste0("ABS_departures_clean-2016.csv")),
     as.is = 1)
@@ -401,15 +402,34 @@ absInterstate <- read.csv(file.path(mainDataFolder,
 # Base migration rate ----------------------------------------------------
 
 if (analysisYear >= 2017) {
-  # Use 2016 data and then extrapolate
+  # Use 2016 data and then estimate rate for following years. Estimates
+  # are generated using the NOM Departures data with an adjustment factor 
+  # estimated using the data for 2004-2016. These estimates and associated
+  # calculations are provided in the file:
+  #  ~\HIV\data\Migration_Permanent_NOM_Comparison.xlx
+  #  This file needs updating each year
+  
   absDeparts <- mutate(absDeparts, migrate = permanent / erp)
   mrate <- absDeparts$migrate
   
-  # At this stage use 2016 migration rate for future years
+  # Read in Excel file and extract estimates for permanent departure rate 
+  # after 2017
+  estimatedMrate <- read_xlsx(file.path(dataFolder,
+    "Migration_Permanent_NOM_Comparison.xlsx"), skip = 3) %>%
+    select(year = Year, mrate = "Base (Permanent)") 
   
-  mrate <- c(mrate, rep(tail(mrate, 1), 
-    length(allYears) - length(startYear:2016)))
-
+  if (tail(estimatedMrate$year, 1) < analysisYear) {
+    stop("Need to update estimated migration rate")
+  }
+  
+  estimatedMrate <- estimatedMrate %>%
+    filter(year >= 2017, year <= analysisYear)
+  
+  # Append estimateMrate to mrate
+  # mrate <- c(mrate, rep(tail(mrate, 1), 
+  #   length(allYears) - length(startYear:2016)))
+  mrate <- c(mrate, estimatedMrate$mrate)
+  
 } else {
   absDeparts <- mutate(absDeparts, migrate = permanent / erp)
   mrate <- absDeparts$migrate
