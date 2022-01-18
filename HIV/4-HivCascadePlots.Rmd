@@ -77,7 +77,7 @@ startYear <- resultsYear - minYear + 1
 
 # Set up project - If ASR plot all populations otherwise just plot 
 # specified cascade
-projectName <- "ASR_2021" #"HIV_Cascade_Paper"
+projectName <- "HIV_Cascade_Paper" #"ASR_2021" "HIV_Cascade_Paper"
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadePop <- "all"
 
@@ -95,6 +95,9 @@ if (projectName %in% c("ASR_2021", "ASR_2020", "ASR_2019", "ASR_2018",
   # ASR do many populations otherwise do the specified one
   cascadePop <- "all" 
   asrCascades <- TRUE
+} else if (projectName == "HIV_Cascade_Paper") {
+  asrCascades <- TRUE # Unless ASR_2016 etc
+  newInfectsPlots <- TRUE
 } else {
   # Turn off newInfectsPlots
   asrCascades <- FALSE # Unless ASR_2016 etc
@@ -253,6 +256,8 @@ plotBarAll <- ggplot(data = resultsAllYear, aes(x = stage, y = value)) +
   ylab("Number of people") + xlab("") +  
   PlotOptions()
 
+plotBarAll
+
 if (pubPlots) {
   # Create an additional stacked bar chart for publications removing 
   # retained stage
@@ -370,6 +375,8 @@ plotStagesAll <- ggplot(data = resultsAll, aes(x = year, y = value)) +
   scale_y_continuous(labels = comma) + 
   ylab("Number of people") + xlab("Year") +  
   PlotOptions()
+
+plotStagesAll
 
 if (savePlots) {
   ggsave(file.path(figFolder, paste("HIVcascade-Stages-", 
@@ -651,6 +658,8 @@ if (newInfectsPlots) {
     ylab("New infections") + xlab("Year") +
     PlotOptions()
   
+  plotInfects
+  
   # Plot infections per plhiv
   plotInfectsRate <- ggplot(data = infectsData, aes(x = year)) +
     geom_ribbon(aes(ymin = 100 * lower / plhivUpper,
@@ -662,6 +671,8 @@ if (newInfectsPlots) {
     expand_limits(y = 0) +
     ylab("New infections\nper 100 PLHIV") + xlab("Year") +
     PlotOptions()
+  
+  plotInfectsRate
   
   # Add number of notifications/diagnoses unadjusted for duplicates excluding 
   # previously diagnosed overseas for comparison
@@ -701,6 +712,8 @@ if (newInfectsPlots) {
     ylab(paste0("Relative to ", infectsYear)) + xlab("Year") +
     PlotOptions() + 
     theme(legend.position = "right")
+  
+  plotRelative
   
   # Produce a nice combined plot
   plotCombined <- ggdraw() +
