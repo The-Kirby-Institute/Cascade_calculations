@@ -6,7 +6,6 @@
 
 # Load packages
 require(tidyverse, quietly = TRUE)
-require(LeftysRpkg, quietly = TRUE)
 require(scales, quietly = TRUE)
 
 # Setup directories
@@ -16,7 +15,7 @@ outputFolder <- file.path(basePath, "output")
 ```
 
 ```{r Options}
-projectName <- "ASR_2021" #"Diagnosed_Fraction_2021"
+projectName <- "HIV_Cascade_Paper" #"ASR_2021" "Diagnosed_Fraction_2021"
 project <- file.path(basePath, "output", projectName)
 
 cascadeList <- c("All-2020")
@@ -214,13 +213,13 @@ for (cascade in cascadeList) {
     max(results[[cascade]]$ipr_upper), "ipr")
   
   
-  SaveFigure(file.path(project, cascade), "new_infections", tempPlot1, 
+  ggsave(file.path(project, cascade, "new_infections.png"), tempPlot1, 
+    width = 16, height = 9, units = "cm")
+  ggsave(file.path(project, cascade, "percent_undiagnosed.png"), tempPlot2, 
     width = 16, height = 9)
-  SaveFigure(file.path(project, cascade), "percent_undiagnosed", tempPlot2, 
+  ggsave(file.path(project, cascade, "ydf.png"), tempPlot3, 
     width = 16, height = 9)
-  SaveFigure(file.path(project, cascade), "ydf", tempPlot3, 
-    width = 16, height = 9)
-  SaveFigure(file.path(project, cascade), "ipr", tempPlot4, 
+  ggsave(file.path(project, cascade, "ipr.png"), tempPlot4, 
     width = 16, height = 9)
   
 }
