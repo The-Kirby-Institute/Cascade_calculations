@@ -147,7 +147,8 @@ if (infectsCalculation == "include") {
   
 }
 
-# Load cascade indicator estimates 
+# Load cascade indicator estimates - might not need as we can recalculate 
+# separately 
 inputFileIndicators<- file.path(resultsFolder, cascadeName,
   paste0("cascadeIndicators.csv"))
 hivCascadeIndicators <- read.csv(inputFileIndicators) 
@@ -409,20 +410,11 @@ if (savePlots) {
 
 # Trends in the UNAIDS 90-90-90 targets and Cascade Indicators
 
-This section looks at the trends in the UNAIDS 90-90-90 targets. We 
-initially did a logistic regression using a year as an independent
-covariate treating the numerator and denominator as "success" or"failures",
-where the "successes" are divided by the total counts as described in this 
-blog post: http://rcompanion.org/handbook/J_02.html.
-
-As for the Poisson models for the main cascade steps we calculated the 
-pseudo-R^2 using the rsq package based on the calculation in the paper: 
-Cameron & Windmeijer, An R-squared measure of goodness of fit for some 
-common nonlinear regression model, Journal of Econometrics, 77 (1997) 
-329-342.
-
-We compared this to a standard linear regression fit which allowed us to 
-estimate the percentage point increase each year
+This section looks at the trends in the UNAIDS 90-90-90 targets and other
+cascade indicators which are proportions or ratios. We used a Poisson model
+with an offset to get a rate ratio. For each gap we obtain linear, logistic, 
+and exponential trends for comparison but used the exponential models for 
+ease of interpretability. 
 
 ```{r Trends 90-90-90}
 # This chunk looks at the trends in the UNAIDS 90-90-90 targets.
@@ -449,10 +441,10 @@ trendData <- bind_rows(trendData, tibble(year = year,
 trendData <- bind_rows(trendData, tibble(year = year,
   stage = "propoverall", value = overallProp, lower = NA, upper = NA))
 
-if (savePlots) {
-  write_csv(trendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
-    toString(startYear), "-", toString(resultsYear), ".csv")))
-}
+# if (savePlots) {
+#   write_csv(trendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
+#     toString(startYear), "-", toString(resultsYear), ".csv")))
+# }
 
 # Linear models -----------------------------------------------------------
 # First simple linear models which allow us to estimate the percentage 
@@ -481,12 +473,6 @@ intervallmdiags <- confint(diagslmModel, "year", type = "Wald")
 intervallmart <- confint(treatedlmModel, "year", type = "Wald")
 intervallmsuppressed <- confint(suppressedlmModel, "year", type = "Wald")
 intervallmoverall <- confint(overalllmModel, "year", type = "Wald")
-
-# R2-values (unadjusted)
-# pseudoR2lmdiags <- rsq(diagslmModel)
-# pseudoR2lmart <- rsq(treatedlmModel)
-# pseudoR2lmsuppressed <- rsq(suppressedlmModel)
-# pseudoR2lmoverall <- rsq(overalllmModel)
 
 # Logistic models ---------------------------------------------------------
 # Fit logistic curve to each trend to see if it produces a better fit. Feel
@@ -523,14 +509,12 @@ p_art <- summary(treatedModel)$coefficients["year", "Pr(>|z|)"]
 p_suppressed <- summary(suppressedModel)$coefficients["year", "Pr(>|z|)"]
 p_overall <- summary(overallModel)$coefficients["year", "Pr(>|z|)"]
 
-# Calculate the pseudo-R^2 
-# pseudoR2art <- rsq(treatedModel, type = "kl")
-# pseudoR2suppressed <- rsq(suppressedModel, type = "kl")
-# pseudoR2overall <- rsq(overallModel, type = "kl")
-
 # Poisson models ----------------------------------------------------------
 # Use a Poisson model with an offset to produce a rate ratio for the change 
-# in the proportion. 
+# in the proportion. These are the main models we will use
+
+trendModelsProp <- list()
+trendPlotsProp <- list()
 
 # Set-up data for Poisson/exponential models
 expTrendData <- trendData %>% 
@@ -538,15 +522,21 @@ expTrendData <- trendData %>%
   mutate(value = round(value)) %>%
   tidyr::spread(stage, value)
 
-# Models - using denominator as an offset
-diagsExpModel <- glm(pldhiv ~ year, offset = log(infected), 
+# Models - using denominator as an offset - explicitly add location of of 
+# offset so segmented fits work: https://stackoverflow.com/questions/19034403/r-package-segmented-with-an-offset-term
+diagsExpModel <- glm(pldhiv ~ year, offset = log(expTrendData$infected), 
   data = expTrendData, family = "poisson")
-treatedExpModel  <- glm(numART ~ year, offset = log(pldhiv), 
+treatedExpModel  <- glm(numART ~ year, offset = log(expTrendData$pldhiv), 
   data = expTrendData, family = "poisson")
-suppressedExpModel  <- glm(suppressed ~ year, offset = log(numART), 
+suppressedExpModel  <- glm(suppressed ~ year, offset = log(expTrendData$numART), 
   data = expTrendData, family = "poisson")
-overallExpModel  <- glm(suppressed ~ year, offset = log(infected), 
+overallExpModel  <- glm(suppressed ~ year, offset = log(expTrendData$infected), 
   data = expTrendData, family = "poisson")
+
+trendModelsProp[["diagnosedProp"]] <- diagsExpModel
+trendModelsProp[["treatedProp"]] <- treatedExpModel
+trendModelsProp[["suppressedProp"]] <- suppressedExpModel
+trendModelsProp[["overallProp"]] <- overallExpModel
 
 # Coefficients for annual change (as rate ratio)
 coeffExpdiags <- exp(coef(diagsExpModel)["year"])
@@ -569,16 +559,11 @@ intervalExpsuppressed <- exp(confint(suppressedExpModel, "year",
   type = "Wald"))
 intervalExpoverall <- exp(confint(overallExpModel, "year", type = "Wald"))
 
-# R2-values (unadjusted)
-# pseudoR2Expdiags <- rsq(diagsExpModel)
-# pseudoR2Expart <- rsq(treatedExpModel)
-# pseudoR2Expsuppressed <- rsq(suppressedExpModel)
-# pseudoR2Expoverall <- rsq(overallExpModel)
-
 # Plots of estimates and trends -------------------------------------------
 # Plot the proportion, linear model and logistic model
 # Function for plotting
-plotProp <- function(proportion, lmmodel, logmodel, expmodel, expoffset, label) {
+plotPropFull <- function(proportion, lmmodel, logmodel, expmodel, expoffset,
+  label) {
   propPlot <- ggplot(data = data.frame(year = year), aes(x = year)) + 
     geom_line(aes(y = proportion, color = "prop")) + 
     geom_point(aes(y = proportion), color = asrcols[2]) +
@@ -595,28 +580,60 @@ plotProp <- function(proportion, lmmodel, logmodel, expmodel, expoffset, label) 
     scale_y_continuous(labels = percent) + 
     coord_cartesian(ylim = c(0,1)) +
     ylab(label) + xlab("Year") +  
-    PlotOptions() # + 
-    # geom_text(x = 2010, y = 0.3, label = paste("Unadjusted R^2 (linear):",
-    #   toString(round(rsq(lmmodel, type = "kl"), digits = 4))), size = 3) +
-    # geom_text(x = 2010, y = 0.2, label = paste("Pseudo-R^2 (logistic):",
-    #   toString(round(rsq(logmodel, type = "kl"), digits = 4))), size = 3) +
-    # geom_text(x = 2010, y = 0.1, label = paste("Pseudo-R^2 (exponential):",
-    #   toString(round(rsq(expmodel, type = "kl"), digits = 4))), size = 3)
+    PlotOptions() 
+
+  return(propPlot)
+}
+
+plotProp <- function(proportion, expmodel, expoffset, label, trend = TRUE) {
+  propPlot <- ggplot(data = data.frame(year = year), aes(x = year)) + 
+    geom_line(aes(y = proportion), color = asrcols[2]) + 
+    geom_point(aes(y = proportion), color = asrcols[2]) +
+    scale_x_continuous(breaks = seq(startYear,                        
+      resultsYear, by = 3)) +
+    scale_y_continuous(labels = percent) + 
+    coord_cartesian(ylim = c(0,1)) +
+    ylab(label) + xlab("Year") +  
+    PlotOptions() 
+  
+  if (trend) {
+  propPlot <- propPlot + 
+    geom_line(aes(y = fitted(expmodel)/expoffset), colour = "black")
+  }
+
   return(propPlot)
 }
 
 # Produce plots
-diagsPropPlot <- plotProp(diagnosedProp, diagslmModel, diagsModel, 
+diagsPropPlotFull <- plotPropFull(diagnosedProp, diagslmModel, diagsModel, 
   diagsExpModel, expTrendData$infected, "Percentage of\nPLHIV diagnosed")
-treatedPropPlot <- plotProp(artProp, treatedlmModel, treatedModel,
+treatedPropPlotFull <- plotPropFull(artProp, treatedlmModel, treatedModel,
   treatedExpModel, expTrendData$pldhiv, "Percentage diagnosed\non ART")
-suppressedPropPlot <- plotProp(supProp, suppressedlmModel, 
+suppressedPropPlotFull <- plotPropFull(supProp, suppressedlmModel, 
   suppressedModel, suppressedExpModel, expTrendData$numART,
   "Percentage on\nART suppressed")
-overallPropPlot <- plotProp(overallProp, overalllmModel, 
+overallPropPlotFull <- plotPropFull(overallProp, overalllmModel, 
   overallModel, overallExpModel, expTrendData$infected, 
   "Percentage on\nART suppressed")
 
+diagsPropPlot <- plotProp(diagnosedProp, diagsExpModel, 
+  expTrendData$infected, "Percentage of\nPLHIV diagnosed", 
+  trend = plotTrends)
+treatedPropPlot <- plotProp(artProp, treatedExpModel, 
+  expTrendData$pldhiv, "Percentage diagnosed\non ART", 
+  trend = plotTrends)
+suppressedPropPlot <- plotProp(supProp, suppressedExpModel, 
+  expTrendData$numART, "Percentage on\nART suppressed", 
+  trend = plotTrends)
+overallPropPlot <- plotProp(overallProp, overallExpModel,
+  expTrendData$infected, "Percentage on\nART suppressed", 
+  trend = plotTrends)
+
+trendPlotsProp[["diagnosedProp"]] <- diagsPropPlot
+trendPlotsProp[["treatedProp"]] <- treatedPropPlot
+trendPlotsProp[["suppressedProp"]] <- suppressedPropPlot
+trendPlotsProp[["overallProp"]] <- overallPropPlot
+  
 # Add linear and Poisson model results to trendCascade
 propTrends <- tibble(stage = c("propdiagnosed", "proptreated",
   "propsuppressed", "propoverall"),
@@ -627,8 +644,6 @@ propTrends <- tibble(stage = c("propdiagnosed", "proptreated",
     intervallmoverall[1]),
   upper = c(intervallmdiags[2], intervallmart[2], intervallmsuppressed[2],
     intervallmoverall[2]),
-  # pseudoR2 = c(pseudoR2lmdiags, pseudoR2lmart, pseudoR2lmsuppressed, 
-  #   pseudoR2lmoverall),
   model = "linear")
 
 propTrendsExp <- tibble(stage = c("propdiagnosed", "proptreated",
@@ -640,8 +655,6 @@ propTrendsExp <- tibble(stage = c("propdiagnosed", "proptreated",
     intervalExpoverall[1]),
   upper = c(intervalExpdiags[2], intervalExpart[2], intervalExpsuppressed[2],
     intervalExpoverall[2]),
-  # pseudoR2 = c(pseudoR2Expdiags, pseudoR2Expart, pseudoR2Expsuppressed, 
-    # pseudoR2Expoverall),
   model = "poisson-offset")
 
 trendCascadeProp <- bind_rows(propTrends, propTrendsExp)
@@ -651,14 +664,12 @@ trendCascadeProp <- bind_rows(propTrends, propTrendsExp)
 legend <- get_legend(diagsPropPlot)
 
 # Update group plot
-combinedPropPlot <- grid.arrange(legend, 
+combinedPropPlot <- grid.arrange(
   diagsPropPlot + theme(legend.position="none"), 
   treatedPropPlot + theme(legend.position="none"),
   suppressedPropPlot + theme(legend.position="none"), 
-  overallPropPlot + theme(legend.position="none"),
-  ncol = 2, nrow = 3, 
-  layout_matrix = rbind(c(1, 1), c(2, 3), c(4, 5)),
-  widths = c(4, 4), heights = c(0.8, 3.1, 3.1))
+  overallPropPlot + theme(legend.position="none"), 
+  ncol = 2, nrow = 2) 
 
 stagesPropPlot <- ggdraw() +
   draw_plot(combinedPropPlot, 0, 0, 1, 1) +
@@ -678,11 +689,43 @@ if (savePlots) {
 
 ```
 
+```{r Trends indicators}
+# This chunk looks at the trends in cascade indicators
+# 
+
+# Produce the proportions
+diagnosedProp <- filter(trendData, stage == "pldhiv")$value / 
+  filter(trendData, stage == "infected")$value
+artProp <- filter(trendData, stage == "numART")$value / 
+  filter(trendData, stage == "pldhiv")$value
+supProp <- filter(trendData, stage == "suppressed")$value / 
+  filter(trendData, stage == "numART")$value
+overallProp <- filter(trendData, stage == "suppressed")$value / 
+  filter(trendData, stage == "infected")$value
+
+year <- startYear:resultsYear
+
+# Add to trend data and save
+trendData <- bind_rows(trendData, tibble(year = year,
+  stage = "propdiagnosed", value = diagnosedProp, lower = NA, upper = NA))
+trendData <- bind_rows(trendData, tibble(year = year,
+  stage = "proptreated", value = artProp, lower = NA, upper = NA))
+trendData <- bind_rows(trendData, tibble(year = year,
+  stage = "propsuppressed", value = supProp, lower = NA, upper = NA))
+trendData <- bind_rows(trendData, tibble(year = year,
+  stage = "propoverall", value = overallProp, lower = NA, upper = NA))
+
+# if (savePlots) {
+#   write_csv(trendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
+#     toString(startYear), "-", toString(resultsYear), ".csv")))
+# }
+```
+
 ```{r Save trends objects}
 # Save main trend storage variables for ease of loading later
-save(trendData, diagsData, newInfects, 
+save(trendData,
   file = file.path(resultsFolder, cascadeName, "CascadeTrendData.Rda"))
-save(trendCascade, trendModels, trendCascadeProp, 
+save(trendCascade, trendModels, trendCascadeProp, trendModelsProp, 
   file = file.path(resultsFolder, cascadeName, "CascadeTrendModels.Rda"))
 
 ```
