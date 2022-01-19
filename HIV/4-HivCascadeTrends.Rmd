@@ -179,14 +179,9 @@ So dropped these tests and just stuck with the pseudo-R^2.
 # exponentiated to represent a rate ratio. 
 
 # Notifications ----------------------------------------------------------
-# LoadLibrary(rsq) # load the rsq package for pseudo-R^2 calculation
 
-# Notifications excluding people previously diagnosed overseas -
-# also explored including those diagnosed overseas and from 1999 the 
-# bottom of the epidemic but it didn't really illuminate much other than 
-# the growing number of notifications in those previously diagnosed 
-# overseas. 
-diagsData <- hivSet %>%
+# Notifications including and excluding people previously diagnosed overseas
+diagsDataExclude <- hivSet %>%
   filter(is.na(previ_diag_overseas)) %>%
   group_by(yeardiagnosis) %>%
   summarise(diags = n()) %>%
@@ -194,24 +189,45 @@ diagsData <- hivSet %>%
   filter(year >= startYear) %>%
   mutate(overseas = "no")
 
-trendDiags <- glm(diags ~ year, data = diagsData, family = "poisson")
-coeff <- exp(coef(trendDiags)[2])
-p_value <- summary(trendDiags)$coefficients["year", "Pr(>|z|)"]
-interval <- exp(confint(trendDiags, "year", type = "Wald"))
+diagsDataInclude <- hivSet %>%
+  group_by(yeardiagnosis) %>%
+  summarise(diags = n()) %>%
+  rename(year = yeardiagnosis) %>%
+  filter(year >= startYear) %>%
+  mutate(overseas = "yes")
 
-diagsPlot <- ggplot(data = diagsData, aes(x = year, y = diags)) +
-  geom_line(color = asrcols[2]) + 
-  geom_point(color = asrcols[2]) +
-  geom_line(aes(y = predict(trendDiags, type = "response")), 
+diagsData <- dplyr::bind_rows(diagsDataExclude, diagsDataInclude)
+
+trendDiagsExclude <- glm(diags ~ year, data = diagsDataExclude, 
+  family = "poisson")
+coeff <- exp(coef(trendDiagsExclude)[2])
+p_value <- summary(trendDiagsExclude)$coefficients["year", "Pr(>|z|)"]
+interval <- exp(confint(trendDiagsExclude, "year", type = "Wald"))
+
+trendDiagsInclude <- glm(diags ~ year, data = diagsDataInclude, 
+  family = "poisson")
+coeff <- exp(coef(trendDiagsInclude)[2])
+p_value <- summary(trendDiagsInclude)$coefficients["year", "Pr(>|z|)"]
+interval <- exp(confint(trendDiagsInclude, "year", type = "Wald"))
+
+diagsPlot <- ggplot(data = diagsDataExclude, aes(x = year)) +
+  geom_line(aes(y = diags, colour = "exclude")) + 
+  geom_line(aes(y = predict(trendDiagsExclude, type = "response")), 
     colour = "black") +
+  geom_line(data = diagsDataInclude, aes(y = diags, colour = "include")) + 
+  geom_line(aes(y = predict(trendDiagsInclude, type = "response")), 
+    colour = "black") +
+  scale_colour_manual(name = "Notifications", values = c("red", "blue"),
+    breaks = c("include", "exclude"), 
+    labels = c("including previously diagnosed overseas", 
+      "excluding previously diagnosed overses")) +
   coord_cartesian(ylim = c(0, 1500)) +
   expand_limits(y = 0) +
   scale_y_continuous(labels = comma) +
   ylab("Annual notifications") + xlab("Year") +
-  PlotOptions() # +
-  # geom_text(x = 2010, y = 200, label = paste("Pseudo-R^2:",
-  #   toString(round(rsq(trendDiags, type = "kl"), digits = 4))), 
-    # size = 3)
+  PlotOptions() 
+
+diagsPlot
 
 if (savePlots) {
   # Save the diagnoses plot
@@ -240,9 +256,6 @@ coeffInfects <- exp(coef(trendInfects)[2])
 intervalInfects <- exp(confint(trendInfects, "year", type = "Wald"))
 p_valueInfects <- summary(trendInfects)$coefficients["year", "Pr(>|z|)"]
 
-
-# Diagnostics
-# pseudoR2Infects <- rsq(trendInfects, type = "kl")
 
 # Infections plot with diagnoses added
 infectsPlot <- ggplot(data = newInfects, aes(x = year, 
@@ -350,6 +363,8 @@ trendCascade$pvalue[9] <- p_valueInfects
 trendCascade$lower[9] <- intervalInfects[1]
 trendCascade$upper[9] <- intervalInfects[2]
 # trendCascade$pseudoR2[9] <- pseudoR2Infects
+
+trendModels[["infections"]] <- trendInfects
 
 # Store plots ------------------------------------------------------------
 PlotTrend <- function(data, models, indicator) {
@@ -1020,35 +1035,45 @@ the estimate from 2007 to 2013. This produced no change in the fitted
 curve. 
 
 ```{r Segmented trends}
-# This chuck is used to explore the trend in diagnosed not on ART which 
-# seems to have a change point. However, we try to find a change point for 
-# each stage. We use the segmented package and with Poisson models. Note
+# This chuck is used to explore the change in trends for each cascade step and 
+# gap. Some seem to have a change point. We try to find a change point for 
+# each stage using the segmented package and with Poisson models. Note
 # if one change point is not found using the segmented package then the 
 # Poisson model is plotted instead (suggests it is a better model). 
 
 LoadLibrary(segmented)
 
-segmentStages <- c("undiagnosed", "noART", "unsuppressed")
+segmentStages <- names(trendModels)
 
 segCI <- function(est, stdErr) {
   return(c(est - 1.96 * stdErr, est + 1.96 * stdErr))
 }
 
 # Initial break point estimates - use trial and error based on 
-# breakpoints() results and to test for sensitivity. 
+# breakpoints() results and visual inspection and to test for sensitivity. 
 # Varying the initial guess of the breakpoint from 2007 to 2013 seems to 
 # produce no change in the fitted curve. 
 # 
 # Unsuppressed doesn't appear to have a single change point. 
-breakPoints <- list("undiagnosed" = 2010,
+breakPoints <- list("infected" = 2010,
+  "plhiv" = 2010,
+  "numART" = 2010, 
+  "suppressed" = 2010,
+  "undiagnosed" = 2010,
   "noART" = c(2007,2016), 
-  "unsuppressed" = 2010)
+  "unsuppressed" = 2010,
+  "diagnoses" = 2010, 
+  "infections" = 2010)
 
 # Estimates for plots for each stage---------------------------------------
 segPlots <- list()
 segModels <- list()
 
-ymax <- c("undiagnosed" = 3500, 
+ymax <- c("infected" = 35000,
+  "plhiv" = 2010,
+  "numART" = 2010, 
+  "suppressed" = 2010,
+  "undiagnosed" = 3500, 
   "noART" = 6500, 
   "unsuppressed" = 4500)
 
@@ -1764,17 +1789,20 @@ print(stagesDiffsPlot4)
 
 # Non-linear model 
 
-After all the exploration of segmented trends I realized that a segmented 
-Poisson model might not be appropriate for describing the change in trends 
+A segmented Poisson model does not necessarily produce a good fit to some of
+the gaps estimates and might not be appropriate for describing the change in trends 
 seen in the cascade gaps. Also it is difficult to decide which estimates
-are most appropriate to use for the gaps trends analysis, particualrly for
-the noART gap where the changepoint could be spurious due to changes in 
-data source over time. 
+are most appropriate to use for the gaps trends analysis, particularly for
+the noART gap where the change point could be spurious due to changes in 
+data source over time. The advantage of the segmented model is that it is
+easily interpretable. It is okay for describing retrospective trends but not as 
+good for prediction.
 
-In this section we use non-linear least squares fitting of a non-linear 
+In this section we explore a non-linear least squares fitting of a non-linear 
 model which allows for an increase and decrease in values over time. 
 Fitting the model allows us to report a rise and decay rate ratio and time 
-where the max of peak value occurs. 
+where the max of peak value occurs. A disadvantage is that it is less 
+interpretable.
 
 The model is based on the following formula:
 $$
@@ -1826,6 +1854,8 @@ ranges for the fits and RRs.
 # Load results from previous chunck 
 # load(file.path(resultsFolder, cascadeName, "CascadeTrendData.Rda"))
 # load(file.path(resultsFolder, cascadeName, "CascadeTrendModels.Rda"))
+
+LoadLibrary(minpack.lm)
 
 # Options
 addSegment <- TRUE
@@ -1916,9 +1946,10 @@ for (ii in fitIndicators) {
     # Now run nls() to produce a non-linear model. Use try in
     # case fit does not converge (which occurs for unsuppressed). 
     plotModel <- TRUE
-    fitModel <- try(nls(tempData$value ~ FitModel(xseq, a, g, d, k),
+    fitModel <- try(nlsLM(tempData$value ~ FitModel(xseq, a, g, d, k),
       start = initialParList[[ii]],
       control = nls.control(maxiter = 1000)))
+      # weights = c(rep(0.2,8), rep(1, 9))))
     
     if ("try-error" %in% class(fitModel)) {
       print(paste("Unable to fit nls to",ii))
@@ -1926,7 +1957,7 @@ for (ii in fitIndicators) {
       plotModel <- FALSE
     } 
     
-     fitModel2 <- nls(value ~ FitModel2(xseq, a, g, d), tempData, 
+     fitModel2 <- nlsLM(value ~ FitModel2(xseq, a, g, d), tempData, 
       start = initialParList[[ii]][1:3],
       control = nls.control(maxiter = 1000))
     
