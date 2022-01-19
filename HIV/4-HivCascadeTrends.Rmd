@@ -66,7 +66,7 @@ cascadePop <- "all"
 # New infections parameters
 infectsCalculation <- "middle" # "include", "exclude" or "middle"
 
-# Plot specs
+# TODO:Plot specs
 stages <- c("infected", "pldhiv",  
   "retained", "numART", "suppressed")
 stageNames <- c("Living with HIV", "Diagnosed", 
@@ -153,10 +153,10 @@ if (infectsCalculation == "include") {
 # Simple trends of the cascade steps and gaps
 
 We used a simple Poisson regression with year as the independent covariate 
-for the main cascade steps and notifications over 2004-2016. A more
-advanced trend analyses were completed by Hamish McMannus but we decided a
-simple poisson progression of the best estimates would be sufficient. 
-Hamish's analysis is available in the trend_analysis folder.
+for the main cascade steps and indicators over 2004-2016. A more
+advanced trend analyses for teh cascade steps was completed by Hamish McMannus
+but we decided a simple poisson progression of the best estimates would be 
+sufficient. Hamish's analysis is available in the trend_analysis folder.
 
 We aimed to produce a number of diagnostics of the poisson fit. Ended up 
 sticking with a plot and pseudo R^2 calculation. The pseudo-R^2 uses 
@@ -168,15 +168,17 @@ regression model, Journal of Econometrics, 77 (1997) 329-342.
 Considered test for heteroscedasticity in the residuals using the 
 Breusch-Pagan test (P > 0.05 means it is okay) using bptest() from the 
 lmtest package https://cran.r-project.org/web/packages/rsq/index.html 
-(don't think  it is valid for Poisson models).
+(but I don't think  it is valid for Poisson models).
 Also the standard in built Chi-squared test isn't valid for Poisson
 based on this blog post: http://thestatsgeek.com/2014/04/26/deviance-goodness-of-fit-test-for-poisson-regression/
-So dropped these tests and just stuck with the pseudo-R^2. 
+So dropped these tests. 
 
 ```{r simple trends}
 # This chunk is used to do some simple trend analysis of the cascade
-# estimates over 2004-2016. Throughout coefficients of Poisson models are
-# exponentiated to represent a rate ratio. 
+# and other indicator estimates over 2004-2020. Throughout coefficients of 
+# Poisson models are exponentiated to represent a rate ratio. 
+
+plotTrends <- FALSE # Add trend lines to plots
 
 # Notifications ----------------------------------------------------------
 
@@ -200,27 +202,29 @@ diagsData <- dplyr::bind_rows(diagsDataExclude, diagsDataInclude)
 
 trendDiagsExclude <- glm(diags ~ year, data = diagsDataExclude, 
   family = "poisson")
-coeff <- exp(coef(trendDiagsExclude)[2])
-p_value <- summary(trendDiagsExclude)$coefficients["year", "Pr(>|z|)"]
-interval <- exp(confint(trendDiagsExclude, "year", type = "Wald"))
+coeffDiagsExclude <- exp(coef(trendDiagsExclude)[2])
+p_valueDiagsExclude  <- summary(trendDiagsExclude)$coefficients["year", "Pr(>|z|)"]
+intervalDiagsExclude  <- exp(confint(trendDiagsExclude, "year", type = "Wald"))
 
 trendDiagsInclude <- glm(diags ~ year, data = diagsDataInclude, 
   family = "poisson")
-coeff <- exp(coef(trendDiagsInclude)[2])
-p_value <- summary(trendDiagsInclude)$coefficients["year", "Pr(>|z|)"]
-interval <- exp(confint(trendDiagsInclude, "year", type = "Wald"))
+coeffDiagsInclude <- exp(coef(trendDiagsInclude)[2])
+p_valueDiagsInclude <- summary(trendDiagsInclude)$coefficients["year", "Pr(>|z|)"]
+intervalDiagsInclude <- exp(confint(trendDiagsInclude, "year", type = "Wald"))
 
 diagsPlot <- ggplot(data = diagsDataExclude, aes(x = year)) +
   geom_line(aes(y = diags, colour = "exclude")) + 
-  geom_line(aes(y = predict(trendDiagsExclude, type = "response")), 
-    colour = "black") +
+  geom_point(aes(y = diags), colour = "blue") +
+  geom_line(aes(y = predict(trendDiagsExclude, type = "response"), 
+    colour = "trend")) +
   geom_line(data = diagsDataInclude, aes(y = diags, colour = "include")) + 
+  geom_point(data = diagsDataInclude, aes(y = diags), colour = "red") +
   geom_line(aes(y = predict(trendDiagsInclude, type = "response")), 
     colour = "black") +
-  scale_colour_manual(name = "Notifications", values = c("red", "blue"),
-    breaks = c("include", "exclude"), 
-    labels = c("including previously diagnosed overseas", 
-      "excluding previously diagnosed overses")) +
+  scale_colour_manual(name = "", values = c("red", "blue", "black"),
+    breaks = c("include", "exclude", "trend"), 
+    labels = c("Including previously diagnosed overseas", 
+      "Excluding previously diagnosed overses", "Trends")) +
   coord_cartesian(ylim = c(0, 1500)) +
   expand_limits(y = 0) +
   scale_y_continuous(labels = comma) +
@@ -239,11 +243,7 @@ if (savePlots) {
     plot = diagsPlot, width = 7.5, height = 6, units = "cm")
 }
 
-# Diagnostics
-# pseudoR2 <- rsq(trendDiags, type = "kl")
-
 # Trends in new infections------------------------------------------------
-
 newInfects <- hivNewInfections %>%
   filter(year >= startYear) %>%
   mutate(infections = round(infections),
@@ -256,8 +256,7 @@ coeffInfects <- exp(coef(trendInfects)[2])
 intervalInfects <- exp(confint(trendInfects, "year", type = "Wald"))
 p_valueInfects <- summary(trendInfects)$coefficients["year", "Pr(>|z|)"]
 
-
-# Infections plot with diagnoses added
+# Infections plot - dropped comparison to diagnoses
 infectsPlot <- ggplot(data = newInfects, aes(x = year, 
   y = infections)) +
   geom_ribbon(aes(ymin = infections_lower, ymax = infections_upper), 
@@ -266,27 +265,23 @@ infectsPlot <- ggplot(data = newInfects, aes(x = year,
   geom_point(color = asrcols[2]) +
   geom_line(aes(y = predict(trendInfects, type = "response"), 
     colour = "infectsTrend")) +
-  geom_line(aes(y = diagsData$diags, colour ="diags")) +
-  geom_point(aes(y = diagsData$diags), colour = asrcols[5]) +
-  geom_line(aes(y = predict(trendDiags, type = "response"), 
-    colour = "diagsTrend")) +
+  # geom_line(aes(y = diagsDataExclude$diags, colour ="diags")) +
+  # geom_point(aes(y = diagsDataExclude$diags), colour = asrcols[5]) +
+  # geom_line(aes(y = predict(trendDiagsExclude, type = "response"), 
+  #   colour = "diagsTrend")) +
   coord_cartesian(ylim = c(0, 1500)) +
   expand_limits(y = 0) +
   scale_y_continuous(labels = comma) +
-  ylab("Annual number") + xlab("Year") +
-  scale_colour_manual("", 
-    labels = c("New infections", "Infections trend", 
-      "Annual notifications", "Notifications trend"),
-    values = c(asrcols[2], "black", asrcols[5], "blue"),
-    limits = c("infects", "infectsTrend","diags","diagsTrend"),
-    guide = guide_legend(nrow = 2)) +
-  PlotOptions() #+
-#   geom_text(x = 2010, y = 300, label = paste("Pseudo-R^2 infections:",
-#     toString(round(rsq(trendInfects, type = "kl"), digits = 4))), 
-#     size = 3) #+ 
-# geom_text(x = 2010, y = 150, label = paste("Pseudo-R^2 notifications:",
-#   toString(round(rsq(trendDiags, type = "kl"), digits = 4))),
-#   size = 3)
+  ylab("Annual new infections") + xlab("Year") +
+  scale_colour_manual(name = "", 
+    labels = c("Estimated infections", "Trend"), 
+      # "Annual notifications", "Notifications trend"),
+    values = c(asrcols[2], "black"), #, asrcols[5], "blue"),
+    limits = c("infects", "infectsTrend")) + #,"diags","diagsTrend"),
+    # guide = guide_legend(nrow = 2)) +
+  PlotOptions()
+
+infectsPlot
 
 if (savePlots) {
   # Save the infects plot
@@ -299,7 +294,7 @@ if (savePlots) {
 }
 
 # Trends in between steps ------------------------------------------------
-diffsData <- tibble(year = diagsData$year)
+diffsData <- tibble(year = newInfects$year)
 diffsData$undiagnosed <- filter(resultsAll, stage == "infected")$value - 
   filter(resultsAll, stage == "pldhiv")$value
 diffsData$noART <- filter(resultsAll, stage == "pldhiv")$value - 
@@ -315,23 +310,36 @@ diffsData$lower <- NA
 diffsData$upper <- NA
 
 trendData <- bind_rows(dplyr::select(resultsAll, year, stage, value,
-  lower, upper), diffsData)
+  lower, upper), diffsData) %>%
+  as_tibble()
 
-# HIV cascade trends ----------------------------------------------------
-steps <- c(stages[stages != "retained"], diffSteps)
-trendCascade <- tibble(stage = character(9), 
-  coeff = numeric(9),
-  pvalue = numeric(9),
-  lower = numeric(9),
-  upper = numeric(9),
-  pseudoR2 = numeric(9))
+# Add diagnoses and infecions data
+trendData <- bind_rows(trendData,
+  diagsDataExclude %>% 
+      mutate(stage = "diagnoses_exclude", lower = NA, upper = NA) %>% 
+      select(year, stage, value = diags, lower, upper),
+  diagsDataInclude %>% 
+      mutate(stage = "diagnoses_include", lower = NA, upper = NA) %>% 
+      select(year, stage, value = diags, lower, upper),
+  newInfects %>% 
+    mutate(stage = "infections") %>%
+    select(year, stage, value = infections, lower = infections_lower, 
+      upper = infections_upper))
+  
+# Trends ----------------------------------------------------
+steps <- unique(trendData$stage) 
+trendCascade <- tibble(stage = character(length(steps)), 
+  coeff = numeric(length(steps)),
+  pvalue = numeric(length(steps)),
+  lower = numeric(length(steps)),
+  upper = numeric(length(steps)))
 
 # Set up to save all the models and plots
 trendModels <- list()
 trendPlots <- list()
 
-for (ii in 1:7) {
-  tempData <- filter(trendData, stage == steps[ii])                      
+for (ii in 1:length(steps)) {
+  tempData <- filter(trendData, stage == unique(trendData$stage)[ii])           
   temp <- glm(round(value) ~ year, data = tempData, family = "poisson")
   
   trendCascade$stage[ii] <- steps[ii]
@@ -341,68 +349,11 @@ for (ii in 1:7) {
   tempInterval <- exp(confint(temp, "year", type = "Wald"))
   trendCascade$lower[ii] <- tempInterval[1]
   trendCascade$upper[ii] <- tempInterval[2]
-  # trendCascade$pseudoR2[ii] <- rsq(temp, type = "kl")
   
   trendModels[[steps[ii]]] <- temp
 }
 
-# Add diagnoses
-trendCascade$stage[8] <- "diagnoses"
-trendCascade$coeff[8] <- coeff
-trendCascade$pvalue[8] <- p_value
-trendCascade$lower[8] <- interval[1]
-trendCascade$upper[8] <- interval[2]
-# trendCascade$pseudoR2[8] <- pseudoR2
-
-trendModels[["diagnoses"]] <- trendDiags
-
-# Add new infections
-trendCascade$stage[9] <- "infections"
-trendCascade$coeff[9] <- coeffInfects
-trendCascade$pvalue[9] <- p_valueInfects
-trendCascade$lower[9] <- intervalInfects[1]
-trendCascade$upper[9] <- intervalInfects[2]
-# trendCascade$pseudoR2[9] <- pseudoR2Infects
-
-trendModels[["infections"]] <- trendInfects
-
-# Store plots ------------------------------------------------------------
-PlotTrend <- function(data, models, indicator) {
-  model <- models[[indicator]]
-  tempData <- filter(data, stage == indicator)
-  ggplot(data = data.frame(year = tempData$year), aes(x = year)) +
-    geom_point(aes(y = tempData$value), colour = "black") +
-    geom_line(aes(y = predict(model, type = "response")),
-      colour = "red") +
-    scale_x_continuous(breaks = tempData$year,
-      limits =  tempData$year) +
-    ylab(paste0("Number of ", tempData$stage[1])) +
-    expand_limits(y = 0) +
-    PlotOptions() 
-}
-
-trendPlots <- lapply(steps, PlotTrend, data = trendData, 
-  models = trendModels)
-names(trendPlots) <- steps
-
-trendPlots[["diagnoses"]] <- diagsPlot
-trendPlots[["infections"]] <- infectsPlot
-
-# Predictions for plotting -----------------------------------------------
-PredictTrend <- function(models, indicator){
-  model <- models[[indicator]]
-  return(predict(model, type = "response"))
-}
-
-# Trend plots ------------------------------------------------------------
-# Create a second set of time trend plots with the 
-# predicted fit and pseudo-R^2. 
-
-# Only do certain stages
-plotStages <- steps
-
-# Set base plotting data
-plotData <- trendData
+# Simple Trend plots ------------------------------------------------------------
 
 yLabels <- c("infected" = "Number of PLHIV",
   "pldhiv" = "Number diagnosed",
@@ -410,8 +361,59 @@ yLabels <- c("infected" = "Number of PLHIV",
   "suppressed" = "Number suppressed\n(VL < 200 copies/ml)",
   "undiagnosed" = "Number of PLHIV\nundiagnosed",
   "noART" = "Number diagnosed\n not on ART",
-  "unsuppressed" = 
-    "Number unsuppressed\n(VL >= 200 copies/ml)")
+  "unsuppressed" = "Number unsuppressed\n(VL >= 200 copies/ml)",
+  "diagnoses_exclude" = "Annual notifications\n(excluding OS diagnoses)",
+  "diagnoses_include" = "Annual notifications\n(including OS diagnoses)",
+  "infections" = "Annual new infections")
+
+# Function to produce plots of data versus trend
+PlotTrend <- function(data, models, indicator, trend = TRUE) {
+  model <- models[[indicator]]
+  tempData <- filter(data, stage == indicator)
+  tempPlot <- ggplot(data = tempData, aes(x = year, y = value)) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), 
+        fill = asrcols[2], alpha = 0.4) +
+    geom_line(color = asrcols[2]) + 
+    geom_point(color = asrcols[2]) +
+    scale_x_continuous(breaks = seq(startYear,                        
+      resultsYear, by = 3)) +
+    ylab(yLabels[indicator]) + xlab("Year") +  
+    expand_limits(y = 0) +
+    scale_y_continuous(labels = comma) + 
+    PlotOptions() 
+
+  if (trend) {
+     tempPlot <- tempPlot + 
+       geom_line(aes(y = predict(model, type = "response")),
+      colour = "black")
+  }
+  
+  # Save the current plot
+  if (savePlots) {
+      ggsave(file.path(figFolder, paste0("HIVcascade-Trends-", indicator, "_",
+        toString(startYear), "-",
+        toString(resultsYear),
+        saveFormat)),
+        plot = tempPlot, width = 7.5, height = 6, 
+        units = "cm")
+  }
+   
+  return(tempPlot)
+}
+
+# Apply to all steps - note will get warnings for steps where lower and upper 
+# are NA
+trendPlots <- lapply(steps, PlotTrend, data = trendData, 
+  models = trendModels, trend = plotTrends)
+names(trendPlots) <- steps
+
+# Predictions for plotting -----------------------------------------------
+# PredictTrend <- function(models, indicator){
+#   model <- models[[indicator]]
+#   return(predict(model, type = "response"))
+# }
+
+
 
 # Loop across stages and save plots 
 plotsTrend <- list()
@@ -422,7 +424,8 @@ for (ii in plotStages) {
     #Select data we want
     tempData <- filter(trendData, stage == ii)
     
-    # Add trend line and pseudo-R^2
+    # Add trend line (and pseudo-R^2/BIC) - note will get warnings
+    # for stages where lower and upper are NA
     plotsTrend[[ii]] <<- ggplot(data = tempData, aes(x = year, 
       y = value)) + 
       geom_ribbon(aes(ymin = lower, ymax = upper), 
@@ -436,10 +439,10 @@ for (ii in plotStages) {
       expand_limits(y = 0) +
       scale_y_continuous(labels = comma) + 
       ylab(yLabels[ii]) + xlab("Year") +  
-      PlotOptions() +
-      geom_text(x = 2010, y = 200, label = paste("Pseudo-R^2:",
-        toString(round(filter(trendCascade,
-          stage == ii)$pseudoR2, digits = 4))), size = 3)
+      PlotOptions() #+
+      # geom_text(x = 2010, y = 200, label = paste("Pseudo-R^2:",
+      #   toString(round(filter(trendCascade,
+      #     stage == ii)$pseudoR2, digits = 4))), size = 3)
     
     # Save the current plot
     if (savePlots) {
@@ -453,12 +456,15 @@ for (ii in plotStages) {
   }) 
 }
 
-# Create a group plot with trend lines
+# Create a group plots with trend lines
+
+# Cascade steps
 stagesTrendPlot <- plot_grid(plotsTrend[[1]], plotsTrend[[2]],
   plotsTrend[[3]], plotsTrend[[4]],
   labels = c("A", "B", "C", "D"), ncol = 2, 
   nrow = 2, align = "v")
 
+# Cascade gaps
 stagesDiffsPlot <- plot_grid(plotsTrend[[5]], plotsTrend[[6]],
   plotsTrend[[7]],
   labels = c("A", "B", "C"), ncol = 2, 
