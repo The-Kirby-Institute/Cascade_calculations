@@ -252,8 +252,15 @@ if (savePlots) {
     plot = diagsPlot, width = 10, height = 8, units = "cm")
 }
 
+# Get new infections
+newInfects <- hivNewInfections %>%
+  filter(year >= startYear) %>%
+  mutate(infections = round(infections),
+    infections_lower = round(infections_lower),
+    infections_upper = round(infections_upper))
+
 # Gaps between steps -----------------------------------------------------------
-diffsData <- tibble(year = newInfects$year)
+diffsData <- tibble(year = diagsDataExclude$year)
 diffsData$undiagnosed <- filter(resultsAll, stage == "infected")$value - 
   filter(resultsAll, stage == "pldhiv")$value
 diffsData$noART <- filter(resultsAll, stage == "pldhiv")$value - 
@@ -279,14 +286,14 @@ trendData <- bind_rows(trendData,
       select(year, stage, value = diags, lower, upper),
   diagsDataInclude %>% 
       mutate(stage = "diagnoses_include", lower = NA, upper = NA) %>% 
-      select(year, stage, value = diags, lower, upper),
+      select(year, stage, value = diags, lower, upper), 
   newInfects %>% 
-    mutate(stage = "infections") %>%
-    select(year, stage, value = infections, lower = infections_lower, 
-      upper = infections_upper))
+      mutate(stage = "infections") %>% 
+      select(year, stage, value = infections, lower = infections_lower, 
+        upper = infections_upper))
 
 # Trends ----------------------------------------------------
-steps <- unique(trendData$stage)
+steps <- c(unique(trendData$stage), "infections")
 
 trendCascade <- tibble(stage = character(length(steps)), 
   coeff = numeric(length(steps)),
@@ -559,7 +566,7 @@ intervalExpsuppressed <- exp(confint(suppressedExpModel, "year",
   type = "Wald"))
 intervalExpoverall <- exp(confint(overallExpModel, "year", type = "Wald"))
 
-# Plots of estimates and trends -------------------------------------------
+# Plots of estimates and trends ------------------------------------------------
 # Plot the proportion, linear model and logistic model
 # Function for plotting
 plotPropFull <- function(proportion, lmmodel, logmodel, expmodel, expoffset,
@@ -690,35 +697,110 @@ if (savePlots) {
 ```
 
 ```{r Trends indicators}
-# This chunk looks at the trends in cascade indicators
-# 
+# This chunk looks at the trends in cascade indicators: yearly diagnosed 
+# fraction (ydf), case detection rate (cdr), infection prevalence ration 
+# (ipr). These are calculated from scratch using the cascade results
 
 # Produce the proportions
-diagnosedProp <- filter(trendData, stage == "pldhiv")$value / 
-  filter(trendData, stage == "infected")$value
-artProp <- filter(trendData, stage == "numART")$value / 
-  filter(trendData, stage == "pldhiv")$value
-supProp <- filter(trendData, stage == "suppressed")$value / 
-  filter(trendData, stage == "numART")$value
-overallProp <- filter(trendData, stage == "suppressed")$value / 
+ydf <- filter(trendData, stage == "diagnoses_include")$value / 
+  (filter(trendData, stage == "undiagnosed")$value + 
+      filter(trendData, stage == "diagnoses_include")$value)
+cdr <- filter(trendData, stage == "diagnoses_include")$value / 
+  filter(trendData, stage == "infections")$value
+ipr <- filter(trendData, stage == "infections")$value / 
   filter(trendData, stage == "infected")$value
 
 year <- startYear:resultsYear
 
 # Add to trend data and save
 trendData <- bind_rows(trendData, tibble(year = year,
-  stage = "propdiagnosed", value = diagnosedProp, lower = NA, upper = NA))
+  stage = "ydf", value = ydf, lower = NA, upper = NA))
 trendData <- bind_rows(trendData, tibble(year = year,
-  stage = "proptreated", value = artProp, lower = NA, upper = NA))
+  stage = "cdr", value = cdr, lower = NA, upper = NA))
 trendData <- bind_rows(trendData, tibble(year = year,
-  stage = "propsuppressed", value = supProp, lower = NA, upper = NA))
+  stage = "ipr", value = ipr, lower = NA, upper = NA))
 trendData <- bind_rows(trendData, tibble(year = year,
-  stage = "propoverall", value = overallProp, lower = NA, upper = NA))
+  stage = "ydfoffest", 
+  value = (filter(trendData, stage == "undiagnosed")$value + 
+      filter(trendData, stage == "diagnoses_include")$value), 
+  lower = NA, upper = NA))
 
 # if (savePlots) {
 #   write_csv(trendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
 #     toString(startYear), "-", toString(resultsYear), ".csv")))
 # }
+
+# Poisson models ----------------------------------------------------------
+# Use a Poisson model with an offset to produce a rate ratio for the change 
+# in the proportion. These are the main models we will use
+
+# trendModelsProp <- list()
+# trendPlotsProp <- list()
+
+# Set-up data for Poisson/exponential models
+expTrendData <- trendData %>% 
+  select(year, stage, value) %>% 
+  mutate(value = round(value)) %>%
+  tidyr::spread(stage, value)
+
+# Models - using denominator as an offset - explicitly add location of of 
+# offset so segmented fits work: https://stackoverflow.com/questions/19034403/r-package-segmented-with-an-offset-term
+ydfModel <- glm(diagnoses_include ~ year, offset = log(expTrendData$ydfoffest), 
+  data = expTrendData, family = "poisson")
+cdrModel  <- glm(diagnoses_include ~ year, offset = log(expTrendData$infections),
+  data = expTrendData, family = "poisson")
+iprModel  <- glm(infections ~ year, offset = log(expTrendData$infected), 
+  data = expTrendData, family = "poisson")
+
+trendModelsProp[["ydf"]] <- ydfModel
+trendModelsProp[["cdr"]] <- cdrModel
+trendModelsProp[["ipr"]] <- iprModel
+
+# Coefficients for annual change (as rate ratio)
+coeffydf <- exp(coef(ydfModel)["year"])
+coeffcdr <- exp(coef(cdrModel)["year"])
+coeffipr <- exp(coef(iprModel)["year"])
+
+# P-values for annual change
+p_valueydf <- summary(ydfModel)$coefficients["year", "Pr(>|z|)"]
+p_valuecdr <- summary(cdrModel)$coefficients["year", "Pr(>|z|)"]
+p_valueipr <- summary(iprModel)$coefficients["year",
+  "Pr(>|z|)"]
+
+# Confidence interval for annual change (as a rate ratio)
+intervalydf <- exp(confint(ydfModel, "year", type = "Wald"))
+intervalcdr <- exp(confint(cdrModel, "year", type = "Wald"))
+intervalipr <- exp(confint(iprModel, "year", 
+  type = "Wald"))
+
+# Plots of estimates and trends ------------------------------------------------
+
+ydfPlot <- plotProp(ydf, ydfModel, expTrendData$ydfoffest, "YDF", 
+  trend = plotTrends)
+cdrPropPlot <- plotProp(cdr, cdrModel, 
+  expTrendData$infections, "CDR", 
+  trend = plotTrends) +
+  # Fix up y axis - will get warnings about replacement
+  scale_y_continuous(labels = number) +
+  coord_cartesian(ylim = c(0,NA))
+iprPlot <- plotProp(ipr, iprModel, 
+  expTrendData$infected, "IPR", 
+  trend = plotTrends)
+
+trendPlotsProp[["ydf"]] <- ydfPlot
+trendPlotsProp[["cdr"]] <- cdrPropPlot
+trendPlotsProp[["ipr"]] <- iprPlot
+
+# Poisson model results to trendCascadeProp
+propTrendsIndicators <- tibble(stage = c("ydf", "cdr", "ipr"),
+  coeff = c(coeffydf, coeffcdr, coeffipr),
+  pvalue = c(p_valueydf, p_valuecdr, p_valueipr),
+  lower = c(intervalydf[1], intervalcdr[1], intervalipr[1]),
+  upper = c(intervalydf[2], intervalcdr[2], intervalipr[2]),
+  model = "poisson-offset")
+
+trendCascadeProp <- bind_rows(trendCascadeProp, propTrendsIndicators)
+
 ```
 
 ```{r Save trends objects}
@@ -734,7 +816,7 @@ save(trendCascade, trendModels, trendCascadeProp, trendModelsProp,
 # Write the trends diagnostics to file
 if (savePlots) {
   trendCascade$model <- "poisson"
-  trendCascade <- bind_rows(trendCascade, propTrends, propTrendsExp)
+  trendCascade <- bind_rows(trendCascade, trendCascadeProp)
   
   write_csv(trendCascade, file.path(figFolder, 
     paste0("HIVcascade_trends_", 
@@ -745,7 +827,7 @@ if (savePlots) {
 # Exploration of breakpoints
 
 In this section we start exploring the annual estimates for each cascade 
-step for the presence for change or break points. 
+step and indicator for the presence for change or break points. 
 
 We first tried the approach within the changepoint package. This was not 
 really useful for trends that are increasing or decreasing as it looks 
@@ -755,15 +837,16 @@ one changepoint using the mean.
 The main analysis was done using the breakpoints() function in the 
 strucchange package. As there are only 14 time points of data we have to 
 set h = 3 (the minimal number of points in each segment for a linear 
-regression to be fitted) for the function to work. This means we can find 
-at most 3 brekpoints. Given there are only 14 data points any models 
-with >= 2 breakpoints are # unlikely to be statistically robust and are 
-more likely reflect over-fitting. For our overall analysis we focused on 
-one breakpoint.
+regression to be fitted) for the function to work. Given there are only 14 data
+points any models with >= 2 breakpoints are unlikely to be statistically 
+robust and are more likely reflect over-fitting. 
 
 ```{r Breakpoints}
 # This chunk is used to explore if structural break points might be 
-# present. 
+# present. The packages here use linear regression. Poisson regression is more
+# appropriate but the results give a good summary of where breakpoints might
+# occur and can inform initial assumptions for the segmented Poisson approach
+# below. 
 
 # Load key libraries
 LoadLibrary(tseries)
@@ -776,115 +859,128 @@ LoadLibrary(changepoint) # Not really used
 # Covert everything into a time series which is more useful in the
 # strucchange package functions. This means results are rounded to the
 # nearest year
-diagsts <- ts(diagsData$diags,
-  start = c(startYear, 1), end = c(resultsYear, 1),
-  frequency = 1)
-infectsts <- ts(newInfects$infections,
-  start = c(startYear, 1), end = c(resultsYear, 1),
-  frequency = 1)
-undiagnosedts <- ts(filter(trendData, stage == "undiagnosed")$value,
-  start = c(startYear, 1), end = c(resultsYear, 1),
-  frequency = 1)
-noartts <- ts(filter(trendData, stage == "noART")$value,
-  start = c(startYear, 1), end = c(resultsYear, 1),
-  frequency = 1)
-unsuppressedts <- ts(filter(trendData, stage == "unsuppressed")$value,
-  start = c(startYear, 1), end = c(resultsYear, 1),
-  frequency = 1)
 
-data <- cbind(diagsts, infectsts, undiagnosedts, noartts, unsuppressedts)
-colnames(data) <- c("diagnoses", "infections", "undiagnosed", "noart",
-  "unsuppressed")
+tots <- function(indicator) {
+ return(ts(filter(trendData, stage == indicator)$value,
+  start = c(startYear, 1), end = c(resultsYear, 1),
+  frequency = 1)) 
+}
+
+infectedts <- tots("infected")
+pldhivts <- tots("pldhiv")
+numARTts <- tots("numART")
+suppressedts <- tots("suppressed")
+undiagnosedts <- tots("undiagnosed")
+noARTts <- tots("noART")
+unsuppressedts <- tots("unsuppressed")
+diagnoses_excludets <- tots("diagnoses_exclude")
+diagnoses_includets <- tots("diagnoses_include")
+infectionsts <- tots("infections")
+propdiagnosedts <- tots("propdiagnosed")
+proptreatedts <- tots("proptreated")
+propsuppressedts <- tots("propsuppressed")
+propoverallts <- tots("propoverall")
+ydfts <- tots("ydf")
+cdrts <- tots("cdr")
+iprts <- tots("ipr")
+
+data <- cbind(infectedts, pldhivts, numARTts, suppressedts, undiagnosedts,
+  noARTts, unsuppressedts, diagnoses_excludets, diagnoses_includets,
+  infectionsts, propdiagnosedts, proptreatedts, propsuppressedts, propoverallts,
+  ydfts, cdrts, iprts)
+colnames(data) <- c("infected", "pldhiv", "numART", "suppressed",
+  "undiagnosed","noART", "unsuppressed", "diagnoses_exclude",
+  "diagnoses_include", "infections", "propdiagnosed", "proptreated",
+  "propsuppressed", "propoverall", "ydf", "cdr", "ipr")
 data <- window(data, start = c(startYear, 1), end = c(resultsYear, 1))
 
 # Search for changepoints -------------------------------------------------
 # Using the changepoint package. 
-autoplot(cpt.mean(diagsts))
-autoplot(cpt.mean(infectsts))
+autoplot(cpt.mean(infectedts))
+autoplot(cpt.mean(pldhivts))
+autoplot(cpt.mean(numARTts))
+autoplot(cpt.mean(suppressedts))
 autoplot(cpt.mean(undiagnosedts))
-autoplot(cpt.mean(noartts))
+autoplot(cpt.mean(noARTts))
 autoplot(cpt.mean(unsuppressedts))
+autoplot(cpt.mean(diagnoses_excludets))
+autoplot(cpt.mean(diagnoses_includets))
+autoplot(cpt.mean(propdiagnosedts))
+autoplot(cpt.mean(proptreatedts))
+autoplot(cpt.mean(propsuppressedts))
+autoplot(cpt.mean(propoverallts))
+autoplot(cpt.mean(ydfts))
+autoplot(cpt.mean(cdrts))
+autoplot(cpt.mean(iprts))
 
 # Search for breakpoints --------------------------------------------------
 # The following code looks for breakpoints in each indicator using the 
 # breakpoints() function in the strucchange package which uses linear 
 # regression.  
 
-# Look for breakpoints - diagnoses
-bpDiagnoses <- breakpoints(diagnoses ~ years, data = data, h = 3)
-summary(bpDiagnoses)
+BPindicator <- function(indicator, tsdata) {
+  bpIndicator <- breakpoints(data[, indicator] ~ years, data = data, h = 3)
+  print(summary(bpIndicator))
 
-autoplot(bpDiagnoses)
-plot(bpDiagnoses)
-plot(diagsts)
-lines(bpDiagnoses)
-lines(confint(bpDiagnoses))
-lines(fitted(bpDiagnoses, breaks = 1), col = 4)
-lines(fitted(bpDiagnoses, breaks = 2), col = 2)
-lines(fitted(bpDiagnoses, breaks = 3), col = 3)
+  autoplot(bpIndicator)
+  plot(bpIndicator)
+  plot(tsdata)
+  lines(bpIndicator)
+  try(lines(confint(bpIndicator))) # CIs might not be able to be calculated
+  lines(fitted(bpIndicator, breaks = 1), col = 4)
+  lines(fitted(bpIndicator, breaks = 2), col = 2)
+  lines(fitted(bpIndicator, breaks = 3), col = 3)
+  
+  return(bpIndicator)
+  
+}
 
-# Look for breakpoints - infections
-bpInfections <- breakpoints(infections ~ years, data = data, h = 3)
-summary(bpInfections)
+bpInfected <- BPindicator("infected", infectedts)
+bpPldhiv <- BPindicator("pldhiv", pldhivts)
+bpNumART <- BPindicator("numART", numARTts)
+bpSuppressed <- BPindicator("suppressed", suppressedts)
+bpUndiagnosed <- BPindicator("undiagnosed", undiagnosedts)
+bpNoART <- BPindicator("noART", noARTts)
+bpUnsuppressed <- BPindicator("unsuppressed", unsuppressedts)
+bpDiagnoses_exclude <- BPindicator("diagnoses_exclude", diagnoses_excludets)
+bpDiagnoses_include <- BPindicator("diagnoses_include", diagnoses_includets)
+bpInfections <- BPindicator("infections", infectionsts)
+bpPropdiagnosed <- BPindicator("propdiagnosed", propdiagnosedts)
+bpProptreated <- BPindicator("proptreated", proptreatedts)
+bpPropsuppressed <- BPindicator("propsuppressed", propsuppressedts)
+bpPropoverall <- BPindicator("propoverall", propoverallts)
+bpYdf <- BPindicator("ydf", ydfts)
+bpCdr <- BPindicator("cdr", cdrts)
+bpIpr <- BPindicator("ipr", iprts)
 
-autoplot(bpInfections)
-plot(bpInfections)
-plot(infectsts)
-lines(bpInfections)
-lines(confint(bpInfections))
-lines(fitted(bpInfections, breaks = 1), col = 4)
-lines(fitted(bpInfections, breaks = 2), col = 2)
-lines(fitted(bpInfections, breaks = 3), col = 3)
-
-# Look for breakpoints - undiagnosed
-bpUndiagnosed <-breakpoints(undiagnosed ~ years, data = data, h = 3)
-summary(bpUndiagnosed)
-
-plot(bpUndiagnosed)
-plot(undiagnosedts)
-lines(bpUndiagnosed)
-lines(confint(bpUndiagnosed))
-lines(fitted(bpUndiagnosed, breaks = 1), col = 4)
-lines(fitted(bpUndiagnosed, breaks = 2), col = 2)
-lines(fitted(bpUndiagnosed, breaks = 3), col = 3)
-
-# Look for breakpoints - noART
-bpNoart <-breakpoints(noart ~ years, data = data, h = 3)
-summary(bpNoart)
-
-plot(bpNoart)
-plot(noartts)
-lines(bpNoart)
-# lines(confint(bpNoart)) Generates an error
-lines(fitted(bpNoart, breaks = 1), col = 4)
-lines(fitted(bpNoart, breaks = 2), col = 2)
-lines(fitted(bpNoart, breaks = 3), col = 3)
-
-# Look for breakpoints - unsuppressed
-bpVl <-breakpoints(unsuppressed ~ years, data = data, h = 3)
-summary(bpVl)
-
-autoplot(bpVl)
-plot(bpVl)
-plot(unsuppressedts)
-lines(bpVl)
-lines(confint(bpVl))
-lines(fitted(bpVl, breaks = 1), col = 4)
-lines(fitted(bpVl, breaks = 2), col = 2)
-lines(fitted(bpVl, breaks = 3), col = 3)
 ```
 
 ```{r Breakpoints table}
 # Create table of summary results ----------------------------------------
 breakTable <- NULL
 
-bpmodels <- list(bpDiagnoses, bpInfections, bpUndiagnosed, bpNoart, bpVl)
+bpmodels <- list(bpInfected, bpPldhiv, bpNumART, bpSuppressed, bpUndiagnosed,
+  bpNoART, bpUnsuppressed, bpDiagnoses_exclude, bpDiagnoses_include, 
+  bpInfections, bpPropdiagnosed, bpProptreated, bpPropsuppressed, 
+  bpPropoverall, bpYdf, bpCdr, bpIpr)
 modelNames <- colnames(data)
-modelString <- c("Annual notifications",
-  "Annual new infections",
+modelString <- c("Number infected",
+  "Number diagnosed", 
+  "Number on ART",
+  "Number suppressed", 
   "Number undiagnosed",
   "Diagnosed but untreated",
-  "On ART but unsuppressed")
+  "On ART but unsuppressed",
+  "Diagnoses excluding OS",
+  "Diagnoses including OS",
+  "Annual new infections",
+  "Proportion undiagnosed", 
+  "Proportion diagnosed treated",
+  "Proportion treated suppressed",
+  "Proportion suppressed overall",
+  "Yearly diagnosed fraction",
+  "Case detection rate",
+  "Incidence prevalence ratio")
 
 # NOTE: confidence interval calculation will produce lots of warnings if it
 # can't be calculated (returns NA)
