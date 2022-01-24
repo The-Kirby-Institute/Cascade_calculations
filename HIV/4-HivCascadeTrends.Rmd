@@ -293,7 +293,7 @@ trendData <- bind_rows(trendData,
         upper = infections_upper))
 
 # Trends ----------------------------------------------------
-steps <- c(unique(trendData$stage), "infections")
+steps <- unique(trendData$stage)
 
 trendCascade <- tibble(stage = character(length(steps)), 
   coeff = numeric(length(steps)),
@@ -529,21 +529,20 @@ expTrendData <- trendData %>%
   mutate(value = round(value)) %>%
   tidyr::spread(stage, value)
 
-# Models - using denominator as an offset - explicitly add location of of 
-# offset so segmented fits work: https://stackoverflow.com/questions/19034403/r-package-segmented-with-an-offset-term
-diagsExpModel <- glm(pldhiv ~ year, offset = log(expTrendData$infected), 
+# Models - using denominator as an offset 
+diagsExpModel <- glm(pldhiv ~ year, offset = log(infected), 
   data = expTrendData, family = "poisson")
-treatedExpModel  <- glm(numART ~ year, offset = log(expTrendData$pldhiv), 
+treatedExpModel  <- glm(numART ~ year, offset = log(pldhiv), 
   data = expTrendData, family = "poisson")
-suppressedExpModel  <- glm(suppressed ~ year, offset = log(expTrendData$numART), 
+suppressedExpModel  <- glm(suppressed ~ year, offset = log(numART), 
   data = expTrendData, family = "poisson")
-overallExpModel  <- glm(suppressed ~ year, offset = log(expTrendData$infected), 
+overallExpModel  <- glm(suppressed ~ year, offset = log(infected), 
   data = expTrendData, family = "poisson")
 
-trendModelsProp[["diagnosedProp"]] <- diagsExpModel
-trendModelsProp[["treatedProp"]] <- treatedExpModel
-trendModelsProp[["suppressedProp"]] <- suppressedExpModel
-trendModelsProp[["overallProp"]] <- overallExpModel
+trendModelsProp[["propdiagnosed"]] <- diagsExpModel
+trendModelsProp[["proptreated"]] <- treatedExpModel
+trendModelsProp[["propsuppressed"]] <- suppressedExpModel
+trendModelsProp[["propoverall"]] <- overallExpModel
 
 # Coefficients for annual change (as rate ratio)
 coeffExpdiags <- exp(coef(diagsExpModel)["year"])
@@ -567,6 +566,7 @@ intervalExpsuppressed <- exp(confint(suppressedExpModel, "year",
 intervalExpoverall <- exp(confint(overallExpModel, "year", type = "Wald"))
 
 # Plots of estimates and trends ------------------------------------------------
+
 # Plot the proportion, linear model and logistic model
 # Function for plotting
 plotPropFull <- function(proportion, lmmodel, logmodel, expmodel, expoffset,
@@ -636,10 +636,10 @@ overallPropPlot <- plotProp(overallProp, overallExpModel,
   expTrendData$infected, "Percentage on\nART suppressed", 
   trend = plotTrends)
 
-trendPlotsProp[["diagnosedProp"]] <- diagsPropPlot
-trendPlotsProp[["treatedProp"]] <- treatedPropPlot
-trendPlotsProp[["suppressedProp"]] <- suppressedPropPlot
-trendPlotsProp[["overallProp"]] <- overallPropPlot
+trendPlotsProp[["propdiagnosed"]] <- diagsPropPlot
+trendPlotsProp[["proptreated"]] <- treatedPropPlot
+trendPlotsProp[["propsuppressed"]] <- suppressedPropPlot
+trendPlotsProp[["propoverall"]] <- overallPropPlot
   
 # Add linear and Poisson model results to trendCascade
 propTrends <- tibble(stage = c("propdiagnosed", "proptreated",
@@ -665,6 +665,12 @@ propTrendsExp <- tibble(stage = c("propdiagnosed", "proptreated",
   model = "poisson-offset")
 
 trendCascadeProp <- bind_rows(propTrends, propTrendsExp)
+
+yLabels <- c(yLabels,
+  "propdiagnosed" = "Percentage of\nPLHIV diagnosed", 
+  "proptreated" = "Percentage diagnosed\non ART",
+  "propsuppressed" = "Percentage on\nART suppressed",
+  "propoverall" = "Percentage on\nART suppressed")
 
 # Save plots --------------------------------------------------------------
 # Create a group 90-90-90 plot with trend lines
@@ -745,11 +751,11 @@ expTrendData <- trendData %>%
 
 # Models - using denominator as an offset - explicitly add location of of 
 # offset so segmented fits work: https://stackoverflow.com/questions/19034403/r-package-segmented-with-an-offset-term
-ydfModel <- glm(diagnoses_include ~ year, offset = log(expTrendData$ydfoffest), 
+ydfModel <- glm(diagnoses_include ~ year, offset = log(ydfoffest), 
   data = expTrendData, family = "poisson")
-cdrModel  <- glm(diagnoses_include ~ year, offset = log(expTrendData$infections),
+cdrModel  <- glm(diagnoses_include ~ year, offset = log(infections),
   data = expTrendData, family = "poisson")
-iprModel  <- glm(infections ~ year, offset = log(expTrendData$infected), 
+iprModel  <- glm(infections ~ year, offset = log(infected), 
   data = expTrendData, family = "poisson")
 
 trendModelsProp[["ydf"]] <- ydfModel
@@ -800,6 +806,11 @@ propTrendsIndicators <- tibble(stage = c("ydf", "cdr", "ipr"),
   model = "poisson-offset")
 
 trendCascadeProp <- bind_rows(trendCascadeProp, propTrendsIndicators)
+
+yLabels <- c(yLabels,
+  "ydf" = "YDF", 
+  "cdr" = "CDR",
+  "ipr" = "IPR")
 
 ```
 
@@ -1079,127 +1090,223 @@ the estimate from 2007 to 2013. This produced no change in the fitted
 curve. 
 
 ```{r Segmented trends}
-# This chuck is used to explore the change in trends for each cascade step and 
-# gap. Some seem to have a change point. We try to find a change point for 
-# each stage using the segmented package and with Poisson models. Note
+# This chuck is used to explore the change in trends for each cascade step, gap,
+# and indicator. Some seem to have a change point. We try to find a change point
+# for each stage using the segmented package and with Poisson models. Note
 # if one change point is not found using the segmented package then the 
 # Poisson model is plotted instead (suggests it is a better model). 
 
 LoadLibrary(segmented)
 
-segmentStages <- names(trendModels)
+segmentStages <- c(names(trendModels), names(trendModelsProp))
 
 segCI <- function(est, stdErr) {
   return(c(est - 1.96 * stdErr, est + 1.96 * stdErr))
 }
 
+allTrendModels <- c(trendModels, trendModelsProp)
+
+# Function for producing results -----------------------------------------------
+Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1, 
+  save = FALSE) {
+  
+  tempData <- filter(trendData, stage == indicator)
+  
+  # Get original model
+  pmodel <- allTrendModels[[indicator]]
+
+  # Generate segmented models - if unable to find checkpoint then error is
+  # found and model becomes to straight Poisson model (0 change points)
+  segModel1 <- tryCatch(segmented(pmodel, seg.Z = ~year, 
+    psi = list(year = initialbp[[1]])),
+    error = function(err) {
+      print(paste0(indicator, ": Error in segmented model 1"))
+      segModel1 <- pmodel
+    })
+  
+  segModel2 <- tryCatch(segmented(pmodel, seg.Z = ~year, 
+    psi = list(year = initialbp[[2]])),
+    error = function(err) {
+      print(paste0(indicator, ": Error in segmented model 2"))
+      segModel2 <- pmodel
+    })  
+  
+  segModel3 <- tryCatch(segmented(pmodel, seg.Z = ~year, 
+    psi = list(year = initialbp[[3]])),
+    error = function(err) {
+      print(paste0(indicator, ": Error in segmented model 3"))
+      segModel3 <- pmodel
+    })
+
+  # Calculate and save breakpoints for each model
+  modelBreakpoints <- tibble(model = c("pmodel", "segModel1", 
+    "segModel2", "segModel2", "segModel3", "segModel3", "segModel3"),
+    estimate = 0,
+    lower = 0,
+    upper = 0)
+
+  if (class(segModel1)[1] == "segmented") {
+    modelBreakpoints$estimate[2] <- unname(segModel1$psi[,"Est."])
+    modelBreakpoints$lower[2] <- segCI(segModel1$psi[, "Est."], 
+      segModel1$psi[, "St.Err"])[1]
+    modelBreakpoints$upper[2] <- segCI(segModel1$psi[, "Est."], 
+      segModel1$psi[, "St.Err"])[2]
+  }
+  if (class(segModel2)[1] == "segmented") {
+    modelBreakpoints$estimate[3:4] <- unname(segModel2$psi[,"Est."])
+    modelBreakpoints$lower[3:4] <- segCI(segModel2$psi[, "Est."], 
+      segModel2$psi[, "St.Err"])[1:2]
+    modelBreakpoints$upper[3:4] <- segCI(segModel2$psi[, "Est."], 
+      segModel2$psi[, "St.Err"])[3:4]
+  }
+  if (class(segModel3)[1] == "segmented") {
+    modelBreakpoints$estimate[5:7] <- unname(segModel3$psi[,"Est."])
+    modelBreakpoints$lower[5:7] <- segCI(segModel3$psi[, "Est."], 
+      segModel3$psi[, "St.Err"])[1:3]
+    modelBreakpoints$upper[5:7] <- segCI(segModel3$psi[, "Est."], 
+      segModel3$psi[, "St.Err"])[4:6]
+  }
+  
+  # Calculate and save slopes for each model
+  modelSlopes <- tibble(model = c("pmodel", "segModel1", "segModel1", 
+    "segModel2", "segModel2", "segModel2", "segModel3", "segModel3",
+    "segModel3", "segModel3"),
+    estimate = 0,
+    lower = 0,
+    upper = 0)
+  
+  modelSlopes$estimate[1] <- exp(unname(coef(pmodel)[2]))
+  modelSlopes$lower[1] <- exp(confint(pmodel, "year", type = "Wald"))[1]
+  modelSlopes$upper[1] <- exp(confint(pmodel, "year", type = "Wald"))[2]
+
+  if (class(segModel1)[1] == "segmented") {
+    modelSlopes$estimate[2:3] <- exp(slope(segModel1)$year[,1])
+    modelSlopes$lower[2:3] <- exp(slope(segModel1)$year[,"CI(95%).l"])
+    modelSlopes$upper[2:3] <- exp(slope(segModel1)$year[,"CI(95%).u"])
+  }
+  if (class(segModel2)[1] == "segmented") {
+    modelSlopes$estimate[4:6] <- exp(slope(segModel2)$year[,1])
+    modelSlopes$lower[4:6] <- exp(slope(segModel2)$year[,"CI(95%).l"])
+    modelSlopes$upper[4:6] <- exp(slope(segModel2)$year[,"CI(95%).u"])
+  }
+  if (class(segModel3)[1] == "segmented") {
+    modelSlopes$estimate[7:10] <- exp(slope(segModel3)$year[,1])
+    modelSlopes$lower[7:10] <- exp(slope(segModel3)$year[,"CI(95%).l"])
+    modelSlopes$upper[7:10] <- exp(slope(segModel3)$year[,"CI(95%).u"])
+  }
+
+  # Calculate and save AIC and BIC values
+  aicValues <- c(AIC(pmodel), AIC(segModel1), AIC(segModel2), AIC(segModel3))
+  bicValues <- c(BIC(pmodel), BIC(segModel1), BIC(segModel2), BIC(segModel3))
+  bicStr <- round(bicValues, digits = 1)
+  
+  segModelData <- data.frame(year = tempData$year, 
+    segvalue1 = fitted(segModel1)/offset, 
+    segvalue2 = fitted(segModel2)/offset,
+    segvalue3 = fitted(segModel3)/offset)
+  
+  # Create plot
+  segPlotAll <- ggplot(data = tempData, 
+    aes(x = year, y = value)) + 
+    geom_line(aes(color = "estimates")) + 
+    geom_point(color = asrcols[2]) +
+    geom_line(aes(y = fitted(pmodel),
+      colour = "overall")) +
+    geom_line(data = segModelData, aes(y = segvalue1, 
+      colour = "segment1")) + 
+    geom_line(data = segModelData, aes(y = segvalue2, 
+      colour = "segment2")) + 
+    geom_line(data = segModelData, aes(y = segvalue3,
+      colour = "segment3")) +
+    scale_x_continuous(breaks = seq(startYear,                        
+      resultsYear, by = 3)) +
+    scale_y_continuous(labels = comma) + 
+    scale_colour_manual("", values = c(asrcols[2], "black", "blue", 
+      "darkgreen", "purple"),
+      limits = c("estimates", "overall", "segment1", "segment2", "segment3"),
+      labels = c("Estimates", "Overall", "One change point", 
+        "Two change points", "Three change points")) +
+    coord_cartesian(ylim = c(0, ymax)) + 
+    ylab(yLabel) + xlab("Year") +  
+    PlotOptions() + theme(legend.position = "right") + 
+    geom_text(x = 2012, y = 0.05 * ymax, 
+      label = sprintf("BIC values\nOverall %s; One cp %s; Two cp %s; Three cp  %s", 
+        bicStr[1], bicStr[2], bicStr[3], bicStr[4]), size = 3)
+
+  segPlotBest <- segPlotAll
+  
+  if (save) {
+    # Save the current plot
+    ggsave(file.path(figFolder, paste0("HIVcascade-Trends-", indicator,
+      "-Segment-All_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat)),
+      plot = segPlotAll, width = 16, height = 12, units = "cm")
+  }
+  
+  return(list(models = list(pmodel, segModel1, segModel2, segModel3),
+    fitted = segModelData, breakpoints = modelBreakpoints, slopes = modelSlopes, 
+    aic = aicValues, bic = bicValues, 
+    plotall = segPlotAll, plotBest = segPlotBest))
+}
+  
+# Find breakpoints -------------------------------------------------------------
 # Initial break point estimates - use trial and error based on 
-# breakpoints() results and visual inspection and to test for sensitivity. 
-# Varying the initial guess of the breakpoint from 2007 to 2013 seems to 
-# produce no change in the fitted curve. 
-# 
-# Unsuppressed doesn't appear to have a single change point. 
-breakPoints <- list("infected" = 2010,
-  "plhiv" = 2010,
-  "numART" = 2010, 
-  "suppressed" = 2010,
-  "undiagnosed" = 2010,
-  "noART" = c(2007,2016), 
-  "unsuppressed" = 2010,
-  "diagnoses" = 2010, 
-  "infections" = 2010)
+# breakpoints() results and visual inspection and to test for sensitivity by 
+# varying.
 
-# Estimates for plots for each stage---------------------------------------
-segPlots <- list()
-segModels <- list()
+initialbp <- list(2010, c(2007, 2016), c(2007, 2012, 2016))
 
+# Y axis range for each model
 ymax <- c("infected" = 35000,
-  "plhiv" = 2010,
-  "numART" = 2010, 
-  "suppressed" = 2010,
+  "pldhiv" = 35000,
+  "numART" = 35000, 
+  "suppressed" = 35000,
   "undiagnosed" = 3500, 
   "noART" = 6500, 
-  "unsuppressed" = 4500)
+  "unsuppressed" = 4500,
+  "diagnoses_exclude" = 1500,
+  "diagnoses_include" = 1500,
+  "infections" = 1500, 
+  "propdiagnosed" = 1, 
+  "proptreated" = 1,       
+  "propsuppressed" = 1,
+  "propoverall" = 1,
+  "ydf" = 1,  
+  "cdr"=  2,
+  "ipr" = 0.1)
 
-for (ii in segmentStages) { 
-  # Need to use local to prevent scope issues with predicted values
-  local({
-    ii <- ii
-    tempData <- filter(trendData, stage == ii)
-    
-    # Regenerate original model in case of scope issues
-    pmodel <- glm(round(value) ~ year, data = tempData, 
-      family = "poisson")
-    
-    # Now run segmented to produce a segmented Poisson model. Use try in
-    # case single change point is not found (which occurs for unsuppressed). 
-    plotModel <- TRUE
-    segModel <- try(segmented(pmodel, seg.Z = ~year, 
-      psi = list(year = breakPoints[[ii]])))
-    
-    if ("try-error" %in% class(segModel)) {
-      segModel <- trendModels[[ii]]
-      plotModel <- FALSE
-    } 
-    
-    segModels[[ii]] <<- segModel
-    
-    # Plot on top of trend plot
-    segModelData <- data.frame(year = tempData$year, 
-      segvalue = fitted(segModel))
-    
-    segPlot <- ggplot(data = tempData, 
-      aes(x = year, y = value)) + 
-      geom_line(aes(color = "estimates")) + 
-      geom_point(color = asrcols[2]) +
-      geom_line(aes(y = fitted(trendModels[[ii]]),
-        colour = "overall")) +
-      geom_line(data = segModelData, aes(y = segvalue, 
-        colour = "segment")) + 
-      scale_x_continuous(breaks = seq(startYear,                        
-        resultsYear, by = 3)) +
-      scale_y_continuous(labels = comma) + 
-      scale_colour_manual("", values = c(asrcols[2], "black", "blue"),
-        limits = c("estimates", "overall", "segment"),
-        labels = c("Estimates", "Overall model",
-          "Segmented model")) +
-      coord_cartesian(ylim = c(0, ymax[ii])) + 
-      ylab(yLabels[ii]) + xlab("Year") +  
-      PlotOptions() #+ 
-      # geom_text(x = 2010, y = 0.2 * ymax[ii], 
-      #   label = paste("Overall pseudo-R^2:",
-      #     toString(round(filter(trendCascade, stage == ii)$pseudoR2, 
-      #       digits = 4))), size = 3) +
-      # geom_text(x = 2010, y = 0.1 * ymax[ii], 
-      #   label = paste("Segmented pseudo-R^2:",
-      #     toString(round(rsq(segModel, type = "kl"), digits = 4))), 
-      #   size = 3) 
-    # if (plotModel) {
-    #   segPlot <- segPlot +
-    #     geom_vline(xintercept = segModel$psi[2], linetype = "dashed",
-    #       colour = "blue") + 
-    #     geom_errorbarh(aes(y = 0.975 * ymax[ii],
-    #       xmin = segCI(segModel$psi[2],
-    #         segModel$psi[3])[1],
-    #       xmax = segCI(segModel$psi[2],
-    #         segModel$psi[3])[2]),
-    #       colour = "blue",
-    #       height = 0.025 * ymax[ii]) 
-    # }
-    
-    segPlots[[ii]] <<- segPlot
-    
-    if (savePlots) {
-      # Save the current plot
-      ggsave(file.path(figFolder, paste0("HIVcascade-Trends-", ii,
-        "-Segment_",
-        toString(startYear), "-",
-        toString(resultsYear),
-        saveFormat)),
-        plot = segPlots[[ii]], width = 12, height = 8, units = "cm")
-    }
-  })
+offsets <- list("infected" = 1,
+  "pldhiv" = 1,
+  "numART" = 1, 
+  "suppressed" = 1,
+  "undiagnosed" = 1, 
+  "noART" = 1, 
+  "unsuppressed" = 1,
+  "diagnoses_exclude" = 1,
+  "diagnoses_include" = 1,
+  "infections" = 1, 
+  "propdiagnosed" = expTrendData$infected, 
+  "proptreated" = expTrendData$pldhiv,       
+  "propsuppressed" = expTrendData$numART,
+  "propoverall" = expTrendData$infected,
+  "ydf" = expTrendData$ydfoffest,
+  "cdr"=  expTrendData$infections,
+  "ipr" = expTrendData$infected)
+
+# Generate results -------------------------------------------------------------
+
+steps <- names(ymax)
+segResults <- list()
+
+for (ii in steps) {
+  print(ii)
+  segResults[[ii]] <- Segment(ii, initialbp, ymax[ii],
+    yLabels[ii], save = TRUE, offset = offsets[[ii]])
 }
+
+# Produce combined plots -------------------------------------------------------
 
 # Figure caption
 figs("segmentedTrends", "")
