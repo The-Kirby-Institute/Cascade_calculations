@@ -26,12 +26,12 @@ source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 source(file.path(Rcode, "PlotColors.R"), echo=TRUE)
 source(file.path(Rcode, "EveryNth.R"), echo=TRUE)
+source(file.path(HIVcode, "ResultsFunctions.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 LoadLibrary(scales)
 LoadLibrary(cowplot) # Note this masks ggsave with save_plot
 LoadLibrary(captioner)
 LoadLibrary(stringr)
-LoadLibrary(gridExtra)
 LoadLibrary(svglite)
 
 # Function to tidy notifications
@@ -83,7 +83,7 @@ indicatorNamesNeat <- c("infected" = "Number living with HIV\n ",
   "retained" = "Number retained in care\n ",
   "numART" = "Number on ART\n ",
   "suppressed" = "Number suppressed\n(VL < 200 copies/ml)",
-  "undiagnosed" = "Number ling with HIV\nundiagnosed",
+  "undiagnosed" = "Number living with HIV\nundiagnosed",
   "noART" = "Number diagnosed\n not on ART",
   "unsuppressed" = "Number unsuppressed\n(VL >= 200 copies/ml)",
   "diagnoses_exclude" = "Annual notifications\n(excluding OS diagnoses)",
@@ -91,8 +91,8 @@ indicatorNamesNeat <- c("infected" = "Number living with HIV\n ",
   "infections" = "Annual new infections\n ",
   "propdiagnosed" = "Percentage of\nPWHIV diagnosed", 
   "proptreated" =  "Percentage diagnosed\non ART",
-  "propsuppressed" = "Percentage overall\nsuppressed",
-  "propoverall" = "Percentage on\nART suppressed",
+  "propsuppressed" =  "Percentage on\nART suppressed",
+  "propoverall" = "Percentage overall\nsuppressed",
   "ydf" = "Yearly diagnosed fraction\n ",
   "cdr" = "Case detection rate\n ",
   "ipr" = "Incidence prevalence ratio\n ")
