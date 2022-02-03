@@ -78,24 +78,24 @@ indicatorNames <- c("infected" = "Living with HIV",
   "cdr" = "Case detection rate",
   "ipr" = "Incidence prevalence ratio")
 
-indicatorNamesNeat <- c("infected" = "Number living with HIV",
-  "pldhiv" = "Number diagnosed",
-  "retained" = "Number retained in care",
-  "numART" = "Number on ART",
+indicatorNamesNeat <- c("infected" = "Number living with HIV\n ",
+  "pldhiv" = "Number diagnosed\n ",
+  "retained" = "Number retained in care\n ",
+  "numART" = "Number on ART\n ",
   "suppressed" = "Number suppressed\n(VL < 200 copies/ml)",
   "undiagnosed" = "Number ling with HIV\nundiagnosed",
   "noART" = "Number diagnosed\n not on ART",
   "unsuppressed" = "Number unsuppressed\n(VL >= 200 copies/ml)",
   "diagnoses_exclude" = "Annual notifications\n(excluding OS diagnoses)",
   "diagnoses_include" = "Annual notifications\n(including OS diagnoses)",
-  "infections" = "Annual new infections",
+  "infections" = "Annual new infections\n ",
   "propdiagnosed" = "Percentage of\nPWHIV diagnosed", 
   "proptreated" =  "Percentage diagnosed\non ART",
   "propsuppressed" = "Percentage overall\nsuppressed",
   "propoverall" = "Percentage on\nART suppressed",
-  "ydf" = "Yearly diagnosed fraction",
-  "cdr" = "Case detection rate",
-  "ipr" = "Incidence prevalence ratio")
+  "ydf" = "Yearly diagnosed fraction\n ",
+  "cdr" = "Case detection rate\n ",
+  "ipr" = "Incidence prevalence ratio\n ")
 
 # Create output directory
 if (savePlots) {
@@ -743,6 +743,12 @@ trendData <- bind_rows(trendData, tibble(year = year,
       filter(trendData, stage == "diagnoses_include")$value, 
   upper = hivCascadeIndicators$undiag_upper+ 
       filter(trendData, stage == "diagnoses_include")$value))
+trendData <- bind_rows(trendData, tibble(year = year,
+  stage = "iproffset",
+  # IPR is calculated using the plhiv number from the stary of each year
+  value = hivCascadeIndicators$start_plhiv,
+  lower = hivCascadeIndicators$start_plhiv_lower,
+  upper = hivCascadeIndicators$start_plhiv_upper))
 
 # Poisson models ----------------------------------------------------------
 # Use a Poisson model with an offset to produce a rate ratio for the change 
@@ -760,7 +766,7 @@ ydfModel <- glm(diagnoses_include ~ year, offset = log(ydfoffest),
   data = expTrendData, family = "poisson")
 cdrModel  <- glm(diagnoses_include ~ year, offset = log(infections),
   data = expTrendData, family = "poisson")
-iprModel  <- glm(infections ~ year, offset = log(infected), 
+iprModel  <- glm(infections ~ year, offset = log(iproffset), 
   data = expTrendData, family = "poisson")
 
 trendModelsProp[["ydf"]] <- ydfModel
@@ -844,7 +850,7 @@ if (savePlots) {
       toString(startYear), "-",
       toString(resultsYear),
       saveFormat, sep = "")),
-    plot = combinedIndicatorPlot, width = 18, height = 21, units = "cm")
+    plot = combinedIndicatorPlot, width = 18, height = 24, units = "cm")
 }
 
 ```
@@ -1151,7 +1157,7 @@ allTrendModels <- c(trendModels, trendModelsProp)
 # model is used
 
 Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1, 
-  yPercent = TRUE, save = FALSE) {
+  min_gap = 3, yPercent = TRUE, save = FALSE) {
   
   tempData <- filter(trendData, stage == indicator)
   
@@ -1159,7 +1165,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
   pmodel <- allTrendModels[[indicator]]
   
   # Generate segmented models - if unable to find checkpoint then error is
-  # found and model becomes to straight Poisson model (0 change points)
+  # found and model reverts to straight Poisson model (0 change points)
   segModel1 <- tryCatch(segmented(pmodel, seg.Z = ~year, 
     psi = list(year = initialbp[[1]])),
     error = function(err) {
@@ -1171,21 +1177,21 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
     psi = list(year = initialbp[[2]])),
     error = function(err) {
       print(paste0(indicator, ": Error in segmented model 2"))
-      segModel2 <- segModel1
+      segModel2 <- pmodel
     })  
   
   segModel3 <- tryCatch(segmented(pmodel, seg.Z = ~year, 
     psi = list(year = initialbp[[3]])),
     error = function(err) {
       print(paste0(indicator, ": Error in segmented model 3"))
-      segModel3 <- segModel2
+      segModel3 <- pmodel
     })
   
   segModel4 <- tryCatch(segmented(pmodel, seg.Z = ~year, 
     psi = list(year = initialbp[[4]])),
     error = function(err) {
       print(paste0(indicator, ": Error in segmented model 4"))
-      segModel4 <- segModel3
+      segModel4 <- pmodel
     })
   
   # Calculate and save breakpoints for each model
@@ -1226,6 +1232,17 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
       segModel4$psi[, "St.Err"])[5:8]
   }
   
+  # Calculate minimum gap between breakpoints and ends
+   modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
+    "segModel2", "segModel3","segModel4"),
+    minimum_gap = c(16, 
+      min(diff(c(startYear, unname(segModel1$psi[, "Est."]), resultsYear))),
+      min(diff(c(startYear, unname(segModel2$psi[, "Est."]), resultsYear))),
+      min(diff(c(startYear, unname(segModel3$psi[, "Est."]), resultsYear))),
+      min(diff(c(startYear, unname(segModel4$psi[, "Est."]), resultsYear)))))
+  
+   gapStr <- round(modelBreakpointGaps$minimum_gap, digits = 1)
+   
   # Calculate and save slopes for each model
   modelSlopes <- tibble(model = c("pmodel", "segModel1", "segModel1", 
     "segModel2", "segModel2", "segModel2", "segModel3", "segModel3",
@@ -1291,9 +1308,8 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
     geom_line(data = modelData, aes(y = segvalue4,
       colour = "segment4")) +
     scale_x_continuous(breaks = seq(startYear, resultsYear),
-      labels =  EveryNth(seq(startYear, resultsYear), 3, inverse = TRUE),
-      limits = c(startYear, resultsYear), 
-      expand = c(0,0)) +
+      labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
+      limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = comma, limits = c(0, ymax)) + 
     scale_colour_manual("", values = c(asrcols[2], "black", "blue", 
       "darkgreen", "purple", "orange2"),
@@ -1304,15 +1320,28 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
         "Four change points")) +
     ylab(yLabel) + xlab("Year") +  
     PlotOptions() + theme(legend.position = "right") + 
+    geom_text(x = 2012, y = 0.15 * ymax, 
+      label = sprintf("BIC values\nOverall %s; One CP %s; Two CPs %s; Three CPs %s; Four CPs %s.", 
+        bicStr[1], bicStr[2], bicStr[3], bicStr[4], bicStr[5]), size = 3) +
     geom_text(x = 2012, y = 0.05 * ymax, 
-      label = sprintf("BIC values\nOverall %s; One CP %s; Two CPs %s;\nThree CPs  %s; Four CPs %s.", 
-        bicStr[1], bicStr[2], bicStr[3], bicStr[4], bicStr[5]), size = 3)
+      label = sprintf("Minimum gaps\nOverall %s; One CP %s; Two CPs %s; Three CPs %s; Four CPs %s.", 
+        gapStr[1], gapStr[2], gapStr[3], gapStr[4], gapStr[5]), size = 3)
   
-  # Select the model with the lowest BIC and plot
+  # Select the model with the lowest BIC but with minimum gap > min_gap
+  # and plot
   segModels <- list(pmodel, segModel1, segModel2, segModel3, segModel4)
-  minBic <- which.min(bicValues)
-  bestModel <- segModels[[minBic]]
-  bestModelData <- select(modelData, c(1, minBic + 1)) 
+  
+  modelBreakpointGaps$bic <- bicValues
+  modelBreakpointGaps$number <- 1:5
+  
+  eligible <- modelBreakpointGaps %>%
+    filter(minimum_gap >= min_gap)
+  
+  bestIndex <- filter(eligible, 
+    number == which.min(eligible$bic))$number
+  
+  bestModel <- segModels[[bestIndex]]
+  bestModelData <- select(modelData, c(1, bestIndex + 1)) 
   colnames(bestModelData)[2] <- "value"
   
   segPlotBest <- ggplot(data = tempData, 
@@ -1321,14 +1350,15 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
     geom_point(color = asrcols[2]) +
     geom_line(data = bestModelData, aes(y = value,
       colour = "best")) + 
+    geom_vline(xintercept = unname(bestModel$psi[, "Est."]),
+      linetype = "dashed") +
     scale_x_continuous(breaks = seq(startYear, resultsYear),
-      labels =  EveryNth(seq(startYear, resultsYear), 3, inverse = TRUE),
-      limits = c(startYear, resultsYear), 
-      expand = c(0,0)) +
+      labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
+      limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = comma, limits = c(0, ymax)) + 
     scale_colour_manual("", values = c(asrcols[2], "black"), 
       limits = c("estimates", "best"), 
-      labels = c("Estimates", "Best fit")) +
+      labels = c("Estimates", "Best fit ")) + # adjust alignment
     ylab(yLabel) + xlab("Year") +  
     PlotOptions() 
   
@@ -1340,17 +1370,35 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
   }
   
   if (save) {
-    # Save the current plot
+    # Save the current plot as a combined plot
+    
+    # segPlotCombine <- plot_grid(segPlotAll, 
+    #   segPlotBest + theme(legend.position = "right"),
+    #   ncol = 1, labels = c("A", "B"))
+    
+    legend1 <- get_legend(segPlotAll)
+    legend2 <- get_legend(segPlotBest + theme(legend.position = "right"))
+    
+    segPlotCombine <- ggdraw() +
+      draw_plot(segPlotAll + theme(legend.position="none"), 
+        0, 0.5, 0.8, 0.5) +
+      draw_plot(segPlotBest + theme(legend.position="none"),
+        0, 0, 0.8, 0.5) +
+      draw_plot(legend1, 0.8, 0.5, 0.2, 0.5) + 
+      draw_plot(legend2, 0.8, 0, 0.2, 0.5) + 
+      draw_plot_label(c("A", "B"), c(0, 0), c(1, 0.5), size = 12)
+    
     ggsave(file.path(figFolder, paste0("HIVcascade-Trends-", indicator,
       "-Segment-All_",
       toString(startYear), "-",
       toString(resultsYear),
       saveFormat)),
-      plot = segPlotAll, width = 16, height = 12, units = "cm")
+      plot = segPlotCombine, width = 22, height = 24, units = "cm")
   }
   
   return(list(models = segModels,
-    fitted = modelData, breakpoints = modelBreakpoints, slopes = modelSlopes, 
+    fitted = modelData, breakpoints = modelBreakpoints, 
+    gaps = modelBreakpointGaps, slopes = modelSlopes, 
     aic = aicValues, bic = bicValues, 
     plotall = segPlotAll, plotBest = segPlotBest))
 }
@@ -1398,7 +1446,7 @@ offsets <- list("infected" = 1,
   "propoverall" = expTrendData$infected,
   "ydf" = expTrendData$ydfoffest,
   "cdr"=  expTrendData$infections,
-  "ipr" = expTrendData$infected)
+  "ipr" = expTrendData$iproffset)
 
 yPercent <- c("infected" = FALSE,
   "pldhiv" = FALSE,
