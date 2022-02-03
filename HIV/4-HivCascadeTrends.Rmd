@@ -1,23 +1,11 @@
 ---
 title: "HIV Cascade Trends Exploration"
 author: "Richard T. Gray"
-date: Latest version - `r format(Sys.Date(), format="%B %d %Y")`
-output:
-  word_document:
-    pandoc_args: --output="docs/HIVcascade_Trends.docx"
-    reference_docx: docs/mystyles.docx
-csl: docs/plos.csl
+date: "Latest version - 3 February 2022"
 ---
 
 This document is used to explore trends in the national Australian HIV 
 Cascade.  
-
-```{r knitr_options, include=FALSE} 
-knitr::opts_chunk$set(echo = FALSE, 
-  warning = FALSE, 
-  message = FALSE, 
-  include = FALSE) 
-```
 
 ```{r setup}
 # Open as a project (setting working directory to source and restarting R)
@@ -1402,7 +1390,14 @@ if (savePlots) {
 
 ```
 
-# Chow and interaction tests of detected change points
+# Testing code =================================================================
+
+The following sections were primarily used for testing and deciding on the best
+approach to evaluating the trends. They are mostly superfluous now but have been
+kept in this script for storage and safe keeping in case the code becomes useful
+at a later date
+
+# Chow and interaction tests of detected change points (DEPRECATED)
 
 This section applies some statistical tests for the segmented model to test 
 for the robustness of any change points and produces a number of summary 
@@ -1417,6 +1412,10 @@ point using an interaction model and performed a Wald test on the slopes
 returning the p-value. This test only tests if the difference between the 
 slope parameters is different to zero as decribed here:  
 https://andrewpwheeler.wordpress.com/2016/10/19/testing-the-equality-of-two-regression-coefficients/
+
+*NOTE:* While the script below runs the estimates seem a bit funny for some
+indicators! I haven't explored the reasons for this because I have decided to 
+use the BIC to obtain best fitting change point model.
 
 ```{r Chow and interaction tests}
 # This chunk runs chow and interaction tests for each intermediate
@@ -1834,22 +1833,18 @@ if (savePlots) {
 
 ```
 
-# Non-linear model 
+# Non-linear model (DEPRECATED)
 
-A segmented Poisson model does not necessarily produce a good fit to some of
-the gaps estimates and might not be appropriate for describing the change in trends 
-seen in the cascade gaps. Also it is difficult to decide which estimates
-are most appropriate to use for the gaps trends analysis, particularly for
-the noART gap where the change point could be spurious due to changes in 
-data source over time. The advantage of the segmented model is that it is
-easily interpretable. It is okay for describing retrospective trends but not as 
-good for prediction.
-
-In this section we explore a non-linear least squares fitting of a non-linear 
-model which allows for an increase and decrease in values over time. 
-Fitting the model allows us to report a rise and decay rate ratio and time 
+This section was used to explore the explore a non-linear least squares fitting 
+of a non-linear model which allows for an increase and decrease in values over
+time. Fitting the model allows us to report a rise and decay rate ratio and time 
 where the max of peak value occurs. A disadvantage is that it is less 
-interpretable.
+interpretable. 
+
+This fitting was applied to the cascade gaps data where a single change point 
+original seemed to produce a good fit. However, this has now been superseeded by 
+the multiple change point approach. The code has been kept here for prosperity 
+and future use. 
 
 The model is based on the following formula:
 $$
@@ -2374,8 +2369,10 @@ mean(filter(boot_coefs, term == "g")$estimate)
 # ggplot(boot_coefs, aes(estimate)) +
 #   geom_histogram(bins = 30) +
 #   facet_wrap( ~ term, scales = "free") +
-#   geom_vline(aes(xintercept = .lower), data = percentile_intervals, col = "blue") +
-#   geom_vline(aes(xintercept = .upper), data = percentile_intervals, col = "blue")
+#   geom_vline(aes(xintercept = .lower), 
+#     data = percentile_intervals, col = "blue") +
+#   geom_vline(aes(xintercept = .upper), 
+#     data = percentile_intervals, col = "blue")
 # 
 # boot_aug <- boot_models_test %>% 
 #   sample_n(200) %>% 
@@ -2384,8 +2381,6 @@ mean(filter(boot_coefs, term == "g")$estimate)
 # ggplot(boot_aug, aes(xseq, value)) +
 #   geom_line(aes(y = .fitted, group = id), alpha = .2, col = "blue") +
 #   geom_point()
-
-
 
 ```
 
