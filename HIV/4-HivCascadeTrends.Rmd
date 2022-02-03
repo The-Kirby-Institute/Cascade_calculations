@@ -40,6 +40,7 @@ notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data",
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 source(file.path(Rcode, "PlotColors.R"), echo=TRUE)
+source(file.path(Rcode, "EveryNth.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 LoadLibrary(scales)
 LoadLibrary(cowplot) # Note this masks ggsave with save_plot
@@ -1225,7 +1226,8 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
     BIC(segModel4))
   bicStr <- round(bicValues, digits = 1)
   
-  segModelData <- data.frame(year = tempData$year, 
+  modelData <- data.frame(year = tempData$year, 
+    overall = fitted(pmodel)/offset,
     segvalue1 = fitted(segModel1)/offset, 
     segvalue2 = fitted(segModel2)/offset,
     segvalue3 = fitted(segModel3)/offset,
@@ -1236,18 +1238,20 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
     aes(x = year, y = value)) + 
     geom_line(aes(color = "estimates")) + 
     geom_point(color = asrcols[2]) +
-    geom_line(aes(y = fitted(pmodel),
+    geom_line(data = modelData, aes(y = overall,
       colour = "overall")) +
-    geom_line(data = segModelData, aes(y = segvalue1, 
+    geom_line(data = modelData, aes(y = segvalue1, 
       colour = "segment1")) + 
-    geom_line(data = segModelData, aes(y = segvalue2, 
+    geom_line(data = modelData, aes(y = segvalue2, 
       colour = "segment2")) + 
-    geom_line(data = segModelData, aes(y = segvalue3,
+    geom_line(data = modelData, aes(y = segvalue3,
       colour = "segment3")) +
-    geom_line(data = segModelData, aes(y = segvalue4,
+    geom_line(data = modelData, aes(y = segvalue4,
       colour = "segment4")) +
-    scale_x_continuous(breaks = seq(startYear,                        
-      resultsYear, by = 3)) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  EveryNth(seq(startYear, resultsYear), 3, inverse = TRUE),
+      limits = c(startYear, resultsYear), 
+      expand = c(0,0)) +
     scale_y_continuous(labels = comma) + 
     scale_colour_manual("", values = c(asrcols[2], "black", "blue", 
       "darkgreen", "purple", "orange"),
@@ -1260,10 +1264,33 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
     ylab(yLabel) + xlab("Year") +  
     PlotOptions() + theme(legend.position = "right") + 
     geom_text(x = 2012, y = 0.05 * ymax, 
-      label = sprintf("BIC values\nOverall %s; One cp %s; Two cps %s;\nThree cps  %s; Four cps %s.", 
+      label = sprintf("BIC values\nOverall %s; One CP %s; Two CPs %s;\nThree CPs  %s; Four CPs %s.", 
         bicStr[1], bicStr[2], bicStr[3], bicStr[4], bicStr[5]), size = 3)
   
-  segPlotBest <- segPlotAll
+  # Select the model with the lowest BIC and plot
+  segModels <- list(pmodel, segModel1, segModel2, segModel3, segModel4)
+  minBic <- which.min(bicValues)
+  bestModel <- segModels[[minBic]]
+  bestModelData <- select(modelData, c(1, minBic + 1)) 
+  colnames(bestModelData)[2] <- "value"
+  
+  segPlotBest <- ggplot(data = tempData, 
+    aes(x = year, y = value)) + 
+    geom_line(aes(color = "estimates")) + 
+    geom_point(color = asrcols[2]) +
+    geom_line(data = bestModelData, aes(y = value,
+      colour = "best")) + 
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  EveryNth(seq(startYear, resultsYear), 3, inverse = TRUE),
+      limits = c(startYear, resultsYear), 
+      expand = c(0,0)) +
+    scale_y_continuous(labels = comma) + 
+    scale_colour_manual("", values = c(asrcols[2], "black"), 
+      limits = c("estimates", "best"), 
+      labels = c("Estimates", "Best fit")) +
+    coord_cartesian(ylim = c(0, ymax)) + 
+    ylab(yLabel) + xlab("Year") +  
+    PlotOptions() 
   
   if (save) {
     # Save the current plot
@@ -1275,7 +1302,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
       plot = segPlotAll, width = 16, height = 12, units = "cm")
   }
   
-  return(list(models = list(pmodel, segModel1, segModel2, segModel3, segModel4),
+  return(list(models = segModels,
     fitted = segModelData, breakpoints = modelBreakpoints, slopes = modelSlopes, 
     aic = aicValues, bic = bicValues, 
     plotall = segPlotAll, plotBest = segPlotBest))
@@ -1331,7 +1358,7 @@ offsets <- list("infected" = 1,
 steps <- names(ymax)
 segResults <- list()
 
-for (ii in steps) {
+for (ii in steps[1]) {
   print(ii)
   segResults[[ii]] <- Segment(ii, initialbp, ymax[ii],
     yLabels[ii], save = TRUE, offset = offsets[[ii]])
