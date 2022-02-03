@@ -282,15 +282,15 @@ trendData <- bind_rows(dplyr::select(resultsAll, year, stage, value,
 # Add diagnoses and infections data --------------------------------------------
 trendData <- bind_rows(trendData,
   diagsDataExclude %>% 
-      mutate(stage = "diagnoses_exclude", lower = NA, upper = NA) %>% 
-      select(year, stage, value = diags, lower, upper),
+    mutate(stage = "diagnoses_exclude", lower = NA, upper = NA) %>% 
+    select(year, stage, value = diags, lower, upper),
   diagsDataInclude %>% 
-      mutate(stage = "diagnoses_include", lower = NA, upper = NA) %>% 
-      select(year, stage, value = diags, lower, upper), 
+    mutate(stage = "diagnoses_include", lower = NA, upper = NA) %>% 
+    select(year, stage, value = diags, lower, upper), 
   newInfects %>% 
-      mutate(stage = "infections") %>% 
-      select(year, stage, value = infections, lower = infections_lower, 
-        upper = infections_upper))
+    mutate(stage = "infections") %>% 
+    select(year, stage, value = infections, lower = infections_lower, 
+      upper = infections_upper))
 
 # Trends ----------------------------------------------------
 steps <- unique(trendData$stage)
@@ -339,7 +339,7 @@ PlotTrend <- function(data, models, indicator, trend = TRUE) {
   tempData <- filter(data, stage == indicator)
   tempPlot <- ggplot(data = tempData, aes(x = year, y = value)) +
     geom_ribbon(aes(ymin = lower, ymax = upper), 
-        fill = asrcols[2], alpha = 0.4) +
+      fill = asrcols[2], alpha = 0.4) +
     geom_line(color = asrcols[2]) + 
     geom_point(color = asrcols[2]) +
     scale_x_continuous(breaks = seq(startYear,                        
@@ -348,23 +348,23 @@ PlotTrend <- function(data, models, indicator, trend = TRUE) {
     expand_limits(y = 0) +
     scale_y_continuous(labels = comma) + 
     PlotOptions() 
-
+  
   if (trend) {
-     tempPlot <- tempPlot + 
-       geom_line(aes(y = predict(model, type = "response")),
-      colour = "black")
+    tempPlot <- tempPlot + 
+      geom_line(aes(y = predict(model, type = "response")),
+        colour = "black")
   }
   
   # Save the current plot
   if (savePlots) {
-      ggsave(file.path(figFolder, paste0("HIVcascade-Trends-", indicator, "_",
-        toString(startYear), "-",
-        toString(resultsYear),
-        saveFormat)),
-        plot = tempPlot, width = 7.5, height = 6, 
-        units = "cm")
+    ggsave(file.path(figFolder, paste0("HIVcascade-Trends-", indicator, "_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat)),
+      plot = tempPlot, width = 7.5, height = 6, 
+      units = "cm")
   }
-   
+  
   return(tempPlot)
 }
 
@@ -588,7 +588,7 @@ plotPropFull <- function(proportion, lmmodel, logmodel, expmodel, expoffset,
     coord_cartesian(ylim = c(0,1)) +
     ylab(label) + xlab("Year") +  
     PlotOptions() 
-
+  
   return(propPlot)
 }
 
@@ -604,10 +604,10 @@ plotProp <- function(proportion, expmodel, expoffset, label, trend = TRUE) {
     PlotOptions() 
   
   if (trend) {
-  propPlot <- propPlot + 
-    geom_line(aes(y = fitted(expmodel)/expoffset), colour = "black")
+    propPlot <- propPlot + 
+      geom_line(aes(y = fitted(expmodel)/expoffset), colour = "black")
   }
-
+  
   return(propPlot)
 }
 
@@ -640,7 +640,7 @@ trendPlotsProp[["propdiagnosed"]] <- diagsPropPlot
 trendPlotsProp[["proptreated"]] <- treatedPropPlot
 trendPlotsProp[["propsuppressed"]] <- suppressedPropPlot
 trendPlotsProp[["propoverall"]] <- overallPropPlot
-  
+
 # Add linear and Poisson model results to trendCascade
 propTrends <- tibble(stage = c("propdiagnosed", "proptreated",
   "propsuppressed", "propoverall"),
@@ -872,9 +872,9 @@ LoadLibrary(changepoint) # Not really used
 # nearest year
 
 tots <- function(indicator) {
- return(ts(filter(trendData, stage == indicator)$value,
-  start = c(startYear, 1), end = c(resultsYear, 1),
-  frequency = 1)) 
+  return(ts(filter(trendData, stage == indicator)$value,
+    start = c(startYear, 1), end = c(resultsYear, 1),
+    frequency = 1)) 
 }
 
 infectedts <- tots("infected")
@@ -932,7 +932,7 @@ autoplot(cpt.mean(iprts))
 BPindicator <- function(indicator, tsdata) {
   bpIndicator <- breakpoints(data[, indicator] ~ years, data = data, h = 3)
   print(summary(bpIndicator))
-
+  
   autoplot(bpIndicator)
   plot(bpIndicator)
   plot(tsdata)
@@ -1114,7 +1114,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
   
   # Get original model
   pmodel <- allTrendModels[[indicator]]
-
+  
   # Generate segmented models - if unable to find checkpoint then error is
   # found and model becomes to straight Poisson model (0 change points)
   segModel1 <- tryCatch(segmented(pmodel, seg.Z = ~year, 
@@ -1137,14 +1137,22 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
       print(paste0(indicator, ": Error in segmented model 3"))
       segModel3 <- pmodel
     })
-
+  
+  segModel4 <- tryCatch(segmented(pmodel, seg.Z = ~year, 
+    psi = list(year = initialbp[[4]])),
+    error = function(err) {
+      print(paste0(indicator, ": Error in segmented model 4"))
+      segModel4 <- pmodel
+    })
+  
   # Calculate and save breakpoints for each model
   modelBreakpoints <- tibble(model = c("pmodel", "segModel1", 
-    "segModel2", "segModel2", "segModel3", "segModel3", "segModel3"),
+    "segModel2", "segModel2", "segModel3", "segModel3", "segModel3",
+    "segModel4", "segModel4", "segModel4", "segModel4"),
     estimate = 0,
     lower = 0,
     upper = 0)
-
+  
   if (class(segModel1)[1] == "segmented") {
     modelBreakpoints$estimate[2] <- unname(segModel1$psi[,"Est."])
     modelBreakpoints$lower[2] <- segCI(segModel1$psi[, "Est."], 
@@ -1167,10 +1175,19 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
       segModel3$psi[, "St.Err"])[4:6]
   }
   
+  if (class(segModel4)[1] == "segmented") {
+    modelBreakpoints$estimate[8:11] <- unname(segModel4$psi[,"Est."])
+    modelBreakpoints$lower[8:11] <- segCI(segModel4$psi[, "Est."], 
+      segModel4$psi[, "St.Err"])[1:4]
+    modelBreakpoints$upper[8:11] <- segCI(segModel4$psi[, "Est."], 
+      segModel4$psi[, "St.Err"])[5:8]
+  }
+  
   # Calculate and save slopes for each model
   modelSlopes <- tibble(model = c("pmodel", "segModel1", "segModel1", 
     "segModel2", "segModel2", "segModel2", "segModel3", "segModel3",
-    "segModel3", "segModel3"),
+    "segModel3", "segModel3", "segModel4", "segModel4", "segModel4", 
+    "segModel4", "segModel4"),
     estimate = 0,
     lower = 0,
     upper = 0)
@@ -1178,7 +1195,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
   modelSlopes$estimate[1] <- exp(unname(coef(pmodel)[2]))
   modelSlopes$lower[1] <- exp(confint(pmodel, "year", type = "Wald"))[1]
   modelSlopes$upper[1] <- exp(confint(pmodel, "year", type = "Wald"))[2]
-
+  
   if (class(segModel1)[1] == "segmented") {
     modelSlopes$estimate[2:3] <- exp(slope(segModel1)$year[,1])
     modelSlopes$lower[2:3] <- exp(slope(segModel1)$year[,"CI(95%).l"])
@@ -1194,16 +1211,25 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
     modelSlopes$lower[7:10] <- exp(slope(segModel3)$year[,"CI(95%).l"])
     modelSlopes$upper[7:10] <- exp(slope(segModel3)$year[,"CI(95%).u"])
   }
-
+  
+  if (class(segModel4)[1] == "segmented") {
+    modelSlopes$estimate[11:15] <- exp(slope(segModel4)$year[,1])
+    modelSlopes$lower[11:15] <- exp(slope(segModel4)$year[,"CI(95%).l"])
+    modelSlopes$upper[11:15] <- exp(slope(segModel4)$year[,"CI(95%).u"])
+  }
+  
   # Calculate and save AIC and BIC values
-  aicValues <- c(AIC(pmodel), AIC(segModel1), AIC(segModel2), AIC(segModel3))
-  bicValues <- c(BIC(pmodel), BIC(segModel1), BIC(segModel2), BIC(segModel3))
+  aicValues <- c(AIC(pmodel), AIC(segModel1), AIC(segModel2), AIC(segModel3),
+    AIC(segModel4))
+  bicValues <- c(BIC(pmodel), BIC(segModel1), BIC(segModel2), BIC(segModel3),
+    BIC(segModel4))
   bicStr <- round(bicValues, digits = 1)
   
   segModelData <- data.frame(year = tempData$year, 
     segvalue1 = fitted(segModel1)/offset, 
     segvalue2 = fitted(segModel2)/offset,
-    segvalue3 = fitted(segModel3)/offset)
+    segvalue3 = fitted(segModel3)/offset,
+    segvalue4 = fitted(segModel4)/offset)
   
   # Create plot
   segPlotAll <- ggplot(data = tempData, 
@@ -1218,21 +1244,25 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
       colour = "segment2")) + 
     geom_line(data = segModelData, aes(y = segvalue3,
       colour = "segment3")) +
+    geom_line(data = segModelData, aes(y = segvalue4,
+      colour = "segment4")) +
     scale_x_continuous(breaks = seq(startYear,                        
       resultsYear, by = 3)) +
     scale_y_continuous(labels = comma) + 
     scale_colour_manual("", values = c(asrcols[2], "black", "blue", 
-      "darkgreen", "purple"),
-      limits = c("estimates", "overall", "segment1", "segment2", "segment3"),
+      "darkgreen", "purple", "orange"),
+      limits = c("estimates", "overall", "segment1", "segment2", "segment3",
+        "segment4"),
       labels = c("Estimates", "Overall", "One change point", 
-        "Two change points", "Three change points")) +
+        "Two change points", "Three change points",
+        "Four change points")) +
     coord_cartesian(ylim = c(0, ymax)) + 
     ylab(yLabel) + xlab("Year") +  
     PlotOptions() + theme(legend.position = "right") + 
     geom_text(x = 2012, y = 0.05 * ymax, 
-      label = sprintf("BIC values\nOverall %s; One cp %s; Two cp %s; Three cp  %s", 
-        bicStr[1], bicStr[2], bicStr[3], bicStr[4]), size = 3)
-
+      label = sprintf("BIC values\nOverall %s; One cp %s; Two cps %s;\nThree cps  %s; Four cps %s.", 
+        bicStr[1], bicStr[2], bicStr[3], bicStr[4], bicStr[5]), size = 3)
+  
   segPlotBest <- segPlotAll
   
   if (save) {
@@ -1245,18 +1275,19 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
       plot = segPlotAll, width = 16, height = 12, units = "cm")
   }
   
-  return(list(models = list(pmodel, segModel1, segModel2, segModel3),
+  return(list(models = list(pmodel, segModel1, segModel2, segModel3, segModel4),
     fitted = segModelData, breakpoints = modelBreakpoints, slopes = modelSlopes, 
     aic = aicValues, bic = bicValues, 
     plotall = segPlotAll, plotBest = segPlotBest))
 }
-  
+
 # Find breakpoints -------------------------------------------------------------
 # Initial break point estimates - use trial and error based on 
 # breakpoints() results and visual inspection and to test for sensitivity by 
 # varying.
 
-initialbp <- list(2010, c(2007, 2016), c(2007, 2012, 2016))
+initialbp <- list(2010, c(2007, 2016), c(2007, 2012, 2016),
+  c(2006, 2010, 2013, 2017))
 
 # Y axis range for each model
 ymax <- c("infected" = 35000,
@@ -1311,16 +1342,16 @@ for (ii in steps) {
 # Figure caption
 figs("segmentedTrends", "")
 
-legend <- get_legend(segPlots[[1]])
+legend <- get_legend(segResults[[1]]$plotall)
 
 # Update group plot
 combinedPlot <- grid.arrange(legend, 
-  segPlots[[1]] + theme(legend.position="none"), 
-  segPlots[[2]] + theme(legend.position="none"),
-  segPlots[[3]] + theme(legend.position="none"), 
+  segResults[[1]]$plotall + theme(legend.position="none"), 
+  segResults[[2]]$plotall + theme(legend.position="none"),
+  segResults[[3]]$plotall + theme(legend.position="none"), 
   ncol = 2, nrow = 3, 
-  layout_matrix = rbind(c(1, 1), c(2, 3), c(4, 5)),
-  widths = c(4, 4), heights = c(0.8, 3.1, 3.1))
+  layout_matrix = rbind(c(1, 1), c(2, 3), c(4, 5))) #,
+  # widths = c(4, 4), heights = c(0.8, 3.1, 3.1))
 
 stagesDiffsPlot2 <- ggdraw() +
   draw_plot(combinedPlot, 0, 0, 1, 1) +
@@ -1340,230 +1371,6 @@ if (savePlots) {
     plot = stagesDiffsPlot2, width = 18, height = 15, units = "cm")
 }
 
-```
-
-```{r Summary of model results}
-# This chunk is used to explore the summary statistics of a
-# segmented model (already have Poisson model stats in trendsCascade)
-# All outputs stored below. Need to exp() estimates and CIs to get 
-# appropriate rate ratio estimates. 
-
-step <- "unsuppressed"
-
-segModel <- segModels[[step]]
-summary(segModel)
-segModel$psi
-segCI(segModel$psi[, "Est."], segModel$psi[, "St.Err"])
-slope(segModel) 
-exp(slope(segModel)$year[,1]) # Rate ratios
-BIC(segModel)
-BIC(trendModels[[step]])
-
-```
-
-```{r Segmented diagnoses and infections}
-# Do an independent segment analysis for diagnoses (as it is a bit 
-# trickier) and infections. 
-
-# Diagnoses---------------------------------------------------------------
-
-# Specify initial breakpoints - use trial and error based on breakpoints()
-# results and to test for sensitivity. 
-
-breakPoints <- c(2008)
-# breakPoints <- c(2008, 2010) # Two breakpoints can be found at 2010 and
-# 2014
-
-# Recreate base model
-trendDiags <- glm(diags ~ year, data = diagsData, 
-  family = "poisson")
-
-# Now run segmented to produce a segmented Poisson model. 
-segDiags <- segmented(trendDiags, seg.Z = ~year, 
-  psi = list(year = breakPoints))
-segModels$diagnoses <- segDiags
-
-segDiagsData <- data.frame(year = diagsData$year, 
-  segvalue = fitted(segDiags))
-
-diagsmax <- 1250
-
-segDiagsPlot <- ggplot(data = diagsData, 
-  aes(x = year, y = diags)) + 
-  geom_line(aes(color = "estimates")) + 
-  geom_point(color = asrcols[2]) +
-  geom_line(aes(y = fitted(trendDiags),
-    colour = "overall")) +
-  geom_line(data = segDiagsData, aes(y = segvalue, 
-    colour = "segment")) + 
-  scale_x_continuous(breaks = seq(startYear,                        
-    resultsYear, by = 3)) +
-  scale_y_continuous(labels = comma) + 
-  scale_colour_manual("", values = c(asrcols[2], "black", "blue"),
-    limits = c("estimates", "overall", "segment"),
-    labels = c("Estimates", "Overall model",
-      "Segmented model")) +
-  coord_cartesian(xlim = c(startYear, resultsYear), 
-    ylim = c(0, diagsmax)) + 
-  ylab("Annual notifications") + xlab("Year") +  
-  PlotOptions() +
-  geom_vline(xintercept = segDiags$psi[,2], linetype = "dashed",
-    colour = "blue") # + 
-  # geom_text(x = 2010, y = 0.2 * diagsmax, 
-  #   label = paste("Overall pseudo-R^2:",
-  #     toString(round(filter(trendCascade, 
-  #       stage == "diagnoses")$pseudoR2,
-  #       digits = 4))), size = 3) +
-  # geom_text(x = 2010, y = 0.1 * diagsmax, 
-  #   label = paste("Segmented pseudo-R^2:",
-  #     toString(round(rsq(segDiags, type = "kl"), digits = 4))),
-  #   size = 3)
-
-if (length(breakPoints) == 1) {
-  segDiagsPlot <- segDiagsPlot +
-    geom_errorbarh(aes(y = 0.975 * diagsmax, 
-      xmin = segCI(segDiags$psi[,2],
-        segDiags$psi[,3])[1],
-      xmax = segCI(segDiags$psi[,2],
-        segDiags$psi[,3])[2]),
-      colour ="blue", 
-      height = 0.025 * diagsmax)
-}
-
-print(segDiagsPlot)
-
-# Summary: break points and slopes for diagnoses. Remember need to exp 
-# slope estimates to get rate ratios.
-summary(segDiags)
-segDiags$psi
-segCI(segDiags$psi[,2], segDiags$psi[,3]) 
-slope(segDiags)
-BIC(trendDiags)
-BIC(segDiags)
-
-# Infections -------------------------------------------------------------
-
-# Specify initial breakpoints - use trial and error based on breakpoints()
-# results and to test for sensitivity. 
-breakPointsInfects <- c(2008)
-
-# Recreate base model
-trendInfects <- glm(round(infections) ~ year, data = newInfects, 
-  family = "poisson")
-
-# Now run segmented to produce a segmented Poisson model. 
-segInfects <- segmented(trendInfects, seg.Z = ~year, 
-  psi = list(year = breakPointsInfects))
-segModels$infections <- segInfects
-
-segInfectsData <- data.frame(year = newInfects$year, 
-  segvalue = fitted(segInfects))
-
-infectsmax <- 1250
-
-segInfectsPlot <- ggplot(data = newInfects, 
-  aes(x = year, y = infections)) + 
-  geom_line(aes(color = "estimates")) + 
-  geom_point(color = asrcols[2]) +
-  geom_line(aes(y = fitted(trendInfects),
-    colour = "overall")) +
-  geom_line(data = segInfectsData, aes(y = segvalue, 
-    colour = "segment")) + 
-  scale_x_continuous(breaks = seq(startYear,                        
-    resultsYear, by = 3)) +
-  scale_y_continuous(labels = comma) + 
-  scale_colour_manual("", values = c(asrcols[2], "black", "blue"),
-    limits = c("estimates", "overall", "segment"),
-    labels = c("Estimates", "Overall model",
-      "Segmented model")) +
-  coord_cartesian(xlim = c(startYear, resultsYear), 
-    ylim = c(0, infectsmax)) + 
-  ylab("Annual new infections") + xlab("Year") +  
-  PlotOptions() +
-  geom_vline(xintercept = segInfects$psi[2], linetype = "dashed",
-    colour = "blue") #+
-  # geom_text(x = 2010, y = 0.2 * infectsmax, 
-  #   label = paste("Overall pseudo-R^2:",
-  #     toString(round(filter(trendCascade, 
-  #       stage == "infections")$pseudoR2,
-  #       digits = 4))), size = 3) +
-  # geom_text(x = 2010, y = 0.1 * infectsmax, 
-  #   label = paste("Segmented pseudo-R^2:",
-  #     toString(round(rsq(segInfects, type = "kl"), digits = 4))),
-  #   size = 3)
-
-if (length(breakPointsInfects) == 1) {
-  segInfectsPlot <- segInfectsPlot +
-    geom_errorbarh(aes(y = 0.975 * infectsmax,
-      xmin = segCI(segInfects$psi[2],
-        segInfects$psi[3])[1],
-      xmax = segCI(segInfects$psi[2],
-        segInfects$psi[3])[2]),
-      colour = "blue",
-      height = 0.025 * diagsmax)
-}
-
-print(segInfectsPlot)
-
-# Summary: break points and slopes for infections. Remember need to exp 
-# to get rate ratios. 
-summary(segInfects)
-segInfects$psi
-segCI(segInfects$psi[2], segInfects$psi[3])
-slope(segInfects)
-BIC(trendInfects)
-BIC(segInfects)
-
-# Combined plot -----------------------------------------------------------
-
-# Figure caption
-figs("segmentedTrends", "Trends in each step of the Australian HIV cascade over 2004-2016 comparing the overall and segmented models. The red discs show the best estimates for the cascade. The black lines show the estimates from the overall fitted Poisson models. The blue lines show the estimates from the segmented fitted Poisson models.")
-
-# Add the diagnoses and infections plot to the combination plot
-stagesDiffsPlot3 <- ggdraw() +
-  draw_plot(legend, 0, 0.93, 1, 0.07) + 
-  draw_plot(segPlots[[1]] + theme(legend.position="none"), 
-    0, 0.62, 0.5, 0.31) +
-  draw_plot(segPlots[[2]] + theme(legend.position="none"),
-    0, 0.32, 0.5, 0.31) +
-  draw_plot(segPlots[[3]] + theme(legend.position="none"),
-    0, 0, 0.5, 0.31) +
-  draw_plot(segInfectsPlot + theme(legend.position="none"),
-    0.5, 0.62, 0.5, 0.31) +
-  draw_plot(segDiagsPlot + theme(legend.position="none"),
-    0.5, 0.31, 0.5, 0.31) +
-  draw_plot_label(c("A", "B", "C", "D", "E"), c(0, 0, 0, 0.5, 0.5),
-    c(0.93, 0.62, 0.31, 0.93, 0.62), size = 12)
-
-if (savePlots) {
-  # Save the diagnoses plot
-  ggsave(file.path(figFolder,
-    paste0("HIVcascade-Trends-diagnoses_Segment_",
-      toString(startYear), "-",
-      toString(resultsYear),
-      saveFormat)),
-    plot = segDiagsPlot, width = 7.5, height = 6, units = "cm")
-  
-  ggsave(file.path(figFolder,
-    paste0("HIVcascade-Trends-infections_Segment_",
-      toString(startYear), "-",
-      toString(resultsYear),
-      saveFormat)),
-    plot = segInfectsPlot, width = 7.5, height = 6, units = "cm")
-  
-  ggsave(file.path(figFolder,
-    paste("HIVcascade-Differences-Trends-All_Segment",
-      toString(startYear), "-",
-      toString(resultsYear),
-      saveFormat, sep = "")),
-    plot = stagesDiffsPlot3, width = 18, height = 25, units = "cm")
-}
-
-```
-
-`r figs("segmentedTrends")`
-```{r, include = TRUE, fig.width = 8, fig.height = 6.7}
-print(stagesDiffsPlot3)
 ```
 
 # Chow and interaction tests of detected change points
@@ -1635,122 +1442,148 @@ pslopes <- function(overalldata, cutpoint) {
   varAB <- sqrt(v[1,1] + v[2,2] - 2 * v[2,1])
   wstat <- diff/varAB # Stat sig if abs > 2 (2 sided p-value treating 
   # wstat as z-score in normal distribution
-  pwstat <- 2*pnorm(-abs(wstat)) # test stat from nomal
+  pwstat <- 2*pnorm(-abs(wstat)) # test stat from normal
   return(list(model = intModel, wstat = wstat, pwstat = pwstat))
 }
 
-selectModel <- function(step) {
-  # This function simply retrieves the correct information for each step
-  if (step == "diagnoses") {
-    overallModel <- trendDiags
-    segModel <- segDiags
-    overallData <- diagsData %>% rename(value = diags) %>%
-      select(-overseas)
-    cutPoint <- round(segModel$psi[2])
-  } else if (step == "infections") {
-    overallModel <- trendInfects
-    segModel <- segInfects
-    overallData <- newInfects %>% rename(value = infections) %>%
-      select(-infections_lower, -infections_upper)
-  } else {
-    overallModel <- trendModels[[step]]
-    segModel <- segModels[[step]]
-    overallData <- filter(trendData, stage == step) %>%
-      select(-lower, -upper)
-    cutPoint <- round(segModel$psi[2])
+selectBreakpoint <- function(indicator, nbreakpoints, breakpoint_number, 
+  offset) {
+  # This function simply retrieves the correct information for each 
+  # breakpoint
+  
+  indicatorData <- trendData %>%
+    filter(stage == indicator) %>% 
+    select(year, value) %>%
+    mutate(offset = 1)
+  
+  if (offset[1] > 0) {
+    indicatorData$offset <- offset
   }
-  output <- list(overallModel = overallModel, segModel = segModel,
-    overallData = overallData, cutPoint = cutPoint)
+  
+  breakpoint <- 0
+  preData <- 0
+  postData <- 0
+  
+  if (nbreakpoints == 1) {
+    breakpoint <- filter(segResults[[indicator]]$breakpoints, 
+      model == "segModel1")$estimate
+    if (breakpoint != 0) {
+      preData <- filter(indicatorData, year <= breakpoint)
+      postData <- filter(indicatorData, year > breakpoint)
+    } 
+  } else if (nbreakpoints == 2) {
+    breakpoint <- filter(segResults[[indicator]]$breakpoints, 
+      model == "segModel2")$estimate
+    if (breakpoint[1] != 0) {
+      if (breakpoint_number == 1) {
+        preData <- filter(indicatorData, year <= breakpoint[1])
+        postData <- filter(indicatorData, year > breakpoint[1], 
+          year <= breakpoint[2])
+      } else {
+        # Second breakpoint
+        preData <- filter(indicatorData, year > breakpoint[1], 
+          year <= breakpoint[2])
+        postData <- filter(indicatorData, year > breakpoint[2])
+      }
+      breakpoint <- breakpoint[breakpoint_number]
+    }
+  } else if (nbreakpoints == 3) {
+    breakpoint <- filter(segResults[[indicator]]$breakpoints, 
+      model == "segModel3")$estimate
+    
+    if (breakpoint[1] != 0) {
+      if (breakpoint_number == 1) {
+        preData <- filter(indicatorData, year <= breakpoint[1])
+        postData <- filter(indicatorData, year > breakpoint[1], 
+          year <= breakpoint[2])
+      } else if (breakpoint_number == 2) {
+        preData <- filter(indicatorData, year > breakpoint[1], 
+          year <= breakpoint[2])
+        postData <- filter(indicatorData, year > breakpoint[2], 
+          year <= breakpoint[3])
+      } else {
+        # Third breakpoint
+        preData <- filter(indicatorData, year > breakpoint[1], 
+          year <= breakpoint[2])
+        postData <- filter(indicatorData, year > breakpoint[2])
+      }
+      breakpoint <- breakpoint[breakpoint_number]
+    }
+  }
+  
+  output <- list(indicator = indicator, breakpoint = breakpoint, 
+    pre_data = preData, post_data = postData)
+  
   return(output)
 }
 
-prepostModels <- function(overalldata, cutpoint) {
+prepostModels <- function(preData, postData, offset) {
   # This function produces the independent pre and post models
   # for the chow test and other testing 
-  preData <- filter(overalldata, year <= cutpoint)
   segModelPre <- glm(round(value) ~ year, data = preData, 
+    offset = log(offset),
     family = "poisson")
-  postData <- filter(overalldata, year > cutpoint)
   segModelPost <- glm(round(value) ~ year, data = postData, 
+    offset = log(offset),
     family = "poisson")
   
   return(list(premodel = segModelPre, postmodel = segModelPost))
 }
 
-# Loop over intermediate steps, perform steps and store overall results ---
-modelString <- c("diagnoses" = "Annual diagnoses",
-  "infections" = "Annual new infections",  
-  "undiagnosed" = "Number undiagnosed",
-  "noART" = "Diagnosed but untreated",
-  "unsuppressed" = "On ART but unsuppressed")
+# Loop over each step and breakpoint store -------------------------------------
 
-steps <- c("diagnoses", "infections", "undiagnosed", "noART",
-  "unsuppressed")
 modelTable <- tibble()
 
-for (step in steps) {
-  outputs <- selectModel(step)
+for (ii in steps) {
+  print(ii)
+  results <- segResults[[ii]]
   
-  # Extract outputs for each step
-  overallModel <- outputs$overallModel
-  segModel <- outputs$segModel
-  overallData <- outputs$overallData
-  cutPoint <- outputs$cutPoint
+  tempTable <- results$breakpoints %>%
+    mutate(indicator = ii) %>%
+    select(indicator, model, breakpoint = estimate)
   
-  # Set up pre and post models
-  splitModels <- prepostModels(overallData, cutPoint)
-  segModelPre <- splitModels$premodel
-  segModelPost <- splitModels$postmodel
+  tempTable$pchow <- 0
+  tempTable$pslopes <- 0
   
-  # Create table of summary results - exp() coefs and confint to get
-  # rate ratios
-  tempTable <- data.frame(indicator = unname(modelString[step]))
-  tempTable$parameter <- exp(coef(overallModel)["year"])
-  tempTable$param_ci_lower <- exp(confint(overallModel, "year", 
-    type = "Wald")[1])
-  tempTable$param_ci_upper <- exp(confint(overallModel, "year", 
-    type = "Wald")[2])
-  tempTable$pvalue <- summary(overallModel)$coefficients["year",
-    "Pr(>|z|)"]
-  # tempTable$pseudoR2 <- rsq(overallModel, type = "kl")
-  tempTable$bic <- BIC(overallModel)
-  
-  tempTable$cpt <-  segModel$psi[, "Est."]
-  tempTable$cpt_ci_lower <- segCI(segModel$psi[, "Est."],
-    segModel$psi[, "St.Err"])[1]
-  tempTable$cpt_ci_upper <- segCI(segModel$psi[, "Est."],
-    segModel$psi[, "St.Err"])[2]
-  tempTable$slope1 <- exp(slope(segModel)$year["slope1", "Est."])
-  tempTable$slope1_ci_l <- exp(slope(segModel)$year["slope1", "CI(95%).l"])
-  tempTable$slope1_ci_u <- exp(slope(segModel)$year["slope1", "CI(95%).u"])
-  tempTable$slope2 <- exp(slope(segModel)$year["slope2", "Est."])
-  tempTable$slope2_ci_l <- exp(slope(segModel)$year["slope2", "CI(95%).l"])
-  tempTable$slope2_ci_u <- exp(slope(segModel)$year["slope2", "CI(95%).u"])
-  tempTable$slopes_p <- unname(pslopes(overallData, cutPoint)[["pwstat"]])
-  tempTable$seg_pseudoR2 <- rsq(segModel, type = "kl")
-  tempTable$seg_bic <- BIC(segModel)
-  tempTable$pchow <- pchow(overallData, overallModel, segModelPre,
-    segModelPost)
+  for (jj in 2:nrow(tempTable)) {
+    print(jj)
+    if (jj == 2) {
+      nbreaks <- 1
+      nbreak <- 1
+    } else if (jj == 3) {
+      nbreaks <- 2
+      nbreak <- 1
+    } else if (jj == 4) {
+      nbreaks <- 2
+      nbreak <- 2
+    } else if (jj == 5) {
+      nbreaks <- 3
+      nbreak <- 1
+    } else if (jj == 6) {
+      nbreaks <- 3
+      nbreak <- 2
+    } else if (jj == 7) { 
+      nbreaks <- 3
+      nbreak <- 3
+    }
+    
+    temp <- selectBreakpoint(ii, nbreaks, nbreak, offsets[[ii]])
+    if (temp$breakpoint[1] != 0) {
+      chowModels <- prepostModels(temp$pre_data, temp$post_data, offsets[[ii]])
+      
+      overalldata <- bind_rows(temp$pre_data, temp$post_data)
+      model <- glm(value ~ year, offset = log(offset), 
+        data = overalldata, family = "poisson")
+      
+      tempTable$pchow[jj] <- pchow(overalldata, model, chowModels$premodel, 
+        chowModels$postmodel)
+      
+      tempTable$pslopes[jj] <- pslopes(overalldata, temp$breakpoint)$pwstat
+    }
+  }
   
   modelTable <- bind_rows(modelTable, tempTable)
 }
-
-# Output stuff for specific models to review ------------------------------
-# step <- "unsuppressed"
-# inputs <- selectModel(step)
-# preppost <- prepostModels(inputs$overallData, inputs$cutPoint)
-# intModel <- pslopes(inputs$overallData, inputs$cutPoint)
-# 
-# coef(preppost$premodel)
-# confint(preppost$premodel)
-# coef(preppost$postmodel)
-# confint(preppost$postmodel)
-# summary(intModel$model)
-# coef(intModel$model)
-# pchow(inputs$overallData, inputs$overallModel, preppost$premodel,
-#  preppost$postmodel)
-# confint(intModel$model)
-# intModel$wstat
 
 # Save as table -----------------------------------------------------------
 if (savePlots) {
@@ -2100,7 +1933,7 @@ for (ii in fitIndicators) {
     fitModel <- try(nlsLM(tempData$value ~ FitModel(xseq, a, g, d, k),
       start = initialParList[[ii]],
       control = nls.control(maxiter = 1000)))
-      # weights = c(rep(0.2,8), rep(1, 9))))
+    # weights = c(rep(0.2,8), rep(1, 9))))
     
     if ("try-error" %in% class(fitModel)) {
       print(paste("Unable to fit nls to",ii))
@@ -2108,7 +1941,7 @@ for (ii in fitIndicators) {
       plotModel <- FALSE
     } 
     
-     fitModel2 <- nlsLM(value ~ FitModel2(xseq, a, g, d), tempData, 
+    fitModel2 <- nlsLM(value ~ FitModel2(xseq, a, g, d), tempData, 
       start = initialParList[[ii]][1:3],
       control = nls.control(maxiter = 1000))
     
@@ -2137,7 +1970,7 @@ for (ii in fitIndicators) {
       coord_cartesian(ylim = c(0, ymax[ii])) +
       ylab(yLabels[ii]) + xlab("Year") +
       PlotOptions() #+
-  
+    
     if (addSegment) {
       # Add Segment model plot for comparison
       segmentModel <- segModels[[ii]]
@@ -2272,7 +2105,7 @@ for (ii in fitIndicators) {
     ii <- ii
     tempData <- filter(fitData, stage == ii) %>%
       mutate(xseq = seq(0,length(years)-1))
-
+    
     modelFit <- tryCatch(nls(value ~ FitModel(xseq, a, g, d, k), tempData, 
       start = initialParList[[ii]],
       control = nls.control(maxiter = 1000)), 
@@ -2373,7 +2206,7 @@ for (ii in fitIndicators) {
         toString(resultsYear),
         saveFormat)),
         plot = bootstrapPlots[[ii]] + theme(legend.position = "none"), 
-          width = 7.5, height = 6, units = "cm")
+        width = 7.5, height = 6, units = "cm")
     }
   })
 }
@@ -2422,7 +2255,7 @@ if (savePlots) {
 #   file = file.path(figFolder, paste0("HIV_Cascade_nls_trends_", 
 #     startYear, "-", resultsYear, ".Rda")))
 load(file.path(figFolder, paste0("HIV_Cascade_nls_trends_",
-    startYear, "-", resultsYear, ".Rda")))
+  startYear, "-", resultsYear, ".Rda")))
 
 fitIndicators <- c("undiagnosed", "noART", "unsuppressed", "infections",
   "diagnoses")
@@ -2471,23 +2304,23 @@ boot_coefs <- bootModelFits[[1]]%>%
   unnest(coef_info)
 mean(filter(boot_coefs, term == "g")$estimate)
 
-    
-    # percentile_intervals <- int_pctl(temp_boot_models, coef_info)
-    # percentile_intervals
-    
-    # ggplot(boot_coefs, aes(estimate)) +
-    #   geom_histogram(bins = 30) +
-    #   facet_wrap( ~ term, scales = "free") +
-    #   geom_vline(aes(xintercept = .lower), data = percentile_intervals, col = "blue") +
-    #   geom_vline(aes(xintercept = .upper), data = percentile_intervals, col = "blue")
-    # 
-    # boot_aug <- boot_models_test %>% 
-    #   sample_n(200) %>% 
-    #   unnest(predictions)
-    # 
-    # ggplot(boot_aug, aes(xseq, value)) +
-    #   geom_line(aes(y = .fitted, group = id), alpha = .2, col = "blue") +
-    #   geom_point()
+
+# percentile_intervals <- int_pctl(temp_boot_models, coef_info)
+# percentile_intervals
+
+# ggplot(boot_coefs, aes(estimate)) +
+#   geom_histogram(bins = 30) +
+#   facet_wrap( ~ term, scales = "free") +
+#   geom_vline(aes(xintercept = .lower), data = percentile_intervals, col = "blue") +
+#   geom_vline(aes(xintercept = .upper), data = percentile_intervals, col = "blue")
+# 
+# boot_aug <- boot_models_test %>% 
+#   sample_n(200) %>% 
+#   unnest(predictions)
+# 
+# ggplot(boot_aug, aes(xseq, value)) +
+#   geom_line(aes(y = .fitted, group = id), alpha = .2, col = "blue") +
+#   geom_point()
 
 
 
