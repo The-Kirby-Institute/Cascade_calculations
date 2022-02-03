@@ -1156,7 +1156,8 @@ allTrendModels <- c(trendModels, trendModelsProp)
 # If there is an error in fitting one of the segmented models then the previous 
 # model is used
 
-Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1, 
+Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA, 
+  maximum = NA, offset = 1, 
   min_gap = 3, yPercent = TRUE, save = FALSE) {
   
   tempData <- filter(trendData, stage == indicator)
@@ -1369,6 +1370,12 @@ Segment <- function(indicator, initialbp, ymax, yLabel, offset = 1,
       scale_y_continuous(labels = percent, limits = c(0, ymax))
   }
   
+  if (!is.na(minimum[1])) {
+    segPlotBest <- segPlotBest +
+      geom_ribbon(aes(ymin = minimum, ymax = maximum), fill = asrcols[2],
+        alpha = 0.4)
+  }
+  
   if (save) {
     # Save the current plot as a combined plot
     
@@ -1427,7 +1434,7 @@ ymax <- c("infected" = 35000,
   "propsuppressed" = 1,
   "propoverall" = 1,
   "ydf" = 1,  
-  "cdr"=  2,
+  "cdr"=  2.5,
   "ipr" = 0.1)
 
 offsets <- list("infected" = 1,
@@ -1474,7 +1481,10 @@ segResults <- list()
 for (ii in steps) {
   print(ii)
   segResults[[ii]] <- Segment(ii, initialbp, ymax[ii],
-    yLabels[ii], save = TRUE, offset = offsets[[ii]], yPercent = yPercent[ii])
+    minimum =  filter(trendData, stage == ii)$lower, 
+    maximum = filter(trendData, stage == ii)$upper, 
+    yLabels[ii], save = TRUE, offset = offsets[[ii]], 
+    yPercent = yPercent[ii])
 }
 
 save(segResults, file = file.path(figFolder, "CascadeSegmentedModels.Rda"))
