@@ -173,7 +173,8 @@ if (infectsCalculation == "include") {
 # separately 
 inputFileIndicators<- file.path(resultsFolder, cascadeName,
   paste0("cascadeIndicators.csv"))
-hivCascadeIndicators <- read.csv(inputFileIndicators) 
+hivCascadeIndicators <- read.csv(inputFileIndicators) %>%
+  filter(year >= startYear)
 
 ```
 
@@ -712,45 +713,36 @@ if (savePlots) {
 # fraction (ydf), case detection rate (cdr), infection prevalence ration 
 # (ipr). 
 
-# Produce the proportions
-ydf <- filter(trendData, stage == "diagnoses_include")$value / 
-  (filter(trendData, stage == "undiagnosed")$value + 
-      filter(trendData, stage == "diagnoses_include")$value)
-cdr <- filter(trendData, stage == "diagnoses_include")$value / 
-  filter(trendData, stage == "infections")$value
-ipr <- filter(trendData, stage == "infections")$value / 
-  filter(trendData, stage == "infected")$value
-
-ydfLower <- filter(trendData, stage == "diagnoses_include")$value / 
-  (filter(trendData, stage == "undiagnosed")$value + 
-      filter(trendData, stage == "diagnoses_include")$value)
-cdrLower <- filter(trendData, stage == "diagnoses_include")$value / 
-  filter(trendData, stage == "infections")$value
-iprLower <- filter(trendData, stage == "infections")$value / 
-  filter(trendData, stage == "infected")$value
-
-ydfUpper <- filter(trendData, stage == "diagnoses_include")$value / 
-  (filter(trendData, stage == "undiagnosed")$value + 
-      filter(trendData, stage == "diagnoses_include")$value)
-cdrUpper <- filter(trendData, stage == "diagnoses_include")$value / 
-  filter(trendData, stage == "infections")$value
-iprUpper <- filter(trendData, stage == "infections")$value / 
-  filter(trendData, stage == "infected")$value
-
 year <- startYear:resultsYear
+
+ydf <- hivCascadeIndicators$ydf
+cdr <- hivCascadeIndicators$cdr
+ipr <- hivCascadeIndicators$ipr
 
 # Add to trend data and save
 trendData <- bind_rows(trendData, tibble(year = year,
-  stage = "ydf", value = ydf, lower = NA, upper = NA))
+  stage = "ydf", 
+  value = hivCascadeIndicators$ydf, 
+  lower = hivCascadeIndicators$ydf_lower, 
+  upper = hivCascadeIndicators$ydf_upper))
 trendData <- bind_rows(trendData, tibble(year = year,
-  stage = "cdr", value = cdr, lower = NA, upper = NA))
+  stage = "cdr", 
+  value = hivCascadeIndicators$cdr, 
+  lower = hivCascadeIndicators$cdr_lower, 
+  upper = hivCascadeIndicators$cdr_upper))
 trendData <- bind_rows(trendData, tibble(year = year,
-  stage = "ipr", value = ipr, lower = NA, upper = NA))
+  stage = "ipr", 
+  value = hivCascadeIndicators$ipr, 
+  lower = hivCascadeIndicators$ipr_lower, 
+  upper = hivCascadeIndicators$ipr_upper))
 trendData <- bind_rows(trendData, tibble(year = year,
   stage = "ydfoffest", 
-  value = (filter(trendData, stage == "undiagnosed")$value + 
-      filter(trendData, stage == "diagnoses_include")$value), 
-  lower = NA, upper = NA))
+  value = hivCascadeIndicators$undiag + 
+      filter(trendData, stage == "diagnoses_include")$value, 
+  lower = hivCascadeIndicators$undiag_lower + 
+      filter(trendData, stage == "diagnoses_include")$value, 
+  upper = hivCascadeIndicators$undiag_upper+ 
+      filter(trendData, stage == "diagnoses_include")$value))
 
 # Poisson models ----------------------------------------------------------
 # Use a Poisson model with an offset to produce a rate ratio for the change 
@@ -797,17 +789,25 @@ intervalipr <- exp(confint(iprModel, "year",
 ydfPlot <- plotProp(ydf, ydfModel, expTrendData$ydfoffest, yLabels["ydf"], 
   trend = plotTrends) +
   # Fix up y axis - will get warnings about replacement
-  scale_y_continuous(labels = number, limits = c(0, 1))
+  scale_y_continuous(labels = number, limits = c(0, 1)) +
+  geom_ribbon(data = filter(trendData, stage == "ydf"),
+    aes(ymin = lower, ymax = upper), fill = asrcols[2], alpha = 0.4)
+
 cdrPropPlot <- plotProp(cdr, cdrModel, 
   expTrendData$infections, yLabels["cdr"], 
   trend = plotTrends) +
   # Fix up y axis - will get warnings about replacement
-  scale_y_continuous(labels = number, limits = c(0, NA))
+  scale_y_continuous(labels = number, limits = c(0, NA)) +
+  geom_ribbon(data = filter(trendData, stage == "cdr"),
+    aes(ymin = lower, ymax = upper), fill = asrcols[2], alpha = 0.4)
+
 iprPlot <- plotProp(ipr, iprModel, 
   expTrendData$infected, yLabels["ipr"], 
-  trend = plotTrends, ymax = 0.2) +
+  trend = plotTrends, ymax = 0.1) +
   # Fix up y axis - will get warnings about replacement
-  scale_y_continuous(labels = number, limits = c(0, 0.2))
+  scale_y_continuous(labels = number, limits = c(0, 0.1)) +
+  geom_ribbon(data = filter(trendData, stage == "ipr"),
+    aes(ymin = lower, ymax = upper), fill = asrcols[2], alpha = 0.4)
 
 trendPlotsProp[["ydf"]] <- ydfPlot
 trendPlotsProp[["cdr"]] <- cdrPropPlot
