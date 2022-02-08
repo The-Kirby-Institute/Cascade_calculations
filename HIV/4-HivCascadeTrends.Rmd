@@ -28,6 +28,9 @@ source(file.path(Rcode, "PlotColors.R"), echo=TRUE)
 source(file.path(Rcode, "EveryNth.R"), echo=TRUE)
 source(file.path(HIVcode, "ResultsFunctions.R"), echo=TRUE)
 LoadLibrary(tidyverse)
+LoadLibrary(segmented)
+LoadLibrary(MASS) # For negative binomial fitting - masks dply::select()
+LoadLibrary(AER) # To test for over dispersion using dispersion() - https://biometry.github.io/APES/LectureNotes/2016-JAGS/Overdispersion/OverdispersionJAGS.pdf
 LoadLibrary(scales)
 LoadLibrary(cowplot) # Note this masks ggsave with save_plot
 LoadLibrary(captioner)
@@ -148,19 +151,19 @@ hivNewInfections <- read.csv(inputFileInfections)
 if (infectsCalculation == "include") {
   hivNewInfections <- hivNewInfections %>%
     filter(exclude == "no") %>% 
-    select(-exclude)
+    dplyr::select(-exclude)
 } else if (infectsCalculation == "exclude") {
   hivNewInfections <- hivNewInfections %>%
     filter(exclude == "yes") %>% 
-    select(-exclude)
+    dplyr::select(-exclude)
 } else {
   # Its "middle"
   infectsInclude <- hivNewInfections %>%
     filter(exclude == "no") %>% 
-    select(-exclude)
+    dplyr::select(-exclude)
   infectsExclude <- hivNewInfections %>%
     filter(exclude == "yes") %>% 
-    select(-exclude)
+    dplyr::select(-exclude)
   
   hivNewInfections <- tibble(year = infectsInclude$year,
     infections = (infectsInclude$infections + 
@@ -234,14 +237,18 @@ diagsDataInclude <- hivSet %>%
 
 diagsData <- dplyr::bind_rows(diagsDataExclude, diagsDataInclude)
 
-trendDiagsExclude <- glm(diags ~ year, data = diagsDataExclude, 
-  family = "poisson")
+# trendDiagsExclude <- glm(diags ~ year, data = diagsDataExclude,
+#   family = "poisson")
+trendDiagsExclude <- glm.nb(diags ~ year, data = diagsDataExclude)
+
 coeffDiagsExclude <- exp(coef(trendDiagsExclude)[2])
 p_valueDiagsExclude  <- summary(trendDiagsExclude)$coefficients["year", "Pr(>|z|)"]
 intervalDiagsExclude  <- exp(confint(trendDiagsExclude, "year", type = "Wald"))
 
-trendDiagsInclude <- glm(diags ~ year, data = diagsDataInclude, 
-  family = "poisson")
+# trendDiagsInclude <- glm(diags ~ year, data = diagsDataInclude,
+#   family = "poisson")
+trendDiagsInclude <- glm.nb(diags ~ year, data = diagsDataInclude)
+
 coeffDiagsInclude <- exp(coef(trendDiagsInclude)[2])
 p_valueDiagsInclude <- summary(trendDiagsInclude)$coefficients["year", "Pr(>|z|)"]
 intervalDiagsInclude <- exp(confint(trendDiagsInclude, "year", type = "Wald"))
@@ -249,11 +256,11 @@ intervalDiagsInclude <- exp(confint(trendDiagsInclude, "year", type = "Wald"))
 diagsPlot <- ggplot(data = diagsDataExclude, aes(x = year)) +
   geom_line(aes(y = diags, colour = "exclude")) + 
   geom_point(aes(y = diags), colour = "blue") +
-  # geom_line(aes(y = predict(trendDiagsExclude, type = "response"), 
-  #   colour = "trend")) +
+  # geom_line(aes(y = predict(trendDiagsExclude, type = "response")),
+  #   colour = "black") +
   geom_line(data = diagsDataInclude, aes(y = diags, colour = "include")) + 
   geom_point(data = diagsDataInclude, aes(y = diags), colour = "red") +
-  # geom_line(aes(y = predict(trendDiagsInclude, type = "response")), 
+  # geom_line(aes(y = predict(trendDiagsInclude, type = "response")),
   #   colour = "black") +
   geom_point(aes(y = diagsDataInclude$diags - diags, 
     colour = "gap")) +
@@ -311,13 +318,13 @@ trendData <- bind_rows(dplyr::select(resultsAll, year, stage, value,
 trendData <- bind_rows(trendData,
   diagsDataExclude %>% 
     mutate(stage = "diagnoses_exclude", lower = NA, upper = NA) %>% 
-    select(year, stage, value = diags, lower, upper),
+    dplyr::select(year, stage, value = diags, lower, upper),
   diagsDataInclude %>% 
     mutate(stage = "diagnoses_include", lower = NA, upper = NA) %>% 
-    select(year, stage, value = diags, lower, upper), 
+    dplyr::select(year, stage, value = diags, lower, upper), 
   newInfects %>% 
     mutate(stage = "infections") %>% 
-    select(year, stage, value = infections, lower = infections_lower, 
+    dplyr::select(year, stage, value = infections, lower = infections_lower, 
       upper = infections_upper))
 
 # Trends ----------------------------------------------------
@@ -335,7 +342,8 @@ trendPlots <- list()
 
 for (ii in 1:length(steps)) {
   tempData <- filter(trendData, stage == unique(trendData$stage)[ii])           
-  temp <- glm(round(value) ~ year, data = tempData, family = "poisson")
+  # temp <- glm(round(value) ~ year, data = tempData, family = "poisson")
+  temp <- glm.nb(round(value) ~ year, data = tempData)
   
   trendCascade$stage[ii] <- steps[ii]
   trendCascade$coeff[ii] <- exp(coef(temp)[2])
@@ -365,11 +373,11 @@ PlotTrend <- function(data, models, indicator, trend = TRUE) {
       labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
       limits = c(startYear, resultsYear)) +
     ylab(yLabels[indicator]) + xlab("Year") +  
-    scale_y_continuous(labels = comma, limits = c(0, NA)) + 
+    scale_y_continuous(labels = comma, limits = c(0, NA)) +
     PlotOptions() 
   
   if (trend) {
-    tempPlot <- tempPlot + 
+    tempPlot <- tempPlot +
       geom_line(aes(y = predict(model, type = "response")),
         colour = "black")
   }
@@ -392,12 +400,6 @@ PlotTrend <- function(data, models, indicator, trend = TRUE) {
 trendPlots <- lapply(steps, PlotTrend, data = trendData, 
   models = trendModels, trend = plotTrends)
 names(trendPlots) <- steps
-
-# Predictions for plotting 
-# PredictTrend <- function(models, indicator){
-#   model <- models[[indicator]]
-#   return(predict(model, type = "response"))
-# }
 
 # Create a group plots ---------------------------------------------------------
 
@@ -431,6 +433,7 @@ if (savePlots) {
     saveFormat, sep = "")),
     plot = stagesDiffsPlot, width = 18, height = 15, units = "cm")
 }
+
 
 ```
 
@@ -530,28 +533,41 @@ p_art <- summary(treatedModel)$coefficients["year", "Pr(>|z|)"]
 p_suppressed <- summary(suppressedModel)$coefficients["year", "Pr(>|z|)"]
 p_overall <- summary(overallModel)$coefficients["year", "Pr(>|z|)"]
 
-# Poisson models ----------------------------------------------------------
-# Use a Poisson model with an offset to produce a rate ratio for the change 
-# in the proportion. These are the main models we will use
+# Negative binomial/Poisson models ---------------------------------------------
+# Use a Negative binomial/Poisson model with an offset to produce a rate ratio 
+# for the change in the proportion. These are the main models we will use. 
 
 trendModelsProp <- list()
 trendPlotsProp <- list()
 
 # Set-up data for Poisson/exponential models
 expTrendData <- trendData %>% 
-  select(year, stage, value) %>% 
+  dplyr::select(year, stage, value) %>% 
   mutate(value = round(value)) %>%
   tidyr::spread(stage, value)
 
 # Models - using denominator as an offset 
-diagsExpModel <- glm(pldhiv ~ year, offset = log(infected), 
-  data = expTrendData, family = "poisson")
-treatedExpModel  <- glm(numART ~ year, offset = log(pldhiv), 
-  data = expTrendData, family = "poisson")
-suppressedExpModel  <- glm(suppressed ~ year, offset = log(numART), 
-  data = expTrendData, family = "poisson")
-overallExpModel  <- glm(suppressed ~ year, offset = log(infected), 
-  data = expTrendData, family = "poisson")
+# diagsExpModel <- glm(pldhiv ~ year, offset = log(infected), 
+#   data = expTrendData, family = "poisson")
+# treatedExpModel  <- glm(numART ~ year, offset = log(pldhiv), 
+#   data = expTrendData, family = "poisson")
+# suppressedExpModel  <- glm(suppressed ~ year, offset = log(numART), 
+#   data = expTrendData, family = "poisson")
+# overallExpModel  <- glm(suppressed ~ year, offset = log(infected), 
+#   data = expTrendData, family = "poisson")
+
+# For diagnosed proportion get warnings about iteration limit and
+# a very large theta using glm.nb however still seem to get a good fit
+diagsExpModel <- glm.nb(pldhiv ~ year + offset(log(infected)), 
+  data = expTrendData)  
+# diagsExpModel <- glm(pldhiv ~ year, offset = log(infected), 
+#   data = expTrendData, family = "poisson")
+treatedExpModel  <- glm.nb(numART ~ year +offset(log(pldhiv)), 
+  data = expTrendData)
+suppressedExpModel  <- glm.nb(suppressed ~ year + offset(log(numART)), 
+  data = expTrendData)
+overallExpModel  <- glm.nb(suppressed ~ year + offset(log(infected)), 
+  data = expTrendData)
 
 trendModelsProp[["propdiagnosed"]] <- diagsExpModel
 trendModelsProp[["proptreated"]] <- treatedExpModel
@@ -750,24 +766,31 @@ trendData <- bind_rows(trendData, tibble(year = year,
   lower = hivCascadeIndicators$start_plhiv_lower,
   upper = hivCascadeIndicators$start_plhiv_upper))
 
-# Poisson models ----------------------------------------------------------
-# Use a Poisson model with an offset to produce a rate ratio for the change 
-# in the proportion. These are the main models we will use.
+# Negative binomial/Poisson models ---------------------------------------------
+# Use a negative binomial/Poisson model with an offset to produce a rate ratio 
+# for the change in the proportion. These are the main models we will use.
 
 # Set-up data for Poisson/exponential models
 expTrendData <- trendData %>% 
-  select(year, stage, value) %>% 
+  dplyr::select(year, stage, value) %>% 
   mutate(value = round(value)) %>%
   tidyr::spread(stage, value)
 
 # Models - using denominator as an offset - explicitly add location of of 
 # offset so segmented fits work: https://stackoverflow.com/questions/19034403/r-package-segmented-with-an-offset-term
-ydfModel <- glm(diagnoses_include ~ year, offset = log(ydfoffest), 
-  data = expTrendData, family = "poisson")
-cdrModel  <- glm(diagnoses_include ~ year, offset = log(infections),
-  data = expTrendData, family = "poisson")
-iprModel  <- glm(infections ~ year, offset = log(iproffset), 
-  data = expTrendData, family = "poisson")
+# ydfModel <- glm(diagnoses_include ~ year, offset = log(ydfoffest), 
+#   data = expTrendData, family = "poisson")
+# cdrModel  <- glm(diagnoses_include ~ year, offset = log(infections),
+#   data = expTrendData, family = "poisson")
+# iprModel  <- glm(infections ~ year, offset = log(iproffset), 
+#   data = expTrendData, family = "poisson")
+
+ydfModel <- glm.nb(diagnoses_include ~ year + offset(log(ydfoffest)), 
+  data = expTrendData)
+cdrModel  <- glm.nb(diagnoses_include ~ year + offset(log(infections)),
+  data = expTrendData)
+iprModel  <- glm.nb(infections ~ year + offset(log(iproffset)), 
+  data = expTrendData)
 
 trendModelsProp[["ydf"]] <- ydfModel
 trendModelsProp[["cdr"]] <- cdrModel
@@ -1342,7 +1365,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     number == which.min(eligible$bic))$number
   
   bestModel <- segModels[[bestIndex]]
-  bestModelData <- select(modelData, c(1, bestIndex + 1)) 
+  bestModelData <- dplyr::select(modelData, c(1, bestIndex + 1)) 
   colnames(bestModelData)[2] <- "value"
   
   segPlotBest <- ggplot(data = tempData, 
@@ -1359,7 +1382,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     scale_y_continuous(labels = comma, limits = c(0, ymax)) + 
     scale_colour_manual("", values = c(asrcols[2], "black"), 
       limits = c("estimates", "best"), 
-      labels = c("Estimates", "Best fit ")) + # adjust alignment
+      labels = c("Estimates", "Fitted trends")) + # adjust alignment
     ylab(yLabel) + xlab("Year") +  
     PlotOptions() 
   
@@ -1424,7 +1447,7 @@ ymax <- c("infected" = 35000,
   "numART" = 35000, 
   "suppressed" = 35000,
   "undiagnosed" = 3500, 
-  "noART" = 6500, 
+  "noART" = 7000, 
   "unsuppressed" = 4500,
   "diagnoses_exclude" = 1500,
   "diagnoses_include" = 1500,
@@ -1512,26 +1535,84 @@ plotCascadeAll <- PlotCascade(latestCascade, retained = TRUE, ymax = 35000,
     "Suppressed\n(VL < 200)"), 
   percentages = TRUE,
   targetlines = "95", targetlabels = FALSE) + 
-  scale_y_continuous(breaks = seq(0, 35000, by = 5000),
-    labels =  EveryNth(seq(0, 35000, by = 5000), 2, inverse = TRUE),
+  scale_y_continuous(breaks = seq(0, 40000, by = 10000),
+    labels =  comma,
     limits = c(0, 35000))
 
-legend <- get_legend(segResults[["infected"]]$plotBest)
+# Stacked HIV cascade ----------------------------------------------------------
+plotLabels <- c("Undiagnosed", 
+  "Diagnosed untreated", 
+  "On ART:  VL > 200 last test", 
+  "On ART: VL < 200 last test")
 
+
+plotCols <- asrcols[c(1, 2, 4, 5)]
+xValues <- seq(startYear, resultsYear, by = 3)
+
+# Set up data for plotting
+stackResults <- hivCascadeAll %>%
+  filter(stage != "retained", population == cascadePop,
+    year >= startYear) %>%
+  dplyr::select(year, stage, value) %>%
+  spread(stage, value) %>%
+  mutate(undiagnosed = infected - pldhiv,
+    diagnosed = pldhiv - numART,
+    unsuppressed = numART - suppressed) %>%
+  dplyr::select(year, undiagnosed, diagnosed, unsuppressed, suppressed) %>%
+  gather("stage", "value", 2:5) %>%
+  mutate(stage = factor(stage, levels = c("undiagnosed", "diagnosed", 
+    "unsuppressed", "suppressed"))) %>%
+  arrange(stage)
+  
+# Create inidividual plots
+stackPlotBase <- ggplot(data = stackResults, aes(x = year, y = value, 
+  fill = stage)) + xlab("Year") +
+  scale_fill_manual(values = plotCols, name = "", labels = plotLabels, 
+    guide = guide_legend(nrow = 2)) +  
+  scale_x_continuous(breaks = xValues) + 
+  PlotOptions() + 
+  theme(legend.text = element_text(size = 8))
+
+stackPlotNum <- stackPlotBase + geom_area(stat="identity") + 
+  ylab("Number of PLHIV") + scale_y_continuous(labels = comma)
+stackPlotProp <- stackPlotBase + geom_area(stat="identity", 
+  position= "fill") + ylab("Percentage of PLHIV") +
+  scale_y_continuous(labels = percent)
+
+# Create a combined plot
+legend <- get_legend(stackPlotNum)
+stackPlotNum2 <- stackPlotNum + theme(legend.position="none")
+stackPlotProp2 <- stackPlotProp + theme(legend.position="none")
+
+plotStacked <- ggdraw() + 
+  draw_plot(legend, 0, 0.8, 1, 0.2) +
+  draw_plot(stackPlotNum2, 0, 0, 0.5, 0.8) +
+  draw_plot(stackPlotProp2, 0.5, 0, 0.5, 0.8)
+  
 cascadeFullPlot <- ggdraw() +
-  draw_plot(diagsPlot, 0, 0.6, 0.5, 0.4) +
-  draw_plot(plotCascadeAll, 0.5, 0.6, 0.5, 0.4) +
-  draw_plot(legend, 0, 0.55, 1, 0.05) + 
+  draw_plot(diagsPlot, 0, 0.5, 0.5, 0.5) +
+  draw_plot(plotCascadeAll, 0.5, 0.5, 0.5, 0.5) +
+  draw_plot(plotStacked, 0, 0, 1, 0.5) +
+  draw_plot_label(c("A", "B", "C"), 
+    c(0, 0.5, 0), c(1, 1, 0.5), 
+    size = 12)
+  
+# Cascade trends ---------------------------------------------------------------
+
+legend <- get_legend(segResults[["infected"]]$plotBest)
+  
+cascadeTrendPlot <- ggdraw() + 
+  draw_plot(legend, 0, 0.95, 1, 0.05) + 
   draw_plot(RmLegened(segResults[["infected"]]$plotBest), 
-    0, 0.275, 0.5, 0.275) +
+    0, 0.475, 0.5, 0.475) +
   draw_plot(RmLegened(segResults[["pldhiv"]]$plotBest),
-    0.5, 0.275, 0.5, 0.275) +
+    0.5, 0.475, 0.5, 0.475) +
   draw_plot(RmLegened(segResults[["numART"]]$plotBest),
-    0, 0, 0.5, 0.275) +
+    0, 0, 0.5, 0.475) +
   draw_plot(RmLegened(segResults[["suppressed"]]$plotBest),
-    0.5, 0, 0.5, 0.275) +
-  draw_plot_label(c("A", "B", "C", "D", "E", "F"), 
-    c(0, 0.5, 0, 0.5, 0, 0.5), c(1, 1, 0.55, 0.55, 0.275, 0.275), 
+    0.5, 0, 0.5, 0.475) +
+  draw_plot_label(c("A", "B", "C", "D"), 
+    c(0, 0.5, 0, 0.5), c(0.95, 0.95, 0.475, 0.475), 
     size = 12)
 
 # Cascade gaps -----------------------------------------------------------------
@@ -1583,7 +1664,14 @@ if (savePlots) {
       toString(startYear), "-",
       toString(resultsYear),
       saveFormat, sep = "")),
-    plot = cascadeFullPlot, width = 22, height = 25, units = "cm")
+    plot = cascadeFullPlot, width = 22, height = 16, units = "cm")
+  
+   ggsave(file.path(figFolder,
+    paste("HIVtrends_Full_Plot_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = cascadeTrendPlot, width = 22, height = 16, units = "cm")
   
   ggsave(file.path(figFolder,
     paste("HIVgaps_Full_Plot_",
@@ -1602,6 +1690,13 @@ if (savePlots) {
 }
 
 ```
+
+
+```{r Combined table}
+
+```
+
+
 
 # Testing code =================================================================
 
