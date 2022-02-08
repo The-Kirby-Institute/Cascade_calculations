@@ -53,7 +53,6 @@ LoadLibrary(scales)
 LoadLibrary(cowplot) # Note this masks ggsave with save_plot
 LoadLibrary(captioner)
 LoadLibrary(stringr)
-LoadLibrary(gridExtra)
 
 # Function to format data and range into thousands
 source(file.path(Rcode, "FormatData.R"))
@@ -159,7 +158,6 @@ if (pubPlots) {
   # Read in location of diagnosis coding
   regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
 
-  
   hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes,
     regionCodes)
   

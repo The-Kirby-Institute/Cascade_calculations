@@ -180,7 +180,7 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
   
   if (removeExcess) {
     # Remove unwanted columns
-    hivData <- select(hivData, -rob, -dateaids, -partnercob, -dateneg, 
+    hivData <- dplyr::select(hivData, -rob, -dateaids, -partnercob, -dateneg, 
       -dateindet, -datedeath, -causeofdeath, -indigenous, 
       -cobcode) 
   }
