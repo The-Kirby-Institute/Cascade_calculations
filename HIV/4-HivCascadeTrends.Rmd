@@ -1169,10 +1169,6 @@ LoadLibrary(segmented)
 
 segmentStages <- c(names(trendModels), names(trendModelsProp))
 
-segCI <- function(est, stdErr) {
-  return(c(est - 1.96 * stdErr, est + 1.96 * stdErr))
-}
-
 allTrendModels <- c(trendModels, trendModelsProp)
 
 # Function for producing results -----------------------------------------------
@@ -1228,32 +1224,27 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
   
   if (class(segModel1)[1] == "segmented") {
     modelBreakpoints$estimate[2] <- unname(segModel1$psi[,"Est."])
-    modelBreakpoints$lower[2] <- segCI(segModel1$psi[, "Est."], 
-      segModel1$psi[, "St.Err"])[1]
-    modelBreakpoints$upper[2] <- segCI(segModel1$psi[, "Est."], 
-      segModel1$psi[, "St.Err"])[2]
+    modelBreakpoints$lower[2] <- unname(confint.segmented(segModel1)[, "CI(95%).low"])
+    modelBreakpoints$upper[2] <- unname(confint.segmented(segModel1)[, "CI(95%).up"])
   }
   if (class(segModel2)[1] == "segmented") {
     modelBreakpoints$estimate[3:4] <- unname(segModel2$psi[,"Est."])
-    modelBreakpoints$lower[3:4] <- segCI(segModel2$psi[, "Est."], 
-      segModel2$psi[, "St.Err"])[1:2]
-    modelBreakpoints$upper[3:4] <- segCI(segModel2$psi[, "Est."], 
+    modelBreakpoints$lower[3:4] <- unname(confint.segmented(segModel2)[, "CI(95%).low"])
+    modelBreakpoints$upper[3:4] <- unname(confint.segmented(segModel2)[, "CI(95%).up"])
+      
+      
+      segCI(segModel2$psi[, "Est."], 
       segModel2$psi[, "St.Err"])[3:4]
   }
   if (class(segModel3)[1] == "segmented") {
     modelBreakpoints$estimate[5:7] <- unname(segModel3$psi[,"Est."])
-    modelBreakpoints$lower[5:7] <- segCI(segModel3$psi[, "Est."], 
-      segModel3$psi[, "St.Err"])[1:3]
-    modelBreakpoints$upper[5:7] <- segCI(segModel3$psi[, "Est."], 
-      segModel3$psi[, "St.Err"])[4:6]
-  }
+    modelBreakpoints$lower[5:7] <- unname(confint.segmented(segModel3)[, "CI(95%).low"])
+    modelBreakpoints$upper[5:7] <- unname(confint.segmented(segModel3)[, "CI(95%).up"])  }
   
   if (class(segModel4)[1] == "segmented") {
     modelBreakpoints$estimate[8:11] <- unname(segModel4$psi[,"Est."])
-    modelBreakpoints$lower[8:11] <- segCI(segModel4$psi[, "Est."], 
-      segModel4$psi[, "St.Err"])[1:4]
-    modelBreakpoints$upper[8:11] <- segCI(segModel4$psi[, "Est."], 
-      segModel4$psi[, "St.Err"])[5:8]
+    modelBreakpoints$lower[8:11] <- unname(confint.segmented(segModel4)[, "CI(95%).low"])
+    modelBreakpoints$upper[8:11] <- unname(confint.segmented(segModel4)[, "CI(95%).up"])
   }
   
   # Calculate minimum gap between breakpoints and ends
