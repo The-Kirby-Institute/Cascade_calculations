@@ -1142,7 +1142,7 @@ for (ii in 1:length(modelNames)) {
 
 if (savePlots) {
   write_csv(breakTable, file.path(figFolder, 
-    paste0("HIVcascade_", "breakpoints_", 
+    paste0("HIVcascade_breakpoints_", 
       toString(startYear), "-", toString(resultsYear), ".csv")))
 }
 
@@ -1420,7 +1420,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
   return(list(models = segModels,
     fitted = modelData, breakpoints = modelBreakpoints, 
     gaps = modelBreakpointGaps, slopes = modelSlopes, 
-    aic = aicValues, bic = bicValues, 
+    aic = aicValues, bic = bicValues, bestIndex = bestIndex, 
     plotall = segPlotAll, plotBest = segPlotBest))
 }
 
@@ -1684,6 +1684,75 @@ if (savePlots) {
 
 
 ```{r Combined table}
+# Create table of overall results ----------------------------------------
+resultsTable <- tibble(indicator = character(),
+  breakpoints = double(),
+  breakpoints_low = double(),
+  breakpoints_up = double(),
+  rate_ratio = double(),
+  rate_ratio_low = double(),
+  rate_ratio_up = double(),
+  valueStart = double(),
+  valueStart_low = double(),
+  valueStart_up = double(),
+  valueEnd = double(),
+  valueEnd_low = double(),
+  valueEnd_up = double())
+
+for (ii in steps) {
+  # Extract breakpoints and slopes for best model
+  best <- segResults[[ii]]$bestIndex
+  model <- segResults[[ii]]$models[[best]]
+  
+  
+  if (class(model) == "segmented") {
+    bps <- confint(model)
+    slopes <- slope(model)$year[, c(1, 4:5)]  
+    
+    nrows <- nrow(slopes)
+    
+    tempTable <- tibble(indicator = rep(indicatorNames[ii], nrows),
+      breakpoints = c(bps[, 1],0),
+      breakpoints_low = c(bps[, 2],0),
+      breakpoints_up = c(bps[, 3],0),
+      rate_ratio = unname(slopes[, 1]), 
+      rate_ratio_low =  unname(slopes[, 2]),
+      rate_ratio_up =  unname(slopes[, 3])) 
+  } else {
+    nrows <- 1
+    
+    tempTable <- tibble(indicator = indicatorNames[ii],
+      breakpoints = 0,
+      breakpoints_low = 0,
+      breakpoints_up = 0,
+      rate_ratio = unname(coef(model)[2]), 
+      rate_ratio_low = unname(confint(model)[2, "2.5 %"]),
+      rate_ratio_up = unname(confint(model)[2, "97.5 %"])) 
+  } 
+    
+  # Add data
+  tempData <- filter(trendData, stage == ii)
+  nyears <- nrow(tempData)
+  
+  tempTable$valueStart <- rep(tempData$value[1], nrows)
+  tempTable$valueStart_low <- rep(tempData$lower[1], nrows)
+  tempTable$valueStart_up <- rep(tempData$lower[1], nrows)
+  
+  tempTable$valueEnd <- rep(tempData$value[nyears], nrows)
+  tempTable$valueEnd_low <- rep(tempData$lower[nyears], nrows)
+  tempTable$valueEnd_up <- rep(tempData$lower[nyears], nrows)
+  
+  #Merge 
+  
+  resultsTable <- bind_rows(resultsTable, tempTable) 
+  
+}
+
+if (savePlots) {
+  write_csv(resultsTable, file.path(figFolder, 
+    paste0("HIVcascade_Summary_Table_", 
+      toString(startYear), "-", toString(resultsYear), ".csv")))
+}
 
 ```
 
