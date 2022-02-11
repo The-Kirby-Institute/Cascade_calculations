@@ -202,18 +202,18 @@ if (retestRange) {
 ```{r extractResults}
 # Extract the actual results we want - resultsYear for 15-29 year olds
 currentDiags <- notifications %>% 
-  filter(year %in% resultsYear) %>%
+  filter(year %in% c((resultsYear-2):resultsYear)) %>%
   select(-male...15.yrs, -male.30.34.yrs, -male...34.yrs, -male.all, 
     -female...15.yrs, -female.30.34.yrs, -female...34.yrs,
     -female.all)
 
 # Current incidence
 currentInc <- incidence %>% 
-  filter(year %in% resultsYear)
+  filter(year %in% c((resultsYear-2):resultsYear))
 
 # Current treatment data
 currentTreat <- treatment %>%
-  select(-source, -reference)
+  dplyr::select(year, stage, region, context, sex, proportion, prop_lower, prop_upper)
 
 ```
 
@@ -221,7 +221,7 @@ currentTreat <- treatment %>%
 nyears <- length(resultsYear)
 
 # Initialize output data frame
-chlamcascade <- data.frame(stage = character(), sex = character(),
+chlamcascade <- data.frame(year = numeric(), stage = character(), sex = character(),
   estimate = numeric(), lower = numeric(), 
   upper = numeric(), percentprevious = numeric())
 
@@ -235,9 +235,9 @@ femaleIncUpper <- currentInc[, 5]
 
 chlamcascade <- rbind(chlamcascade, 
   data.frame(stage = "infections",
-    year = rep(resultsYear, 3),
+    year = rep((resultsYear-2):resultsYear, 3),
     sex = rep(c("male", "female", "all"), 
-      each = length(resultsYear)),
+      each = length((resultsYear-2):resultsYear)),
     estimate = c(maleInc, femaleInc, 
       maleInc + femaleInc),
     lower = c(maleIncLower, femaleIncLower,
@@ -313,9 +313,9 @@ if (!paper && resultsYear %in% 2015:2016) {
 # Generate cascade
 chlamcascade <- rbind(chlamcascade, 
   data.frame(stage = "notifications",
-    year = rep(resultsYear, 3),
+    year = rep((resultsYear-2):resultsYear, 3),
     sex = rep(c("male", "female", "all"), 
-      each = length(resultsYear)), 
+      each = length((resultsYear-2):resultsYear)), 
     estimate = c(maleDiags, femaleDiags,
       maleDiags + femaleDiags),
     lower = c(lowerMaleDiags,
@@ -342,147 +342,153 @@ chlamcascade <- rbind(chlamcascade,
 
 # Weights for calculations based on notifications ------------------------
 weightsDF <- filter(currentTreat, stage == "notifications")
-weights <- weightsDF$proportion # urban, regional, remote
-names(weights) <- c("urban", "regional", "remote")
+weights <- dplyr::select(weightsDF, year, region, proportion) %>%
+  rename(weight = proportion)
+# weights <- weightsDF$proportion # urban, regional, remote
+# names(weights) <- c("urban", "regional", "remote")
 
 weightsClinicDF <- filter(currentTreat, stage == "diagnoses")
-weightsClinic <- weightsClinicDF$proportion # urban, regional, remote
-names(weightsClinic) <- c("shc", "gp", "other")
+weightsClinic <- dplyr::select(weightsClinicDF, year, context, proportion)
+# weightsClinic <- weightsClinicDF$proportion # urban, regional, remote
+# names(weightsClinic) <- c("shc", "gp", "other")
 
 # Proportion treated -----------------------------------------------------
 # Simply take the mean of the estimates for remote areas
 treatedDF <- filter(currentTreat, stage == "treated")
 
-propTreatedUrban <- weightsClinic["gp"] * 
+propTreatedUrban <- filter(weightsClinic, context == "gp")$proportion * 
   filter(treatedDF, region == "urban", context == "gp")$proportion + 
-  (1 - weightsClinic["gp"]) * 
+  (1 - filter(weightsClinic, context == "gp")$proportion) * 
   filter(treatedDF, region == "urban", context == "other")$proportion
+propTreatedUrban <- tibble(year = (resultsYear-2):resultsYear,
+  region = "urban", 
+  proportion = propTreatedUrban)
 
-propTreatedRegion <- weightsClinic["gp"] * 
+propTreatedRegion <- filter(weightsClinic, context == "gp")$proportion * 
   filter(treatedDF, region == "regional", context == "gp")$proportion + 
-  (1 - weightsClinic["gp"]) * 
+  (1 - filter(weightsClinic, context == "gp")$proportion) * 
   filter(treatedDF, region == "regional", context == "other")$proportion
+propTreatedRegion <- tibble(year = (resultsYear-2):resultsYear, 
+  region = "regional", 
+  proportion = propTreatedRegion)
 
-propTreatedRemote <- mean(filter(treatedDF, 
-  region == "remote")$proportion)
+propTreatedRemote <- rowMeans(matrix(filter(treatedDF, 
+  region == "remote")$proportion, nrow = 3, byrow = TRUE))
+propTreatedRemote <- tibble(year = (resultsYear-2):resultsYear, 
+  region = "remote",
+  proportion = propTreatedRemote)
 
-propTreated <- c(propTreatedUrban, propTreatedRegion, propTreatedRemote)
-propTreated <- sum(propTreated * weights)
+propTreated <- bind_rows(propTreatedUrban, propTreatedRegion) %>%
+  bind_rows(propTreatedRemote) %>%
+  left_join(weights, by = c("year", "region")) %>%
+  arrange(year) 
+
+propTreated <- propTreated %>%
+  group_by(year) %>%
+  summarise(proportion = sum(proportion * weight))
 
 # Hard coded ranges based on propTreated value - +/- 10%
-propTreatedMin <- min(filter(treatedDF, 
-  region == "remote")$proportion) # minimum in remote
-propTreatedMax <- min(1, propTreated * 1.1)
+propTreatedMin <- filter(treatedDF, region == "remote") %>% 
+  group_by(year) %>% 
+  summarise(proportion = min(proportion)) # minimum in remote
+propTreatedMax <- propTreated %>%
+  mutate(proportion = min(1, proportion * 1.1))
 
 maleDiagnoses <- filter(chlamcascade, stage == "notifications", 
   sex == "male")
 femaleDiagnoses <- filter(chlamcascade, stage == "notifications", 
   sex == "female")
 
-if (is.na(maleDiagnoses$lower)) {
-  # No uncertainty in notifications
-  maleTreated <- as.matrix(maleDiagnoses$estimate) %*%
-    t(as.matrix(c(propTreated, propTreatedMin, propTreatedMax)))
-  
-  femaleTreated <- as.matrix(femaleDiagnoses$estimate) %*%
-    t(as.matrix(c(propTreated, propTreatedMin, propTreatedMax)))
-  
-} else {  
-  # Uncertainty in notifications
-  maleTreated <- t(as.matrix(c(maleDiagnoses$estimate,
-    maleDiagnoses$lower,
-    maleDiagnoses$upper))* 
-      as.matrix(c(propTreated, propTreatedMin,
-        propTreatedMax)))
-  femaleTreated <- t(as.matrix(c(femaleDiagnoses$estimate,
-    femaleDiagnoses$lower,
-    femaleDiagnoses$upper))* 
-      as.matrix(c(propTreated, propTreatedMin,
-        propTreatedMax)))
-}
+# No uncertainty in notifications
+maleTreated <- maleDiagnoses %>%
+  select(year, estimate, lower, upper) %>%
+  mutate(estimate = estimate*propTreated$proportion,
+    lower = lower*propTreatedMin$proportion,
+    upper = upper*propTreatedMax$proportion) %>%
+  mutate(stage = "treated", 
+    sex = "male",
+    percentprevious = estimate / maleDiags,
+    percentpreviousLower = lower / upperMaleDiags,
+    percentpreviousUpper = upper / lowerMaleDiags) %>%
+  select(stage, year, sex, estimate, lower, upper, 
+    everything())
 
-chlamcascade <- rbind(chlamcascade, 
-  data.frame(stage = "treated",
-    year = rep(resultsYear, 3),
-    sex = rep(c("male", "female", "all"), 
-      each = length(resultsYear)), 
-    estimate = c(maleTreated[, 1],
-      femaleTreated[, 1],
-      maleTreated[, 1] + 
-        femaleTreated[, 1]),
-    lower =  c(maleTreated[, 2], 
-      femaleTreated[ , 2],
-      maleTreated[, 2] + 
-        femaleTreated[, 2]), 
-    upper = c(maleTreated[, 3], 
-      femaleTreated[, 3],
-      maleTreated[, 3] + 
-        femaleTreated[, 3]),
-    percentprevious = 100 * 
-      c(maleTreated[, 1] / maleDiags,
-        femaleTreated[, 1] / femaleDiags,
-        (maleTreated[, 1] + femaleTreated[, 1]) /
-          (maleDiags + femaleDiags)),
-    percentpreviousLower = 100 * 
-      c(maleTreated[, 2] / upperMaleDiags,
-        femaleTreated[, 2] / upperFemaleDiags,
-        (maleTreated[, 2] + femaleTreated[, 2]) / 
-          (upperMaleDiags + upperFemaleDiags)),
-    percentpreviousUpper = 100 * 
-      c(maleTreated[, 3] / lowerMaleDiags,
-        femaleTreated[, 3] / lowerFemaleDiags,
-        (maleTreated[, 3] + femaleTreated[, 3]) /
-          (lowerMaleDiags + lowerFemaleDiags))))
+femaleTreated <- femaleDiagnoses %>%
+  select(year, estimate, lower, upper) %>%
+  mutate(estimate = estimate*propTreated$proportion,
+    lower = lower*propTreatedMin$proportion,
+    upper = upper*propTreatedMax$proportion) %>%
+  mutate(stage = "treated", 
+    sex = "female",
+    percentprevious = estimate / femaleDiags,
+    percentpreviousLower = lower / upperFemaleDiags,
+    percentpreviousUpper = upper / lowerFemaleDiags) %>%
+  select(stage, year, sex, estimate, lower, upper, 
+    everything())
+
+allTreated <- tibble(
+  stage = "treated", year = maleTreated$year, sex = "all") %>%
+  mutate(estimate = maleTreated$estimate + femaleTreated$estimate,
+    lower = maleTreated$lower + femaleTreated$lower,
+    upper = maleTreated$upper + femaleTreated$upper) %>%
+  mutate(percentprevious = estimate / (maleDiags + femaleDiags),
+    percentpreviousLower = lower / (upperMaleDiags + upperFemaleDiags),
+    percentpreviousUpper = upper / (lowerMaleDiags + lowerFemaleDiags)) %>%
+  select(stage, year, sex, estimate, lower, upper, 
+    everything())
+
+chlamcascade <- chlamcascade %>%
+  bind_rows(maleTreated) %>%
+  bind_rows(femaleTreated) %>%
+  bind_rows(allTreated)
 
 # Retesting --------------------------------------------------------------
 retestDF <- filter(currentTreat, stage == "retested")
 
-# shc, gp, other
-diagnosesProp <- filter(currentTreat, stage == "diagnoses")$proportion
-
 # Re-order and add the gp and other together (for non-clinic settings)
 # TODO: Think about whether this adding makes sense
-diagnosesProp <- c(diagnosesProp[2] + diagnosesProp[3], diagnosesProp[1])
-names(diagnosesProp) <- c("gp", "shc")
+diagnosesProp <- currentTreat %>%
+  filter(stage == "diagnoses") %>%
+  select(year, context, proportion) %>%
+  spread(context, proportion) %>%
+  mutate(non_shc = gp + other) %>%
+  select(year, gp= non_shc, shc)
 
 # Functions for proportion retested
 propRetested <- function(gender, value) {
   # Local function to calculate proportion tested
-  propReTest <- unname(weights["urban"] * (diagnosesProp["shc"] * 
-      filter(retestDF, sex == gender, region == "urban", 
+  propReTest <- filter(weights, region == "urban")$weight * 
+      (diagnosesProp$shc * filter(retestDF, sex == gender, region == "urban", 
         context == "shc")[value] + 
-      diagnosesProp["gp"] * 
-      filter(retestDF,  sex == gender, region == "urban", 
+      diagnosesProp$gp * filter(retestDF,  sex == gender, region == "urban", 
         context == "gp")[value]) + 
-      weights["regional"] * (diagnosesProp["shc"] * 
-          filter(retestDF, sex == gender, region == "regional", 
+      filter(weights, region == "regional")$weight * 
+      (diagnosesProp$shc * filter(retestDF, sex == gender, region == "regional", 
             context == "shc")[value] + 
-          diagnosesProp["gp"] * 
-          filter(retestDF,  sex == gender, region == "regional", 
+          diagnosesProp$gp * filter(retestDF,  sex == gender, region == "regional", 
             context == "gp")[value]) + 
-      weights["remote"] * (diagnosesProp["shc"] * 
-          filter(retestDF, sex == gender, region == "remote", 
+      filter(weights, region == "remote")$weight * 
+      (diagnosesProp$shc * filter(retestDF, sex == gender, region == "remote", 
             context == "shc")[value] + 
-          diagnosesProp["gp"] * 
-          filter(retestDF,  sex == gender, region == "remote", 
-            context == "gp")[value]))
+          diagnosesProp$gp * filter(retestDF,  sex == gender, region == "remote", 
+            context == "gp")[value])
   
-  return(as.numeric(propReTest))
+  return(tibble(year = diagnosesProp$year, proportion = propReTest[[value]]))
 }
 
 propRetestedSHC <- function(gender, value) {
   # Local function to calculate proportion tested
-  propReTest <- unname(weights["urban"] *  
+  propReTest <- filter(weights, region == "urban")$weight  *  
       filter(retestDF, sex == gender, region == "urban", 
         context == "shc")[value] + 
-      weights["regional"] * 
+      filter(weights, region == "regional")$weight  * 
       filter(retestDF, sex == gender, region == "regional", 
         context == "shc")[value] +
-      weights["remote"] *  
+      filter(weights, region == "remote")$weight  *  
       filter(retestDF, sex == gender, region == "remote", 
-        context == "shc")[value])
+        context == "shc")[value]
   
-  return(as.numeric(propReTest))
+  return(tibble(year = diagnosesProp$year, proportion = propReTest[[value]]))
 }
 
 # Males
@@ -569,17 +575,32 @@ if (retestRange) {
 }
 
 # Now calculated the number retested
-maleRetested <- as.data.frame(t(apply(filter(chlamcascade, 
-  stage == "treated",
-  sex == "male")[, c("estimate", "lower", "upper")], 1, 
-  function(x) x * c(propReTestMale, propReTestMaleLower,
-    propReTestMaleUpper))))
+maleRetested <- chlamcascade %>%
+  filter(stage == "treated", sex == "male") %>%
+  select(year, sex, estimate, lower, upper) %>%
+  mutate(estimate = estimate * propReTestMale$proportion,
+    lower = lower * propReTestMaleLower$proportion,
+    upper = upper * propReTestMaleUpper$proportion,
+    stage = "retested") %>%
+  select(stage, year, sex, estimate, lower, upper, 
+    everything())
 
-femaleRetested <- as.data.frame(t(apply(filter(chlamcascade, 
-  stage == "treated",
-  sex == "female")[, c("estimate", "lower", "upper")], 1, 
-  function(x) x * c(propReTestFemale, propReTestFemaleLower,
-    propReTestFemaleUpper))))
+femaleRetested <- chlamcascade %>%
+  filter(stage == "treated", sex == "female") %>%
+  select(year, sex, estimate, lower, upper) %>%
+  mutate(estimate = estimate * propReTestFemale$proportion,
+    lower = lower * propReTestFemaleLower$proportion,
+    upper = upper * propReTestFemaleUpper$proportion,
+    stage = "retested") %>%
+  select(stage, year, sex, estimate, lower, upper, 
+    everything())
+
+allRetested <- tibble(stage = "retested", 
+  year = maleRetested$year,
+  sex = "all", 
+  estimate = maleRetested$estimate + femaleRetested$estimate, 
+  lower = maleRetested$lower + femaleRetested$lower, 
+  upper = maleRetested$upper + femaleRetested$upper)
 
 if (retestRange) {
   # Period: 42-120 
@@ -629,48 +650,65 @@ if (retestRange) {
 }  
 
 # Store in our cascade
-chlamcascade <- rbind(chlamcascade, 
-  data.frame(stage = "retested",
-    year = rep(resultsYear, 3),
-    sex = rep(c("male", "female", "all"), 
-      each = length(resultsYear)),
-    estimate = c(maleRetested$estimate,
-      femaleRetested$estimate,
-      maleRetested$estimate + 
-        femaleRetested$estimate),
-    lower =  c(maleRetested$lower,
-      femaleRetested$lower,
-      maleRetested$lower + 
-        femaleRetested$lower), 
-    upper = c(maleRetested$upper,
-      femaleRetested$upper,
-      maleRetested$upper + 
-        femaleRetested$upper),
-    percentprevious = 100 * 
-      c(maleRetested$estimate / 
-          maleTreated[, 1],
-        femaleRetested$estimate /
-          femaleTreated[, 1],
-        (maleRetested$estimate +
-            femaleRetested$estimate) / 
-          (maleTreated[, 1] + femaleTreated[, 1])),
-    percentpreviousLower = 100 * 
-      c(maleRetested$lower/ 
-          maleTreated[, 3],
-        femaleRetested$lower /
-          femaleTreated[, 3],
-        (maleRetested$lower +
-            femaleRetested$lower) / 
-          (maleTreated[, 3] + femaleTreated[, 3])),
-    percentpreviousUpper = 100 * 
-      c(maleRetested$upper / 
-          maleTreated[, 2],
-        femaleRetested$upper /
-          femaleTreated[, 2],
-        (maleRetested$upper +
-            femaleRetested$upper) / 
-          (maleTreated[, 2] + 
-              femaleTreated[, 2]))))
+chlamcascade <- chlamcascade %>%
+  bind_rows(maleRetested) %>%
+  bind_rows(femaleRetested) %>%
+  bind_rows(allRetested)
+  
+updateRetested <- chlamcascade %>% 
+  filter(stage == "retested") %>%  
+  mutate(percentprevious = 100 * estimate / filter(chlamcascade, stage == "treated")$estimate,
+    percentpreviousLower = 100 * lower / filter(chlamcascade, stage == "treated")$upper,
+    percentpreviousUpper = 100 * upper / filter(chlamcascade, stage == "treated")$lower)
+
+chlamcascade <- chlamcascade %>%
+  filter(stage != "retested") %>%
+  bind_rows(updateRetested)
+
+# Store in our cascade
+# chlamcascade <- rbind(chlamcascade, 
+#   data.frame(stage = "retested",
+#     year = rep((resultsYear-2):resultsYear, 
+#       each = length((resultsYear-2):resultsYear)),
+#     sex = rep(c("male", "female", "all"), 
+#       each = length((resultsYear-2):resultsYear)),
+#     estimate = c(maleRetested$estimate,
+#       femaleRetested$estimate,
+#       maleRetested$estimate + 
+#         femaleRetested$estimate),
+#     lower =  c(maleRetested$lower,
+#       femaleRetested$lower,
+#       maleRetested$lower + 
+#         femaleRetested$lower), 
+#     upper = c(maleRetested$upper,
+#       femaleRetested$upper,
+#       maleRetested$upper + 
+#         femaleRetested$upper),
+#     percentprevious = 100 * 
+#       c(maleRetested$estimate / 
+#           maleTreated[, 1],
+#         femaleRetested$estimate /
+#           femaleTreated[, 1],
+#         (maleRetested$estimate +
+#             femaleRetested$estimate) / 
+#           (maleTreated[, 1] + femaleTreated[, 1])),
+#     percentpreviousLower = 100 * 
+#       c(maleRetested$lower/ 
+#           maleTreated[, 3],
+#         femaleRetested$lower /
+#           femaleTreated[, 3],
+#         (maleRetested$lower +
+#             femaleRetested$lower) / 
+#           (maleTreated[, 3] + femaleTreated[, 3])),
+#     percentpreviousUpper = 100 * 
+#       c(maleRetested$upper / 
+#           maleTreated[, 2],
+#         femaleRetested$upper /
+#           femaleTreated[, 2],
+#         (maleRetested$upper +
+#             femaleRetested$upper) / 
+#           (maleTreated[, 2] + 
+#               femaleTreated[, 2]))))
 
 # Retested positive ------------------------------------------------------
 
@@ -726,11 +764,16 @@ if (saveCascade) {
   }
   
   # Cascade
-  saveString <- paste0("chlamydia_cascade-", 
-    toString(tail(resultsYear, 1)), ".csv")
+  saveString1 <- paste0("chlamydia_cascade-", resultsYear, ".csv")
+  saveString2 <- paste0("chlamydia_cascade_trend-", resultsYear-2, "-", resultsYear, ".csv")
   
-  write.csv(chlamcascade, file = file.path(resultsFolder, saveString), 
+  
+  write.csv(filter(chlamcascade, year == resultsYear), file = file.path(resultsFolder, saveString1), 
     row.names = FALSE)
+  
+   write.csv(chlamcascade, file = file.path(resultsFolder, saveString2), 
+    row.names = FALSE)
+  
   
   # Range retesting
   if (retestRange) {
@@ -788,7 +831,7 @@ if (resultsYear == 2014) {
 # Plot the bar chart -----------------------------------------------------
 
 # First sort out sex as a factor to order the bars
-plotcascade <- chlamcascade
+plotcascade <- filter(chlamcascade, year == 2020)
 plotcascade$sex <- factor(plotcascade$sex, 
   levels = c("male", "female", "all"))
 plotcascade$stage <- factor(plotcascade$stage, 
@@ -801,14 +844,15 @@ cascadeAll <- filter(plotcascade, year == resultsYear,
 texty <- cascadeAll$upper
 texty[3:4] <- cascadeAll$estimate[3:4]
 
-allCascade <- ggplot(data = filter(cascadeAll, sex %in% c("male", "female")),
+allCascade <- ggplot(data = filter(cascadeAll, sex %in% c("male", "female"),
+  year == 2020),
   aes(x = stage, y = estimate, fill = sex)) + 
   geom_bar(position = "dodge", stat = "identity", colour = "black") + 
   geom_errorbar(aes(ymin = lower, ymax = upper), 
     position = position_dodge(width = 0.9),
     width = 0.2, color = "black", size = 1.2) +
   geom_text(aes(label = ifelse(is.na(percentprevious), "",
-    paste0(format(percentprevious, digits = 3), "%")),
+    paste0(format(percentprevious, digits = 2), "%")),
     y = texty + 10000),
     position = position_dodge(width = 0.9),
     fontface = "bold",
