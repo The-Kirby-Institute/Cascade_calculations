@@ -1232,10 +1232,6 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     modelBreakpoints$estimate[3:4] <- unname(segModel2$psi[,"Est."])
     modelBreakpoints$lower[3:4] <- unname(confint.segmented(segModel2)[, "CI(95%).low"])
     modelBreakpoints$upper[3:4] <- unname(confint.segmented(segModel2)[, "CI(95%).up"])
-      
-      
-      segCI(segModel2$psi[, "Est."], 
-      segModel2$psi[, "St.Err"])[3:4]
   }
   if (class(segModel3)[1] == "segmented") {
     modelBreakpoints$estimate[5:7] <- unname(segModel3$psi[,"Est."])
@@ -1539,7 +1535,6 @@ plotLabels <- c("Undiagnosed",
 
 
 plotCols <- asrcols[c(1, 2, 4, 5)]
-xValues <- seq(startYear, resultsYear, by = 3)
 
 # Set up data for plotting
 stackResults <- hivCascadeAll %>%
@@ -1561,7 +1556,9 @@ stackPlotBase <- ggplot(data = stackResults, aes(x = year, y = value,
   fill = stage)) + xlab("Year") +
   scale_fill_manual(values = plotCols, name = "", labels = plotLabels, 
     guide = guide_legend(nrow = 2)) +  
-  scale_x_continuous(breaks = xValues) + 
+  scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
+      limits = c(startYear, resultsYear)) +
   PlotOptions() + 
   theme(legend.text = element_text(size = 8))
 
