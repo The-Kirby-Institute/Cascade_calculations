@@ -36,7 +36,7 @@
 #' @param rangeappend Append prefix and suffix to both lower and upper 
 #' ("both) or just prefix to lower and suffix to upper ("single"). 
 #' @param thousands String to separate estimates by thousands. Default is 
-#' a comma "," but can be a space " ". 
+#' a comma "," but can be a space " " or "". 
 #' @param decimal String to show decimal only does lower or midline. 
 #' Default is "." but Lancet uses a midline decimal.
 #' @param tail String to attach to the end of the overall string. NOT sure
@@ -70,12 +70,13 @@
 FormatData <- function(estimate, lower = NA, upper = NA, places = NULL, 
   prefix = "", suffix = "", units = "", rangestr = "", rangeto = "\u2012",
   rangebracket = c(" (",")"), rangeappend = c("single", "both"), 
-  thousands = c(",", " "), decimal = c("low","mid"), tail = "") {
+  thousands = c(",", " ", "no"), decimal = c("low","mid"), tail = "") {
   
   # Setup defaults - "mid" specifies a mid-line decimal
   decimal <- match.arg(decimal)
   decimal <- ifelse(decimal == "low", ".", "\xB7")
   thousands <- match.arg(thousands)
+  thousands <- ifelse(thousands == "no", "", thousands)
   rangeappend <- match.arg(rangeappend)
   
   # Round values appropriately
@@ -130,10 +131,10 @@ FormatData <- function(estimate, lower = NA, upper = NA, places = NULL,
   }
   
   # Setup range string
-  if (lowStr == "" && upStr == "") {
-  # No range
-   rangeString <- ""
-  } else if (upStr == "") {
+  if (lowStr[1] == "" && upStr[1] == "") {
+    # No range
+    rangeString <- ""
+  } else if (upStr[1] == "") {
     # Only lower bound as a single value
     rangeString <- paste0(rangebracket[1], rangestr, prefix, lowStr, 
       suffix, rangebracket[2])

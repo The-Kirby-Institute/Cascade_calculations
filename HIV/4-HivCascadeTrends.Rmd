@@ -26,6 +26,7 @@ source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 source(file.path(Rcode, "PlotColors.R"), echo=TRUE)
 source(file.path(Rcode, "EveryNth.R"), echo=TRUE)
+source(file.path(Rcode, "FormatData.R"), echo=TRUE)
 source(file.path(HIVcode, "ResultsFunctions.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 LoadLibrary(segmented)
@@ -1711,36 +1712,36 @@ for (ii in steps) {
     
     nrows <- nrow(slopes)
     
-    tempTable <- tibble(indicator = rep(indicatorNames[ii], nrows),
-      breakpoints = c(bps[, 1],0),
-      breakpoints_low = c(bps[, 2],0),
-      breakpoints_up = c(bps[, 3],0),
-      rate_ratio = unname(slopes[, 1]), 
-      rate_ratio_low =  unname(slopes[, 2]),
-      rate_ratio_up =  unname(slopes[, 3])) 
+    tempTable <- tibble(indicator = rep(unname(indicatorNames[ii]), nrows),
+      breakpoints = unname(c(bps[, 1], 0)),
+      breakpoints_low = unname(c(bps[, 2], 0)),
+      breakpoints_up = unname(c(bps[, 3], 0)),
+      rate_ratio = exp(unname(slopes[, 1])), 
+      rate_ratio_low =  exp(unname(slopes[, 2])),
+      rate_ratio_up =  exp(unname(slopes[, 3]))) 
   } else {
     nrows <- 1
     
-    tempTable <- tibble(indicator = indicatorNames[ii],
+    tempTable <- tibble(indicator = unname(indicatorNames[ii]),
       breakpoints = 0,
       breakpoints_low = 0,
       breakpoints_up = 0,
-      rate_ratio = unname(coef(model)[2]), 
-      rate_ratio_low = unname(confint(model)[2, "2.5 %"]),
-      rate_ratio_up = unname(confint(model)[2, "97.5 %"])) 
+      rate_ratio = exp(unname(coef(model)[2])), 
+      rate_ratio_low = exp(unname(confint(model)[2, "2.5 %"])),
+      rate_ratio_up = exp(unname(confint(model)[2, "97.5 %"]))) 
   } 
     
   # Add data
   tempData <- filter(trendData, stage == ii)
   nyears <- nrow(tempData)
   
-  tempTable$valueStart <- rep(tempData$value[1], nrows)
-  tempTable$valueStart_low <- rep(tempData$lower[1], nrows)
-  tempTable$valueStart_up <- rep(tempData$lower[1], nrows)
+  tempTable$valueStart <- c(tempData$value[1], rep(0, nrows-1))
+  tempTable$valueStart_low <- c(tempData$lower[1], rep(0, nrows-1))
+  tempTable$valueStart_up <- c(tempData$upper[1], rep(0, nrows-1))
   
-  tempTable$valueEnd <- rep(tempData$value[nyears], nrows)
-  tempTable$valueEnd_low <- rep(tempData$lower[nyears], nrows)
-  tempTable$valueEnd_up <- rep(tempData$lower[nyears], nrows)
+  tempTable$valueEnd <- c(tempData$value[nyears], rep(0, nrows-1))
+  tempTable$valueEnd_low <- c(tempData$lower[nyears], rep(0, nrows-1))
+  tempTable$valueEnd_up <- c(tempData$upper[nyears], rep(0, nrows-1))
   
   #Merge 
   
@@ -1748,15 +1749,47 @@ for (ii in steps) {
   
 }
 
+# Replace missing lower and upper bounds with zero
+resultsTable[is.na(resultsTable)] <- 0
+
+# Create a formatted table -----------------------------------------------------
+
+formatTable <- tibble(indicator = resultsTable$indicator)
+formatTable$valueStart <- FormatData(resultsTable$valueStart,
+  resultsTable$valueStart_low, resultsTable$valueStart_up, places = -1,
+  decimal = "mid")
+formatTable$valueEnd <- FormatData(resultsTable$valueEnd,
+  resultsTable$valueEnd_low, resultsTable$valueEnd_up, places = -1,
+  decimal = "mid")
+
+# Need to overwrite proportion estimates so they are not rounded
+formatTable$valueStart[25:40]  <- FormatData(resultsTable$valueStart[25:40],
+  resultsTable$valueStart_low[25:40], resultsTable$valueStart_up[25:40], 
+  places = 2, decimal = "mid")
+formatTable$valueEnd[25:40] <- FormatData(resultsTable$valueEnd[25:40],
+  resultsTable$valueEnd_low[25:40], resultsTable$valueEnd_up[25:40], 
+  places = 2, decimal = "mid")
+
+formatTable$breakpoints <- FormatData(resultsTable$breakpoints,
+  resultsTable$breakpoints_low, resultsTable$breakpoints_up, 
+  thousands = "no", places = 1,
+  decimal = "mid")
+formatTable$rate_ratios <- FormatData(resultsTable$rate_ratio,
+  resultsTable$rate_ratio_low, resultsTable$rate_ratio_up, places = 4,
+  decimal = "mid")
+
 if (savePlots) {
   write_csv(resultsTable, file.path(figFolder, 
     paste0("HIVcascade_Summary_Table_", 
       toString(startYear), "-", toString(resultsYear), ".csv")))
+  
+  write_csv(formatTable, file.path(figFolder, 
+    paste0("HIVcascade_Formated_Table_", 
+      toString(startYear), "-", toString(resultsYear), ".csv")))
+  
 }
 
 ```
-
-
 
 # Testing code =================================================================
 
