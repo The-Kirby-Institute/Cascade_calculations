@@ -8,14 +8,18 @@
 require(tidyverse, quietly = TRUE)
 require(scales, quietly = TRUE)
 
+
 # Setup directories
 basePath <- file.path(dirname(getwd()), "HIV")
 outputFolder <- file.path(basePath, "output")
 
+source(file.path(dirname(getwd()), "code", "PlotColors.R"))
+source(file.path(dirname(getwd()), "code", "EveryNth.R"))
+
 ```
 
 ```{r Options}
-projectName <- "HIV_Cascade_Paper" #"ASR_2021" "Diagnosed_Fraction_2021"
+projectName <- "ASR_2021" #"ASR_2021" 
 project <- file.path(basePath, "output", projectName)
 
 cascadeList <- c("All-2020")
@@ -181,8 +185,9 @@ plotUndiag <- function(df, title, ymax, indicator) {
   }
   
   plot <- plot +
-    scale_x_continuous(limits = c(2010, resultsYear), 
-      breaks = seq(2010,resultsYear,2)) +
+     scale_x_continuous(breaks = 2010:resultsYear,
+    labels =  EveryNth(2010:resultsYear, 2, inverse = TRUE),
+    limits = c(2010, resultsYear)) +
     PlotOptions() 
   
   return(plot)
@@ -214,13 +219,13 @@ for (cascade in cascadeList) {
   
   
   ggsave(file.path(project, cascade, "new_infections.png"), tempPlot1, 
-    width = 16, height = 9, units = "cm")
+    width = 8, height = 6, units = "cm")
   ggsave(file.path(project, cascade, "percent_undiagnosed.png"), tempPlot2, 
-    width = 16, height = 9)
+    width = 8, height = 6)
   ggsave(file.path(project, cascade, "ydf.png"), tempPlot3, 
-    width = 16, height = 9)
+    width = 8, height = 6)
   ggsave(file.path(project, cascade, "ipr.png"), tempPlot4, 
-    width = 16, height = 9)
+    width = 8, height = 6)
   
 }
 
