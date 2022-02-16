@@ -10,7 +10,9 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
   # This function is used to produce a tidier data set for the notiifcations
   # by cleaning up the key variable for the HIV cascade calculations. 
   # Requires:dplyr
-  
+  # 
+  # Needs AgeCat.R to be loaded 
+  #
   # Args:
   #   hivData: Data frame of raw semi-process notications data.
   #   analysisYear: Year of notifications we are runnning. Required because
@@ -115,11 +117,11 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
   hivData$diag_region <- NA
   
   # Change cob from code to String
-  hivData$diag_region <- as.character(regionCodes$SA3_name_2016[match(hivData$postcode,
-    regionCodes$postcode)])
+  hivData$diag_region <- as.character(regCodes$SA3_name_2016[match(hivData$postcode,
+    regCodes$postcode)])
   
   # If region is not in regionCodes/NAs, change to unknown/not reported
-  hivData$diag_region[!(hivData$postcode %in% regionCodes$postcode)] <- "Unknown"
+  hivData$diag_region[!(hivData$postcode %in% regCodes$postcode)] <- "Unknown"
   hivData$diag_region[is.na(hivData$postcode)] <- "Not Reported"
   
   # Additional variables---------------------------------------------------
@@ -130,7 +132,7 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
     # Age groups: <15, 15-19, 20-24, 25-29, 30-34, 35-39, 40-44, 45-49, 
     #   50-54, 55-59, 60-64, 65-69, 70-74, 75-79, 80-84, 
     #   85+ (18 age groups)
-    source(file.path(Rcode, "AgeCat.R")) # use age cat function 
+
     hivData$agebin <- AgeCat(hivData$agehiv, lower = 0, upper = 85, by = 5)
     
     hivData$agebin <- factor(hivData$agebin, 
