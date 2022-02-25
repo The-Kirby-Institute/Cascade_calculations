@@ -29,16 +29,17 @@ notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data",
 dataFolder <- file.path(basePath, "data")
 
 # Load standard libraries and options ------------------------------------
-source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
+source(file.path(Rcode, "LoadLibrary.R"))
 LoadLibrary(tidyverse)
 LoadLibrary(readxl)
-# source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
-source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
-source(file.path(Rcode, "FillDataFrame.R"), echo=TRUE)
+source(file.path(Rcode, "PlotOptions.R"))
+source(file.path(Rcode, "FillDataFrame.R"))
 
 # Useful functions -------------------------------------------------------
-source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
-source(file.path(HIVcode, "DeduplicationFunctions.R"), echo=TRUE)
+source(file.path(Rcode, "AgeCat.R"))
+source(file.path(HIVcode, "TidyNotifications.R"))
+source(file.path(HIVcode, "DeduplicationFunctions.R"))
+source(file.path(HIVcode, "GetMigrate.R"))
 
 ```
 
@@ -1309,7 +1310,6 @@ cleanNom$age[cleanNom$age == "a0_4"] <- "a00_04"
 cleanNom$age[cleanNom$age == "a5_9"] <- "a05_09"
 
 # Relative migration rates
-source(file.path(HIVcode, "GetMigrate.R"))
 relAgeMigrate <- GetMigrateAge(analysisYear, cleanNom, "all",
   "all", "all", "all", "all", "all", "all", propMale = NULL)
 relAgeMigrateMale <- GetMigrateAge(analysisYear, cleanNom, "male",
