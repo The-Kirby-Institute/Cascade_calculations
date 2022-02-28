@@ -68,7 +68,7 @@ saveResults <- TRUE
 if (projectName %in% c("ASR_2016", "ASR_2017", "ASR_2018", "ASR_2019")) {
   artString <- "NAPWHA" 
 } else if (projectName == "HIV_Cascade_Paper") {
-  artString <- "ATRAS"
+  artString <- "PBS-Ineligible"
 } else {
   artString <- "PBS-Ineligible"
   # warning("Non-standard project make sure artString is set correctly")

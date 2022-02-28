@@ -621,7 +621,7 @@ for (region in states) {
 # post-diagnosis movement for east state and territory and Australia overall. 
   
 # Specific NSW estimates (hardcodede) -- based on 6-monthly follow-up data 
-# from NSW Health cumulatively over 2013-2018. Data for 2013-2018 in the 
+# from NSW Health cumulatively over 2013-2020. Data for 2013-2020 in the 
 # local file 
 # ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_27Oct2021.xlsx.
 # The variables below store the cumulative emigration proportion for 
@@ -699,6 +699,8 @@ hivAdjustments$pstay_vic_lower <- propStayLowerVic /
   hivBaseRates$propstay_lower
 hivAdjustments$pstay_vic_upper <- propStayUpperVic /
   hivBaseRates$propstay_upper
+
+# TODO: Do this calculation for each state and territory. 
 
 ```
 
