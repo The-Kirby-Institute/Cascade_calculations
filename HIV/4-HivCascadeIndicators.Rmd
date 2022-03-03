@@ -8,7 +8,6 @@
 require(tidyverse, quietly = TRUE)
 require(scales, quietly = TRUE)
 
-
 # Setup directories
 basePath <- file.path(dirname(getwd()), "HIV")
 outputFolder <- file.path(basePath, "output")
@@ -19,7 +18,8 @@ source(file.path(dirname(getwd()), "code", "EveryNth.R"))
 ```
 
 ```{r Options}
-projectName <- "ASR_2021" #"ASR_2021" 
+projectName <- "ASR_2021" # "ASR_2021" 
+                          # "HIV_Cascade_Paper"
 project <- file.path(basePath, "output", projectName)
 
 cascadeList <- c("All-2020")

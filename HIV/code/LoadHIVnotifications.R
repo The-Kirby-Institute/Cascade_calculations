@@ -3,7 +3,7 @@
 # Self-contained function to quickly load the HIV notifications data 
 # in the national HIV registry.
 
-# require(tidyverse)
+require(tidyverse)
 
 LoadHIVnotifications <- function(analysisYear) {
   

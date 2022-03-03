@@ -10,8 +10,8 @@ Cascade.
 ```{r setup}
 # Open as a project (setting working directory to source and restarting R)
 
-# Setup directories
-basePath <- getwd() #dirname(getwd())
+# Set up directories
+basePath <- getwd()
 Rcode <- file.path(dirname(getwd()), "code")
 HIVcode <- file.path(basePath, "code") 
 dataFolder <- file.path(basePath, "data")
@@ -22,12 +22,12 @@ notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data",
   "National HIV Registry", "Cascades")
 
 # Load standard libraries and options ----------------------------------
-source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
-source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
-source(file.path(Rcode, "PlotColors.R"), echo=TRUE)
-source(file.path(Rcode, "EveryNth.R"), echo=TRUE)
-source(file.path(Rcode, "FormatData.R"), echo=TRUE)
-source(file.path(HIVcode, "ResultsFunctions.R"), echo=TRUE)
+source(file.path(Rcode, "LoadLibrary.R"))
+source(file.path(Rcode, "PlotOptions.R"))
+source(file.path(Rcode, "PlotColors.R"))
+source(file.path(Rcode, "EveryNth.R"))
+source(file.path(Rcode, "FormatData.R"))
+source(file.path(HIVcode, "ResultsFunctions.R"))
 LoadLibrary(tidyverse)
 LoadLibrary(segmented)
 LoadLibrary(MASS) # For negative binomial fitting - masks dply::select()
@@ -39,7 +39,8 @@ LoadLibrary(stringr)
 LoadLibrary(svglite)
 
 # Function to tidy notifications
-source(file.path(HIVcode, "TidyNotifications.R"), echo=TRUE)
+source(file.path(Rcode, "AgeCat.R"))
+source(file.path(HIVcode, "TidyNotifications.R"))
 
 # Script parameters
 resultsYear <- 2020  # year of cascade we will plot
@@ -109,8 +110,9 @@ if (savePlots) {
 }
 
 # Captions
-figs <- captioner()
-tabs <- captioner(prefix = "Table")
+# figs <- captioner()
+# tabs <- captioner(prefix = "Table")
+captions <- list()
 
 # Plot colours 
 asrcols <- PlotColors("hivcascade5")
@@ -416,10 +418,6 @@ stagesDiffsPlot <- plot_grid(trendPlots[[5]], trendPlots[[6]],
   labels = c("A", "B", "C"), ncol = 2, 
   nrow = 2, align = "v")
 
-# Figure captions
-figs("cascadeTrends", "Trends in each step of the Australian HIV cascade over 2004-2018. The red discs show the best estimates for the cascade with the shading showing the range. The black lines show the estimatesfrom the fitted Poisson models.")
-figs("gapsTrends", "Trends in gaps between the steps of the Australian HIV cascade over 2004-2018. The red discs show the best estimates. The black lines show the estimates from the fitted Poisson models.")
-
 # Save the current plots
 if (savePlots) {
   ggsave(file.path(figFolder, paste("HIVcascade-Stages-Trends_",
@@ -434,7 +432,6 @@ if (savePlots) {
     saveFormat, sep = "")),
     plot = stagesDiffsPlot, width = 18, height = 15, units = "cm")
 }
-
 
 ```
 
@@ -712,8 +709,6 @@ combinedPropPlot <- plot_grid(
   ncol = 2, nrow = 2, 
   labels = c("A", "B", "C", "D")) 
 
-figs("unaidsTargets", "Trends in the UNAIDS 90-90-90 and overall targets over 2004-2018.")
-
 if (savePlots) {
   ggsave(file.path(figFolder,
     paste("HIVcascade_Proportion_Trends_",
@@ -865,8 +860,6 @@ combinedIndicatorPlot <- plot_grid(
   trendPlotsProp$ipr + theme(legend.position="none"), 
   ncol = 2, nrow = 3, 
   labels = c("A", "B", "C", "D", "E")) 
-
-figs("indicators", "")
 
 if (savePlots) {
   ggsave(file.path(figFolder,
@@ -1508,8 +1501,7 @@ RmLegened <- function(plot) {
   return(plot + theme(legend.position = "none"))
 }
 
-# Figure caption
-figs("cascadeFull", "")
+
 
 # HIV Cascade in 2020 ----------------------------------------------------------
 latestCascade <- filter(hivCascadeAll,
@@ -1585,7 +1577,10 @@ cascadeFullPlot <- ggdraw() +
   draw_plot_label(c("A", "B", "C"), 
     c(0, 0.5, 0), c(1, 1, 0.5), 
     size = 12)
-  
+
+# Figure captions
+captions[["cascadeFull"]] <- "HIV notifications in Australia and Australia's HIV cascade to the end of 2020. A) Annual notifications data . B) HIV cascade at end of 2020 including estimates for retained in care. Horizontal lines show the UNAIDS 95-95-95 targets. C) Estimate numbers and percentages of people living with HIV in each step of the HIV cascade over 2004-2020.  "
+
 # Cascade trends ---------------------------------------------------------------
 
 legend <- get_legend(segResults[["infected"]]$plotBest)
@@ -1603,6 +1598,7 @@ cascadeTrendPlot <- ggdraw() +
   draw_plot_label(c("A", "B", "C", "D"), 
     c(0, 0.5, 0, 0.5), c(0.95, 0.95, 0.475, 0.475), 
     size = 12)
+captions[["stepTrends"]] <- "Estimates and trends for each HIV cascade step over 2004-2020. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points. "
 
 # Cascade gaps -----------------------------------------------------------------
 
@@ -1626,7 +1622,9 @@ gapsFullPlot <- ggdraw() +
     c(0, 0.5, 0, 0.5, 0, 0.5), c(0.95, 0.95, 0.633, 0.633, 0.316, 0.316), 
     size = 12)
 
-# Remaining cascade gaps ------------------------------------------------------- 
+captions[["cascadeGaps"]] <- "Trends in the estimated gaps in the HIV cascade. Red lines show the estimated values from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
+
+# Remaining cascade indicators --------------------------------------------------- 
 
 legend <- get_legend(segResults[["diagnoses_include"]]$plotBest)
 
@@ -1646,7 +1644,9 @@ indicatorsFullPlot <- ggdraw() +
     c(0, 0.5, 0, 0.5, 0.25), c(0.95, 0.95, 0.633, 0.633, 0.316), 
     size = 12)
 
-# Save combined plot------------------------------------------------------------
+captions[["cascadeIndicators"]] <- "Trends in cascade related indicators. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the best fitting piecewise Poisson model predictions. Vertical dashed lines show the location of detected change points."
+
+# Save combined plots ----------------------------------------------------------
 if (savePlots) {
   ggsave(file.path(figFolder,
     paste("HIVcascade_Full_Plot_",
@@ -1751,6 +1751,8 @@ resultsTable[is.na(resultsTable)] <- 0
 
 # Create a formatted table -----------------------------------------------------
 
+captions[["resultsTable"]] <- "Summary results"
+
 formatTable <- tibble(indicator = resultsTable$indicator)
 formatTable$valueStart <- FormatData(resultsTable$valueStart,
   resultsTable$valueStart_low, resultsTable$valueStart_up, places = -1,
@@ -1787,6 +1789,17 @@ if (savePlots) {
 }
 
 ```
+
+```{r Save final figures and tables}
+# This chunk saves the final figures, tables and results to produce 
+# a Rmarkdown script of results
+
+save(cascadeFullPlot, cascadeTrendPlot, gapsFullPlot, indicatorsFullPlot, 
+  resultsTable, formatTable, captions,
+  file = file.path(figFolder, "CascadeFinalResults.Rda"))
+
+```
+
 
 # Testing code =================================================================
 
@@ -2207,7 +2220,8 @@ legend <- get_legend(segTestPlot[[1]])
 combinedTest <- grid.arrange(legend, 
   segTestPlot[[1]] + theme(legend.position="none",
     plot.title = element_text(hjust = 0.5, size = 10)) +
-    ggtitle("Original\nestimates"),
+    labs(title = "Original\nestimates", 
+      caption = figs("trendSensitivity")) +
   segTestPlot[[2]] + theme(legend.position="none"), 
   segTestPlot[[3]] + theme(legend.position="none"),
   segTestPlot[[4]] + theme(legend.position="none"), 
@@ -2496,9 +2510,6 @@ for (ii in fitIndicators) {
   })
 }
 
-# Figure caption
-figs("fittedTrends", "")
-
 # Create combined plot
 legend <- get_legend(fitPlots[[1]])
 
@@ -2666,9 +2677,6 @@ for (ii in fitIndicators) {
     }
   })
 }
-
-# Figure caption
-figs("bootTrends", "")
 
 # Create combined plot
 legend <- get_legend(bootstrapPlots[[1]])
