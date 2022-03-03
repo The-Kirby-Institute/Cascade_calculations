@@ -110,7 +110,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   
   # Look at the overall notifications first
   if (excludeOS) {
-    hivData <- filter(hivData, is.na(previ_diag_overseas))
+    hivData <- filter(hivData, is.na(previ_diag_overseas), 
+      is.na(agehiv) | agehiv >= 15) # Assume missing ages are older than 15 years
   }
   
   hivSetAll <- filter(hivData, yeardiagnosis <= analysisYear)
