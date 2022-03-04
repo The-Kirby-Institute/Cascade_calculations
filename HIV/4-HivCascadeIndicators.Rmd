@@ -47,6 +47,9 @@ diagnosesFile <- paste0("pldhiv-", resultsYear, "-all.csv")
 
 startYear <- 2000
 
+# New infections parameters
+infectsCalculation <- "exclude" # "include", "exclude" or "middle"
+
 ```
 
 ```{r extract results function}
@@ -68,13 +71,23 @@ IndicatorResults <- function(cascadeName) {
     select(year, value, lower, upper) 
   
   # Tidy up new infections estimates
-  infectionsInclude <- filter(infections, exclude == "no")
-  infectionsExclude <- filter(infections, exclude == "yes")
-  
-  infectionsResults <- tibble(year = infectionsInclude$year,
-    infections = (infectionsInclude$infections + infectionsExclude$infections)/2,
-    infections_lower = infectionsExclude$infections_lower,
-    infections_upper = infectionsInclude$infections_upper)
+    if (infectsCalculation == "include") {
+    infectionsResults <- filter(infections, exclude == "no") %>%
+       select(-exclude)
+  } else if (infectsCalculation == "exclude") {
+    infectionsResults <- filter(infections, exclude == "yes") %>%
+       select(-exclude)
+  } else {
+    # Its "middle"
+    infectionsInclude <- filter(infections, exclude == "no")
+    infectionsExclude <- filter(infections, exclude == "yes")
+   
+    infectionsResults <- tibble(year = infectionsInclude$year,
+      infections = (infectionsInclude$infections +
+          infectionsExclude$infections)/2,
+      infections_lower = infectionsExclude$infections_lower,
+      infections_upper = infectionsInclude$infections_upper)
+  }
   
   # For PLHIV create start year values by shifting
   plhiv$start_plhiv <- c(plhiv$value[1], plhiv$value[1:(nrow(plhiv)-1)])

@@ -56,7 +56,7 @@ cascadeName <- "All-2020"
 cascadePop <- "all"
 
 # New infections parameters
-infectsCalculation <- "middle" # "include", "exclude" or "middle"
+infectsCalculation <- "exclude" # "include", "exclude" or "middle"
 
 # Specifications for each cascade step and indicator - primarily for plotting
 allIndicators <- c("infected", "pldhiv", "retained", "numART", "suppressed",
@@ -1427,7 +1427,7 @@ ymax <- c("infected" = 35000,
   "pldhiv" = 35000,
   "numART" = 35000, 
   "suppressed" = 35000,
-  "undiagnosed" = 3500, 
+  "undiagnosed" = 4000, 
   "noART" = 7000, 
   "unsuppressed" = 4500,
   "diagnoses_exclude" = 1500,
@@ -1500,8 +1500,6 @@ save(segResults, file = file.path(figFolder, "CascadeSegmentedModels.Rda"))
 RmLegened <- function(plot) {
   return(plot + theme(legend.position = "none"))
 }
-
-
 
 # HIV Cascade in 2020 ----------------------------------------------------------
 latestCascade <- filter(hivCascadeAll,

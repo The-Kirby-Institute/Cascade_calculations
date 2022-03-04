@@ -51,6 +51,7 @@ LoadLibrary(knitr)
 LoadLibrary(tidyverse)
 LoadLibrary(scales)
 LoadLibrary(cowplot) # Note this masks ggsave with save_plot
+LoadLibrary(gridExtra)
 LoadLibrary(captioner)
 LoadLibrary(stringr)
 
@@ -61,6 +62,7 @@ source(file.path(Rcode, "FormatData.R"))
 source(file.path(Rcode, "GetLegend.R"))
 
 # Function to tidy notifications
+source(file.path(Rcode, "AgeCat.R"))
 source(file.path(HIVcode, "TidyNotifications.R"))
 
 # Function for adjustments
@@ -76,7 +78,7 @@ startYear <- resultsYear - minYear + 1
 
 # Set up project - If ASR plot all populations otherwise just plot 
 # specified cascade
-projectName <- "HIV_Cascade_Paper" #"ASR_2021" "HIV_Cascade_Paper"
+projectName <- "ASR_2021" #"ASR_2021" "HIV_Cascade_Paper"
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadePop <- "all"
 
@@ -86,6 +88,9 @@ newInfectsPlots <- TRUE
 linkageplots <- ifelse(pubPlots, TRUE, FALSE)
 saveFormat <- ".png" # file extension for saved plots 
 excludeCare <- FALSE # Include linked and retained in care?
+
+# New infections parameters
+infectsCalculation <- "exclude" # "include", "exclude" or "middle"
 
 # Setup based on specs
 asrcols <- PlotColors("hivcascade5")
@@ -629,17 +634,29 @@ if (newInfectsPlots) {
   infectsYear <- startYear # resultsYear - 10 + 1 # Last 10 years
   
   # Sort out new infections
-  infectsData <- tibble(year = infectsYear:resultsYear)
-  
-  infectsData$estimate <- (filter(newInfections, year >= infectsYear,
-    exclude == "no")$infections + filter(newInfections,
-      year >= infectsYear, exclude == "yes")$infections) / 2
-  
-  infectsData$lower <- filter(newInfections, year >= infectsYear,
-    exclude == "yes")$infections_lower
-  
-  infectsData$upper<- filter(newInfections, year >= infectsYear,
-    exclude == "no")$infections_upper
+  if (infectsCalculation == "include") {
+    infectsData <- filter(newInfections, year >= infectsYear,
+      exclude == "no") %>%
+      select(-exclude, estimate = infections, lower = infections_lower, 
+        upper = infections_upper)
+  } else if (infectsCalculation == "exclude") {
+    infectsData <- filter(newInfections, year >= infectsYear,
+      exclude == "yes") %>%
+      select(-exclude, estimate = infections, lower = infections_lower, 
+        upper = infections_upper)
+  } else {
+    infectsData <- tibble(year = infectsYear:resultsYear)
+    
+    infectsData$estimate <- (filter(newInfections, year >= infectsYear,
+      exclude == "no")$infections + filter(newInfections,
+        year >= infectsYear, exclude == "yes")$infections) / 2
+    
+    infectsData$lower <- filter(newInfections, year >= infectsYear,
+      exclude == "yes")$infections_lower
+    
+    infectsData$upper<- filter(newInfections, year >= infectsYear,
+      exclude == "no")$infections_upper
+  }
   
   plhivEstimate <- filter(resultsAll, stage == "infected")$value
   plhivLower <- filter(resultsAll, stage == "infected")$lower

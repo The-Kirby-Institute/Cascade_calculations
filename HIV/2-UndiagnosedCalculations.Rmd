@@ -24,10 +24,9 @@ outputFolder <- file.path(basePath, "output")
 
 # Set working directory to source file location
 
-# Load standard libraries and options ----------------------------------
-source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
-# source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
-source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+# Load standard libraries and options ------------------------------------------
+source(file.path(Rcode, "LoadLibrary.R"))
+source(file.path(Rcode, "PlotOptions.R"))
 LoadLibrary(tidyverse)
 LoadLibrary(readxl)
 
@@ -45,8 +44,9 @@ ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky
                    # file name issues.
 updateECDC <- TRUE
 
-getNewInfections <- FALSE # can only be TRUE if include and exclude ECDC
-                          # have been run
+getNewInfections <- TRUE # can only be TRUE if include and exclude ECDC
+                         # have been run
+adjustUndiagnosed <- FALSE # adjust percentage undiagnosed
 
 # Produce cascadeName from the flag and analysis year. 
 if (analysisYear <= 2016) {
@@ -158,19 +158,10 @@ if (!file.exists(finalFile1) || updateECDC) {
 
 ```{r Load data}
 # Chunk to load the PLDHIV estimates and ECDC undiagnosed estimates. 
-# For file to be read in properly make sure hidden rows are unhidden and
-# the file name changed into the correct format. 
+
 pldhiv <- read.csv(file.path(outputFolder, projectFolder, cascadeName, 
   paste0("HIVpldhivEstimates-", toString(analysisYear), ".csv"))) %>%
   filter(stage == "pldhiv")
-
-# numberUndiagnosed <- read_excel(file.path(outputFolder, projectFolder, 
-#   cascadeName, ecdcChart), sheet = 2, col_names = FALSE, skip = 131) %>%
-#   select(X__2, X__11, X__12, X__13) %>%
-#   rename(year = X__2, undiagnosed = X__11, undiagnosed_lower = X__12,
-#     undiagnosed_upper = X__13) %>%
-#   slice(1:length(1980:analysisYear)) %>%
-#   mutate(year = as.numeric(year))
 
 # Read in and tidy main ECDC results file - results for best fitting curve
 # Reported as the mean value in the ECDC model.
@@ -178,13 +169,6 @@ mainUndiagnosed <- read_csv(file.path(outputFolder, projectFolder,
   cascadeName, paste0(ecdcChart, ".csv"))) %>%
   select(year, N_Und, N_Und_Alive_p) %>%
   rename(undiagnosed = N_Und, percent = N_Und_Alive_p)
-
-# percentUndiagnosed <- read_excel(file.path(outputFolder, projectFolder, 
-#   cascadeName, ecdcChart), sheet = 2, col_names = FALSE, skip = 195) %>%
-#   select(X__2, X__3, X__4, X__5) %>%
-#   rename(year = X__2, percent = X__3, percent_lower = X__4,
-#     percent_upper = X__5) %>%
-#   slice(1:length(1980:analysisYear))
 
 # Read in and tidy ECDC confidence interval file - the bootstrapped 
 # confidence intervals are updated at the end of each run so we take 
@@ -233,21 +217,7 @@ if (getNewInfections) {
   newInfections <- left_join(newInfections, confIntervalInfections, 
     by = "year") %>%
     relocate(exclude, .after = last_col())
-  
-  # newInfections <- read_excel(file.path(outputFolder, projectFolder, 
-  #   cascadeName, "All_ECDC_Charts.xlsm"), sheet = 2, col_names = FALSE, 
-  #   skip = 3) %>%
-  #   select(...2, ...3, ...4, ...5) %>%
-  #   rename(year = ...2, infections = ...3, infections_lower = ...4,
-  #     infections_upper = ...5) %>%
-  #   slice(1:length(1980:analysisYear)) %>%
-  #   mutate(year = as.numeric(year)) %>%
-  #   # Round to two decimal places (excessive I know)
-  #   mutate(infections = round(as.numeric(infections), digits = 2),
-  #     infections_lower = round(as.numeric(infections_lower), digits = 2),
-  #     infections_upper = round(as.numeric(infections_upper), digits = 2)) %>%
-  #   mutate(exclude = "no")
-  
+
   # For all diagnoses when overseas born excluded
   newInfectionsExclude <- read_csv(file.path(outputFolder, projectFolder, 
     cascadeName, paste0(ecdcChart, "_exclude.csv"))) %>%
@@ -264,21 +234,7 @@ if (getNewInfections) {
    newInfectionsExclude <- left_join(newInfectionsExclude,
      confIntervalInfectionsExclude, by = "year") %>%
     relocate(exclude, .after = last_col())
-  
-  # newInfectionsExclude <- read_excel(file.path(outputFolder, projectFolder, 
-  #   cascadeName, "All_ECDC_Charts.xlsm"), sheet = 2, col_names = FALSE, 
-  #   skip = 3) %>%
-  #   select(...2, ...3, ...4, ...5) %>%
-  #   rename(year = ...2, infections = ...3, infections_lower = ...4,
-  #     infections_upper = ...5) %>%
-  #   slice(1:length(1980:analysisYear)) %>%
-  #   mutate(year = as.numeric(year)) %>%
-  #   # Round to two decimal places (excessive I know)
-  #   mutate(infections = round(as.numeric(infections), digits = 2),
-  #     infections_lower = round(as.numeric(infections_lower), digits = 2),
-  #     infections_upper = round(as.numeric(infections_upper), digits = 2)) %>%
-  #   mutate(exclude = "yes")
-  
+
   # Merge the two infections estimates
   newInfections <- bind_rows(newInfections, newInfectionsExclude)
   
@@ -302,9 +258,11 @@ if (cascadeFlag == "Otherexp") {
       pnumber_upper = pldhiv_upper/(1 - percent_upper / 100) -
         pldhiv_upper) %>%
     group_by(year) %>%
-    mutate(undiag = (pnumber + undiagnosed)/2,
-      undiag_lower = min(pnumber_lower, undiagnosed_lower),
-      undiag_upper = max(pnumber_upper, undiagnosed_upper)) %>%
+    mutate(undiag = ifelse(adjustUndiagnosed, mean(c(pnumber, undiagnosed)), pnumber),
+      undiag_lower = ifelse(adjustUndiagnosed, 
+        min(pnumber_lower, undiagnosed_lower), pnumber_lower), 
+      undiag_upper = ifelse(adjustUndiagnosed, 
+        max(pnumber_upper, undiagnosed_upper), pnumber_upper)) %>%
     mutate(plhiv = undiag + pldhiv,
       plhiv_lower = undiag_lower + pldhiv_lower,
       plhiv_upper = undiag_upper + pldhiv_upper) %>%
