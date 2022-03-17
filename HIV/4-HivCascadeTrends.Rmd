@@ -75,10 +75,10 @@ indicatorNames <- c("infected" = "Living with HIV",
   "diagnoses_exclude" = "Diagnoses excluding OS",
   "diagnoses_include" = "Diagnoses including OS",
   "infections" ="Annual new infections",
-  "propdiagnosed" = "Proportion undiagnosed",
-  "proptreated" =  "Proportion diagnosed treated",
-  "propsuppressed" = "Proportion treated suppressed",
-  "propoverall" = "Proportion suppressed overall",
+  "propdiagnosed" = "Percentage diagnosed",
+  "proptreated" =  "Percentage diagnosed treated",
+  "propsuppressed" = "Percentage treated suppressed",
+  "propoverall" = "Percentage suppressed overall",
   "ydf" = "Yearly diagnosed fraction",
   "cdr" = "Case detection rate",
   "ipr" = "Incidence prevalence ratio")
@@ -94,7 +94,7 @@ indicatorNamesNeat <- c("infected" = "Number living with HIV\n ",
   "diagnoses_exclude" = "Annual notifications\n(excluding OS diagnoses)",
   "diagnoses_include" = "Annual notifications\n(including OS diagnoses)",
   "infections" = "Annual new infections\n ",
-  "propdiagnosed" = "Percentage of\nPWHIV diagnosed", 
+  "propdiagnosed" = "Percentage of\nPLHIV diagnosed", 
   "proptreated" =  "Percentage diagnosed\non ART",
   "propsuppressed" =  "Percentage on\nART suppressed",
   "propoverall" = "Percentage overall\nsuppressed",
@@ -1048,7 +1048,7 @@ modelString <- c("Number infected",
   "Diagnoses excluding OS",
   "Diagnoses including OS",
   "Annual new infections",
-  "Proportion undiagnosed", 
+  "Proportion diagnosed", 
   "Proportion diagnosed treated",
   "Proportion treated suppressed",
   "Proportion suppressed overall",
@@ -1475,7 +1475,7 @@ yPercent <- c("infected" = FALSE,
   "propoverall" = TRUE,
   "ydf" = FALSE,  
   "cdr"=  FALSE,
-  "ipr" = FALSE)
+  "ipr" = TRUE)
 
 # Generate results -------------------------------------------------------------
 
@@ -1759,13 +1759,29 @@ formatTable$valueEnd <- FormatData(resultsTable$valueEnd,
   resultsTable$valueEnd_low, resultsTable$valueEnd_up, places = -1,
   decimal = "mid")
 
-# Need to overwrite proportion estimates so they are not rounded
-formatTable$valueStart[25:40]  <- FormatData(resultsTable$valueStart[25:40],
-  resultsTable$valueStart_low[25:40], resultsTable$valueStart_up[25:40], 
+# Need to overwrite percentage and proportion estimates so they are not rounded
+# and have the right number of decimal places
+percentIndices <- c(25:34, 40:42)
+propIndices <- c(35:39)
+
+formatTable$valueStart[propIndices]  <- FormatData(resultsTable$valueStart[propIndices],
+  resultsTable$valueStart_low[propIndices], resultsTable$valueStart_up[propIndices], 
   places = 2, decimal = "mid")
-formatTable$valueEnd[25:40] <- FormatData(resultsTable$valueEnd[25:40],
-  resultsTable$valueEnd_low[25:40], resultsTable$valueEnd_up[25:40], 
+formatTable$valueEnd[propIndices] <- FormatData(resultsTable$valueEnd[propIndices],
+  resultsTable$valueEnd_low[propIndices], resultsTable$valueEnd_up[propIndices], 
   places = 2, decimal = "mid")
+
+formatTable$valueStart[percentIndices]  <- FormatData(
+  100*resultsTable$valueStart[percentIndices],
+  100*resultsTable$valueStart_low[percentIndices],
+  100*resultsTable$valueStart_up[percentIndices], 
+  places = 1, decimal = "mid")
+formatTable$valueEnd[percentIndices] <- FormatData(
+  100*resultsTable$valueEnd[percentIndices],
+  100*resultsTable$valueEnd_low[percentIndices],
+  100*resultsTable$valueEnd_up[percentIndices], 
+  places = 1, decimal = "mid")
+
 
 formatTable$breakpoints <- FormatData(resultsTable$breakpoints,
   resultsTable$breakpoints_low, resultsTable$breakpoints_up, 
