@@ -78,7 +78,7 @@ startYear <- resultsYear - minYear + 1
 
 # Set up project - If ASR plot all populations otherwise just plot 
 # specified cascade
-projectName <- "ASR_2021" #"ASR_2021" "HIV_Cascade_Paper"
+projectName <- "HIV_Cascade_Paper" #"ASR_2021" "HIV_Cascade_Paper"
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadePop <- "all"
 
@@ -850,6 +850,12 @@ if (asrCascades && linkageplots) {
     ylab("Annual diagnoses \n linked to care") + xlab("Year") +
     PlotOptions()
   
+  hivResults %>% 
+    filter(yeardiagnosis >= 1984) %>% 
+    select(yeardiagnosis, proplinked) %>%
+    write_csv(file.path(figFolder, paste0("linkage_prop_", 
+    toString(startYear), "-", toString(resultsYear), ".csv")))
+  
   # Turns out there is not much difference in % linked between MSM and
   # non-MSM so exclude from plot
   linkPlotRecent <- ggplot(data = hivResults,
@@ -964,10 +970,13 @@ if (asrCascades && linkageplots) {
   allCd4$msm <- msmCd4$msm
   allCd4$nonmsm <- nonMsmCd4$nonmsm
   
-  # Gather into long format for plotting 
+  # Gather into long format for plotting and save separately
   allCd4 <- gather(allCd4, "category", "cd4", 2:4)
   
-  # Creat the plot
+  write_csv(allCd4, file.path(figFolder, paste0("linkage_CD4_", 
+    toString(startYear), "-", toString(resultsYear), ".csv")))
+  
+  # Create the plot
   aveCd4Plot <- ggplot(data = allCd4, aes(x = year, y = cd4, 
     color = category)) + 
     geom_line() +
@@ -980,9 +989,9 @@ if (asrCascades && linkageplots) {
     PlotOptions() 
   
   # Save plot
-  ggsave(file.path(figFolder, paste("linkage_CD4_", 
+  ggsave(file.path(figFolder, paste0("linkage_CD4_", 
     toString(startYear), "-", toString(resultsYear), 
-    saveFormat, sep = "")), plot = aveCd4Plot, 
+    saveFormat)), plot = aveCd4Plot, 
     width = 9, height = 7.5, units = "cm")
 }
 ```
