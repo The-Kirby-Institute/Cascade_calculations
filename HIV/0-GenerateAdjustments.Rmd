@@ -45,7 +45,7 @@ source(file.path(HIVcode, "GetMigrate.R"))
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2020
+analysisYear <- 2021
 startYear <- 1980 # First year in HIV registry is 1980
 
 allYears <- startYear:analysisYear 
@@ -395,10 +395,12 @@ if (analysisYear >= 2017) {
     paste0("ABS_departures_clean-", analysisYear, ".csv")),
     as.is = 1)
 }
+# TODO: TEMPORARY FILE BEING USED AS MISSING DATA FOR NSW AND WA 
+# 27 June 2022
 absInterstate <- read.csv(file.path(mainDataFolder, 
-  paste0("ABS_interstate_clean-", analysisYear, ".csv")), 
+  paste0("ABS_interstate_clean-", analysisYear, "-temp.csv")), 
   as.is = 1) %>%
-  filter(year <= 2020)
+  filter(year <= analysisYear)
 
 # Base migration rate ----------------------------------------------------
 
@@ -727,11 +729,13 @@ for (ii in 1:nrow(hivParams)) {
   assign(hivParams$parameter[ii], hivParams$value[ii])
 }
 
-# Load AHOD data to calculate mortality and do some simple cleaning
+# Load AHOD data to calculate mortality and do some simple 
+# TODO: TEMPORARY AHOD DATA USED FOR 2022 AS DATA NOT YET AVAILABLE - 27 June 2022
 ahodData <- read.csv(file.path(dataFolder, 
   paste0("ahod", analysisYear, ".csv")))
 
-# Load gender deathrate ratios - NNED TO UPDATE THE ESTIMATES IN THIS FILE
+# Load gender deathrate ratios - NNED TO UPDATE THE ESTIMATES IN THIS FILE EACH
+# YEAR
 sexDrates <- read_excel(file.path(dataFolder,
   "HIV_Gender_Deathrates.xlsx"),
   sheet = 2) %>%
