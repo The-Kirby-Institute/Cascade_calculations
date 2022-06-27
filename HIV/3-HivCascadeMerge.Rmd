@@ -50,7 +50,7 @@ if (multipleCascades && projectName %in% c("ASR_2016", "ASR_2017",
    cascadeNames <- c("All", "Male", "Female", "Indigenous", 
      "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "ACT", "NSW",
      "NT", "QLD", "SA", "TAS", "VIC", "WA", "CALD", "SSA", "SEA", "SCA", 
-     "Othercob")   
+     "Othercob")  
 } else {
   # Specify cascades manually (without year)
   cascadeNames <- "All" # specify cascades with project 
