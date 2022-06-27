@@ -45,8 +45,9 @@ LoadLibrary(captioner)
 LoadLibrary(scales)
 source(file.path(Rcode, "FormatData.R"))
 
+
 # Script options
-dataYear <- 2020
+dataYear <- 2021
 
 runImpute <- TRUE
 saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 
@@ -62,6 +63,7 @@ changeFemaleMsm <- TRUE
 # of notifications in prepartion for imputing
 
 # Function to tidy notifications
+source(file.path(Rcode, "AgeCat.R"))
 source(file.path(HIVcode, "TidyNotifications.R"))
 
 # Load cleaned notifications data
@@ -442,7 +444,7 @@ if (runChecks) {
   # imputation The primary purpose is to make sure the imputation values 
   # align proportionally with the known values
   
-  impVars # For refernece
+  impVars # For reference
   
   # yeardiagnosis is complete and state is complete following manual fix. 
   # The other variables have missing data. We create a function here so we 
