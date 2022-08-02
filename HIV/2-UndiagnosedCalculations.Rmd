@@ -74,8 +74,8 @@ ecdcChart <- paste0(ecdcGroup, "_ECDC")
 # First check if exclude file exists and make appropriate adjustments to 
 # settings
 excludeFile <-  file.path(outputFolder, projectFolder, "ECDC_models",
-      paste0("All-", toString(analysisYear)), paste0(ecdcResults, "_exclude"), 
-      "results", "All_Result_main.csv")
+      cascadeName, paste0(ecdcResults, "_exclude"),  "results", 
+      paste0(ecdcGroup, "_Result_main.csv"))
 if (!file.exists(excludeFile)) {
   addExclude <- FALSE
 }
@@ -224,7 +224,55 @@ mergedData <- pldhiv %>%
   left_join(., undiagnosed, by = "year") %>%
   as_tibble()
 
-# population <- cascadeFlag
+# If available and required repeat above and add exclude results
+if (addExclude) {
+  pldhivExclude <- read.csv(file.path(outputFolder, projectFolder, cascadeName, 
+    paste0("HIVpldhivEstimates-", toString(analysisYear), "_exclude.csv"))) %>%
+    filter(stage == "pldhiv")
+  
+  mainUndiagnosedExclude <- read_csv(file.path(outputFolder, projectFolder, 
+    cascadeName, paste0(ecdcChart, "_exclude.csv"))) %>%
+    select(year, N_Und, N_Und_Alive_p) %>%
+    rename(undiagnosed_exclude = N_Und, percent_exclude = N_Und_Alive_p)
+  
+  if (file.exists(file.path(outputFolder, projectFolder,
+    cascadeName, paste0(ecdcChart, "_confIntervals_exclude.csv"))) & doUncertainty) {
+    confIntervalUndiagnosedExclude <- read_csv(file.path(outputFolder, projectFolder,
+      cascadeName, paste0(ecdcChart, "_confIntervals_exclude.csv"))) %>%
+      filter(run == max(.$run)) %>%
+      select(year, N_Und_LB, N_Und_UB, N_Und_Alive_p_LB, N_Und_Alive_p_UB) %>%
+      rename(undiagnosed_lower_exclude = N_Und_LB, 
+        percent_lower_exclude = N_Und_Alive_p_LB,
+        undiagnosed_upper_exclude = N_Und_UB, 
+        percent_upper_exclude = N_Und_Alive_p_UB)
+  } else {
+    confIntervalUndiagnosedExclude <- mainUndiagnosedExclude %>%
+      mutate(undiagnosed_lower_exclude = undiagnosed_exclude,
+        percent_lower_exclude = percent_exclude,
+        undiagnosed_upper_exclude = undiagnosed_exclude,
+        percent_upper_exclude = percent_exclude) %>%
+      select(year, undiagnosed_lower_exclude, percent_lower_exclude, 
+        undiagnosed_upper_exclude, percent_upper_exclude)
+  }
+  
+  undiagnosedExclude <- left_join(mainUndiagnosedExclude, 
+    confIntervalUndiagnosedExclude, by = "year") %>%
+    select(year, undiagnosed_exclude, undiagnosed_lower_exclude, 
+      undiagnosed_upper_exclude, percent_exclude, percent_lower_exclude,
+      percent_upper_exclude)
+  
+  # Merge undiagnosed data into one data frame
+  mergedDataExclude <- pldhivExclude %>%
+    select(-stage) %>%
+    rename(pldhiv_exclude = value,
+      pldhiv_lower_exclude = lower,
+      pldhiv_upper_exclude = upper) %>%
+    left_join(., undiagnosedExclude, by = "year") %>%
+    as_tibble()
+  
+  mergedData <- left_join(mergedData, mergedDataExclude, by = "year")
+  
+}
 
 if (getNewInfections) {
   # Also grab the new infections estimates - can only be done if include
