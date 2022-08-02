@@ -232,10 +232,8 @@ GetAdjustments <- function(hivBase, hivAdjustments,
   #   adjustments$inter_departrate <- 0
   # }
   
-
-  # Further adjust propstay and deathrate by location only have this for 
-  # NSW and Victoria. For other states assume no post-diagnosis movement
-  # and the national deathrate
+  # Further adjust propstay and deathrate by state only have deathrate for 
+  # NSW, Victoria, and Queensland. For other states assume the national deathrate
   if (targetState[1] != "all" && length(targetState) == 1) {
     
     if (targetState[1] == "nsw") {
@@ -288,15 +286,77 @@ GetAdjustments <- function(hivBase, hivAdjustments,
         hivAdjustments$drate_vic_lower
       adjustments$deathrate_upper <- adjustments$deathrate_upper *
         hivAdjustments$drate_vic_upper
-    } else {
-      # Same as Vic because assuming no movement outside NSW
+      
+    } else if (targetState[1] == "qld") {
       adjustments$propstay <- adjustments$propstay *
-        hivAdjustments$pstay_vic
+        hivAdjustments$pstay_qld
       adjustments$propstay_lower <- adjustments$propstay_lower *
-        hivAdjustments$pstay_vic_lower
+        hivAdjustments$pstay_qld_lower
       adjustments$propstay_upper <- adjustments$propstay_upper *
-        hivAdjustments$pstay_vic_upper
+        hivAdjustments$pstay_qld_upper
+      
+      adjustments$deathrate <- adjustments$deathrate *
+        hivAdjustments$drate_qld
+      adjustments$deathrate_lower <- adjustments$deathrate_lower *
+        hivAdjustments$drate_qld_lower
+      adjustments$deathrate_upper <- adjustments$deathrate_upper *
+        hivAdjustments$drate_qld_upper
+      
+    } else if (targetState[1] == "wa") {
+      adjustments$propstay <- adjustments$propstay *
+        hivAdjustments$pstay_wa
+      adjustments$propstay_lower <- adjustments$propstay_lower *
+        hivAdjustments$pstay_wa_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper *
+        hivAdjustments$pstay_wa_upper
+    
+      # No WA specific deathrate
+
+    } else if (targetState[1] == "sa") {
+      adjustments$propstay <- adjustments$propstay *
+        hivAdjustments$pstay_sa
+      adjustments$propstay_lower <- adjustments$propstay_lower *
+        hivAdjustments$pstay_sa_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper *
+        hivAdjustments$pstay_sa_upper
+
+      # No SA specific deathrate
+      
+    } else if (targetState[1] == "act") {
+      adjustments$propstay <- adjustments$propstay *
+        hivAdjustments$pstay_act
+      adjustments$propstay_lower <- adjustments$propstay_lower *
+        hivAdjustments$pstay_act_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper *
+        hivAdjustments$pstay_act_upper
+
+      # No ACT specific deathrate
+      
+    } else if (targetState[1] == "tas") {
+      adjustments$propstay <- adjustments$propstay *
+        hivAdjustments$pstay_tas
+      adjustments$propstay_lower <- adjustments$propstay_lower *
+        hivAdjustments$pstay_tas_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper *
+        hivAdjustments$pstay_tas_upper
+
+      # No TAS specific deathrate
+      
+    } else if (targetState[1] == "nt") {
+      adjustments$propstay <- adjustments$propstay *
+        hivAdjustments$pstay_nt
+      adjustments$propstay_lower <- adjustments$propstay_lower *
+        hivAdjustments$pstay_nt_lower
+      adjustments$propstay_upper <- adjustments$propstay_upper *
+        hivAdjustments$pstay_nt_upper
+      
+      # No NT specific deathrate
+
+    } else {
+      # Do nothing
     }
+    
+    
   } 
   
   # if (targetAtsi == "indigenous") {
