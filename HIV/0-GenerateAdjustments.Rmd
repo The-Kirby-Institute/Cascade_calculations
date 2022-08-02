@@ -930,12 +930,6 @@ for (ii in 2:length(annDiags)) {
   # numLiving_max[ii] <- numLiving_max[ii-1] + annDiags[ii] -
   #   (1-hivBaseRates$propstay_lower[ii-1]) * annDiags[ii-1] -
   #   deaths_min[ii-1] - numLiving_max[ii-1] * allMigrateLower[ii-1]
-  #   
-  # Old formula Calculation of crude average annual mortality rates up to 2003
-  # 
-  # linkageMortality <- deaths / numLiving
-  # linkageMortalityMin <- deaths_min / numLiving_max
-  # linkageMortalityMax <- deaths_max / numLiving_min
 
   # New formula: Used since mid-2022. Calculations provide the number at 
   # the end of the year using the number at the end of the previous year and
@@ -951,6 +945,11 @@ for (ii in 2:length(annDiags)) {
     deaths_min[ii] - numLiving_max[ii-1] * allMigrateLower[ii]
 
 }
+
+# Old formula Calculation of crude average annual mortality rates up to 2003
+# linkageMortality <- deaths / numLiving
+# linkageMortalityMin <- deaths_min / numLiving_max
+# linkageMortalityMax <- deaths_max / numLiving_min
 
 # New formula calculations of crude average annual mortality rates up to 2003
 # This is given by number deaths in given year divided by previous year living
