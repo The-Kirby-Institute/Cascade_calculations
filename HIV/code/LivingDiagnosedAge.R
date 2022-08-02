@@ -141,6 +141,18 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
       # Update current age group for current year - assuming same 
       # overseas migration rate for each age group equal to overall 
       # migration rate
+      
+      # NOTE: In mid 2022 I changed from the old formulas below to the new formulas. 
+      # I had previously been using the old formula (with the "new" formula 
+      # commented out!). I don't think it makes a massive difference to the 
+      # estimates but I think the new formula better captures what we want 
+      # conceptually. 
+      
+      # Old formula: Based on an Euler approximation approach but given the
+      # annual time difference doesn't really capture changes on an annual basis
+      # appropriately especially with the effects of the COVID-19 pandemic on 
+      # emigration since 2020. This formula was used up to mid 2022 for 
+      # cascade estimates.  
       nliving[jj, ii] <- nliving[jj, ii - 1] + 
         propunique[ii] * annualdiags[jj, ii] - 
         (1 - propstay[ii-1]) * propunique[ii-1] * annualdiags[jj, ii-1] - 
@@ -149,6 +161,19 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
         departs[jj, ii-1] * nliving[jj, ii-1] +
         arrivals[jj, ii-1] * (pldhiv[jj, ii-1] - nliving[jj, ii-1]) -
         nliving[jj, ii - 1] * ageRate[jj] + ageUp
+      
+      # New formula: Used since mid-2022. Calculations provide the number at 
+      # the end of the year using the number at the end of the previous year and
+      # changes through the year (assumes new diagnoses stay in the population 
+      # except for those who leave immediately) 
+      nliving[jj, ii] <- nliving[jj, ii - 1] + 
+        propstay[ii] * propunique[ii] * annualdiags[jj, ii] - 
+        deathrate[ii] * agedeath[jj, ii] * nliving[jj, ii-1] -
+        migration[ii] * agemigrate[jj, ii] * nliving[jj, ii-1] -
+        departs[jj, ii] * nliving[jj, ii-1] +
+        arrivals[jj, ii] * (pldhiv[jj, ii-1] - nliving[jj, ii-1]) -
+        nliving[jj, ii - 1] * ageRate[jj] + ageUp
+      
       
       # For low numbers the previous calculation could give number less
       # than zero. In this case replace with zero

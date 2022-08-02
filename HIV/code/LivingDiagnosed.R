@@ -101,50 +101,59 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   for (ii in 2:nyears) {
     
     # The following formula needs to have the same form as the formula in
-    # 0-GenerateAdjustments.Rmd to ensure the deathrates/deaths match
+    # 0-GenerateAdjustments.Rmd to ensure the deathrates/deaths match. 
     
-    # Old formula. Based on an Euler approximation approach but given the
-    # annual time difference doesn't really capture what we want on an 
-    # annual basis.
+    # NOTE: In mid 2022 I changed from the old formulas below to the new formulas. 
+    # I had previously been using the old formula (with the "new" formula 
+    # commented out!). I don't think it makes a massive difference to the 
+    # estimates but I think the new formula better captures what we want 
+    # conceptually. 
     
-    nliving[ii] <- nliving[ii-1] + propunique[ii] * annualdiags[ii] -
-      (1-propstay[ii-1]) * propunique[ii-1] * annualdiags[ii-1] - 
-      (deathrate[ii-1] + migration[ii-1] + departs[ii-1]) * nliving[ii-1] +
-      arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
+    # Old formula: Based on an Euler approximation approach but given the
+    # annual time difference doesn't really capture changes on an annual basis
+    # appropriately especially with the effects of the COVID-19 pandemic on 
+    # emigration since 2020. This formula was used up to mid 2022 for 
+    # cascade estimates.  
     
-    # New formula. Calculations provide the number at the end of the
-    # year using the number at the end of the previous year and changes
-    # through the year (assumes new diagnoses stay in the population 
-    # except for those who leave immediately) 
-    # nliving[ii] <- nliving[ii-1] + propstay[ii] * propunique[ii] *
-    #   annualdiags[ii] - (deathrate[ii] + migration[ii] +
-    #                        departs[ii]) * nliving[ii-1] +
-    #   arrivals[ii] * (pldhiv[ii-1] - nliving[ii-1])
-    # 
-    # Annual estimates
+    # nliving[ii] <- nliving[ii-1] + propunique[ii] * annualdiags[ii] -
+    #   (1-propstay[ii-1]) * propunique[ii-1] * annualdiags[ii-1] - 
+    #   (deathrate[ii-1] + migration[ii-1] + departs[ii-1]) * nliving[ii-1] +
+    #   arrivals[ii-1] * (pldhiv[ii-1] - nliving[ii-1])
+    
+    # Old formula annual estimates
     # nduplicates[ii] <- (1 - propunique[ii]) * annualdiags[ii]
     # 
-    # ndead[ii] <- deathrate[ii] * nliving[ii-1]
+    # ndead[ii] <- deathrate[ii] * nliving[ii]
     # 
-    # nmigrants[ii] <- migration[ii] * nliving[ii-1]
+    # nmigrants[ii] <- migration[ii] * nliving[ii]
     # 
-    # ndeparts[ii] <- departs[ii] * nliving[ii-1]
+    # ndeparts[ii] <- departs[ii] * nliving[ii]
     # 
-    # narrivals[ii] <- arrivals[ii] * (pldhiv[ii-1] - nliving[ii-1])
+    # narrivals[ii] <- arrivals[ii] * (pldhiv[ii] - nliving[ii])
     # 
     # nleave[ii] <- (1 - propstay[ii]) * propunique[ii] *
     #   annualdiags[ii]
     
+    # New formula: Used since mid-2022. Calculations provide the number at 
+    # the end of the year using the number at the end of the previous year and
+    # changes through the year (assumes new diagnoses stay in the population 
+    # except for those who leave immediately) 
+    nliving[ii] <- nliving[ii-1] + propstay[ii] * propunique[ii] *
+      annualdiags[ii] - (deathrate[ii] + migration[ii] +
+                           departs[ii]) * nliving[ii-1] +
+      arrivals[ii] * (pldhiv[ii-1] - nliving[ii-1])
+
+    # Annual estimates for new formula
     nduplicates[ii] <- (1 - propunique[ii]) * annualdiags[ii]
-    
-    ndead[ii] <- deathrate[ii] * nliving[ii]
-    
-    nmigrants[ii] <- migration[ii] * nliving[ii]
-    
-    ndeparts[ii] <- departs[ii] * nliving[ii]
-    
-    narrivals[ii] <- arrivals[ii] * (pldhiv[ii] - nliving[ii])
-    
+
+    ndead[ii] <- deathrate[ii] * nliving[ii-1]
+
+    nmigrants[ii] <- migration[ii] * nliving[ii-1]
+
+    ndeparts[ii] <- departs[ii] * nliving[ii-1]
+
+    narrivals[ii] <- arrivals[ii] * (pldhiv[ii-1] - nliving[ii-1])
+
     nleave[ii] <- (1 - propstay[ii]) * propunique[ii] *
       annualdiags[ii]
     
@@ -153,7 +162,6 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   # Put all the outputs into a dataframe
   
   # Return final output
-  #return(nliving)
   return(data.frame(pldhiv  = nliving,
                     diagnoses = annualdiags,
                     duplicates = nduplicates,

@@ -905,61 +905,61 @@ for (ii in 2:length(annDiags)) {
   # The following formula needs to have the same form as the formula in
   # LivingDiagnosed.R to ensure the deathrates match and the number
   # of deaths at the end of 2003 is correct. 
-  # 
-  # TODO: replace the calculation below with LivingDiagnosed.R so that
-  # accidently differences are prevented.
   
-  # Old formula. Based on an Euler approximation approach but given the
-  # annual time difference doesn't really capture what we want on an 
-  # annual basis. 
+  # NOTE: In mid 2022 I changed from the old formulas below to the new formulas. 
+  # I had previously been using the old formula (with "new" formula commented 
+  # out!). I don't think it makes a massive difference to the estimates but I 
+  # think the new formula better captures what we want conceptually. 
   
-  numLiving[ii] <- numLiving[ii-1] + annDiags[ii] -
-    (1-hivBaseRates$propstay[ii-1]) * annDiags[ii-1] -
-    deaths[ii-1] - numLiving[ii-1] * allMigrate[ii-1]
-  numLiving_min[ii] <- numLiving_min[ii-1] + annDiags[ii] -
-    (1-hivBaseRates$propstay_upper[ii-1]) * annDiags[ii-1] -
-    deaths_max[ii-1] - numLiving_min[ii-1] * allMigrateUpper[ii-1]
-  numLiving_max[ii] <- numLiving_max[ii-1] + annDiags[ii] -
-    (1-hivBaseRates$propstay_lower[ii-1]) * annDiags[ii-1] -
-    deaths_min[ii-1] - numLiving_max[ii-1] * allMigrateLower[ii-1]
-
-  # numLiving[ii] <- numLiving[ii-1] + 
-  #   hivBaseRates$propstay[ii-1] * annDiags[ii] -
+  # TODO: It would be good to replace the calculation below with 
+  # a function that is also used in LivingDiagnosed.R so that
+  # accidental differences are prevented.
+  
+  # Old formulas: Based on an Euler approximation approach but given the
+  # annual time difference doesn't really capture changes on an annual basis
+  # appropriately especially with the effects of the COVID-19 pandemic on 
+  # emigration since 2020. This formula was used up to mid 2022 for 
+  # cascade estimates. 
+  
+  # numLiving[ii] <- numLiving[ii-1] + annDiags[ii] -
+  #   (1-hivBaseRates$propstay[ii-1]) * annDiags[ii-1] -
   #   deaths[ii-1] - numLiving[ii-1] * allMigrate[ii-1]
-  # numLiving_min[ii] <- numLiving_min[ii-1] +
-  #   hivBaseRates$propstay_upper[ii] * annDiags[ii] -
+  # numLiving_min[ii] <- numLiving_min[ii-1] + annDiags[ii] -
+  #   (1-hivBaseRates$propstay_upper[ii-1]) * annDiags[ii-1] -
   #   deaths_max[ii-1] - numLiving_min[ii-1] * allMigrateUpper[ii-1]
-  # numLiving_max[ii] <- numLiving_max[ii-1] +
-  #   hivBaseRates$propstay_lower[ii] * annDiags[ii] -
+  # numLiving_max[ii] <- numLiving_max[ii-1] + annDiags[ii] -
+  #   (1-hivBaseRates$propstay_lower[ii-1]) * annDiags[ii-1] -
   #   deaths_min[ii-1] - numLiving_max[ii-1] * allMigrateLower[ii-1]
-  
-  # New formula. Calculations provide the number at the end of the
-  # year using the number at the end of the previous year and changes
-  # through the year (assumes new diagnoses stay in the population 
+  #   
+  # Old formula Calculation of crude average annual mortality rates up to 2003
+  # 
+  # linkageMortality <- deaths / numLiving
+  # linkageMortalityMin <- deaths_min / numLiving_max
+  # linkageMortalityMax <- deaths_max / numLiving_min
+
+  # New formula: Used since mid-2022. Calculations provide the number at 
+  # the end of the year using the number at the end of the previous year and
+  # changes through the year (assumes new diagnoses stay in the population 
   # except for those who leave immediately) 
-  # numLiving[ii] <- numLiving[ii-1] + hivBaseRates$propstay[ii] *
-  #   annDiags[ii] - deaths[ii] - numLiving[ii-1] * allMigrate[ii]
-  # numLiving_min[ii] <- numLiving_min[ii-1] +
-  #   hivBaseRates$propstay_upper[ii] * annDiags[ii] -
-  #   deaths_max[ii] - numLiving_min[ii-1] * allMigrateUpper[ii]
-  # numLiving_max[ii] <- numLiving_max[ii-1] +
-  #   hivBaseRates$propstay_lower[ii] * annDiags[ii] -
-  #   deaths_min[ii] - numLiving_max[ii-1] * allMigrateLower[ii]
+  numLiving[ii] <- numLiving[ii-1] + hivBaseRates$propstay[ii] *
+    annDiags[ii] - deaths[ii] - numLiving[ii-1] * allMigrate[ii]
+  numLiving_min[ii] <- numLiving_min[ii-1] +
+    hivBaseRates$propstay_upper[ii] * annDiags[ii] -
+    deaths_max[ii] - numLiving_min[ii-1] * allMigrateUpper[ii]
+  numLiving_max[ii] <- numLiving_max[ii-1] +
+    hivBaseRates$propstay_lower[ii] * annDiags[ii] -
+    deaths_min[ii] - numLiving_max[ii-1] * allMigrateLower[ii]
 
 }
 
-# Calculate crude average annual mortality rates up to 2003
-# Old formula
-linkageMortality <- deaths / numLiving
-linkageMortalityMin <- deaths_min / numLiving_max
-linkageMortalityMax <- deaths_max / numLiving_min
-
-# New formula
-# linkageMortality <- deaths / c(numLiving[1], head(numLiving, -1))
-# linkageMortalityMin <- deaths_min / 
-#   c(numLiving_max[1], head(numLiving_max, -1))
-# linkageMortalityMax <- deaths_max / 
-#   c(numLiving_min[1], head(numLiving_min, -1))
+# New formula calculations of crude average annual mortality rates up to 2003
+# This is given by number deaths in given year divided by previous year living
+# with HIV estimate to match the new formula 
+linkageMortality <- deaths / c(numLiving[1], head(numLiving, -1))
+linkageMortalityMin <- deaths_min /
+  c(numLiving_max[1], head(numLiving_max, -1))
+linkageMortalityMax <- deaths_max /
+  c(numLiving_min[1], head(numLiving_min, -1))
 
 # Append AHOD mortality -------------------------------------------------
 
