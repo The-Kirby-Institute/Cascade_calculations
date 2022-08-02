@@ -44,12 +44,12 @@ ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky
 # file name issues.
 updateECDC <- TRUE
 
+useAdjusted <- TRUE # adjust number undiagnosed and percentage undiagnosed
+
 # The following can only be TRUE if include and exclude ECDC have been run
 addExclude <- TRUE
-undiagnosedMethod <- "include" # "include", "exclude", "average" 
+undiagnosedMethod <- "average" # "include", "exclude", "average" 
 getNewInfections <- TRUE 
-
-adjustUndiagnosed <- FALSE # adjust percentage undiagnosed
 
 # Use if ECDC bootstrapping hasn't been done
 doUncertainty <- FALSE # Calculate uncertainty estimates
@@ -334,32 +334,112 @@ if (getNewInfections) {
 
 ```{r Undiagnosed calculations}
 # This chunk produces the final calculations
-if (cascadeFlag == "Otherexp") {
-  plhiv <- mergedData %>%
-    mutate(plhiv = pldhiv/(1 - percent / 100),
-      plhiv_lower = pldhiv_lower/(1 - percent_lower / 100),
-      plhiv_upper = pldhiv_upper/(1 - percent_upper / 100)) %>%
-    select(-undiagnosed, -undiagnosed_lower, -undiagnosed_upper)
-} else {
-  plhiv <- mergedData %>%
-    mutate(pnumber = pldhiv/(1 - percent / 100) - pldhiv,
-      pnumber_lower = pldhiv_lower/(1 - percent_lower / 100) -
-        pldhiv_lower,
-      pnumber_upper = pldhiv_upper/(1 - percent_upper / 100) -
-        pldhiv_upper) %>%
-    group_by(year) %>%
-    mutate(undiag = ifelse(adjustUndiagnosed, mean(c(pnumber, undiagnosed)), pnumber),
-      undiag_lower = ifelse(adjustUndiagnosed, 
-        min(pnumber_lower, undiagnosed_lower), pnumber_lower), 
-      undiag_upper = ifelse(adjustUndiagnosed, 
-        max(pnumber_upper, undiagnosed_upper), pnumber_upper)) %>%
-    mutate(plhiv = undiag + pldhiv,
-      plhiv_lower = undiag_lower + pldhiv_lower,
-      plhiv_upper = undiag_upper + pldhiv_upper) %>%
-    mutate(undiag_percent = 100 * undiag/plhiv,
-      uplower = 100 * undiag_lower/plhiv_lower,
-      upupper = 100 * undiag_upper/plhiv_upper) 
+# if (cascadeFlag == "Otherexp") {
+#   plhiv <- mergedData %>%
+#     mutate(plhiv = pldhiv/(1 - percent / 100),
+#       plhiv_lower = pldhiv_lower/(1 - percent_lower / 100),
+#       plhiv_upper = pldhiv_upper/(1 - percent_upper / 100)) %>%
+#     select(-undiagnosed, -undiagnosed_lower, -undiagnosed_upper)
+# } else {
+#   plhiv <- mergedData %>%
+#     mutate(pnumber = pldhiv/(1 - percent / 100) - pldhiv,
+#       pnumber_lower = pldhiv_lower/(1 - percent_lower / 100) -
+#         pldhiv_lower,
+#       pnumber_upper = pldhiv_upper/(1 - percent_upper / 100) -
+#         pldhiv_upper) %>%
+#     group_by(year) %>%
+#     mutate(undiag = ifelse(adjustUndiagnosed, mean(c(pnumber, undiagnosed)), pnumber),
+#       undiag_lower = ifelse(adjustUndiagnosed, 
+#         min(pnumber_lower, undiagnosed_lower), pnumber_lower), 
+#       undiag_upper = ifelse(adjustUndiagnosed, 
+#         max(pnumber_upper, undiagnosed_upper), pnumber_upper)) %>%
+#     mutate(plhiv = undiag + pldhiv,
+#       plhiv_lower = undiag_lower + pldhiv_lower,
+#       plhiv_upper = undiag_upper + pldhiv_upper) %>%
+#     mutate(undiag_percent = 100 * undiag/plhiv,
+#       uplower = 100 * undiag_lower/plhiv_lower,
+#       upupper = 100 * undiag_upper/plhiv_upper) 
+# }
+
+plhiv <- mergedData %>% 
+  mutate(undiag_adjusted = undiagnosed * pldhiv / ecdc_diagnosed,
+    undiag_adjusted_lower = undiagnosed_lower * pldhiv / ecdc_diagnosed,
+    undiag_adjusted_upper = undiagnosed_upper * pldhiv / ecdc_diagnosed) %>%
+  # The following should be same as percent adding for checking
+  mutate(percent_adjusted = 100 * undiag_adjusted / (pldhiv + undiag_adjusted),
+    percent_adjusted_lower = 100 * undiag_adjusted_lower / 
+      (pldhiv_upper + undiag_adjusted_upper),
+    percent_adjusted_upper = 100 * undiag_adjusted_upper / 
+      (pldhiv_lower + undiag_adjusted_lower)) 
+
+if (addExclude) {
+  plhiv <- plhiv %>%
+    mutate(undiag_adjusted_exclude = undiagnosed_exclude *
+        pldhiv_exclude/ecdc_diagnosed_exclude,
+      undiag_adjusted_lower_exclude = undiagnosed_lower_exclude *
+        pldhiv_exclude/ecdc_diagnosed_exclude,
+      undiag_adjusted_upper_exclude = undiagnosed_upper_exclude *
+        pldhiv_exclude/ecdc_diagnosed_exclude) %>%
+    # Compared to pldhiv 
+    mutate(percent_adjusted_exclude = 100 * undiag_adjusted_exclude / 
+        (pldhiv + undiag_adjusted_exclude),
+      percent_adjusted_lower_exclude = 100 * undiag_adjusted_lower_exclude / 
+        (pldhiv_upper + undiag_adjusted_upper_exclude),
+      percent_adjusted_upper_exclude = 100 * undiag_adjusted_upper_exclude / 
+        (pldhiv_lower + undiag_adjusted_lower_exclude))
 }
+
+# Add final number undiagnosed used for calculations
+if (useAdjusted) {
+  if (undiagnosedMethod == "include") {
+    plhiv <- plhiv %>% 
+      mutate(final_undiagnosed = undiag_adjusted,
+        final_undiagnosed_lower = undiag_adjusted_lower,
+        final_undiagnosed_upper = undiag_adjusted_upper)
+  } else if (undiagnosedMethod == "exclude") {
+    plhiv <- plhiv %>% 
+      mutate(final_undiagnosed = undiag_adjusted_exclude,
+        final_undiagnosed_lower = undiag_adjusted_lower_exclude,
+        final_undiagnosed_upper = undiag_adjusted_upper_exclude)
+  } else {
+    # Average 
+    plhiv <- plhiv %>% 
+      mutate(final_undiagnosed = (undiag_adjusted + undiag_adjusted_exclude) / 2,
+        final_undiagnosed_lower = (undiag_adjusted_lower +
+            undiag_adjusted_lower_exclude) / 2,
+        final_undiagnosed_upper = (undiag_adjusted_upper + 
+            undiag_adjusted_upper_exclude) / 2)
+  }
+} else {
+  if (undiagnosedMethod == "include") {
+    plhiv <- plhiv %>% 
+      mutate(final_undiagnosed = undiagnosed,
+        final_undiagnosed_lower = undiagnosed_lower,
+        final_undiagnosed_upper = undiagnosed_upper)
+  } else if (undiagnosedMethod == "exclude") {
+    plhiv <- plhiv %>% 
+      mutate(final_undiagnosed = undiagnosed_exclude,
+        final_undiagnosed_lower = undiagnosed_lower_exclude,
+        final_undiagnosed_upper = undiagnosed_upper_exclude)
+  } else {
+    # Average 
+    plhiv <- plhiv %>% 
+      mutate(final_undiagnosed = (undiagnosed + undiagnosed_exclude) / 2,
+        final_undiagnosed_lower = (undiagnosed_lower + undiagnosed_lower_exclude) / 2,
+        final_undiagnosed_upper = (undiagnosed_upper + undiagnosed_upper_exclude) / 2)
+  }
+}
+
+# Add final results 
+plhiv <- plhiv %>%
+  mutate(plhiv = pldhiv + final_undiagnosed,
+    plhiv_lower = pldhiv_lower + final_undiagnosed_lower,
+    plhiv_upper = pldhiv_upper + final_undiagnosed_upper) %>%
+  mutate(undiag_percent = 100 * final_undiagnosed / plhiv,
+    undiag_percent_lower = 100 * final_undiagnosed_lower / plhiv_upper,
+    undiag_percent_upper = 100 * final_undiagnosed_upper / plhiv_lower) %>%
+  mutate(adjusted = ifelse(useAdjusted, "yes", "no"),
+    method = undiagnosedMethod)
 
 # Extract cascade results
 plhivResults <- plhiv %>% 
@@ -368,7 +448,6 @@ plhivResults <- plhiv %>%
   rename(value = plhiv,
     lower = plhiv_lower,
     upper = plhiv_upper)
-
 
 # Save results
 if (saveResults) {
@@ -396,7 +475,4 @@ if (saveResults) {
   }
 }
 
-# if (fileFlag) {
-#   stop("You need to unhide hidden rows otherwise results are incorrect")
-# } 
 ```
