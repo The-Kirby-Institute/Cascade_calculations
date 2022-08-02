@@ -416,7 +416,7 @@ if (analysisYear >= 2017) {
   mrate <- absDeparts$migrate
   
   # Read in Excel file and extract estimates for permanent departure rate 
-  # after 2017
+  # after 2017. NEEDS TO BE UPDATED ANNUALLY
   estimatedMrate <- read_xlsx(file.path(dataFolder,
     "Migration_Permanent_NOM_Comparison.xlsx"), skip = 3) %>%
     select(year = Year, mrate = "Base (Permanent)") 
@@ -687,7 +687,7 @@ hivAdjustments$pstay_nsw_upper <- hivBaseRates$propstay_upper /
   hivBaseRates$propstay_upper
 
 # Victorian estimates - Victoria had no notifications in 1981 and 1982
-propAusVic <- FillDataFrame(1980:2020, filter(hivCobCumState, state == "vic"), 
+propAusVic <- FillDataFrame(allYears, filter(hivCobCumState, state == "vic"), 
   cumulative = TRUE)$australia 
 
 propStayVic <- propAusVic * (1 - ausBornEmigrate) + (1 - propAusVic) * 
@@ -702,7 +702,101 @@ hivAdjustments$pstay_vic_lower <- propStayLowerVic /
 hivAdjustments$pstay_vic_upper <- propStayUpperVic /
   hivBaseRates$propstay_upper
 
-# TODO: Do this calculation for each state and territory. 
+# Queensland estimates
+propAusQld <- FillDataFrame(allYears, filter(hivCobCumState, state == "qld"), 
+  cumulative = TRUE)$australia 
+
+propStayQld <- propAusQld * (1 - ausBornEmigrate) + (1 - propAusQld) * 
+  (1 - osBornEmigrate)
+propStayLowerQld <-  propAusQld * (1 - 2 * ausBornEmigrate) + (1 - propAusQld) * 
+  (1 - 2 * osBornEmigrate)
+propStayUpperQld <- rep(1, length(allYears))
+
+hivAdjustments$pstay_qld <- propStayQld / hivBaseRates$propstay
+hivAdjustments$pstay_qld_lower <- propStayLowerQld /
+  hivBaseRates$propstay_lower
+hivAdjustments$pstay_qld_upper <- propStayUpperQld /
+  hivBaseRates$propstay_upper
+
+# Western Australia
+propAusWa <- FillDataFrame(allYears, filter(hivCobCumState, state == "wa"), 
+  cumulative = TRUE)$australia 
+
+propStayWa <- propAusWa * (1 - ausBornEmigrate) + (1 - propAusWa) * 
+  (1 - osBornEmigrate)
+propStayLowerWa <-  propAusWa * (1 - 2 * ausBornEmigrate) + (1 - propAusWa) * 
+  (1 - 2 * osBornEmigrate)
+propStayUpperWa <- rep(1, length(allYears))
+
+hivAdjustments$pstay_wa <- propStayWa / hivBaseRates$propstay
+hivAdjustments$pstay_wa_lower <- propStayLowerWa /
+  hivBaseRates$propstay_lower
+hivAdjustments$pstay_wa_upper <- propStayUpperWa /
+  hivBaseRates$propstay_upper
+
+# South Australia
+propAusSa <- FillDataFrame(allYears, filter(hivCobCumState, state == "sa"), 
+  cumulative = TRUE)$australia 
+
+propStaySa <- propAusSa * (1 - ausBornEmigrate) + (1 - propAusSa) * 
+  (1 - osBornEmigrate)
+propStayLowerSa <-  propAusSa * (1 - 2 * ausBornEmigrate) + (1 - propAusSa) * 
+  (1 - 2 * osBornEmigrate)
+propStayUpperSa <- rep(1, length(allYears))
+
+hivAdjustments$pstay_sa <- propStaySa / hivBaseRates$propstay
+hivAdjustments$pstay_sa_lower <- propStayLowerSa /
+  hivBaseRates$propstay_lower
+hivAdjustments$pstay_sa_upper <- propStayUpperSa /
+  hivBaseRates$propstay_upper
+
+# ACT
+propAusAct <- FillDataFrame(allYears, filter(hivCobCumState, state == "act"), 
+  cumulative = TRUE)$australia 
+
+propStayAct <- propAusAct * (1 - ausBornEmigrate) + (1 - propAusAct) * 
+  (1 - osBornEmigrate)
+propStayLowerAct <-  propAusAct * (1 - 2 * ausBornEmigrate) + (1 - propAusAct) * 
+  (1 - 2 * osBornEmigrate)
+propStayUpperAct <- rep(1, length(allYears))
+
+hivAdjustments$pstay_act <- propStayAct / hivBaseRates$propstay
+hivAdjustments$pstay_act_lower <- propStayLowerAct /
+  hivBaseRates$propstay_lower
+hivAdjustments$pstay_act_upper <- propStayUpperAct /
+  hivBaseRates$propstay_upper
+
+# Tasmania
+propAusTas <- FillDataFrame(allYears, filter(hivCobCumState, state == "tas"), 
+  cumulative = TRUE)$australia 
+
+propStayTas <- propAusTas * (1 - ausBornEmigrate) + (1 - propAusTas) * 
+  (1 - osBornEmigrate)
+propStayLowerTas <-  propAusTas * (1 - 2 * ausBornEmigrate) + (1 - propAusTas) * 
+  (1 - 2 * osBornEmigrate)
+propStayUpperTas <- rep(1, length(allYears))
+
+hivAdjustments$pstay_tas <- propStayTas / hivBaseRates$propstay
+hivAdjustments$pstay_tas_lower <- propStayLowerTas /
+  hivBaseRates$propstay_lower
+hivAdjustments$pstay_tas_upper <- propStayUpperTas /
+  hivBaseRates$propstay_upper
+
+# Northern territory
+propAusNt <- FillDataFrame(allYears, filter(hivCobCumState, state == "nt"), 
+  cumulative = TRUE)$australia 
+
+propStayNt <- propAusNt * (1 - ausBornEmigrate) + (1 - propAusNt) * 
+  (1 - osBornEmigrate)
+propStayLowerNt <-  propAusNt * (1 - 2 * ausBornEmigrate) + (1 - propAusNt) * 
+  (1 - 2 * osBornEmigrate)
+propStayUpperNt <- rep(1, length(allYears))
+
+hivAdjustments$pstay_nt <- propStayNt / hivBaseRates$propstay
+hivAdjustments$pstay_nt_lower <- propStayLowerNt /
+  hivBaseRates$propstay_lower
+hivAdjustments$pstay_nt_upper <- propStayUpperNt /
+  hivBaseRates$propstay_upper
 
 ```
 
@@ -820,7 +914,7 @@ for (ii in 2:length(annDiags)) {
   # annual basis. 
   
   numLiving[ii] <- numLiving[ii-1] + annDiags[ii] -
-    (1-hivBaseRates$propstay[ii-1]) * annDiags[ii-1] - 
+    (1-hivBaseRates$propstay[ii-1]) * annDiags[ii-1] -
     deaths[ii-1] - numLiving[ii-1] * allMigrate[ii-1]
   numLiving_min[ii] <- numLiving_min[ii-1] + annDiags[ii] -
     (1-hivBaseRates$propstay_upper[ii-1]) * annDiags[ii-1] -
@@ -828,7 +922,7 @@ for (ii in 2:length(annDiags)) {
   numLiving_max[ii] <- numLiving_max[ii-1] + annDiags[ii] -
     (1-hivBaseRates$propstay_lower[ii-1]) * annDiags[ii-1] -
     deaths_min[ii-1] - numLiving_max[ii-1] * allMigrateLower[ii-1]
-  
+
   # numLiving[ii] <- numLiving[ii-1] + 
   #   hivBaseRates$propstay[ii-1] * annDiags[ii] -
   #   deaths[ii-1] - numLiving[ii-1] * allMigrate[ii-1]
@@ -845,13 +939,13 @@ for (ii in 2:length(annDiags)) {
   # except for those who leave immediately) 
   # numLiving[ii] <- numLiving[ii-1] + hivBaseRates$propstay[ii] *
   #   annDiags[ii] - deaths[ii] - numLiving[ii-1] * allMigrate[ii]
-  # numLiving_min[ii] <- numLiving_min[ii-1] + 
+  # numLiving_min[ii] <- numLiving_min[ii-1] +
   #   hivBaseRates$propstay_upper[ii] * annDiags[ii] -
   #   deaths_max[ii] - numLiving_min[ii-1] * allMigrateUpper[ii]
-  # numLiving_max[ii] <- numLiving_max[ii-1] + 
+  # numLiving_max[ii] <- numLiving_max[ii-1] +
   #   hivBaseRates$propstay_lower[ii] * annDiags[ii] -
   #   deaths_min[ii] - numLiving_max[ii-1] * allMigrateLower[ii]
-  
+
 }
 
 # Calculate crude average annual mortality rates up to 2003
@@ -1000,19 +1094,19 @@ hivAdjustments$drate_qld <- hivAdjustments$drate_qld /
 hivAdjustments$drate_qld_lower <- hivBaseRates$deathrate_lower 
 hivAdjustments$drate_qld_lower[(indexLinkage+1):length(deathRate)] <-
   filter(ahodDeaths, state == "qld")$lower
-hivAdjustments$drate_qld <- hivAdjustments$drate_qld_lower /
+hivAdjustments$drate_qld_lower <- hivAdjustments$drate_qld_lower /
   deathrateDiv_lower
 
 hivAdjustments$drate_qld_upper <- hivBaseRates$deathrate_upper 
 hivAdjustments$drate_qld_upper[(indexLinkage+1):length(deathRate)] <-
   filter(ahodDeaths, state == "qld")$upper
-hivAdjustments$drate_qld <- hivAdjustments$drate_qld_upper /
+hivAdjustments$drate_qld_upper <- hivAdjustments$drate_qld_upper /
   deathrateDiv_upper
 
 ```
 
 ```{r Interstate migration rates}
-# This chunk calculats interstate migration rates. At this stage just 
+# This chunk calculates interstate migration rates. At this stage just 
 # calculate the best fit. Don't worry about upper and lower bounds.
 
 # First estimate erp for each state
