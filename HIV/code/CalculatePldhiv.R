@@ -90,9 +90,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
   ecdcModel <- cascadeName # name
   if (excludeOS) {
-    # If excludeOS don't save the pldhiv estimates as we are only using 
-    # this for ECDC calculations
-    saveResults <- FALSE
+    # If excludeOS don't do extra calculations
     doRetained <- FALSE
     projectPldhiv <- FALSE
   }
@@ -1195,51 +1193,59 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     dir.create(resultsPath, showWarnings = FALSE, recursive = TRUE)
     
     # Save all estimates
-    if (doAge) {
-      saveStringDetails <- file.path(resultsPath, 
-        paste0("pldhiv-", toString(analysisYear), "-age-"))
-      write_csv(rownames_to_column(as.data.frame(pldhivAll), 
-        var = "agebin"),
-        paste0(saveStringDetails, "all.csv"))
-      write_csv(rownames_to_column(as.data.frame(pldhivAllMin), 
-        var = "agebin"), paste0(saveStringDetails, "min.csv"))
-      write_csv(rownames_to_column(as.data.frame(pldhivAllMax), 
-        var = "agebin"), paste0(saveStringDetails, "max.csv"))
-      
-      # Save overall as well
-      saveStringDetails <- file.path(resultsPath, 
+    if (excludeOS) {
+      # Only save a subset of results 
+      saveStringDetails <- file.path(resultsPath,
         paste0("pldhiv-", toString(analysisYear), "-"))
-      write_csv(pldhivOverall, paste0(saveStringDetails, "all.csv"))
-      write_csv(pldhivOverallMin, paste0(saveStringDetails, "min.csv"))
-      write_csv(pldhivOverallMax, paste0(saveStringDetails, "max.csv"))
-      
+      write_csv(pldhivAll, paste0(saveStringDetails, "all_exclude.csv"))
+
     } else {
-      saveStringDetails <- file.path(resultsPath, 
-        paste0("pldhiv-", toString(analysisYear), "-"))
-      write_csv(pldhivAll, paste0(saveStringDetails, "all.csv"))
-      write_csv(pldhivAllMin, paste0(saveStringDetails, "min.csv"))
-      write_csv(pldhivAllMax, paste0(saveStringDetails, "max.csv"))
-    }
-    
-    # Save main results
-    saveStringPldhiv <- file.path(resultsPath, 
-      paste0("HIVpldhivEstimates-", toString(analysisYear)))
-    if (doAge) {
-      write_csv(hivDiagnosedOverall, paste0(saveStringPldhiv, ".csv"))
-      saveStringPldhiv <- paste0(saveStringPldhiv, "-age")
-    }
-    write_csv(hivDiagnosed, paste0(saveStringPldhiv, ".csv"))
-    
-    #save parameters 
-    saveStringParams <- file.path(resultsPath, "PldhivParameters")
-    
-    # Write to csv
-    write_csv(hivParams, paste0(saveStringParams, ".csv"))
-    
-    # Write uniqueNotifications to file
-    if (doUnique) {
-      saveStringUnique <- file.path(resultsPath, "UniqueNotifications")
-      write_csv(uniqueNotifications, paste0(saveStringUnique, ".csv"))
+      if (doAge) {
+        saveStringDetails <- file.path(resultsPath, 
+          paste0("pldhiv-", toString(analysisYear), "-age-"))
+        write_csv(rownames_to_column(as.data.frame(pldhivAll), 
+          var = "agebin"),
+          paste0(saveStringDetails, "all.csv"))
+        write_csv(rownames_to_column(as.data.frame(pldhivAllMin), 
+          var = "agebin"), paste0(saveStringDetails, "min.csv"))
+        write_csv(rownames_to_column(as.data.frame(pldhivAllMax), 
+          var = "agebin"), paste0(saveStringDetails, "max.csv"))
+        
+        # Save overall as well
+        saveStringDetails <- file.path(resultsPath, 
+          paste0("pldhiv-", toString(analysisYear), "-"))
+        write_csv(pldhivOverall, paste0(saveStringDetails, "all.csv"))
+        write_csv(pldhivOverallMin, paste0(saveStringDetails, "min.csv"))
+        write_csv(pldhivOverallMax, paste0(saveStringDetails, "max.csv"))
+        
+      } else {
+        saveStringDetails <- file.path(resultsPath, 
+          paste0("pldhiv-", toString(analysisYear), "-"))
+        write_csv(pldhivAll, paste0(saveStringDetails, "all.csv"))
+        write_csv(pldhivAllMin, paste0(saveStringDetails, "min.csv"))
+        write_csv(pldhivAllMax, paste0(saveStringDetails, "max.csv"))
+      }
+      
+      # Save main results
+      saveStringPldhiv <- file.path(resultsPath, 
+        paste0("HIVpldhivEstimates-", toString(analysisYear)))
+      if (doAge) {
+        write_csv(hivDiagnosedOverall, paste0(saveStringPldhiv, ".csv"))
+        saveStringPldhiv <- paste0(saveStringPldhiv, "-age")
+      }
+      write_csv(hivDiagnosed, paste0(saveStringPldhiv, ".csv"))
+      
+      #save parameters 
+      saveStringParams <- file.path(resultsPath, "PldhivParameters")
+      
+      # Write to csv
+      write_csv(hivParams, paste0(saveStringParams, ".csv"))
+      
+      # Write uniqueNotifications to file
+      if (doUnique) {
+        saveStringUnique <- file.path(resultsPath, "UniqueNotifications")
+        write_csv(uniqueNotifications, paste0(saveStringUnique, ".csv"))
+      }
     }
   }
 
