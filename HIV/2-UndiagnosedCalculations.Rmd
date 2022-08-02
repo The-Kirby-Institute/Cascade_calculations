@@ -34,9 +34,9 @@ LoadLibrary(readxl)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2020
+analysisYear <- 2021
 saveResults <- TRUE 
-projectFolder <- "ASR_2021" # "ASR_2021"
+projectFolder <- "ASR_2022" # "ASR_2021"
                             # "HIV_Cascade_Paper"
 cascadeFlag <- "All" # minus year
 ecdcResults <- "exposure"
@@ -44,9 +44,13 @@ ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky
                    # file name issues.
 updateECDC <- TRUE
 
-getNewInfections <- TRUE # can only be TRUE if include and exclude ECDC
-                         # have been run
+getNewInfections <- FALSE # can only be TRUE if include and exclude ECDC
+                          # have been run
 adjustUndiagnosed <- FALSE # adjust percentage undiagnosed
+
+# Use if ECDC bootstrapping hasn't been done
+doUncertainty <- FALSE # Calculate uncertainty estimates
+if (cascadeFlag %in% c("All", "Female", "Male") ) doUncertainty <- TRUE
 
 # Produce cascadeName from the flag and analysis year. 
 if (analysisYear <= 2016) {
@@ -173,12 +177,23 @@ mainUndiagnosed <- read_csv(file.path(outputFolder, projectFolder,
 # Read in and tidy ECDC confidence interval file - the bootstrapped 
 # confidence intervals are updated at the end of each run so we take 
 # the lower and upper bound from the last run. 
-confIntervalUndiagnosed <- read_csv(file.path(outputFolder, projectFolder, 
-  cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) %>%
-  filter(run == max(.$run)) %>%
-  select(year, N_Und_LB, N_Und_UB, N_Und_Alive_p_LB, N_Und_Alive_p_UB) %>%
-  rename(undiagnosed_lower = N_Und_LB, percent_lower = N_Und_Alive_p_LB,
-    undiagnosed_upper = N_Und_UB, percent_upper = N_Und_Alive_p_UB)
+if (file.exists(file.path(outputFolder, projectFolder,
+  cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) & doUncertainty) {
+  confIntervalUndiagnosed <- read_csv(file.path(outputFolder, projectFolder,
+    cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) %>%
+    filter(run == max(.$run)) %>%
+    select(year, N_Und_LB, N_Und_UB, N_Und_Alive_p_LB, N_Und_Alive_p_UB) %>%
+    rename(undiagnosed_lower = N_Und_LB, percent_lower = N_Und_Alive_p_LB,
+      undiagnosed_upper = N_Und_UB, percent_upper = N_Und_Alive_p_UB)
+} else {
+  confIntervalUndiagnosed <- mainUndiagnosed %>%
+    mutate(undiagnosed_lower = undiagnosed,
+      percent_lower = percent,
+      undiagnosed_upper = undiagnosed,
+      percent_upper = percent) %>%
+    select(year, undiagnosed_lower, percent_lower, undiagnosed_upper,
+      percent_upper)
+}
 
 undiagnosed <- left_join(mainUndiagnosed, confIntervalUndiagnosed, 
   by = "year") %>%
