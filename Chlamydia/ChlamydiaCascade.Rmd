@@ -44,8 +44,8 @@ source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2020 # year of cascade we will calculate and plot   
-dataYear <- 2020 # year data for estimates was generated (to handle updated 
+resultsYear <- 2021 # year of cascade we will calculate and plot   
+dataYear <- 2021 # year data for estimates was generated (to handle updated 
                  # data) this is the data output year as well.
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
@@ -831,7 +831,7 @@ if (resultsYear == 2014) {
 # Plot the bar chart -----------------------------------------------------
 
 # First sort out sex as a factor to order the bars
-plotcascade <- filter(chlamcascade, year == 2020)
+plotcascade <- filter(chlamcascade, year == resultsYear)
 plotcascade$sex <- factor(plotcascade$sex, 
   levels = c("male", "female", "all"))
 plotcascade$stage <- factor(plotcascade$stage, 
@@ -845,7 +845,7 @@ texty <- cascadeAll$upper
 texty[3:4] <- cascadeAll$estimate[3:4]
 
 allCascade <- ggplot(data = filter(cascadeAll, sex %in% c("male", "female"),
-  year == 2020),
+  year == resultsYear),
   aes(x = stage, y = estimate, fill = sex)) + 
   geom_bar(position = "dodge", stat = "identity", colour = "black") + 
   geom_errorbar(aes(ymin = lower, ymax = upper), 
