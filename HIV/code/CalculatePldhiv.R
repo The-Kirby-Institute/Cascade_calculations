@@ -1195,9 +1195,9 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     # Save all estimates
     if (excludeOS) {
       # Only save a subset of results 
-      saveStringDetails <- file.path(resultsPath,
-        paste0("pldhiv-", toString(analysisYear), "-"))
-      write_csv(pldhivAll, paste0(saveStringDetails, "all_exclude.csv"))
+      saveStringPldhiv <- file.path(resultsPath, 
+        paste0("HIVpldhivEstimates-", toString(analysisYear)))
+      write_csv(hivDiagnosed, paste0(saveStringPldhiv, "_exclude.csv"))
 
     } else {
       if (doAge) {
