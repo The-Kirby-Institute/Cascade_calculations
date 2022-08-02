@@ -36,16 +36,19 @@ LoadLibrary(readxl)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2021
 saveResults <- TRUE 
-projectFolder <- "ASR_2022" # "ASR_2021"
+projectFolder <- "Testing" # "ASR_2022"
                             # "HIV_Cascade_Paper"
-cascadeFlag <- "All" # minus year
+cascadeFlag <- "All-new" # minus year
 ecdcResults <- "exposure"
 ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky 
                    # file name issues.
 updateECDC <- TRUE
 
-getNewInfections <- FALSE # can only be TRUE if include and exclude ECDC
-                          # have been run
+# The following can only be TRUE if include and exclude ECDC have been run
+addExclude <- TRUE
+undiagnosedMethod <- "include" # "include", "exclude", "average" 
+getNewInfections <- TRUE 
+
 adjustUndiagnosed <- FALSE # adjust percentage undiagnosed
 
 # Use if ECDC bootstrapping hasn't been done
@@ -68,6 +71,18 @@ ecdcChart <- paste0(ecdcGroup, "_ECDC")
 # This chunk copies the appropriate ECDC files to the appropriate output 
 # files and renames the file.
 
+# First check if exclude file exists and make appropriate adjustments to 
+# settings
+excludeFile <-  file.path(outputFolder, projectFolder, "ECDC_models",
+      paste0("All-", toString(analysisYear)), paste0(ecdcResults, "_exclude"), 
+      "results", "All_Result_main.csv")
+if (!file.exists(excludeFile)) {
+  addExclude <- FALSE
+}
+undiagnosedMethod <- ifelse(!addExclude, "include", undiagnosedMethod)
+getNewInfections <- ifelse(!addExclude, FALSE, getNewInfections)
+
+# Now sort out all the files
 if (cascadeFlag == "Otherexp") {
   # Use overall undiagnosed
   ecdcFile1 <- file.path(outputFolder, projectFolder, "ECDC_models",
@@ -254,6 +269,8 @@ if (getNewInfections) {
   newInfections <- bind_rows(newInfections, newInfectionsExclude)
   
 }
+
+
 ```
 
 
