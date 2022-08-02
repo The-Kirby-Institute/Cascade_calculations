@@ -19,11 +19,11 @@ source(file.path(dirname(getwd()), "code", "PlotOptions.R"))
 ```
 
 ```{r Options}
-projectName <- "ASR_2021" # "ASR_2021" 
+projectName <- "ASR_2022" # "ASR_2021" 
                           # "HIV_Cascade_Paper"
 project <- file.path(basePath, "output", projectName)
 
-cascadeList <- c("All-2020")
+cascadeList <- c("All-2021")
 
 # List for YDF paper
 # cascadeList <- c("Hetero-2019", "Hetero-female-2019",
@@ -40,7 +40,7 @@ cascadeList <- c("All-2020")
 #   "SSA-2020", "Othercob-2020", "Otherexp-IPR-2020")
 
 # Result files and specifications
-resultsYear <- 2020
+resultsYear <- 2021
 cascadeFile <- paste0("HIVcascadeEstimates-", resultsYear,".csv")
 infectionsFile <- paste0("newInfectionsEstimates-", resultsYear,".csv")
 undiagnosedFile <- paste0("plhivEstimates-", resultsYear, ".csv")

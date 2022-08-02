@@ -72,13 +72,13 @@ source(file.path(HIVcode, "GetAdjustments.R"))
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters ------------------------------------------------------
-resultsYear <- 2020  # year of cascade we will plot
-minYear <- 17 # how long ago do we plot things (from 2004)
+resultsYear <- 2021  # year of cascade we will plot
+minYear <- 18 # how long ago do we plot things (from 2004)
 startYear <- resultsYear - minYear + 1 
 
 # Set up project - If ASR plot all populations otherwise just plot 
 # specified cascade
-projectName <- "HIV_Cascade_Paper" #"ASR_2021" "HIV_Cascade_Paper"
+projectName <- "ASR_2022" #"ASR_2022" "HIV_Cascade_Paper"
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadePop <- "all"
 
@@ -94,7 +94,7 @@ infectsCalculation <- "exclude" # "include", "exclude" or "middle"
 
 # Setup based on specs
 asrcols <- PlotColors("hivcascade5")
-if (projectName %in% c("ASR_2021", "ASR_2020", "ASR_2019", "ASR_2018", 
+if (projectName %in% c("ASR_2022", "ASR_2021", "ASR_2020", "ASR_2019", "ASR_2018", 
   "ASR_2017", "ASR_2016")) {
   # ASR do many populations otherwise do the specified one
   cascadePop <- "all" 

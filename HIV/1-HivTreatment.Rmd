@@ -28,7 +28,7 @@ LoadLibrary(tidyverse)
 LoadLibrary(readxl)
 
 # Primary script parameters
-analysisYear <- 2020
+analysisYear <- 2021
 replaceValues <- TRUE
 saveResults <- TRUE
 
@@ -77,13 +77,13 @@ if (analysisYear < 2020) {
 }
 
 # Load PBS data to get gender and state estimates
-pbsData <- read.csv(pbsFile, as.is = c(1, 2))
+pbsData <- read_csv(pbsFile) 
 
 # Tidy up the prospection data
 hivTreatedPbs <- pbsData %>%
   filter(gender == "all") %>%
   select(-gender) %>%
-  as_tibble()
+  as_tibble() 
 
 # Append overall gender data 
 genderTreatedPbs <- pbsData %>%
@@ -109,7 +109,7 @@ hivTreatedPbs <- bind_rows(hivTreatedPbs, genderTreatedPbs)
 
 if (analysisYear >= 2020) {
   # Need to do lower estimates as well
-  pbsDataLower <- read.csv(pbsFile_lower, as.is = c(1, 2))
+  pbsDataLower <- read_csv(pbsFile_lower) #, as.is = c(1, 2))
   
   hivTreatedPbsLower <- pbsDataLower %>%
   filter(gender == "all") %>%

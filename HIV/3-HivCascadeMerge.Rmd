@@ -22,8 +22,8 @@ source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
-analysisYear <- 2020
-projectName <-  "ASR_2021" # "ASR_2021" 
+analysisYear <- 2021
+projectName <-  "ASR_2022" # "ASR_2021" 
                            #"HIV_Cascade_Paper"
                            
 multipleCascades <- TRUE
@@ -46,7 +46,7 @@ if (multipleCascades && projectName %in% c("ASR_2016", "ASR_2017",
    cascadeNames <- c("All", "Male", "Female", "Indigenous", 
      "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "SSA", "SEA",
      "Othercob")
-} else if (multipleCascades && projectName == "ASR_2021") {  
+} else if (multipleCascades && projectName %in% c("ASR_2021", "ASR_2022")) {  
    cascadeNames <- c("All", "Male", "Female", "Indigenous", 
      "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "ACT", "NSW",
      "NT", "QLD", "SA", "TAS", "VIC", "WA", "CALD", "SSA", "SEA", "SCA", 
