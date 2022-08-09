@@ -36,9 +36,9 @@ LoadLibrary(readxl)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2021
 saveResults <- TRUE 
-projectFolder <- "Testing" # "ASR_2022"
+projectFolder <- "ASR_2022" # "ASR_2022"
 # "HIV_Cascade_Paper"
-cascadeFlag <- "All-new" # minus year
+cascadeFlag <- "All" # minus year
 ecdcResults <- "exposure"
 ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky 
 # file name issues.
@@ -48,12 +48,13 @@ useAdjusted <- TRUE # adjust number undiagnosed and percentage undiagnosed
 
 # The following can only be TRUE if include and exclude ECDC have been run
 addExclude <- TRUE
-undiagnosedMethod <- "average" # "include", "exclude", "average" 
+undiagnosedMethod <- "exclude" # "include", "exclude" (default), "average" 
+undiagnosedMethod <- ifelse(cascadeFlag == "Indigenous", "include", undiagnosedMethod)
 getNewInfections <- TRUE 
 
 # Use if ECDC bootstrapping hasn't been done
-doUncertainty <- FALSE # Calculate uncertainty estimates
-if (cascadeFlag %in% c("All", "Female", "Male") ) doUncertainty <- TRUE
+doUncertainty <- TRUE # Calculate uncertainty estimates
+doUncertainty <- ifelse(cascadeFlag == "Indigenous", FALSE, doUncertainty)
 
 # Produce cascadeName from the flag and analysis year. 
 if (analysisYear <= 2016) {
@@ -97,7 +98,7 @@ if (cascadeFlag == "Otherexp") {
     paste0("All-", toString(analysisYear)), ecdcResults, "results",
     paste0("All_Charts", ecdcType))
   
-  if (getNewInfections) {
+  if (addExclude || getNewInfections) {
     # Copy exclude o/s results as well
     ecdcFile1Exclude <- file.path(outputFolder, projectFolder, "ECDC_models",
       paste0("All-", toString(analysisYear)), 
@@ -128,7 +129,7 @@ if (cascadeFlag == "Otherexp") {
     cascadeName, ecdcResults,  "results", 
     paste0(ecdcGroup, "_Charts", ecdcType))
   
-  if (getNewInfections) {
+  if (addExclude || getNewInfections) {
     # Copy exclude o/s results as well
     ecdcFile1Exclude <- file.path(outputFolder, projectFolder, "ECDC_models",
       cascadeName, paste0(ecdcResults, "_exclude"),  "results", 
@@ -151,7 +152,7 @@ finalFile2 <- file.path(outputFolder, projectFolder, cascadeName,
 finalFileMain <- file.path(outputFolder, projectFolder, cascadeName,
   paste0(ecdcChart, "_Charts", ecdcType))
 
-if (getNewInfections) {
+if (addExclude || getNewInfections) {
   finalFile1Exclude <- file.path(outputFolder, projectFolder, cascadeName,
     paste0(ecdcChart, "_exclude.csv"))
   finalFile2Exclude <- file.path(outputFolder, projectFolder, cascadeName,
@@ -162,12 +163,16 @@ if (getNewInfections) {
 
 if (!file.exists(finalFile1) || updateECDC) {
   file.copy(ecdcFile1, finalFile1, overwrite = TRUE)
-  file.copy(ecdcFile2, finalFile2, overwrite = TRUE)
+  if (file.exists(ecdcFile2)) { 
+    file.copy(ecdcFile2, finalFile2, overwrite = TRUE)
+  }
   file.copy(ecdcFileMain, finalFileMain, overwrite = TRUE)
   
-  if (getNewInfections) {
+  if (addExclude || getNewInfections) {
     file.copy(ecdcFile1Exclude, finalFile1Exclude, overwrite = TRUE)
-    file.copy(ecdcFile2Exclude, finalFile2Exclude, overwrite = TRUE)
+    if (file.exists(ecdcFile2Exclude)) { 
+      file.copy(ecdcFile2Exclude, finalFile2Exclude, overwrite = TRUE)
+    }
     file.copy(ecdcFileMainExclude, finalFileMainExclude, overwrite = TRUE)
   }
 } 
@@ -294,7 +299,8 @@ if (getNewInfections) {
     rename(infections = N_Inf_M) %>%
     mutate(exclude = "no")
   
-  if (doUncertainty) {
+  if (file.exists(file.path(outputFolder, projectFolder,
+  cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) & doUncertainty) {
     confIntervalInfections <- read_csv(file.path(outputFolder, projectFolder, 
       cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) %>%
       filter(run == max(.$run)) %>%
@@ -312,7 +318,8 @@ if (getNewInfections) {
     rename(infections = N_Inf_M) %>%
     mutate(exclude = "yes")
   
-  if (doUncertainty) {
+  if (file.exists(file.path(outputFolder, projectFolder,
+    cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) & doUncertainty) {
     confIntervalInfectionsExclude <- read_csv(file.path(outputFolder, projectFolder, 
       cascadeName, paste0(ecdcChart, "_confIntervals_exclude.csv"))) %>%
       filter(run == max(.$run)) %>%
