@@ -23,8 +23,7 @@ LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
 analysisYear <- 2021
-projectName <-  "ASR_2022" # "ASR_2021" 
-#"HIV_Cascade_Paper"
+projectName <-  "ASR_2022" # "ASR_2022"; "HIV_Cascade_Paper"
 
 multipleCascades <- TRUE
 artNames <- NULL

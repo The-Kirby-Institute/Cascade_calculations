@@ -100,11 +100,11 @@ if (projectName %in% c("ASR_2022", "ASR_2021", "ASR_2020", "ASR_2019", "ASR_2018
   cascadePop <- "all" 
   asrCascades <- TRUE
 } else if (projectName == "HIV_Cascade_Paper") {
-  asrCascades <- TRUE # Unless ASR_2016 etc
+  asrCascades <- FALSE 
   newInfectsPlots <- TRUE
 } else {
   # Turn off newInfectsPlots
-  asrCascades <- FALSE # Unless ASR_2016 etc
+  asrCascades <- FALSE 
   newInfectsPlots <- FALSE
 }
 
