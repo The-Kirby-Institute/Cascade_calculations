@@ -60,9 +60,13 @@ IndicatorResults <- function(cascadeName) {
   infections <- read_csv(file.path(project, cascadeName, infectionsFile),
     show_col_types = FALSE)
   undiagnosed <- read_csv(file.path(project, cascadeName, undiagnosedFile),
-    col_types = cols(.default = "d")) %>%
-    select(year, undiag, undiag_lower, undiag_upper, undiag_percent, uplower,
-      upupper) 
+    show_col_types = FALSE) %>%
+    select(year, undiag = final_undiagnosed, 
+      undiag_lower = final_undiagnosed_lower, 
+      undiag_upper = final_undiagnosed_upper, 
+      undiag_percent, 
+      uplower = undiag_percent_lower,
+      upupper = undiag_percent_lower) 
   diagnoses <- read_csv(file.path(project, cascadeName, diagnosesFile),
     col_types = cols(.default = "d"), show_col_types = FALSE) %>%
     select(year, diagnoses)
