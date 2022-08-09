@@ -1,6 +1,6 @@
 Merge HIV Cascades
 ==================
-  
+
 Neil Arvin Bretana and Richard T. Gray
 
 ```{r Initialization}
@@ -24,8 +24,8 @@ LoadLibrary(tidyverse)
 # Primary script parameters ---------------------------------------------------
 analysisYear <- 2021
 projectName <-  "ASR_2022" # "ASR_2021" 
-                           #"HIV_Cascade_Paper"
-                           
+#"HIV_Cascade_Paper"
+
 multipleCascades <- TRUE
 artNames <- NULL
 
@@ -39,18 +39,22 @@ if (multipleCascades && projectName %in% c("ASR_2016", "ASR_2017",
     "Hetero", "PWID", "Otherexp","ACT", "NSW", "VIC", "SSA", "SEA",
     "Othercob")
 } else if (multipleCascades && projectName == "ASR_2019") {  
-   cascadeNames <- c("All", "Male", "Female", "Indigenous", 
-     "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "ACT", "NSW",
-     "NT", "QLD", "SA", "TAS", "VIC", "WA", "SSA", "SEA", "Othercob")
+  cascadeNames <- c("All", "Male", "Female", "Indigenous", 
+    "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "ACT", "NSW",
+    "NT", "QLD", "SA", "TAS", "VIC", "WA", "SSA", "SEA", "Othercob")
 } else if (multipleCascades && projectName == "ASR_2020") {  
-   cascadeNames <- c("All", "Male", "Female", "Indigenous", 
-     "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "SSA", "SEA",
-     "Othercob")
-} else if (multipleCascades && projectName %in% c("ASR_2021", "ASR_2022")) {  
-   cascadeNames <- c("All", "Male", "Female", "Indigenous", 
-     "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "ACT", "NSW",
-     "NT", "QLD", "SA", "TAS", "VIC", "WA", "CALD", "SSA", "SEA", "SCA", 
-     "Othercob")  
+  cascadeNames <- c("All", "Male", "Female", "Indigenous", 
+    "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "SSA", "SEA",
+    "Othercob")
+} else if (multipleCascades && projectName == "ASR_2021") {  
+  cascadeNames <- c("All", "Male", "Female", "Indigenous", 
+    "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "ACT", "NSW",
+    "NT", "QLD", "SA", "TAS", "VIC", "WA", "CALD", "SSA", "SEA", "SCA", 
+    "Othercob")  
+} else if (multipleCascades && projectName == "ASR_2022") {
+  cascadeNames <- c("All", "Male", "Female", "Indigenous", 
+    "AusNonIndigenous", "MSM", "Hetero", "Pwid", "SSA", "SEA", "SCA", 
+    "Othercob")
 } else {
   # Specify cascades manually (without year)
   cascadeNames <- "All" # specify cascades with project 
@@ -61,6 +65,7 @@ if (is.null(artNames)) {
 }
 
 mergeAll <- TRUE
+adjustLower <- TRUE # adjust lower bounds to match lower bound of treatment
 saveResults <- TRUE
 
 # Set ART string - "ATRAS", "NAPWAH", or  "PBS"
@@ -113,11 +118,39 @@ for (ii in 1:length(cascadeNames)) {
     filter(population == tolower(artNames[ii])) %>%
     select(-population)
   
+  if (adjustLower) {
+    if (nrow(treatment) > 0) {
+      # Make sure lower bounds for PLHIV, PLDHIV and retained aren't lower
+      # than the lower bound of treatment
+      treatLower <- (treatment %>% filter(stage == "numART"))$lower
+      startLiving <- min(living$year)
+      treatStart <- min(treatment$year)
+      
+      treatLower <- c(rep(0,length(startLiving:(treatStart-1))), treatLower)
+      
+      living$lower <- ifelse(living$lower < treatLower, treatLower, living$lower)
+      
+      pldhivNew <- pldhiv %>% filter(stage == "pldhiv")
+      pldhivNew$lower <- ifelse(pldhivNew$lower < treatLower, treatLower,
+        pldhivNew$lower)
+      
+      retainedNew <- pldhiv %>% filter(stage == "retained")
+      retainedNew$lower <- ifelse(
+        retainedNew$lower < treatLower[(length(treatLower) - 
+            nrow(retainedNew) + 1):length(treatLower)], 
+        treatLower[(length(treatLower) - nrow(retainedNew) + 1):length(treatLower)],
+        retainedNew$lower)
+      
+      
+      pldhiv <- bind_rows(pldhivNew, retainedNew)
+    }
+  }
+  
   # Bind cascade
   hivCascade <- bind_rows(living, pldhiv, treatment) %>%
     mutate(population = tolower(cascadeNames[ii])) %>%
     select(stage, year, population, everything())
-
+  
   # Save if required
   if (saveResults) {
     write_csv(hivCascade, paste0(cascadeFolder, 
