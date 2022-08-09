@@ -1244,7 +1244,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     # after 2019 which is justifiable I think due to COVID. 
     modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
       "segModel2", "segModel3","segModel4"),
-      minimum_gap = c(length(years)-1, 
+      minimum_gap = c(resultsYear - startYear, 
         min(diff(c(startYear, unname(segModel1$psi[, "Est."])))), 
         min(diff(c(startYear, unname(segModel2$psi[, "Est."])))),
         min(diff(c(startYear, unname(segModel3$psi[, "Est."])))), 
@@ -1252,7 +1252,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
   } else {
     modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
       "segModel2", "segModel3","segModel4"),
-      minimum_gap = c(length(years)-1, 
+      minimum_gap = c(resultsYear - startYear, 
         min(diff(c(startYear, unname(segModel1$psi[, "Est."]), resultsYear))),
         min(diff(c(startYear, unname(segModel2$psi[, "Est."]), resultsYear))),
         min(diff(c(startYear, unname(segModel3$psi[, "Est."]), resultsYear))),
@@ -1340,11 +1340,19 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     PlotOptions() + theme(legend.position = "right") + 
     geom_text(x = 2012, y = 0.15 * ymax, 
       label = sprintf("BIC values\nOverall %s; One CP %s; Two CPs %s; Three CPs %s; Four CPs %s.", 
-        bicStr[1], bicStr[2], bicStr[3], bicStr[4], bicStr[5]), size = 3) +
-    geom_text(x = 2012, y = 0.05 * ymax, 
-      label = sprintf("Minimum gaps\nOverall %s; One CP %s; Two CPs %s; Three CPs %s; Four CPs %s.", 
-        gapStr[1], gapStr[2], gapStr[3], gapStr[4], gapStr[5]), size = 3)
+        bicStr[1], bicStr[2], bicStr[3], bicStr[4], bicStr[5]), size = 3) 
   
+  if (allow_end_gap) {
+    segPlotAll <- segPlotAll +
+      geom_text(x = 2012, y = 0.05 * ymax, 
+        label = sprintf("Minimum gaps (excluding end)\nOverall %s; One CP %s; Two CPs %s; Three CPs %s; Four CPs %s.", 
+          gapStr[1], gapStr[2], gapStr[3], gapStr[4], gapStr[5]), size = 3)
+  } else {
+    segPlotAll <- segPlotAll +
+      geom_text(x = 2012, y = 0.05 * ymax, 
+        label = sprintf("Minimum gaps\nOverall %s; One CP %s; Two CPs %s; Three CPs %s; Four CPs %s.", 
+          gapStr[1], gapStr[2], gapStr[3], gapStr[4], gapStr[5]), size = 3)
+  } 
   # Select the model with the lowest BIC but with minimum gap > min_gap
   # and plot
   segModels <- list(pmodel, segModel1, segModel2, segModel3, segModel4)
