@@ -43,8 +43,8 @@ source(file.path(Rcode, "AgeCat.R"))
 source(file.path(HIVcode, "TidyNotifications.R"))
 
 # Script parameters
-resultsYear <- 2020  # year of cascade we will plot
-minYear <- 17      # how long ago do we plot things
+resultsYear <- 2021  # year of cascade we will plot
+minYear <- 18      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE
 years <- startYear:resultsYear
@@ -52,7 +52,7 @@ years <- startYear:resultsYear
 # Set up project and cascade to analyse
 projectName <- "HIV_Cascade_Paper"  
 resultsFolder <- file.path(resultsFolder, projectName)
-cascadeName <- "All-2020"
+cascadeName <- "All-2021"
 cascadePop <- "all"
 
 # New infections parameters
@@ -1171,7 +1171,7 @@ allTrendModels <- c(trendModels, trendModelsProp)
 
 Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA, 
   maximum = NA, offset = 1, 
-  min_gap = 3, yPercent = TRUE, save = FALSE) {
+  min_gap = 3, allow_end_gap = TRUE, yPercent = TRUE, save = FALSE) {
   
   tempData <- filter(trendData, stage == indicator)
   
@@ -1238,13 +1238,26 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
   }
   
   # Calculate minimum gap between breakpoints and ends
-  modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
-    "segModel2", "segModel3","segModel4"),
-    minimum_gap = c(16, 
-      min(diff(c(startYear, unname(segModel1$psi[, "Est."]), resultsYear))),
-      min(diff(c(startYear, unname(segModel2$psi[, "Est."]), resultsYear))),
-      min(diff(c(startYear, unname(segModel3$psi[, "Est."]), resultsYear))),
-      min(diff(c(startYear, unname(segModel4$psi[, "Est."]), resultsYear)))))
+  
+  if (allow_end_gap) {
+    # Allow gap at end to be less than min_gap. Means can have a change point 
+    # after 2019 which is justifiable I think due to COVID. 
+    modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
+      "segModel2", "segModel3","segModel4"),
+      minimum_gap = c(length(years)-1, 
+        min(diff(c(startYear, unname(segModel1$psi[, "Est."])))), 
+        min(diff(c(startYear, unname(segModel2$psi[, "Est."])))),
+        min(diff(c(startYear, unname(segModel3$psi[, "Est."])))), 
+        min(diff(c(startYear, unname(segModel4$psi[, "Est."])))))) 
+  } else {
+    modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
+      "segModel2", "segModel3","segModel4"),
+      minimum_gap = c(length(years)-1, 
+        min(diff(c(startYear, unname(segModel1$psi[, "Est."]), resultsYear))),
+        min(diff(c(startYear, unname(segModel2$psi[, "Est."]), resultsYear))),
+        min(diff(c(startYear, unname(segModel3$psi[, "Est."]), resultsYear))),
+        min(diff(c(startYear, unname(segModel4$psi[, "Est."]), resultsYear)))))
+  } 
   
   gapStr <- round(modelBreakpointGaps$minimum_gap, digits = 1)
   
@@ -1342,8 +1355,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
   eligible <- modelBreakpointGaps %>%
     filter(minimum_gap >= min_gap)
   
-  bestIndex <- filter(eligible, 
-    number == which.min(eligible$bic))$number
+  bestIndex <- eligible[which.min(eligible$bic),]$number
   
   bestModel <- segModels[[bestIndex]]
   bestModelData <- dplyr::select(modelData, c(1, bestIndex + 1)) 
@@ -1484,14 +1496,15 @@ segResults <- list()
 
 for (ii in steps) {
   print(ii)
-  segResults[[ii]] <- Segment(ii, initialbp, ymax[ii],
-    minimum =  filter(trendData, stage == ii)$lower, 
+  segResults[[ii]] <- Segment(ii, initialbp, ymax[ii], 
+    minimum =  filter(trendData, stage == ii)$lower,
     maximum = filter(trendData, stage == ii)$upper, 
+    # min_gap = 3, allow_end_gap = TRUE,
     yLabels[ii], save = TRUE, offset = offsets[[ii]], 
     yPercent = yPercent[ii])
 }
 
-save(segResults, file = file.path(figFolder, "CascadeSegmentedModels.Rda"))
+# save(segResults, file = file.path(figFolder, "CascadeSegmentedModels.Rda"))
 
 ```
 
@@ -1510,21 +1523,18 @@ suppressedPredict <- exp(predict(segResults$suppressed$models[[segResults$suppre
 
 # Predict values for cascade percentages using models with offsets
 propdiagnosed95 <- exp(predict(segResults$propdiagnosed$models[[segResults$propdiagnosed$bestIndex]],
-    newdata = data.frame(year = 2020:2030, infected = infectedPredict)))/infectedPredict
+  newdata = data.frame(year = 2020:2030, infected = infectedPredict)))/infectedPredict
 proptreated95 <- exp(predict(segResults$proptreated$models[[segResults$proptreated$bestIndex]],
-    newdata = data.frame(year = 2020:2030, pldhiv = diagnosedPredict)))/diagnosedPredict
+  newdata = data.frame(year = 2020:2030, pldhiv = diagnosedPredict)))/diagnosedPredict
 propsuppressed95 <- exp(predict(segResults$propsuppressed$models[[segResults$propsuppressed$bestIndex]],
-    newdata = data.frame(year = 2020:2030, numART = numARTPredict)))/numARTPredict
+  newdata = data.frame(year = 2020:2030, numART = numARTPredict)))/numARTPredict
 
 # Direct calculations
 diagnosedPredict/infectedPredict
 numARTPredict/diagnosedPredict
 suppressedPredict/numARTPredict
 
-
-
 ```
-
 
 ```{r Produce combined plots} 
 
@@ -1583,15 +1593,15 @@ stackResults <- hivCascadeAll %>%
   mutate(stage = factor(stage, levels = c("undiagnosed", "diagnosed", 
     "unsuppressed", "suppressed"))) %>%
   arrange(stage)
-  
+
 # Create individual plots
 stackPlotBase <- ggplot(data = stackResults, aes(x = year, y = value, 
   fill = stage)) + xlab("Year") +
   scale_fill_manual(values = plotCols, name = "", labels = plotLabels, 
     guide = guide_legend(nrow = 2)) +  
   scale_x_continuous(breaks = seq(startYear, resultsYear),
-      labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
-      limits = c(startYear, resultsYear)) +
+    labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
+    limits = c(startYear, resultsYear)) +
   PlotOptions() + 
   theme(legend.text = element_text(size = 8))
 
@@ -1610,7 +1620,7 @@ plotStacked <- ggdraw() +
   draw_plot(legend, 0, 0.8, 1, 0.2) +
   draw_plot(stackPlotNum2, 0, 0, 0.5, 0.8) +
   draw_plot(stackPlotProp2, 0.5, 0, 0.5, 0.8)
-  
+
 cascadeFullPlot <- ggdraw() +
   draw_plot(diagsPlot, 0, 0.5, 0.5, 0.5) +
   draw_plot(plotCascadeAll, 0.5, 0.5, 0.5, 0.5) +
@@ -1625,7 +1635,7 @@ captions[["cascadeFull"]] <- "HIV notifications in Australia and Australia's HIV
 # Cascade trends ---------------------------------------------------------------
 
 legend <- get_legend(segResults[["infected"]]$plotBest)
-  
+
 cascadeTrendPlot <- ggdraw() + 
   draw_plot(legend, 0, 0.95, 1, 0.05) + 
   draw_plot(RmLegened(segResults[["infected"]]$plotBest), 
@@ -1698,7 +1708,7 @@ if (savePlots) {
       saveFormat, sep = "")),
     plot = cascadeFullPlot, width = 22, height = 16, units = "cm")
   
-   ggsave(file.path(figFolder,
+  ggsave(file.path(figFolder,
     paste("HIVtrends_Full_Plot_",
       toString(startYear), "-",
       toString(resultsYear),
@@ -1722,7 +1732,6 @@ if (savePlots) {
 }
 
 ```
-
 
 ```{r Combined table}
 # Create table of overall results ----------------------------------------
@@ -1770,7 +1779,7 @@ for (ii in steps) {
       rate_ratio_low = exp(unname(confint(model)[2, "2.5 %"])),
       rate_ratio_up = exp(unname(confint(model)[2, "97.5 %"]))) 
   } 
-    
+  
   # Add data
   tempData <- filter(trendData, stage == ii)
   nyears <- nrow(tempData)
@@ -1858,7 +1867,6 @@ save(cascadeFullPlot, cascadeTrendPlot, gapsFullPlot, indicatorsFullPlot,
   file = file.path(figFolder, "CascadeFinalResults.Rda"))
 
 ```
-
 
 # Testing code =================================================================
 
@@ -2281,7 +2289,7 @@ combinedTest <- grid.arrange(legend,
     plot.title = element_text(hjust = 0.5, size = 10)) +
     labs(title = "Original\nestimates", 
       caption = figs("trendSensitivity")) +
-  segTestPlot[[2]] + theme(legend.position="none"), 
+    segTestPlot[[2]] + theme(legend.position="none"), 
   segTestPlot[[3]] + theme(legend.position="none"),
   segTestPlot[[4]] + theme(legend.position="none"), 
   ncol = 2, nrow = 3, 
