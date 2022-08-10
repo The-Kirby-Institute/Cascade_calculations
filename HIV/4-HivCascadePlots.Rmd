@@ -554,7 +554,7 @@ if (pubPlots) {
     geom_line(color = asrcols[2])  +
     scale_x_continuous(breaks = xValues,
       limits = c(startYear, resultsYear)) +
-    scale_y_continuous(labels = percent, limits = c(0, 0.02)) + 
+    scale_y_continuous(labels = percent, limits = c(0, 0.01)) + 
     ylab("Emmigration rate (%)") + xlab("Year") +  
     PlotOptions()
   
@@ -574,19 +574,31 @@ if (pubPlots) {
     saveFormat, sep = "")),
     plot = plotDeathRate, width = 7.5, height = 6, units = "cm")
   
+  ggsave(file.path(figFolder, paste("HIVmigrants_", 
+    toString(startYear), "-", toString(resultsYear), 
+    saveFormat, sep = "")),
+    plot = plotMigrants, width = 7.5, height = 6, units = "cm") 
+  
+  ggsave(file.path(figFolder, paste("HIVmigration_rate_", 
+    toString(startYear), "-", toString(resultsYear), 
+    saveFormat, sep = "")),
+    plot = plotMigrationRate, width = 7.5, height = 6, units = "cm")
+  
   # Create a combined plot
   HIVdiagnosedPlot <- ggdraw() +
-    draw_plot(plots[[2]], 0, 0.5, 0.5, 0.5) + #Number PLDHIV
-    draw_plot(casesPlot, 0.5, 0.5, 0.5, 0.5) +
-    draw_plot(plotDeaths, 0, 0, 0.5, 0.5) +
-    draw_plot(plotDeathRate, 0.5, 0, 0.5, 0.5) +
-    draw_plot_label(c("A", "B", "C", "D"), c(0, 0.5, 0, 0.5), 
-      c(1, 1, 0.5, 0.5), size = 12)
+    draw_plot(plots[[2]], 0, 0.66, 0.5, 0.33) + #Number PLDHIV
+    draw_plot(casesPlot, 0.5, 0.66, 0.5, 0.33) +
+    draw_plot(plotDeaths, 0, 0.33, 0.5, 0.33) +
+    draw_plot(plotDeathRate, 0.5, 0.33, 0.5, 0.33) +
+    draw_plot(plotMigrants, 0, 0, 0.5, 0.33) +
+    draw_plot(plotMigrationRate, 0.5, 0, 0.5, 0.33) +
+    draw_plot_label(c("A", "B", "C", "D", "E", "F"), c(0, 0.5, 0, 0.5, 0, 0.5), 
+      c(1, 1, 0.66, 0.66, 0.33, 0.33), size = 12)
   
   ggsave(file.path(figFolder, paste("HIVdiagnosed_indicators_", 
     toString(startYear), "-", toString(resultsYear), 
     saveFormat, sep = "")),
-    plot = HIVdiagnosedPlot, width = 20, height = 16, units = "cm")
+    plot = HIVdiagnosedPlot, width = 20, height = 24, units = "cm")
   
   # Treatment coverage plot ----------------------------------------------
   
