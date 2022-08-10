@@ -885,7 +885,7 @@ if (asrCascades && linkageplots) {
     saveFormat, sep = "")), plot = linkPlotRecent, 
     width = 9, height = 7.5, units = "cm")
   
-  # 2016 distribution ----------------------------------------------------
+  # Distribution ----------------------------------------------------
   
   # Organize our date and calculate days between diagnosis and CD4
   linkDays <- hivSet %>%
@@ -938,7 +938,7 @@ if (asrCascades && linkageplots) {
   # Average CD4 count ----------------------------------------------------
   
   # Create data frames and do the calculations for each population group
-  # Need to remove those previoulsy diagnosed overseas first as they maybe
+  # Need to remove those previously diagnosed overseas first as they maybe
   # on treatment and have a higher CD4 count. Do this by converting NAs to
   # a number and then filter out those previously diagnosed.
   cd4Set <- hivSet
@@ -993,6 +993,31 @@ if (asrCascades && linkageplots) {
     toString(startYear), "-", toString(resultsYear), 
     saveFormat)), plot = aveCd4Plot, 
     width = 9, height = 7.5, units = "cm")
+  
+  # CD4 count distribution comparison ------------------------------------------
+  
+  # Compare distribution of CD4 count when diagnoses highest and results year
+  # 1,079 notifications (excluding previous diagnosis in 2014). 
+  # CD4 counts > 2000 have been filtered out. 
+  
+  cd4Data <- cd4Set %>% 
+    filter(yearhiv %in% c(2014,2021), !is.na(cd4count), cd4count <=2000) %>%
+    select(year = yearhiv, cd4count)
+  
+  cd4Hist <- ggplot(data = cd4Data, aes(x = cd4count, colour = year, group = year)) + 
+    geom_freqpoly(binwidth = 50) +
+    scale_colour_manual(name = "", 
+      breaks = C("2014", "2021"),
+      values = c(asrcols[2], asrcols[4])) +
+    ylab("Count") + xlab("CD4 count at diagnosis") +
+    PlotOptions()
+  
+  # Save plot
+  ggsave(file.path(figFolder, paste0("CD4_histogram", 
+    toString(startYear), "-", toString(resultsYear), 
+    saveFormat)), plot = cd4Hist, 
+    width = 9, height = 7.5, units = "cm")
+  
 }
 ```
 
