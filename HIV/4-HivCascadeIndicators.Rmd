@@ -19,7 +19,7 @@ source(file.path(dirname(getwd()), "code", "PlotOptions.R"))
 ```
 
 ```{r Options}
-projectName <- "ASR_2022" # "ASR_2021" 
+projectName <- "HIV_Cascade_Paper" # "ASR_2021" 
                           # "HIV_Cascade_Paper"
 project <- file.path(basePath, "output", projectName)
 
@@ -44,7 +44,11 @@ resultsYear <- 2021
 cascadeFile <- paste0("HIVcascadeEstimates-", resultsYear,".csv")
 infectionsFile <- paste0("newInfectionsEstimates-", resultsYear,".csv")
 undiagnosedFile <- paste0("plhivEstimates-", resultsYear, ".csv")
+
+# Need all files to get range in deaths
 diagnosesFile <- paste0("pldhiv-", resultsYear, "-all.csv")
+diagnosesFileLower <- paste0("pldhiv-", resultsYear, "-min.csv")
+diagnosesFileUpper <- paste0("pldhiv-", resultsYear, "-max.csv")
 
 startYear <- 2000
 
@@ -59,6 +63,7 @@ IndicatorResults <- function(cascadeName) {
   # Read in associated cascade files and extract key columns
   infections <- read_csv(file.path(project, cascadeName, infectionsFile),
     show_col_types = FALSE)
+  
   undiagnosed <- read_csv(file.path(project, cascadeName, undiagnosedFile),
     show_col_types = FALSE) %>%
     select(year, undiag = final_undiagnosed, 
@@ -66,10 +71,18 @@ IndicatorResults <- function(cascadeName) {
       undiag_upper = final_undiagnosed_upper, 
       undiag_percent, 
       uplower = undiag_percent_lower,
-      upupper = undiag_percent_lower) 
-  diagnoses <- read_csv(file.path(project, cascadeName, diagnosesFile),
+      upupper = undiag_percent_upper) 
+  
+  pldhivAll <- read_csv(file.path(project, cascadeName, diagnosesFile),
     col_types = cols(.default = "d"), show_col_types = FALSE) %>%
-    select(year, diagnoses)
+    select(year, diagnoses, deaths)
+  pldhivLower <- read_csv(file.path(project, cascadeName, diagnosesFileLower),
+    col_types = cols(.default = "d"), show_col_types = FALSE) %>%
+    select(year, deaths)
+  pldhivUpper <- read_csv(file.path(project, cascadeName, diagnosesFileUpper),
+    col_types = cols(.default = "d"), show_col_types = FALSE) %>%
+    select(year, deaths)
+  
   plhiv <- read_csv(file.path(project, cascadeName, cascadeFile),
     show_col_types = FALSE) %>%
     filter(stage == "infected") %>%
@@ -94,7 +107,11 @@ IndicatorResults <- function(cascadeName) {
       infections_upper = infectionsInclude$infections_upper)
   }
   
-  # For PLHIV create start year values by shifting
+  # Tidy up diagnoses
+  diagnoses <- pldhivAll %>% 
+    select(year, diagnoses) 
+  
+  # For PLHIV create start year values for IPR calculation by shifting
   plhiv$start_plhiv <- c(plhiv$value[1], plhiv$value[1:(nrow(plhiv)-1)])
   plhiv$start_plhiv_lower <- c(plhiv$lower[1], plhiv$lower[1:(nrow(plhiv)-1)])
   plhiv$start_plhiv_upper <- c(plhiv$upper[1], plhiv$upper[1:(nrow(plhiv)-1)])
@@ -102,11 +119,18 @@ IndicatorResults <- function(cascadeName) {
   plhiv <- plhiv %>%
     select(year, start_plhiv, start_plhiv_lower, start_plhiv_upper)
   
+  # Tidy up deaths
+  deaths <- pldhivAll %>%
+    select(year, deaths) %>%
+    mutate(deaths_lower = pldhivUpper$deaths,
+      deaths_upper = pldhivLower$deaths)
+  
   # Merge results
   results <- diagnoses %>%
     left_join(undiagnosed, by = "year") %>%
     left_join(infectionsResults, by = "year") %>%
-    left_join(plhiv, by = "year")
+    left_join(plhiv, by = "year") %>%
+    left_join(deaths, by = "year")
   
   return(results)
 }
@@ -122,7 +146,10 @@ AddResults <- function(results) {
       cdr_upper = diagnoses/infections_lower,
       ipr = infections/start_plhiv,
       ipr_lower = infections_lower/start_plhiv_upper,
-      ipr_upper = infections_upper/start_plhiv_lower)
+      ipr_upper = infections_upper/start_plhiv_lower,
+      imr = infections/deaths,
+      imr_lower = infections_lower/deaths_upper,
+      imr_upper = infections_upper/deaths_lower)
   
   return(newResults)
   
@@ -159,8 +186,8 @@ plotUndiag <- function(df, title, ymax, indicator) {
     # New infections
     plot <- ggplot(df, aes(x = year)) + 
       geom_ribbon(aes(ymin = infections_lower, ymax = infections_upper), 
-        fill = cols[1], alpha = 0.2) +
-      geom_line(aes(y=infections), colour = cols[1]) +
+        fill = cols[2], alpha = 0.2) +
+      geom_line(aes(y=infections), colour = cols[2]) +
       labs(y = "New Infections", x = "Year", title = title) +
       scale_y_continuous(limits = c(0, ymax), 
         label = comma)
@@ -168,33 +195,45 @@ plotUndiag <- function(df, title, ymax, indicator) {
     # Undiagnosed percentage - Values rescaled to proportions
     plot <- ggplot(df, aes(x = year)) + 
       geom_ribbon(aes(ymin = uplower/100, ymax = upupper/100), 
-        fill = cols[1], alpha = 0.2) +
-      geom_line(aes(y=undiag_percent/100), colour = cols[1]) +
+        fill = cols[2], alpha = 0.2) +
+      geom_line(aes(y=undiag_percent/100), colour = cols[2]) +
       labs(y = "Percentage undiagnosed", x = "Year", title = title) +
       scale_y_continuous(limits = c(0, ymax), 
         label = percent)
   } else if (indicator == "ydf") {
-    # YDF and CDR plots combined
+    # YDF 
     plot <- ggplot(df, aes(x = year)) +
-      geom_ribbon(aes(ymin = cdr_lower, ymax = cdr_upper), 
-        fill = cols[1], alpha = 0.2) +
-      geom_line(aes(y=cdr, colour = "cdr")) +
       geom_ribbon(aes(ymin = ydf_lower, ymax = ydf_upper), 
         fill = cols[2], alpha = 0.2) +
-      geom_line(aes(y=ydf, colour = "ydf")) +
-      labs(y = "Value", x = "Year", title = title) +
-      scale_colour_manual("", labels = c("CDR", "YDF"),
-        breaks = c("cdr", "ydf"), values = cols) + 
-      ylim(0, ymax) +
-      theme(legend.position = "right")
-    
+      geom_line(aes(y=ydf), colour = cols[2]) +
+      labs(y = "Yearly diagnosed fraction (YDF)", x = "Year", title = title) +
+      scale_y_continuous(limits = c(0, ymax), 
+        label = comma)
+  } else if (indicator == "cdr") {
+    # CDR
+    plot <- ggplot(df, aes(x = year)) + 
+      geom_ribbon(aes(ymin = cdr_lower, ymax = cdr_upper), 
+        fill = cols[2], alpha = 0.2) +
+      geom_line(aes(y=cdr), colour = cols[2]) +
+      labs(y = "Case detection rate", x = "Year", title = title) +
+      scale_y_continuous(limits = c(0, ymax), 
+        label = comma)
   } else if (indicator == "ipr") {
-    # IPR plot
+    # IPR 
     plot <- ggplot(df, aes(x = year)) + 
       geom_ribbon(aes(ymin = ipr_lower, ymax = ipr_upper), 
-        fill = cols[1], alpha = 0.2) +
-      geom_line(aes(y=ipr), colour = cols[1]) +
-      labs(y = "Incidence prevalence ratio", x = "Year", title = title) +
+        fill = cols[2], alpha = 0.2) +
+      geom_line(aes(y=ipr), colour = cols[2]) +
+      labs(y = "Incidence prevalence ratio (IPR)", x = "Year", title = title) +
+      scale_y_continuous(limits = c(0, ymax), 
+        label = comma)
+  } else if ((indicator == "imr")) {
+    # IMR
+    plot <- ggplot(df, aes(x = year)) + 
+      geom_ribbon(aes(ymin = imr_lower, ymax = imr_upper), 
+        fill = cols[2], alpha = 0.2) +
+      geom_line(aes(y=imr), colour = cols[2]) +
+      labs(y = "Incidence mortality ratio (IMR)", x = "Year", title = title) +
       scale_y_continuous(limits = c(0, ymax), 
         label = comma)
   } else {
@@ -203,7 +242,7 @@ plotUndiag <- function(df, title, ymax, indicator) {
   
   plot <- plot +
      scale_x_continuous(breaks = 2010:resultsYear,
-    labels =  EveryNth(2010:resultsYear, 2, inverse = TRUE),
+    labels =  EveryNth(2010:resultsYear, 2, inverse = FALSE),
     limits = c(2010, resultsYear)) +
     PlotOptions() 
   
@@ -227,22 +266,35 @@ for (cascade in cascadeList) {
   tempPlot2 <- plotUndiag(results[[cascade]], cascade, 
     ceiling(max(results[[cascade]]$upupper))/100, "percent")
   
-  # YDF and CDR
+  # YDF
   tempPlot3 <- plotUndiag(results[[cascade]], cascade, 
-    ceiling(max(results[[cascade]]$cdr_upper)), "ydf")
+    ceiling(max(results[[cascade]]$ydf_upper))/2, "ydf")
   
+  # CDR
   tempPlot4 <- plotUndiag(results[[cascade]], cascade, 
+    ceiling(max(results[[cascade]]$cdr_upper)), "cdr")
+  
+  # IPR
+  tempPlot5 <- plotUndiag(results[[cascade]], cascade, 
     max(results[[cascade]]$ipr_upper), "ipr")
+  
+  # IMR
+  tempPlot6 <- plotUndiag(results[[cascade]], cascade, 
+    max(results[[cascade]]$imr_upper), "imr")
   
   
   ggsave(file.path(project, cascade, "new_infections.png"), tempPlot1, 
-    width = 8, height = 6, units = "cm")
+    width = 10, height = 8, units = "cm")
   ggsave(file.path(project, cascade, "percent_undiagnosed.png"), tempPlot2, 
-    width = 8, height = 6)
+    width = 10, height = 8, units = "cm")
   ggsave(file.path(project, cascade, "ydf.png"), tempPlot3, 
-    width = 8, height = 6)
-  ggsave(file.path(project, cascade, "ipr.png"), tempPlot4, 
-    width = 8, height = 6)
+    width = 10, height = 8, units = "cm")
+  ggsave(file.path(project, cascade, "cdr.png"), tempPlot4, 
+    width = 10, height = 8, units = "cm")
+  ggsave(file.path(project, cascade, "ipr.png"), tempPlot5, 
+    width = 10, height = 8, units = "cm")
+  ggsave(file.path(project, cascade, "imr.png"), tempPlot6, 
+    width = 10, height = 8, units = "cm")
   
 }
 
