@@ -181,6 +181,9 @@ if (pubPlots) {
   hivResults$deaths <- cumsum(pldhivAll$deaths)
   hivResults$deaths_min <- cumsum(pldhivMin$deaths)
   hivResults$deaths_max <- cumsum(pldhivMax$deaths)
+  hivResults$emmigrants <- cumsum(pldhivAll$emigrants + pldhivAll$diag_departs)
+  hivResults$emmigrants_min <- cumsum(pldhivMin$emigrants + pldhivMin$diag_departs)
+  hivResults$emmigrants_max <- cumsum(pldhivMax$emigrants + pldhivMax$diag_departs)
   
   hivBase <- read.csv(file.path(dataFolder, paste0("HIVbaseEstimates-",
     toString(resultsYear), ".csv")))
@@ -197,6 +200,9 @@ if (pubPlots) {
   hivResults$deathrate <- subsetRates$deathrate
   hivResults$drlower <- subsetRates$deathrate_lower
   hivResults$drupper <- subsetRates$deathrate_upper
+  hivResults$mrate <- subsetRates$mrate
+  hivResults$mrate_lower <- subsetRates$mrate_lower
+  hivResults$mrate_upper <- subsetRates$mrate_upper
   
   annualDiags <- hivSet %>% 
     group_by(yearhiv) %>%
@@ -1002,12 +1008,13 @@ if (asrCascades && linkageplots) {
   
   cd4Data <- cd4Set %>% 
     filter(yearhiv %in% c(2014,2021), !is.na(cd4count), cd4count <=2000) %>%
-    select(year = yearhiv, cd4count)
+    select(year = yearhiv, cd4count) %>%
+    mutate(year = as.factor(year))
   
   cd4Hist <- ggplot(data = cd4Data, aes(x = cd4count, colour = year, group = year)) + 
     geom_freqpoly(binwidth = 50) +
     scale_colour_manual(name = "", 
-      breaks = C("2014", "2021"),
+      breaks = c("2014", "2021"),
       values = c(asrcols[2], asrcols[4])) +
     ylab("Count") + xlab("CD4 count at diagnosis") +
     PlotOptions()
