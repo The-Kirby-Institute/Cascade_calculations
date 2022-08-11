@@ -62,7 +62,7 @@ infectsCalculation <- "exclude" # "include", "exclude" or "middle"
 allIndicators <- c("infected", "pldhiv", "retained", "numART", "suppressed",
   "undiagnosed", "noART", "unsuppressed", "diagnoses_exclude",
   "diagnoses_include", "infections", "propdiagnosed", "proptreated",
-  "propsuppressed", "propoverall", "ydf", "cdr", "ipr")
+  "propsuppressed", "propoverall", "ydf", "cdr", "ipr", "imr")
 
 indicatorNames <- c("infected" = "Living with HIV",
   "pldhiv" = "Diagnosed",
@@ -81,7 +81,8 @@ indicatorNames <- c("infected" = "Living with HIV",
   "propoverall" = "Percentage suppressed overall",
   "ydf" = "Yearly diagnosed fraction",
   "cdr" = "Case detection rate",
-  "ipr" = "Incidence prevalence ratio")
+  "ipr" = "Incidence prevalence ratio",
+  "imr" = "Incidence mortality ratio")
 
 indicatorNamesNeat <- c("infected" = "Number living with HIV\n ",
   "pldhiv" = "Number diagnosed\n ",
@@ -100,7 +101,8 @@ indicatorNamesNeat <- c("infected" = "Number living with HIV\n ",
   "propoverall" = "Percentage overall\nsuppressed",
   "ydf" = "Yearly diagnosed fraction\n ",
   "cdr" = "Case detection rate\n ",
-  "ipr" = "Incidence prevalence ratio\n ")
+  "ipr" = "Incidence prevalence ratio\n ",
+  "imr" = "Incidence mortality ratio\n ")
 
 # Create output directory
 if (savePlots) {
@@ -119,6 +121,9 @@ asrcols <- PlotColors("hivcascade5")
 
 # Number of x-axis labels
 xTicks <- 4
+# Position of x-axis ticks in plots
+xValues <- seq(startYear+1, resultsYear, by = 4)
+
 ```
 
 ```{r loadresults}
@@ -404,7 +409,7 @@ trendPlots <- lapply(steps, PlotTrend, data = trendData,
   models = trendModels, trend = plotTrends)
 names(trendPlots) <- steps
 
-# Create a group plots ---------------------------------------------------------
+# Create group plots -----------------------------------------------------------
 
 # Cascade steps
 stagesTrendPlot <- plot_grid(trendPlots[[1]], trendPlots[[2]],
@@ -558,8 +563,7 @@ expTrendData <- trendData %>%
 # a very large theta using glm.nb however still seem to get a good fit
 diagsExpModel <- glm.nb(pldhiv ~ year + offset(log(infected)), 
   data = expTrendData)  
-# diagsExpModel <- glm(pldhiv ~ year, offset = log(infected), 
-#   data = expTrendData, family = "poisson")
+
 treatedExpModel  <- glm.nb(numART ~ year +offset(log(pldhiv)), 
   data = expTrendData)
 suppressedExpModel  <- glm.nb(suppressed ~ year + offset(log(numART)), 
@@ -722,14 +726,15 @@ if (savePlots) {
 
 ```{r Trends indicators}
 # This chunk looks at the trends in cascade indicators: yearly diagnosed 
-# fraction (ydf), case detection rate (cdr), infection prevalence ration 
-# (ipr). 
+# fraction (ydf), case detection rate (cdr), incidence prevalence ratio 
+# (ipr), and incidence mortality ratio (imr)
 
 year <- startYear:resultsYear
 
 ydf <- hivCascadeIndicators$ydf
 cdr <- hivCascadeIndicators$cdr
 ipr <- hivCascadeIndicators$ipr
+imr <- hivCascadeIndicators$imr
 
 # Add to trend data and save
 trendData <- bind_rows(trendData, tibble(year = year,
@@ -748,6 +753,11 @@ trendData <- bind_rows(trendData, tibble(year = year,
   lower = hivCascadeIndicators$ipr_lower, 
   upper = hivCascadeIndicators$ipr_upper))
 trendData <- bind_rows(trendData, tibble(year = year,
+  stage = "imr", 
+  value = hivCascadeIndicators$imr, 
+  lower = hivCascadeIndicators$imr_lower, 
+  upper = hivCascadeIndicators$imr_upper))
+trendData <- bind_rows(trendData, tibble(year = year,
   stage = "ydfoffest", 
   value = hivCascadeIndicators$undiag + 
     filter(trendData, stage == "diagnoses_include")$value, 
@@ -757,10 +767,15 @@ trendData <- bind_rows(trendData, tibble(year = year,
     filter(trendData, stage == "diagnoses_include")$value))
 trendData <- bind_rows(trendData, tibble(year = year,
   stage = "iproffset",
-  # IPR is calculated using the plhiv number from the stary of each year
+  # IPR is calculated using the plhiv number from the start of each year
   value = hivCascadeIndicators$start_plhiv,
   lower = hivCascadeIndicators$start_plhiv_lower,
   upper = hivCascadeIndicators$start_plhiv_upper))
+trendData <- bind_rows(trendData, tibble(year = year,
+  stage = "imroffset",
+  value = hivCascadeIndicators$deaths,
+  lower = hivCascadeIndicators$deaths_lower,
+  upper = hivCascadeIndicators$deaths_upper))
 
 # Negative binomial/Poisson models ---------------------------------------------
 # Use a negative binomial/Poisson model with an offset to produce a rate ratio 
@@ -780,6 +795,8 @@ expTrendData <- trendData %>%
 #   data = expTrendData, family = "poisson")
 # iprModel  <- glm(infections ~ year, offset = log(iproffset), 
 #   data = expTrendData, family = "poisson")
+# imrModel  <- glm(infections ~ year, offset = log(imroffset), 
+#   data = expTrendData, family = "poisson")  
 
 ydfModel <- glm.nb(diagnoses_include ~ year + offset(log(ydfoffest)), 
   data = expTrendData)
@@ -787,27 +804,31 @@ cdrModel  <- glm.nb(diagnoses_include ~ year + offset(log(infections)),
   data = expTrendData)
 iprModel  <- glm.nb(infections ~ year + offset(log(iproffset)), 
   data = expTrendData)
+ipmModel  <- glm.nb(infections ~ year + offset(log(imroffset)), 
+  data = expTrendData)
 
 trendModelsProp[["ydf"]] <- ydfModel
 trendModelsProp[["cdr"]] <- cdrModel
 trendModelsProp[["ipr"]] <- iprModel
+trendModelsProp[["imr"]] <- imrModel
 
 # Coefficients for annual change (as rate ratio)
 coeffydf <- exp(coef(ydfModel)["year"])
 coeffcdr <- exp(coef(cdrModel)["year"])
 coeffipr <- exp(coef(iprModel)["year"])
+coeffimr <- exp(coef(imrModel)["year"])
 
 # P-values for annual change
 p_valueydf <- summary(ydfModel)$coefficients["year", "Pr(>|z|)"]
 p_valuecdr <- summary(cdrModel)$coefficients["year", "Pr(>|z|)"]
-p_valueipr <- summary(iprModel)$coefficients["year",
-  "Pr(>|z|)"]
+p_valueipr <- summary(iprModel)$coefficients["year",   "Pr(>|z|)"]
+p_valueimr <- summary(imrModel)$coefficients["year",   "Pr(>|z|)"]
 
 # Confidence interval for annual change (as a rate ratio)
 intervalydf <- exp(confint(ydfModel, "year", type = "Wald"))
 intervalcdr <- exp(confint(cdrModel, "year", type = "Wald"))
-intervalipr <- exp(confint(iprModel, "year", 
-  type = "Wald"))
+intervalipr <- exp(confint(iprModel, "year", type = "Wald"))
+intervalimr <- exp(confint(imrModel, "year", type = "Wald"))
 
 # Plots of estimates and trends ------------------------------------------------
 
@@ -834,17 +855,26 @@ iprPlot <- plotProp(ipr, iprModel,
   geom_ribbon(data = filter(trendData, stage == "ipr"),
     aes(ymin = lower, ymax = upper), fill = asrcols[2], alpha = 0.4)
 
+imrPlot <- plotProp(imr, imrModel, 
+  expTrendData$infected, yLabels["imr"], 
+  trend = plotTrends) +
+  # Fix up y axis - will get warnings about replacement
+  scale_y_continuous(labels = number, limits = c(0, 0.1)) +
+  geom_ribbon(data = filter(trendData, stage == "ipr"),
+    aes(ymin = lower, ymax = upper), fill = asrcols[2], alpha = 0.4)
+
 trendPlotsProp[["ydf"]] <- ydfPlot
 trendPlotsProp[["cdr"]] <- cdrPropPlot
 trendPlotsProp[["ipr"]] <- iprPlot
+trendPlotsProp[["imr"]] <- imrPlot
 
-# Poisson model results to trendCascadeProp
-propTrendsIndicators <- tibble(stage = c("ydf", "cdr", "ipr"),
-  coeff = c(coeffydf, coeffcdr, coeffipr),
-  pvalue = c(p_valueydf, p_valuecdr, p_valueipr),
-  lower = c(intervalydf[1], intervalcdr[1], intervalipr[1]),
-  upper = c(intervalydf[2], intervalcdr[2], intervalipr[2]),
-  model = "poisson-offset")
+# Model results to trendCascadeProp
+propTrendsIndicators <- tibble(stage = c("ydf", "cdr", "ipr", "imr"),
+  coeff = c(coeffydf, coeffcdr, coeffipr, coeffimr),
+  pvalue = c(p_valueydf, p_valuecdr, p_valueipr, p_valueimr),
+  lower = c(intervalydf[1], intervalcdr[1], intervalipr[1], intervalimr[1]),
+  upper = c(intervalydf[2], intervalcdr[2], intervalipr[2], intervalimr[2]),
+  model = "negative-binomial-offset")
 
 trendCascadeProp <- bind_rows(trendCascadeProp, propTrendsIndicators)
 
@@ -854,12 +884,14 @@ legend <- get_legend(trendPlots$diagnoses_include)
 # Update group plot
 combinedIndicatorPlot <- plot_grid(
   trendPlots$diagnoses_include + theme(legend.position="none"), 
+  trendPlots$diagnoses_exclude + theme(legend.position="none"),
   trendPlots$infections + theme(legend.position="none"),
   trendPlotsProp$ydf + theme(legend.position="none"), 
   trendPlotsProp$cdr + theme(legend.position="none"), 
   trendPlotsProp$ipr + theme(legend.position="none"), 
-  ncol = 2, nrow = 3, 
-  labels = c("A", "B", "C", "D", "E")) 
+   trendPlotsProp$imr + theme(legend.position="none"), 
+  ncol = 2, nrow = 4, 
+  labels = c("A", "B", "C", "D", "E", "F", "G")) 
 
 if (savePlots) {
   ggsave(file.path(figFolder,
@@ -867,7 +899,7 @@ if (savePlots) {
       toString(startYear), "-",
       toString(resultsYear),
       saveFormat, sep = "")),
-    plot = combinedIndicatorPlot, width = 18, height = 24, units = "cm")
+    plot = combinedIndicatorPlot, width = 18, height = 32, units = "cm")
 }
 
 ```
