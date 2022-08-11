@@ -804,7 +804,7 @@ cdrModel  <- glm.nb(diagnoses_include ~ year + offset(log(infections)),
   data = expTrendData)
 iprModel  <- glm.nb(infections ~ year + offset(log(iproffset)), 
   data = expTrendData)
-ipmModel  <- glm.nb(infections ~ year + offset(log(imroffset)), 
+imrModel  <- glm.nb(infections ~ year + offset(log(imroffset)), 
   data = expTrendData)
 
 trendModelsProp[["ydf"]] <- ydfModel
@@ -840,7 +840,7 @@ ydfPlot <- plotProp(ydf, ydfModel, expTrendData$ydfoffest, yLabels["ydf"],
     aes(ymin = lower, ymax = upper), fill = asrcols[2], alpha = 0.4)
 
 cdrPropPlot <- plotProp(cdr, cdrModel, 
-  expTrendData$infections, yLabels["cdr"], 
+  expTrendData$cdroffset, yLabels["cdr"], 
   trend = plotTrends) +
   # Fix up y axis - will get warnings about replacement
   scale_y_continuous(labels = number, limits = c(0, NA)) +
@@ -848,7 +848,7 @@ cdrPropPlot <- plotProp(cdr, cdrModel,
     aes(ymin = lower, ymax = upper), fill = asrcols[2], alpha = 0.4)
 
 iprPlot <- plotProp(ipr, iprModel, 
-  expTrendData$infected, yLabels["ipr"], 
+  expTrendData$iproffset, yLabels["ipr"], 
   trend = plotTrends, ymax = 0.1) +
   # Fix up y axis - will get warnings about replacement
   scale_y_continuous(labels = number, limits = c(0, 0.1)) +
@@ -856,11 +856,11 @@ iprPlot <- plotProp(ipr, iprModel,
     aes(ymin = lower, ymax = upper), fill = asrcols[2], alpha = 0.4)
 
 imrPlot <- plotProp(imr, imrModel, 
-  expTrendData$infected, yLabels["imr"], 
+  expTrendData$imroffset, yLabels["imr"], 
   trend = plotTrends) +
   # Fix up y axis - will get warnings about replacement
-  scale_y_continuous(labels = number, limits = c(0, 0.1)) +
-  geom_ribbon(data = filter(trendData, stage == "ipr"),
+  scale_y_continuous(labels = number, limits = c(0, NA)) +
+  geom_ribbon(data = filter(trendData, stage == "imr"),
     aes(ymin = lower, ymax = upper), fill = asrcols[2], alpha = 0.4)
 
 trendPlotsProp[["ydf"]] <- ydfPlot
@@ -989,15 +989,16 @@ propoverallts <- tots("propoverall")
 ydfts <- tots("ydf")
 cdrts <- tots("cdr")
 iprts <- tots("ipr")
+imrts <- tots("imr")
 
 data <- cbind(infectedts, pldhivts, numARTts, suppressedts, undiagnosedts,
   noARTts, unsuppressedts, diagnoses_excludets, diagnoses_includets,
   infectionsts, propdiagnosedts, proptreatedts, propsuppressedts, propoverallts,
-  ydfts, cdrts, iprts)
+  ydfts, cdrts, iprts, imrts)
 colnames(data) <- c("infected", "pldhiv", "numART", "suppressed",
   "undiagnosed","noART", "unsuppressed", "diagnoses_exclude",
   "diagnoses_include", "infections", "propdiagnosed", "proptreated",
-  "propsuppressed", "propoverall", "ydf", "cdr", "ipr")
+  "propsuppressed", "propoverall", "ydf", "cdr", "ipr", "imr")
 data <- window(data, start = c(startYear, 1), end = c(resultsYear, 1))
 
 # Search for changepoints -------------------------------------------------
@@ -1018,6 +1019,7 @@ autoplot(cpt.mean(propoverallts))
 autoplot(cpt.mean(ydfts))
 autoplot(cpt.mean(cdrts))
 autoplot(cpt.mean(iprts))
+autoplot(cpt.mean(imrts))
 
 # Search for breakpoints --------------------------------------------------
 # The following code looks for breakpoints in each indicator using the 
@@ -1043,7 +1045,7 @@ BPindicator <- function(indicator, tsdata) {
 
 bpInfected <- BPindicator("infected", infectedts)
 bpPldhiv <- BPindicator("pldhiv", pldhivts)
-bpNumART <- BPindicator("numART", numARTts)
+bpNumART <- BPindicator("numART", numARTts) # get error with confidence intervals
 bpSuppressed <- BPindicator("suppressed", suppressedts)
 bpUndiagnosed <- BPindicator("undiagnosed", undiagnosedts)
 bpNoART <- BPindicator("noART", noARTts)
@@ -1051,13 +1053,14 @@ bpUnsuppressed <- BPindicator("unsuppressed", unsuppressedts)
 bpDiagnoses_exclude <- BPindicator("diagnoses_exclude", diagnoses_excludets)
 bpDiagnoses_include <- BPindicator("diagnoses_include", diagnoses_includets)
 bpInfections <- BPindicator("infections", infectionsts)
-bpPropdiagnosed <- BPindicator("propdiagnosed", propdiagnosedts)
-bpProptreated <- BPindicator("proptreated", proptreatedts)
-bpPropsuppressed <- BPindicator("propsuppressed", propsuppressedts)
-bpPropoverall <- BPindicator("propoverall", propoverallts)
+bpPropdiagnosed <- BPindicator("propdiagnosed", propdiagnosedts) # get error with confidence intervals
+bpProptreated <- BPindicator("proptreated", proptreatedts) # get error with confidence intervals
+bpPropsuppressed <- BPindicator("propsuppressed", propsuppressedts) # get error with confidence intervals
+bpPropoverall <- BPindicator("propoverall", propoverallts) # get error with confidence intervals
 bpYdf <- BPindicator("ydf", ydfts)
 bpCdr <- BPindicator("cdr", cdrts)
 bpIpr <- BPindicator("ipr", iprts)
+bpImr <- BPindicator("imr", iprts)
 
 ```
 
@@ -1068,7 +1071,7 @@ breakTable <- NULL
 bpmodels <- list(bpInfected, bpPldhiv, bpNumART, bpSuppressed, bpUndiagnosed,
   bpNoART, bpUnsuppressed, bpDiagnoses_exclude, bpDiagnoses_include, 
   bpInfections, bpPropdiagnosed, bpProptreated, bpPropsuppressed, 
-  bpPropoverall, bpYdf, bpCdr, bpIpr)
+  bpPropoverall, bpYdf, bpCdr, bpIpr, bpImr)
 modelNames <- colnames(data)
 modelString <- c("Number infected",
   "Number diagnosed", 
@@ -1086,7 +1089,8 @@ modelString <- c("Number infected",
   "Proportion suppressed overall",
   "Yearly diagnosed fraction",
   "Case detection rate",
-  "Incidence prevalence ratio")
+  "Incidence prevalence ratio", 
+  "Incidence mortality ratio")
 
 # NOTE: confidence interval calculation will produce lots of warnings if it
 # can't be calculated (returns NA)
