@@ -44,9 +44,10 @@ notificationsFolder <- file.path("/", "SVR-NAS", "Public", "SERP", "Data",
   "National HIV Registry", "Cascades")
 
 # Load standard libraries and options ----------------------------------
-source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
-source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
-source(file.path(Rcode, "Plotcolors.R"), echo=TRUE)
+source(file.path(Rcode, "LoadLibrary.R"))
+source(file.path(Rcode, "PlotOptions.R"))
+source(file.path(Rcode, "Plotcolors.R"))
+source(file.path(Rcode, "EveryNth.R"))
 LoadLibrary(knitr)
 LoadLibrary(tidyverse)
 LoadLibrary(scales)
@@ -78,7 +79,7 @@ startYear <- resultsYear - minYear + 1
 
 # Set up project - If ASR plot all populations otherwise just plot 
 # specified cascade
-projectName <- "ASR_2022" #"ASR_2022" "HIV_Cascade_Paper"
+projectName <- "HIV_Cascade_Paper" #"ASR_2022" "HIV_Cascade_Paper"
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadePop <- "all"
 
@@ -126,8 +127,8 @@ if (savePlots) {
 figs <- captioner()
 tabs <- captioner(prefix = "Table")
 
-# Position of x-axis ticks in plots
-xValues <- seq(startYear+1, resultsYear, by = 4)
+# Number of x-axis ticks in plots
+xTicks <- 4
 
 ```
 
@@ -162,10 +163,10 @@ if (pubPlots) {
   
   # Read in country code data
   countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
-
+  
   # Read in location of diagnosis coding
   regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
-
+  
   hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes,
     regionCodes)
   
@@ -287,7 +288,6 @@ if (pubPlots) {
   }
   
   plotCols <- asrcols[c(1, 2, 4, 5)]
-  # xValues <- seq(startYear+1, resultsYear, by = 4)
   
   # Set up data for plotting
   stackResults <- resultsAll %>%
@@ -308,7 +308,9 @@ if (pubPlots) {
     fill = stage)) + xlab("Year") +
     scale_fill_manual(values = plotCols, name = "", labels = plotLabels, 
       guide = guide_legend(nrow = 2)) +  
-    scale_x_continuous(breaks = xValues) + 
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
+      limits = c(startYear, resultsYear)) +
     PlotOptions() + 
     theme(legend.text = element_text(size = 8))
   
@@ -381,7 +383,9 @@ plotStagesAll <- ggplot(data = resultsAll, aes(x = year, y = value)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), 
     fill = asrcols[2], alpha = 0.4) +
   geom_line(color = asrcols[2]) + facet_wrap(~ stage, scales = "free")  +
-  scale_x_continuous(breaks = xValues) +
+  scale_x_continuous(breaks = seq(startYear, resultsYear),
+    labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
+    limits = c(startYear, resultsYear)) +
   expand_limits(y = 0) +
   scale_y_continuous(labels = comma) + 
   ylab("Number of people") + xlab("Year") +  
@@ -430,7 +434,9 @@ if (pubPlots) {
       geom_ribbon(aes(ymin = lower, ymax = upper), 
         fill = asrcols[2], alpha = 0.4) +
       geom_line(color = asrcols[2]) + 
-      scale_x_continuous(breaks = xValues) +
+      scale_x_continuous(breaks = seq(startYear, resultsYear),
+        labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
+        limits = c(startYear, resultsYear)) +
       expand_limits(y = 0) +
       scale_y_continuous(labels = comma) + 
       ylab(yLabels[ii]) + xlab("Year") +  
@@ -463,7 +469,9 @@ if (pubPlots) {
     yeardiagnosis >= startYear), 
     aes(x = yeardiagnosis, y = uniquecases)) +
     geom_line(color = asrcols[2])  +
-    scale_x_continuous(breaks = xValues) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
+      limits = c(startYear, resultsYear)) +
     expand_limits(y = 0) +
     scale_y_continuous(labels = comma) + 
     ylab("Number of unique cases") + xlab("Year") +  
@@ -516,7 +524,8 @@ if (pubPlots) {
     geom_ribbon(aes(ymin = deaths_min, ymax = deaths_max), 
       fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
-    scale_x_continuous(breaks = xValues,
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     expand_limits(y = 0) +
     scale_y_continuous(labels = comma) + 
@@ -528,7 +537,8 @@ if (pubPlots) {
     geom_ribbon(aes(ymin = drlower, ymax = drupper), 
       fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
-    scale_x_continuous(breaks = xValues,
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = percent, limits = c(0, 0.02)) + 
     ylab("Mortality rate (%)") + xlab("Year") +  
@@ -541,7 +551,8 @@ if (pubPlots) {
   plotMigrants <- ggplot(data = hivResults, aes(x = yeardiagnosis, 
     y = emmigrants)) +
     geom_line(color = asrcols[2])  +
-    scale_x_continuous(breaks = xValues,
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     expand_limits(y = 0) +
     scale_y_continuous(labels = comma) + 
@@ -552,7 +563,8 @@ if (pubPlots) {
   plotMigrationRate <- ggplot(data = hivResults, 
     aes(x = yeardiagnosis, y = mrate)) +
     geom_line(color = asrcols[2])  +
-    scale_x_continuous(breaks = xValues,
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = percent, limits = c(0, 0.01)) + 
     ylab("Emmigration rate (%)") + xlab("Year") +  
@@ -623,7 +635,9 @@ if (pubPlots) {
     geom_ribbon(aes(ymin = artcov_min, ymax =  artcov_max), 
       fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
-    scale_x_continuous(breaks = xValues) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
+      limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = percent) + 
     coord_cartesian(ylim = c(0,1)) +
     ylab("ART coverage of\nPLDHIV (%)") + xlab("Year") +  
@@ -655,7 +669,9 @@ if (pubPlots) {
     geom_ribbon(aes(ymin = suscov_min, ymax = suscov_max), 
       fill = asrcols[2], alpha = 0.4) + 
     geom_line(color = asrcols[2])  +
-    scale_x_continuous(breaks = xValues) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
+      limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = percent, limits = c(0, 1)) + 
     ylab("PLHIV suppressed (%)") + xlab("Year") +  
     PlotOptions()
@@ -710,7 +726,9 @@ if (newInfectsPlots) {
     geom_ribbon(aes(ymin = lower, ymax = upper),
       alpha = 0.3, fill = "red") +
     geom_line(aes(y = estimate), colour = "red") +
-    scale_x_continuous(breaks = xValues) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
+      limits = c(startYear, resultsYear)) +
     scale_y_continuous(label = comma, limits = c(0, 1500))+
     ylab("New infections") + xlab("Year") +
     PlotOptions()
@@ -723,7 +741,9 @@ if (newInfectsPlots) {
       ymax = 100 * upper / plhivLower),
       alpha = 0.3, fill = "black") +
     geom_line(aes(y = 100 * estimate / plhivEstimate), colour = "black") +
-    scale_x_continuous(breaks = xValues) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
+      limits = c(startYear, resultsYear)) +
     expand_limits(y = 0) +
     ylab("New infections\nper 100 PLHIV") + xlab("Year") +
     PlotOptions()
@@ -732,7 +752,7 @@ if (newInfectsPlots) {
   
   # Add number of notifications/diagnoses unadjusted for duplicates excluding 
   # previously diagnosed overseas for comparison
-
+  
   diagsData <- hivSet %>% 
     group_by(yearhiv) %>%
     filter(is.na(previ_diag_overseas)) %>%
@@ -754,8 +774,10 @@ if (newInfectsPlots) {
       alpha = 0.3, fill = "red") +
     geom_line(aes(y = estimate / estimate[1], colour = "infections")) +
     geom_line(aes(y = diagsData$diags / diagsData$diags[1],
-        colour = "diags")) +
-    scale_x_continuous(breaks = xValues) +
+      colour = "diags")) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
+      limits = c(startYear, resultsYear)) +
     scale_y_continuous(label = percent, limits = c(0, 1.5)) +
     scale_colour_manual(name = NULL,
       values = c("red", "black", "blue"),
@@ -855,7 +877,7 @@ if (asrCascades && linkageplots) {
   # each exposure group - issues with using unique cases due to 
   # differences in the cumulative number uniquw being negative !!
   # Therefore use notifications overall for calculations. 
-
+  
   expLinked <- hivSet %>% 
     group_by(expgroup, yeardiagnosis) %>% 
     filter(linked == "yes") %>%
@@ -876,9 +898,9 @@ if (asrCascades && linkageplots) {
     #   noncases = sum(uniquecases)) %>%
     # select(-linked, -uniquecases, -proplinked) %>%
     mutate(proplinked = linked / notifications)
-    # filter(expgroup == "hetero") %>%
-    # select(-expgroup)
-    # 
+  # filter(expgroup == "hetero") %>%
+  # select(-expgroup)
+  # 
   # Create the plots - plot after 1984 to exclude small numbers 
   # early in the epidemic
   
@@ -894,7 +916,7 @@ if (asrCascades && linkageplots) {
     filter(yeardiagnosis >= 1984) %>% 
     select(yeardiagnosis, proplinked) %>%
     write_csv(file.path(figFolder, paste0("linkage_prop_", 
-    toString(startYear), "-", toString(resultsYear), ".csv")))
+      toString(startYear), "-", toString(resultsYear), ".csv")))
   
   # Turns out there is not much difference in % linked between MSM and
   # non-MSM so exclude from plot
@@ -902,14 +924,15 @@ if (asrCascades && linkageplots) {
     aes(x = yeardiagnosis, y = proplinked)) + 
     geom_line(aes(colour = "all"))  +
     geom_line(data = filter(expLinked, expgroup == "msm"),
-                            aes(x = year, y = proplinked, colour = "msm")) +
+      aes(x = year, y = proplinked, colour = "msm")) +
     geom_line(data = nonMsmLinked, aes(x = year, y = proplinked,
       colour = "nonmsm")) +
-     scale_colour_manual(name = "",
+    scale_colour_manual(name = "",
       breaks = c("all", "msm", "nonmsm"),
       values = c("black", asrcols[2], asrcols[4]),
       labels =  c("All", "MSM", "non-MSM")) +
-    scale_x_continuous(breaks = xValues,
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     scale_y_continuous(label = percent, limits = c(0, 1)) + 
     ylab("Annual diagnoses \n linked to care") + xlab("Year") +
@@ -940,8 +963,8 @@ if (asrCascades && linkageplots) {
     filter(dayslinked >= 0) %>%
     mutate(weeklinked = ceiling(dayslinked/7)) %>%
     mutate(weeklinked = ifelse(weeklinked == 0, 1, weeklinked))
-
-    # days linked for MSM and non-MSM
+  
+  # days linked for MSM and non-MSM
   msmLinkDays <- filter(linkDays, expgroup == "msm") 
   nonMsmLinkdays <- filter(linkDays, expgroup != "msm")
   
@@ -1020,7 +1043,9 @@ if (asrCascades && linkageplots) {
   aveCd4Plot <- ggplot(data = allCd4, aes(x = year, y = cd4, 
     color = category)) + 
     geom_line() +
-    scale_x_continuous(breaks = xValues) +
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
+      limits = c(startYear, resultsYear)) +
     scale_colour_manual(name = "",
       values = c("black", asrcols[2], asrcols[4]),
       labels =  c("All", "MSM", "non-MSM")) +

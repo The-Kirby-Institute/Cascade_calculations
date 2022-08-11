@@ -84,10 +84,10 @@ indicatorNames <- c("infected" = "Living with HIV",
   "ipr" = "Incidence prevalence ratio",
   "imr" = "Incidence mortality ratio")
 
-indicatorNamesNeat <- c("infected" = "Number living with HIV\n ",
-  "pldhiv" = "Number diagnosed\n ",
-  "retained" = "Number retained in care\n ",
-  "numART" = "Number on ART\n ",
+indicatorNamesNeat <- c("infected" = "Number living with HIV",
+  "pldhiv" = "Number diagnosed",
+  "retained" = "Number retained in care",
+  "numART" = "Number on ART",
   "suppressed" = "Number suppressed\n(VL < 200 copies/ml)",
   "undiagnosed" = "Number living with HIV\nundiagnosed",
   "noART" = "Number diagnosed\n not on ART",
@@ -99,10 +99,10 @@ indicatorNamesNeat <- c("infected" = "Number living with HIV\n ",
   "proptreated" =  "Percentage diagnosed\non ART",
   "propsuppressed" =  "Percentage on\nART suppressed",
   "propoverall" = "Percentage overall\nsuppressed",
-  "ydf" = "Yearly diagnosed fraction\n ",
-  "cdr" = "Case detection rate\n ",
-  "ipr" = "Incidence prevalence ratio\n ",
-  "imr" = "Incidence mortality ratio\n ")
+  "ydf" = "Yearly diagnosed fraction", 
+  "cdr" = "Case detection rate",
+  "ipr" = "Incidence prevalence ratio",
+  "imr" = "Incidence mortality ratio")
 
 # Create output directory
 if (savePlots) {
@@ -121,8 +121,6 @@ asrcols <- PlotColors("hivcascade5")
 
 # Number of x-axis labels
 xTicks <- 4
-# Position of x-axis ticks in plots
-xValues <- seq(startYear+1, resultsYear, by = 4)
 
 ```
 
@@ -282,7 +280,7 @@ diagsPlot <- ggplot(data = diagsDataExclude, aes(x = year)) +
     guide = guide_legend(nrow = 3)) +
   scale_y_continuous(labels = comma, limits = c(0, 1500)) +
   scale_x_continuous(breaks = seq(startYear, resultsYear),
-    labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
+    labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
     limits = c(startYear, resultsYear)) +
   ylab("Annual notifications") + xlab("Year") +
   PlotOptions() 
@@ -378,7 +376,7 @@ PlotTrend <- function(data, models, indicator, trend = TRUE) {
     geom_line(color = asrcols[2]) + 
     geom_point(color = asrcols[2]) +
     scale_x_continuous(breaks = seq(startYear, resultsYear),
-      labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     ylab(yLabels[indicator]) + xlab("Year") +  
     scale_y_continuous(labels = comma, limits = c(0, NA)) +
@@ -616,7 +614,7 @@ plotPropFull <- function(proportion, lmmodel, logmodel, expmodel, expoffset,
       labels = c("Estimated proportion", "Linear model", 
         "Logistic model", "Exponential model")) + 
     scale_x_continuous(breaks = seq(startYear, resultsYear),
-      labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = percent, limits = c(0, ymax)) + 
     ylab(label) + xlab("Year") +  
@@ -631,7 +629,7 @@ plotProp <- function(proportion, expmodel, expoffset, label, ymax = 1,
     geom_line(aes(y = proportion), color = asrcols[2]) + 
     geom_point(aes(y = proportion), color = asrcols[2]) +
     scale_x_continuous(breaks = seq(startYear, resultsYear),
-      labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = percent, limits = c(0, ymax)) + 
     ylab(label) + xlab("Year") +  
@@ -1280,7 +1278,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     # after 2019 which is justifiable I think due to COVID. 
     modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
       "segModel2", "segModel3","segModel4"),
-      minimum_gap = c(resultsYear - startYear, 
+      minimum_gap = c(Inf, # No breakpoints 
         min(diff(c(startYear, unname(segModel1$psi[, "Est."])))), 
         min(diff(c(startYear, unname(segModel2$psi[, "Est."])))),
         min(diff(c(startYear, unname(segModel3$psi[, "Est."])))), 
@@ -1288,7 +1286,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
   } else {
     modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
       "segModel2", "segModel3","segModel4"),
-      minimum_gap = c(resultsYear - startYear, 
+      minimum_gap = c(Inf, # No breakpoints 
         min(diff(c(startYear, unname(segModel1$psi[, "Est."]), resultsYear))),
         min(diff(c(startYear, unname(segModel2$psi[, "Est."]), resultsYear))),
         min(diff(c(startYear, unname(segModel3$psi[, "Est."]), resultsYear))),
@@ -1362,7 +1360,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     geom_line(data = modelData, aes(y = segvalue4,
       colour = "segment4")) +
     scale_x_continuous(breaks = seq(startYear, resultsYear),
-      labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = comma, limits = c(0, ymax)) + 
     scale_colour_manual("", values = c(asrcols[2], "black", "blue", 
@@ -1414,7 +1412,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     geom_vline(xintercept = unname(bestModel$psi[, "Est."]),
       linetype = "dashed") +
     scale_x_continuous(breaks = seq(startYear, resultsYear),
-      labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = comma, limits = c(0, ymax)) + 
     scale_colour_manual("", values = c(asrcols[2], "black"), 
@@ -1495,7 +1493,8 @@ ymax <- c("infected" = 35000,
   "propoverall" = 1,
   "ydf" = 1,  
   "cdr"=  5.0,
-  "ipr" = 0.1)
+  "ipr" = 0.1,
+  "imr" = 20)
 
 offsets <- list("infected" = 1,
   "pldhiv" = 1,
@@ -1513,7 +1512,8 @@ offsets <- list("infected" = 1,
   "propoverall" = expTrendData$infected,
   "ydf" = expTrendData$ydfoffest,
   "cdr"=  expTrendData$infections,
-  "ipr" = expTrendData$iproffset)
+  "ipr" = expTrendData$iproffset,
+  "imr" = expTrendData$imroffset)
 
 yPercent <- c("infected" = FALSE,
   "pldhiv" = FALSE,
@@ -1531,7 +1531,8 @@ yPercent <- c("infected" = FALSE,
   "propoverall" = TRUE,
   "ydf" = FALSE,  
   "cdr"=  FALSE,
-  "ipr" = TRUE)
+  "ipr" = TRUE,
+  "imr" = FALSE)
 
 # Generate results -------------------------------------------------------------
 
@@ -1548,7 +1549,7 @@ for (ii in steps) {
     yPercent = yPercent[ii])
 }
 
-# save(segResults, file = file.path(figFolder, "CascadeSegmentedModels.Rda"))
+save(segResults, file = file.path(figFolder, "CascadeSegmentedModels.Rda"))
 
 ```
 
@@ -1644,7 +1645,7 @@ stackPlotBase <- ggplot(data = stackResults, aes(x = year, y = value,
   scale_fill_manual(values = plotCols, name = "", labels = plotLabels, 
     guide = guide_legend(nrow = 2)) +  
   scale_x_continuous(breaks = seq(startYear, resultsYear),
-    labels =  EveryNth(seq(startYear, resultsYear), xTicks, inverse = TRUE),
+    labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
     limits = c(startYear, resultsYear)) +
   PlotOptions() + 
   theme(legend.text = element_text(size = 8))
@@ -1682,17 +1683,14 @@ legend <- get_legend(segResults[["infected"]]$plotBest)
 
 cascadeTrendPlot <- ggdraw() + 
   draw_plot(legend, 0, 0.95, 1, 0.05) + 
-  draw_plot(RmLegened(segResults[["infected"]]$plotBest), 
-    0, 0.475, 0.5, 0.475) +
-  draw_plot(RmLegened(segResults[["pldhiv"]]$plotBest),
-    0.5, 0.475, 0.5, 0.475) +
-  draw_plot(RmLegened(segResults[["numART"]]$plotBest),
-    0, 0, 0.5, 0.475) +
-  draw_plot(RmLegened(segResults[["suppressed"]]$plotBest),
-    0.5, 0, 0.5, 0.475) +
-  draw_plot_label(c("A", "B", "C", "D"), 
-    c(0, 0.5, 0, 0.5), c(0.95, 0.95, 0.475, 0.475), 
-    size = 12)
+  draw_plot(
+    plot_grid(RmLegened(segResults[["infected"]]$plotBest),
+      RmLegened(segResults[["pldhiv"]]$plotBest),
+      RmLegened(segResults[["numART"]]$plotBest),
+      RmLegened(segResults[["suppressed"]]$plotBest),
+      ncol = 2, nrow = 2, align = "v",
+      labels = c("A", "B", "C", "D", "E", "F")), 0, 0, 1, 0.95)
+  
 captions[["stepTrends"]] <- "Estimates and trends for each HIV cascade step over 2004-2021. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points. "
 
 # Cascade gaps -----------------------------------------------------------------
@@ -1701,47 +1699,37 @@ legend <- get_legend(segResults[["undiagnosed"]]$plotBest)
 
 gapsFullPlot <- ggdraw() +
   draw_plot(legend, 0, 0.95, 1, 0.05) + 
-  draw_plot(RmLegened(segResults[["propdiagnosed"]]$plotBest),
-    0.5, 0.633, 0.5, 0.316) +
-  draw_plot(RmLegened(segResults[["undiagnosed"]]$plotBest), 
-    0, 0.633, 0.5, 0.316) +
-  draw_plot(RmLegened(segResults[["proptreated"]]$plotBest),
-    0.5, 0.316, 0.5, 0.316) +
-  draw_plot(RmLegened(segResults[["noART"]]$plotBest),
-    0, 0.316, 0.5, 0.316) +
-  draw_plot(RmLegened(segResults[["propsuppressed"]]$plotBest),
-    0.5, 0, 0.5, 0.316) +
-  draw_plot(RmLegened(segResults[["unsuppressed"]]$plotBest),
-    0, 0, 0.5, 0.316) +
-  draw_plot_label(c("A", "B", "C", "D", "E", "F"), 
-    c(0, 0.5, 0, 0.5, 0, 0.5), c(0.95, 0.95, 0.633, 0.633, 0.316, 0.316), 
-    size = 12)
-
-captions[["cascadeGaps"]] <- "Trends in the estimated gaps in the HIV cascade. Red lines show the estimated values from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
+   draw_plot(
+     plot_grid(
+  RmLegened(segResults[["propdiagnosed"]]$plotBest),
+  RmLegened(segResults[["undiagnosed"]]$plotBest),
+  RmLegened(segResults[["proptreated"]]$plotBest),
+  RmLegened(segResults[["noART"]]$plotBest),
+  RmLegened(segResults[["propsuppressed"]]$plotBest),
+  RmLegened(segResults[["unsuppressed"]]$plotBest),
+   ncol = 2, nrow = 3, align = "v",
+  labels = c("A", "B", "C", "D", "E", "F")), 0, 0, 1, 0.95)
+  
+captions[["cascadeGaps"]] <- "Trends in the estimated gaps of the HIV cascade over 2004-2021. Red lines show the estimated values from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
 
 # Remaining cascade indicators --------------------------------------------------- 
 
 legend <- get_legend(segResults[["diagnoses_include"]]$plotBest)
 
-indicatorsFullPlot <- ggdraw() +
-  draw_plot(legend, 0, 0.95, 1, 0.05) + 
-  draw_plot(RmLegened(segResults[["diagnoses_include"]]$plotBest),
-    0, 0.633, 0.5, 0.316) +
-  draw_plot(RmLegened(segResults[["diagnoses_exclude"]]$plotBest),
-    0.5, 0.633, 0.5, 0.316) +
-  draw_plot(RmLegened(segResults[["infections"]]$plotBest), 
-    0, 0.316, 0.5, 0.316) +
-  draw_plot(RmLegened(segResults[["ydf"]]$plotBest),
-    0.5, 0.316, 0.5, 0.316) +
-  draw_plot(RmLegened(segResults[["cdr"]]$plotBest),
-    0, 0, 0.5, 0.316) +
-  draw_plot(RmLegened(segResults[["ipr"]]$plotBest),
-    0.5, 0, 0.5, 0.316) +
-  draw_plot_label(c("A", "B", "C", "D", "E", "F"), 
-    c(0, 0.5, 0, 0.5, 0, 0.5), c(0.95, 0.95, 0.633, 0.633, 0.316, 0.316), 
-    size = 12)
+indicatorsFullPlot <-  ggdraw() +
+  draw_plot(legend, 0, 0.95, 1, 0.05) +
+  draw_plot(
+    plot_grid(RmLegened(segResults[["diagnoses_include"]]$plotBest),
+      RmLegened(segResults[["diagnoses_exclude"]]$plotBest),
+      RmLegened(segResults[["infections"]]$plotBest),
+      RmLegened(segResults[["ydf"]]$plotBest),
+      RmLegened(segResults[["cdr"]]$plotBest),
+      RmLegened(segResults[["ipr"]]$plotBest),
+      RmLegened(segResults[["imr"]]$plotBest),
+      ncol = 2, nrow = 3, align = "v",
+      labels = c("A", "B", "C", "D", "E", "F", "G")), 0, 0, 1, 0.95)
 
-captions[["cascadeIndicators"]] <- "Trends in cascade related indicators. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the best fitting piecewise Poisson model predictions. Vertical dashed lines show the location of detected change points."
+captions[["cascadeIndicators"]] <- "Trends in cascade related indicators over 2004-2021. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
 
 # Save combined plots ----------------------------------------------------------
 if (savePlots) {
@@ -1771,7 +1759,7 @@ if (savePlots) {
       toString(startYear), "-",
       toString(resultsYear),
       saveFormat, sep = "")),
-    plot = indicatorsFullPlot, width = 22, height = 25, units = "cm")
+    plot = indicatorsFullPlot, width = 22, height = 32, units = "cm")
   
 }
 
