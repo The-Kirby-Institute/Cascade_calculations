@@ -1677,7 +1677,7 @@ cascadeFullPlot <- ggdraw() +
     size = 12)
 
 # Figure captions
-captions[["cascadeFull"]] <- "HIV notifications in Australia and Australia's HIV cascade to the end of 2021. A) Annual notifications data . B) HIV cascade at end of 2021 including estimates for retained in care (note lower range of Diagnosed and Retained in care adjusted to equal lower range of number Receiving treatment). Horizontal lines show the UNAIDS 90-90-90 targets. C) Estimate numbers and percentages of people living with HIV in each step of the HIV cascade over 2004-2021.  "
+captions[["cascadeFull"]] <- "HIV notifications in Australia and Australia's HIV cascade to the end of 2021. A) Annual notifications data. B) HIV cascade at end of 2021 including estimates for retained in care (note lower range of Diagnosed and Retained in care adjusted to equal lower range of number Receiving treatment). Horizontal lines show the UNAIDS 90-90-90 targets. C) Estimate numbers and percentages of people living with HIV in each step of the HIV cascade over 2004-2021.  "
 
 # Cascade trends ---------------------------------------------------------------
 
@@ -1761,7 +1761,7 @@ if (savePlots) {
       toString(startYear), "-",
       toString(resultsYear),
       saveFormat, sep = "")),
-    plot = indicatorsFullPlot, width = 22, height = 32, units = "cm")
+    plot = indicatorsFullPlot, width = 22, height = 35, units = "cm")
   
 }
 
@@ -1851,8 +1851,8 @@ formatTable$valueEnd <- FormatData(resultsTable$valueEnd,
 
 # Need to overwrite percentage and proportion estimates so they are not rounded
 # and have the right number of decimal places
-percentIndices <- c(25:34, 40:42)
-propIndices <- c(35:39)
+percentIndices <- c(28:36, 43:45)
+propIndices <- c(37:42, 46:48)
 
 formatTable$valueStart[propIndices]  <- FormatData(resultsTable$valueStart[propIndices],
   resultsTable$valueStart_low[propIndices], resultsTable$valueStart_up[propIndices], 
@@ -1872,13 +1872,12 @@ formatTable$valueEnd[percentIndices] <- FormatData(
   100*resultsTable$valueEnd_up[percentIndices], 
   places = 1, decimal = decimalMark)
 
-
 formatTable$breakpoints <- FormatData(resultsTable$breakpoints,
   resultsTable$breakpoints_low, resultsTable$breakpoints_up, 
   thousands = "no", places = 1,
   decimal = decimalMark)
 formatTable$rate_ratios <- FormatData(resultsTable$rate_ratio,
-  resultsTable$rate_ratio_low, resultsTable$rate_ratio_up, places = 4,
+  resultsTable$rate_ratio_low, resultsTable$rate_ratio_up, places = 3,
   decimal = decimalMark)
 
 if (savePlots) {
