@@ -1494,7 +1494,7 @@ ymax <- c("infected" = 35000,
   "propsuppressed" = 1,
   "propoverall" = 1,
   "ydf" = 0.5,  
-  "cdr"=  5.0,
+  "cdr"=  4.0,
   "ipr" = 0.1,
   "imr" = 20)
 
