@@ -45,14 +45,21 @@ cascadeFile <- paste0("HIVcascadeEstimates-", resultsYear,".csv")
 infectionsFile <- paste0("newInfectionsEstimates-", resultsYear,".csv")
 undiagnosedFile <- paste0("plhivEstimates-", resultsYear, ".csv")
 
-# Need all files to get range in deaths
+# Need all pldhiv files (which include previously diagnosed 
+# overseas)to get range in deaths
 diagnosesFile <- paste0("pldhiv-", resultsYear, "-all.csv")
 diagnosesFileLower <- paste0("pldhiv-", resultsYear, "-min.csv")
 diagnosesFileUpper <- paste0("pldhiv-", resultsYear, "-max.csv")
 
+# Read in file with diagnoses excluding previously diagnosed overseas
+
+ecdcFileInclude <- "All_ECDC.csv"
+ecdcFileExclude <- "All_ECDC_exclude.csv"
+
 startYear <- 2000
 
-# New infections parameters
+# New infections parameters -- Default is "exclude" because we consider
+# people previously diagnosed overseas are aware of there status. 
 infectsCalculation <- "exclude" # "include", "exclude" or "middle"
 
 ```
@@ -73,6 +80,7 @@ IndicatorResults <- function(cascadeName) {
       uplower = undiag_percent_lower,
       upupper = undiag_percent_upper) 
   
+  # Read in PLDHIV files for deaths
   pldhivAll <- read_csv(file.path(project, cascadeName, diagnosesFile),
     col_types = cols(.default = "d"), show_col_types = FALSE) %>%
     select(year, diagnoses, deaths)
@@ -88,8 +96,34 @@ IndicatorResults <- function(cascadeName) {
     filter(stage == "infected") %>%
     select(year, value, lower, upper) 
   
+  # Read in adjusted diagnoses
+  if (infectsCalculation == "include") {
+    diagnoses <- read_csv(file.path(project, cascadeName, ecdcFileInclude),
+      show_col_types = FALSE) %>% 
+      select(year, diagnoses = N_HIV_D)
+    
+  } else if (infectsCalculation == "exclude") {
+     diagnoses <- read_csv(file.path(project, cascadeName, ecdcFileExclude),
+      show_col_types = FALSE) %>% 
+      select(year, diagnoses = N_HIV_D)
+  } else {
+    # Its "middle"
+     diagnosesInclude <- read_csv(file.path(project, cascadeName, ecdcFileInclude),
+      show_col_types = FALSE) %>% 
+      select(year, diagnoses_include = N_HIV_D)
+     
+     diagnosesExclude <- read_csv(file.path(project, cascadeName, ecdcFileExclude),
+      show_col_types = FALSE) %>% 
+      select(year, diagnoses_exclude = N_HIV_D)
+     
+     diagnoses <- diagnosesInclude %>%
+         left_join(diagnosesExclude, by = "year") %>%
+       mutate(diagnoses = (diagnoses_include + diagnoses_exclude) / 2) %>%
+       select(year, diagnoses)
+  }
+  
   # Tidy up new infections estimates
-    if (infectsCalculation == "include") {
+  if (infectsCalculation == "include") {
     infectionsResults <- filter(infections, exclude == "no") %>%
        select(-exclude)
   } else if (infectsCalculation == "exclude") {
@@ -107,10 +141,7 @@ IndicatorResults <- function(cascadeName) {
       infections_upper = infectionsInclude$infections_upper)
   }
   
-  # Tidy up diagnoses
-  diagnoses <- pldhivAll %>% 
-    select(year, diagnoses) 
-  
+
   # For PLHIV create start year values for IPR calculation by shifting
   plhiv$start_plhiv <- c(plhiv$value[1], plhiv$value[1:(nrow(plhiv)-1)])
   plhiv$start_plhiv_lower <- c(plhiv$lower[1], plhiv$lower[1:(nrow(plhiv)-1)])
@@ -122,7 +153,7 @@ IndicatorResults <- function(cascadeName) {
   # Tidy up deaths
   deaths <- pldhivAll %>%
     select(year, deaths) %>%
-    mutate(deaths_lower = pldhivUpper$deaths,
+    mutate(deaths_lower = pldhivUpper$deaths, # opposite because we will be dividing
       deaths_upper = pldhivLower$deaths)
   
   # Merge results

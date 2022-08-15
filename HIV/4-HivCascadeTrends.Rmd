@@ -760,11 +760,11 @@ trendData <- bind_rows(trendData, tibble(year = year,
 trendData <- bind_rows(trendData, tibble(year = year,
   stage = "ydfoffest", 
   value = hivCascadeIndicators$undiag + 
-    filter(trendData, stage == "diagnoses_include")$value, 
+    filter(trendData, stage == "diagnoses_exclude")$value, 
   lower = hivCascadeIndicators$undiag_lower + 
-    filter(trendData, stage == "diagnoses_include")$value, 
+    filter(trendData, stage == "diagnoses_exclude")$value, 
   upper = hivCascadeIndicators$undiag_upper+ 
-    filter(trendData, stage == "diagnoses_include")$value))
+    filter(trendData, stage == "diagnoses_exclude")$value))
 trendData <- bind_rows(trendData, tibble(year = year,
   stage = "iproffset",
   # IPR is calculated using the plhiv number from the start of each year
@@ -798,9 +798,9 @@ expTrendData <- trendData %>%
 # imrModel  <- glm(infections ~ year, offset = log(imroffset), 
 #   data = expTrendData, family = "poisson")  
 
-ydfModel <- glm.nb(diagnoses_include ~ year + offset(log(ydfoffest)), 
+ydfModel <- glm.nb(diagnoses_exclude ~ year + offset(log(ydfoffest)), 
   data = expTrendData)
-cdrModel  <- glm.nb(diagnoses_include ~ year + offset(log(infections)),
+cdrModel  <- glm.nb(diagnoses_exclude ~ year + offset(log(infections)),
   data = expTrendData)
 iprModel  <- glm.nb(infections ~ year + offset(log(iproffset)), 
   data = expTrendData)
@@ -1493,7 +1493,7 @@ ymax <- c("infected" = 35000,
   "proptreated" = 1,       
   "propsuppressed" = 1,
   "propoverall" = 1,
-  "ydf" = 1,  
+  "ydf" = 0.5,  
   "cdr"=  5.0,
   "ipr" = 0.1,
   "imr" = 20)
@@ -1703,12 +1703,12 @@ gapsFullPlot <- ggdraw() +
   draw_plot(legend, 0, 0.95, 1, 0.05) + 
   draw_plot(
     plot_grid(
-      RmLegened(segResults[["propdiagnosed"]]$plotBest),
       RmLegened(segResults[["undiagnosed"]]$plotBest),
-      RmLegened(segResults[["proptreated"]]$plotBest),
+      RmLegened(segResults[["propdiagnosed"]]$plotBest),
       RmLegened(segResults[["noART"]]$plotBest),
-      RmLegened(segResults[["propsuppressed"]]$plotBest),
+      RmLegened(segResults[["proptreated"]]$plotBest),
       RmLegened(segResults[["unsuppressed"]]$plotBest),
+      RmLegened(segResults[["propsuppressed"]]$plotBest),
       ncol = 2, nrow = 3, align = "v",
       labels = c("A", "B", "C", "D", "E", "F")), 0, 0, 1, 0.95)
 
@@ -1728,7 +1728,7 @@ indicatorsFullPlot <-  ggdraw() +
       RmLegened(segResults[["cdr"]]$plotBest),
       RmLegened(segResults[["ipr"]]$plotBest),
       RmLegened(segResults[["imr"]]$plotBest),
-      ncol = 2, nrow = 3, align = "v",
+      ncol = 2, nrow = 4, align = "v",
       labels = c("A", "B", "C", "D", "E", "F", "G")), 0, 0, 1, 0.95)
 
 captions[["cascadeIndicators"]] <- "Trends in cascade related indicators over 2004-2021. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
