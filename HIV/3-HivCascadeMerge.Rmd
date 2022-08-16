@@ -22,41 +22,20 @@ source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
-analysisYear <- 2021
-projectName <-  "ASR_2022" # "ASR_2022"; "HIV_Cascade_Paper"
+analysisYear <- 2019
+projectName <-  "Undiagnosed_Metrics_Paper" # "ASR_2022"; "HIV_Cascade_Paper"
 
 multipleCascades <- TRUE
 artNames <- NULL
 
 # If this is an ASR project already have specific populations
-if (multipleCascades && projectName %in% c("ASR_2016", "ASR_2017", 
-  "ASR_2018")) {
-  # cascadeNames <- c("All", "Male", "Female", "Atsi", "AusNonAtsi", "SSA",
-  #   "SEA", "Othercob", "CALD", "MSM", "Hetero", "PWID", "Otherexp",
-  #   "ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA")
-  cascadeNames <- c("All", "Male", "Female", "Atsi", "AusNonAtsi", "MSM", 
-    "Hetero", "PWID", "Otherexp","ACT", "NSW", "VIC", "SSA", "SEA",
-    "Othercob")
-} else if (multipleCascades && projectName == "ASR_2019") {  
-  cascadeNames <- c("All", "Male", "Female", "Indigenous", 
-    "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "ACT", "NSW",
-    "NT", "QLD", "SA", "TAS", "VIC", "WA", "SSA", "SEA", "Othercob")
-} else if (multipleCascades && projectName == "ASR_2020") {  
-  cascadeNames <- c("All", "Male", "Female", "Indigenous", 
-    "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "SSA", "SEA",
-    "Othercob")
-} else if (multipleCascades && projectName == "ASR_2021") {  
-  cascadeNames <- c("All", "Male", "Female", "Indigenous", 
-    "AusNonIndigenous", "MSM", "Hetero", "Pwid", "Otherexp", "ACT", "NSW",
-    "NT", "QLD", "SA", "TAS", "VIC", "WA", "CALD", "SSA", "SEA", "SCA", 
-    "Othercob")  
-} else if (multipleCascades && projectName == "ASR_2022") {
+if (multipleCascades && projectName == "ASR_2022") {
   cascadeNames <- c("All", "Male", "Female", "Indigenous", 
     "AusNonIndigenous", "MSM", "Hetero", "Pwid", "SSA", "SEA", "SCA", 
     "Othercob")
 } else {
   # Specify cascades manually (without year)
-  cascadeNames <- "All" # specify cascades with project 
+  cascadeNames <- "MSM-Aus" # specify cascades with project 
 }
 
 if (is.null(artNames)) {

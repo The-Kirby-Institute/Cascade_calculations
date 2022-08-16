@@ -19,28 +19,18 @@ source(file.path(dirname(getwd()), "code", "PlotOptions.R"))
 ```
 
 ```{r Options}
-projectName <- "HIV_Cascade_Paper" # "ASR_2021" 
-                          # "HIV_Cascade_Paper"
+projectName <- "Undiagnosed_Metrics_Paper"  # "ASR_2021" 
+                                          # "HIV_Cascade_Paper"
+                                          # "Undiagnosed_Metrics_Paper"
 project <- file.path(basePath, "output", projectName)
 
-cascadeList <- c("All-2021")
+# cascadeList <- c("All-2021")
 
 # List for YDF paper
-# cascadeList <- c("Hetero-2019", "Hetero-female-2019",
-#   "Hetero-female-Aus-2019", "Hetero-female-Othercob-2019",
-#   "Hetero-female-SEA-2019", "Hetero-female-SSA-2019",
-#   "Hetero-male-2019", "Hetero-male-Aus-2019", "Hetero-male-Othercob-2019",
-#   "Hetero-male-SEA-2019", "Hetero-male-SSA-2019",
-#   "Indigenous-2019", "MSM-2019", "MSM-Othercob-2019", "MSM-SEA-2019",
-#   "MSM-SSA-2019", "MSM-nonAus-2019")
-
-# List for IPR paper
-# cascadeList <- c("All-2020", "Hetero-2020", "Male-2020", "Female-2020",
-#   "MSM-2020", "Pwid-2020",  "SEA-2020", "SCA-2020", 
-#   "SSA-2020", "Othercob-2020", "Otherexp-IPR-2020")
+resultsYear <- 2019
+cascadeList <- "MSM-Aus-2019" 
 
 # Result files and specifications
-resultsYear <- 2021
 cascadeFile <- paste0("HIVcascadeEstimates-", resultsYear,".csv")
 infectionsFile <- paste0("newInfectionsEstimates-", resultsYear,".csv")
 undiagnosedFile <- paste0("plhivEstimates-", resultsYear, ".csv")
@@ -202,8 +192,8 @@ for (cascade in cascadeList) {
   
   results[[cascade]] <- tempResults  
   
-  write_csv(results[[cascade]], file.path(project, cascade, 
-    "cascadeIndicators.csv"))
+  # write_csv(results[[cascade]], file.path(project, cascade, 
+  #   "cascadeIndicators.csv"))
   
 }
 

@@ -50,14 +50,14 @@ specified project folder and have a cascade file handle.
 
 ```{r Cascade and script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2021
+analysisYear <- 2019
 saveResults <- TRUE
 
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "ASR_2022" # "ASR_2022" for latest ASR
-                                      # "HIV_Cascade_Paper" for paper
+projectOutput <- "Undiagnosed_Metrics_Paper" # "ASR_2022" for latest ASR
+                            # "HIV_Cascade_Paper"
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entered via a file in project Output 
