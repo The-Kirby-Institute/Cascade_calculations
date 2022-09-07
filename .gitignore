@@ -36,7 +36,11 @@ HIV/data/*
 !HIV/data/HIVbaseEstimates-*.csv
 !HIV/data/individualHIVparameters.csv
 !HIV/data/README.md
-HIV/output/
+HIV/output/*
+!HIV/output/Undiagnosed_metrics_paper
+HIV/output/Undiagnosed_metrics_paper/*
+!HIV/output/Undiagnosed_metrics_paper/Final_Results
+!HIV/output/Undiagnosed_metrics_paper/UndiagnosedIndicatorPlots.Rmd
 HIV/trend_analysis/
 HIV/output.dta
 

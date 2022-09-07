@@ -1,0 +1,407 @@
+---
+title: "Undiagnosed indicator plots"
+author: "Richard T. Gray"
+---
+
+This script loads all the estimates and fitted trends for the undiagnosed
+indicator estimates and produces plots for each subpopulation.
+
+```{r Setup}
+# Open as a project (setting working directory to source and restarting R)
+
+# Setup directories
+basePath <- getwd()
+
+# Load standard libraries and options
+require(LeftysRpkg)
+LoadLibrary(tidyverse)
+LoadLibrary(scales)
+LoadLibrary(cowplot)
+options(dplyr.summarise.inform = FALSE) 
+
+# Results file
+resultsPath <- file.path(basePath, "Final_Results")
+estimatesFile <- file.path(resultsPath, "cascadeIndicatorsAll.csv")
+
+```
+
+```{r Load estimates}
+
+cascadeIndicators <- read_csv(estimatesFile, show_col_types = FALSE) %>%
+  filter(year >= 2008) %>%
+  select(year, population, 
+    diagnoses, 
+    undiag, undiag_lower, undiag_upper, 
+    infections, infections_lower, infections_upper,
+    start_plhiv, start_plhiv_lower, start_plhiv_upper,
+    plhiv, plhiv_lower, plhiv_upper, 
+    udf = undiag_percent, udf_lower = uplower, udf_upper = upupper, 
+    ydf, ydf_lower, ydf_upper,
+    cdr, cdr_lower, cdr_upper, 
+    tdf_predict, tdf_predict_lower, tdf_predict_upper,  
+    ydf_predict, ydf_predict_lower, ydf_predict_upper,
+    cdr_predict, cdr_predict_lower, cdr_predict_upper) %>%
+  mutate(tdf = 1 - udf/100, tdf_lower = 1 - udf_upper/100, 
+    tdf_upper = 1- udf_lower/100)
+
+# Change names
+cascadeIndicators <- cascadeIndicators %>%
+  mutate(population = ifelse(population == "MSM-Aus", "msm_aus", population)) %>%
+  mutate(population = ifelse(population == "MSM-nonAus", "msm_os", population)) %>%
+  mutate(population = ifelse(population == "Hetero-male", "male", population)) %>%
+  mutate(population = ifelse(population == "Hetero-female", "female", population))
+
+```
+
+```{r Rearrange data}
+# Functions that rearrange the data so that predictions are a separate 
+# population. Makes it easier to plot
+
+sexData <- function(indicator) {
+  
+  estimatesData <- cascadeIndicators %>% 
+    filter(population %in% c("female", "male")) %>%
+    select(year, population, 
+      estimate = indicator, 
+      lower = paste0(indicator, "_lower"), 
+      upper = paste0(indicator, "_upper"))
+  
+  predictData <- cascadeIndicators %>% 
+    filter(population %in% c("female", "male")) %>%
+    select(year, population, 
+      estimate = paste0(indicator, "_predict"), 
+      lower = paste0(indicator, "_predict_lower"), 
+      upper = paste0(indicator, "_predict_upper")) %>%
+    mutate(population = ifelse(population == "female", "female_trend", 
+      population)) %>%
+    mutate(population = ifelse(population == "male", "male_trend", 
+      population)) %>%
+    bind_rows(estimatesData) %>%
+    # Use factor to order populations to plot and legend
+    mutate(population = factor(population, 
+      levels = c("female", "male", "female_trend", "male_trend" )))
+  
+  return(predictData)
+  
+}
+
+msmData <- function(indicator) {
+  
+  estimatesData <- cascadeIndicators %>% 
+    filter(population %in% c("msm_aus", "msm_os")) %>%
+    select(year, population, 
+      estimate = indicator, 
+      lower = paste0(indicator, "_lower"), 
+      upper = paste0(indicator, "_upper"))
+  
+  predictData <- cascadeIndicators %>% 
+    filter(population %in% c("msm_aus", "msm_os")) %>%
+    select(year, population, 
+      estimate = paste0(indicator, "_predict"), 
+      lower = paste0(indicator, "_predict_lower"), 
+      upper = paste0(indicator, "_predict_upper")) %>%
+    mutate(population = ifelse(population == "msm_aus", "msm_aus_trend", 
+      population)) %>%
+    mutate(population = ifelse(population == "msm_os", "msm_os_trend", 
+      population)) %>%
+    bind_rows(estimatesData) %>%
+    # Use factor to order populations to plot and legend
+    mutate(population = factor(population, 
+      levels = c("msm_aus", "msm_os", "msm_aus_trend", "msm_os_trend")))
+  
+  return(predictData)
+  
+}
+
+```
+
+```{r Plot specifications}
+
+startYear <- min(cascadeIndicators$year)
+endYear <- max(cascadeIndicators$year)
+
+# Legend specifications
+cols <- c(
+  "female" = "red", 
+  "male" = "blue", 
+  "female_trend" = "red", 
+  "male_trend" = "blue", 
+  "msm_aus" = "red", 
+  "msm_os" = "blue",
+  "msm_aus_trend" = "red", 
+  "msm_os_trend" = "blue")
+
+lines <- c(
+  "female" = "dashed", 
+  "male" = "dashed", 
+  "female_trend" = "solid", 
+  "male_trend" = "solid",
+  "msm_aus" = "dashed",
+  "msm_os" = "dashed",
+  "msm_aus_trend" = "solid",
+  "msm_os_trend" = "solid")
+
+shapes <- c(
+  "female" = 16, 
+  "male" = 16, 
+  "female_trend" = NA, 
+  "male_trend" = NA,
+  "msm_aus" = 16,
+  "msm_os" = 16,
+  "msm_aus_trend" = NA, 
+  "msm_os_trend" = NA)
+
+fills <- c(
+  "female" = "red", 
+  "male" = "blue", 
+  "female_trend" = "white", 
+  "male_trend" = "white",
+  "msm_aus" = "red",
+  "msm_os" = "blue",
+  "msm_aus_trend" = "white", 
+  "msm_os_trend" = "white")
+
+legLabels <- c(
+  "female" = "Female estimates",
+  "male" = "Male estimates",
+  "female_trend" = "Female trend",
+  "male_trend" = "Male trend",
+  "msm_aus" = "Australian born\nmale-to-male sexual\ncontact estimates", 
+  "msm_os" = "Overseas born \nmale-to-male sexual\ncontact estimates",
+  "msm_aus_trend" = "Australian born\nmale-to-male sexual\ncontact trend", 
+  "msm_os_trend" = "Overseas born\nmale-to-male sexual\ncontact trend")
+```
+
+```{r Plot function}
+
+PopPlot <- function(plotData, ylabel) {
+  
+  plot <- ggplot(data = plotData, aes(x = year, y = estimate, colour = population, 
+    linetype = population, fill = population, shape = population)) + 
+    geom_line() +
+    geom_point() +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1, colour = NA) +
+    # scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0,0.4)) +
+    scale_x_continuous(breaks = seq(startYear, endYear),
+      labels = EveryNth(seq(startYear, endYear), 2, inverse = TRUE),
+      limits = c(startYear, endYear)) +
+    scale_colour_manual(name = "", 
+      breaks = levels(plotData$population),
+      values = cols[levels(plotData$population)], 
+      labels = legLabels[levels(plotData$population)]) +
+    scale_linetype_manual(name = "", 
+      breaks = levels(plotData$population),
+      values = lines[levels(plotData$population)], 
+      labels = legLabels[levels(plotData$population)]) +
+    scale_shape_manual(name = "", 
+      breaks = levels(plotData$population),
+      values = shapes[levels(plotData$population)], 
+      labels = legLabels[levels(plotData$population)]) +
+    scale_fill_manual(name = "", 
+      breaks = levels(plotData$population),
+      values = fills[levels(plotData$population)], 
+      labels = legLabels[levels(plotData$population)]) +
+    xlab("Year") + ylab(ylabel) +
+    PlotOptions() + theme(legend.position = "right")
+  
+  return(plot)
+}
+
+```
+
+```{r Plot for sex}
+
+sextdf <- sexData("tdf")
+sexydf <- sexData("ydf")
+sexcdr <- sexData("cdr")
+
+# Produce plots
+sextdfPlot <- PopPlot(sextdf, "Total diagnosed fraction  (%)") +
+  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0,1))
+sexydfPlot <- PopPlot(sexydf, "Yearly diagnosed fraction (%)") +
+  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0,0.4))
+sexcdrPlot <- PopPlot(sexcdr, "Case detection rate") + expand_limits(y =0)
+
+SaveFigure(resultsPath, "YDF_Sex", sexydfPlot)
+SaveFigure(resultsPath, "CDR_Sex", sexcdrPlot)
+SaveFigure(resultsPath, "TDF_Sex", sextdfPlot)
+
+# Create and save a combined plot
+legend <- GetLegend(sexydfPlot + theme(legend.position = "bottom"))
+
+combinePlotSex <- ggdraw() +
+  draw_plot(sextdfPlot + theme(legend.position = "none"), 0, 0.1, 0.33, 0.9) +
+  draw_plot(sexydfPlot + theme(legend.position = "none"), 0.33, 0.1, 0.33, 0.9) +
+  draw_plot(sexcdrPlot + theme(legend.position = "none"), 0.66, 0.1, 0.33, 0.9) +
+  draw_plot(legend, 0, 0, 1, 0.1) +
+  draw_plot_label(c("A", "B", "C"), c(0, 0.33, 0.66), c(1, 1, 1),  size = 12) +
+  theme(plot.background = element_rect(fill="white", color = NA))
+
+SaveFigure(resultsPath, "Undiagnosed_Figure1_Sex", combinePlotSex, width = 25)
+
+```
+
+```{r Plot for MSM}
+
+msmtdf <- msmData("tdf")
+msmydf <- msmData("ydf")
+msmcdr <- msmData("cdr")
+
+# Produce plots
+msmtdfPlot <- PopPlot(msmtdf, "Total diagnosed fraction  (%)") +
+  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0,1))
+msmydfPlot <- PopPlot(msmydf, "Yearly diagnosed fraction (%)") +
+  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0,0.5))
+msmcdrPlot <- PopPlot(msmcdr, "Case detection rate") + expand_limits(y =0)
+
+
+SaveFigure(resultsPath, "TDF_MSM", msmtdfPlot)
+SaveFigure(resultsPath, "YDF_MSM", msmydfPlot)
+SaveFigure(resultsPath, "CDR_MSM", msmcdrPlot)
+
+# Create and save a combined plot
+legend <- GetLegend(msmtdfPlot + theme(legend.position = "bottom"))
+
+combinePlotMSM <- ggdraw() +
+  draw_plot(msmtdfPlot + theme(legend.position = "none"), 0, 0.1, 0.33, 0.9) +
+  draw_plot(msmydfPlot + theme(legend.position = "none"), 0.33, 0.1, 0.33, 0.9) +
+  draw_plot(msmcdrPlot + theme(legend.position = "none"), 0.66, 0.1, 0.33, 0.9) +
+  draw_plot(legend, 0, 0, 1, 0.1) +
+  draw_plot_label(c("A", "B", "C"), c(0, 0.33, 0.66), c(1, 1, 1),  size = 12) +
+  theme(plot.background = element_rect(fill="white", color = NA))
+
+SaveFigure(resultsPath, "Undiagnosed_Figure2_M2M", combinePlotMSM, width = 25)
+
+```
+
+
+```{r Summary table}
+# Function to produce row
+IndRow <- function(pop, ind, type = c("number", "percent", "decimal")) {
+  
+  type <- match.arg(type)
+  
+  temp <- cascadeIndicators %>%
+    filter(population == pop) %>%
+    select("year", contains(ind)) 
+  
+  indVec <- as_vector(temp[,ind])
+  indVecLow <- as_vector(temp[,paste0(ind, "_lower")])
+  indVecHigh <- as_vector(temp[,paste0(ind, "_upper")])
+  
+  if (type == "number") {
+    vector <- FormatData(indVec, indVecLow, indVecHigh, places = 0)
+  } else if(type == "percent") {  
+    vector <- FormatData(100*indVec, 100*indVecLow, 100*indVecHigh, suffix = "%", 
+      places = 1)
+  } else if (type == "decimal") {
+    vector <- FormatData(indVec, indVecLow, indVecHigh, 
+      places = 2)
+  }
+  
+  final <- tibble(year = temp$year, neat = vector) %>%
+    spread(year, neat)
+  
+  return(final)
+  
+}
+
+# Function to produce diagnoses row
+DiagRow <- function(pop) {
+  row <- cascadeIndicators %>%
+    filter(population == pop) %>%
+    select(year, diagnoses) %>% 
+    mutate(diagnoses = FormatData(diagnoses, places = 0)) %>%
+    spread(year, diagnoses)
+  return(row)
+}
+
+metricList <- c("diagnoses", "infections", "undiag", "plhiv", "tdf", "ydf", "cdr")
+
+# Generate rows for each population
+totalDiags <- cascadeIndicators %>%
+  group_by(year) %>%
+  summarise(total_diags = sum(diagnoses)) %>%
+  ungroup() %>%
+  mutate(total_diags = FormatData(total_diags, places = 0)) %>%
+  spread(year, total_diags) %>%
+  mutate(population = "all", 
+    metric = "diagnoses") %>%
+  select(population, metric, everything())
+
+msmAusResults <- DiagRow("msm_aus") %>% 
+  bind_rows(IndRow("msm_aus", "infections", "number")) %>% 
+  bind_rows(IndRow("msm_aus", "undiag", "number")) %>% 
+  bind_rows(IndRow("msm_aus", "plhiv", "number")) %>% 
+  bind_rows(IndRow("msm_aus", "tdf", "percent")) %>% 
+  bind_rows(IndRow("msm_aus", "ydf", "percent")) %>% 
+  bind_rows(IndRow("msm_aus", "cdr", "decimal")) %>%
+  mutate(population = "msm_Aus", 
+    metric = metricList) %>%
+  select(population, metric, everything())
+
+msmosResults <- DiagRow("msm_os") %>%
+  bind_rows(IndRow("msm_os", "infections", "number")) %>% 
+  bind_rows(IndRow("msm_os", "undiag", "number")) %>% 
+  bind_rows(IndRow("msm_os", "plhiv", "number")) %>% 
+  bind_rows(IndRow("msm_os", "tdf", "percent")) %>% 
+  bind_rows(IndRow("msm_os", "ydf", "percent")) %>% 
+  bind_rows(IndRow("msm_os", "cdr", "decimal")) %>%
+  mutate(population = "msm_Os", 
+    metric = metricList) %>%
+  select(population, metric, everything())
+
+femaleResults <- DiagRow("female") %>%
+  bind_rows(IndRow("female", "infections", "number")) %>% 
+  bind_rows(IndRow("female", "undiag", "number")) %>% 
+  bind_rows(IndRow("female", "plhiv", "number")) %>% 
+  bind_rows(IndRow("female", "tdf", "percent")) %>% 
+  bind_rows(IndRow("female", "ydf", "percent")) %>% 
+  bind_rows(IndRow("female", "cdr", "decimal")) %>%
+  mutate(population = "female", 
+    metric = metricList) %>%
+  select(population, metric, everything())
+
+maleResults <- DiagRow("male") %>%
+  bind_rows(IndRow("male", "infections", "number")) %>% 
+  bind_rows(IndRow("male", "undiag", "number")) %>% 
+  bind_rows(IndRow("male", "plhiv", "number")) %>% 
+  bind_rows(IndRow("male", "tdf", "percent")) %>% 
+  bind_rows(IndRow("male", "ydf", "percent")) %>% 
+  bind_rows(IndRow("male", "cdr", "decimal")) %>%
+  mutate(population = "male", 
+    metric = metricList) %>%
+  select(population, metric, everything())
+
+tableResults <- totalDiags %>%
+  bind_rows(msmAusResults) %>%
+  bind_rows(msmosResults) %>% 
+  bind_rows(femaleResults) %>% 
+  bind_rows(maleResults)
+
+write_excel_csv(tableResults, file.path(resultsPath, "TableResults.csv"))
+
+# Totals
+totalMetrics <- function(pop) {
+  filter(cascadeIndicators, population == pop) %>% 
+    summarise(pop = pop, total_diags =   sum(diagnoses), 
+      total_infects = sum(infections))
+}
+
+totals <- cascadeIndicators %>%
+  summarise(pop = "all", total_diags = sum(diagnoses), 
+    total_infects = sum(infections)) %>%
+  bind_rows(totalMetrics("msm_aus")) %>% 
+  bind_rows(totalMetrics("msm_os")) %>%
+  bind_rows(totalMetrics("female")) %>%
+  bind_rows(totalMetrics("male")) %>%
+  gather("year", "total", 2:3) %>%
+  mutate(total = FormatData(total, places = 0)) %>%
+  arrange(pop)
+
+write_excel_csv(totals, file.path(resultsPath, "TableResultsTotals.csv"))
+
+```
+
+
+
