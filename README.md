@@ -98,9 +98,9 @@ The following publications are associated with this project and used code in thi
 - T Marukutira, RT Gray, C Douglass, C El-Hayek, C Moreira, J Asselin, B Donovan, et al. Gaps in the HIV Diagnosis and Care Cascade for Migrants in Australia, 2013–2017: A Cross-Sectional Study. PLOS Medicine 2020;17:e1003044. 
     - Published results produced using [version v4.1_migrant_cascade_paper](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.1_migrant_cascade_paper); doi:[10.5281/zenodo.3600660](http://doi.org/10.5281/zenodo.3600660)
 <br></br>
-PG Patel, P Keen, H McManus, T Duck, D Callander, C Selvey, C Power, et al. Increased Targeted HIV Testing and Reduced Undiagnosed HIV Infections among Gay and Bisexual Men. HIV Medicine 2021;22:605–16. https://doi.org/10.1111/hiv.13102.
+- PG Patel, P Keen, H McManus, T Duck, D Callander, C Selvey, C Power, et al. Increased Targeted HIV Testing and Reduced Undiagnosed HIV Infections among Gay and Bisexual Men. HIV Medicine 2021;22:605–16. https://doi.org/10.1111/hiv.13102.
     - Results produced using [version v4.15_ASR_2019](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.15_ASR_2019) 
 <br></br>
-JH Stephens,RT Gray, R Guy, T Vickers, J Ward. A HIV Diagnosis and Treatment Cascade for Aboriginal and Torres Strait Islander Peoples of Australia. AIDS Care 2021. https://doi.org/10.1080/09540121.2021.2001416.
+- JH Stephens,RT Gray, R Guy, T Vickers, J Ward. A HIV Diagnosis and Treatment Cascade for Aboriginal and Torres Strait Islander Peoples of Australia. AIDS Care 2021. https://doi.org/10.1080/09540121.2021.2001416.
     - Results produced using [version v4.15_ASR_2019](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.15_ASR_2019) 
 
