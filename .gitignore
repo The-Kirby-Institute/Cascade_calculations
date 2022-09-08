@@ -41,6 +41,7 @@ HIV/output/*
 HIV/output/Undiagnosed_metrics_paper/*
 !HIV/output/Undiagnosed_metrics_paper/Final_Results
 !HIV/output/Undiagnosed_metrics_paper/UndiagnosedIndicatorPlots.Rmd
+!HIV/output/Undiagnosed_metrics_paper/Statistical_Analysis
 HIV/trend_analysis/
 HIV/output.dta
 
