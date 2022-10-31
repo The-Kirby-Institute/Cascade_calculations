@@ -47,6 +47,8 @@ currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 resultsYear <- 2021 # year of cascade we will calculate and plot   
 dataYear <- 2021 # year data for estimates was generated (to handle updated 
                  # data) this is the data output year as well.
+numyears <- 5 # Number of years of cascades
+
 saveCascade <- TRUE                    
 saveplots <- TRUE # Save plots as separate files
 fileType <- ".tiff" # ".png" for documents; .tiff for paper
@@ -94,7 +96,6 @@ treatFile <- file.path(dataFolder, paste("chlamtreatment",
 notifications <-  read.csv(notificationsFile)
 incidence <- read.csv(incidenceFile)
 treatment <- read.csv(treatFile) 
-
 
 if (retestRange) {
   
@@ -202,14 +203,14 @@ if (retestRange) {
 ```{r extractResults}
 # Extract the actual results we want - resultsYear for 15-29 year olds
 currentDiags <- notifications %>% 
-  filter(year %in% c((resultsYear-2):resultsYear)) %>%
+  filter(year %in% c((resultsYear-numyears+1):resultsYear)) %>%
   select(-male...15.yrs, -male.30.34.yrs, -male...34.yrs, -male.all, 
     -female...15.yrs, -female.30.34.yrs, -female...34.yrs,
     -female.all)
 
 # Current incidence
 currentInc <- incidence %>% 
-  filter(year %in% c((resultsYear-2):resultsYear))
+  filter(year %in% c((resultsYear-numyears+1):resultsYear))
 
 # Current treatment data
 currentTreat <- treatment %>%
@@ -235,9 +236,9 @@ femaleIncUpper <- currentInc[, 5]
 
 chlamcascade <- rbind(chlamcascade, 
   data.frame(stage = "infections",
-    year = rep((resultsYear-2):resultsYear, 3),
+    year = rep((resultsYear- numyears + 1):resultsYear, 3),
     sex = rep(c("male", "female", "all"), 
-      each = length((resultsYear-2):resultsYear)),
+      each = length((resultsYear - numyears + 1):resultsYear)),
     estimate = c(maleInc, femaleInc, 
       maleInc + femaleInc),
     lower = c(maleIncLower, femaleIncLower,
@@ -313,9 +314,9 @@ if (!paper && resultsYear %in% 2015:2016) {
 # Generate cascade
 chlamcascade <- rbind(chlamcascade, 
   data.frame(stage = "notifications",
-    year = rep((resultsYear-2):resultsYear, 3),
+    year = rep((resultsYear - numyears + 1):resultsYear, 3),
     sex = rep(c("male", "female", "all"), 
-      each = length((resultsYear-2):resultsYear)), 
+      each = length((resultsYear - numyears + 1):resultsYear)), 
     estimate = c(maleDiags, femaleDiags,
       maleDiags + femaleDiags),
     lower = c(lowerMaleDiags,
@@ -360,7 +361,7 @@ propTreatedUrban <- filter(weightsClinic, context == "gp")$proportion *
   filter(treatedDF, region == "urban", context == "gp")$proportion + 
   (1 - filter(weightsClinic, context == "gp")$proportion) * 
   filter(treatedDF, region == "urban", context == "other")$proportion
-propTreatedUrban <- tibble(year = (resultsYear-2):resultsYear,
+propTreatedUrban <- tibble(year = (resultsYear - numyears + 1):resultsYear,
   region = "urban", 
   proportion = propTreatedUrban)
 
@@ -368,13 +369,13 @@ propTreatedRegion <- filter(weightsClinic, context == "gp")$proportion *
   filter(treatedDF, region == "regional", context == "gp")$proportion + 
   (1 - filter(weightsClinic, context == "gp")$proportion) * 
   filter(treatedDF, region == "regional", context == "other")$proportion
-propTreatedRegion <- tibble(year = (resultsYear-2):resultsYear, 
+propTreatedRegion <- tibble(year = (resultsYear - numyears + 1):resultsYear, 
   region = "regional", 
   proportion = propTreatedRegion)
 
 propTreatedRemote <- rowMeans(matrix(filter(treatedDF, 
-  region == "remote")$proportion, nrow = 3, byrow = TRUE))
-propTreatedRemote <- tibble(year = (resultsYear-2):resultsYear, 
+  region == "remote")$proportion, nrow = numyears, byrow = TRUE))
+propTreatedRemote <- tibble(year = (resultsYear - numyears + 1):resultsYear, 
   region = "remote",
   proportion = propTreatedRemote)
 
@@ -765,7 +766,8 @@ if (saveCascade) {
   
   # Cascade
   saveString1 <- paste0("chlamydia_cascade-", resultsYear, ".csv")
-  saveString2 <- paste0("chlamydia_cascade_trend-", resultsYear-2, "-", resultsYear, ".csv")
+  saveString2 <- paste0("chlamydia_cascade_trend-", resultsYear - numyears + 1, 
+    "-", resultsYear, ".csv")
   
   
   write.csv(filter(chlamcascade, year == resultsYear), file = file.path(resultsFolder, saveString1), 
