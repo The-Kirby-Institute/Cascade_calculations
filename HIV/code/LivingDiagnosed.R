@@ -142,6 +142,9 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
       annualdiags[ii] - (deathrate[ii] + migration[ii] +
                            departs[ii]) * nliving[ii-1] +
       arrivals[ii] * (pldhiv[ii-1] - nliving[ii-1])
+    
+    # With small numbers can sometimes get a negative so check and replace with 0
+    nliving[ii] <- ifelse(nliving[ii] < 0, 0, nliving[ii])
 
     # Annual estimates for new formula
     nduplicates[ii] <- (1 - propunique[ii]) * annualdiags[ii]

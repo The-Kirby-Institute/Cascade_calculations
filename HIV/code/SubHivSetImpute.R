@@ -56,9 +56,15 @@ SubHivSetImpute <- function(hivdataframe, fAge, fGender, fExposure, fCob,
   
   if (fExposure[1] != 'all') {
     # Exclude ones we don't want and keep ones we want
-    excludeframe <- bind_rows(excludeframe, 
-      filter(includeframe, !(expgroup %in% fExposure)))
-    includeframe <- filter(includeframe, expgroup %in% fExposure) 
+    if (fExposure[1] == "non-msm") {
+      excludeframe <- bind_rows(excludeframe, 
+        filter(includeframe, expgroup == "msm"))
+      includeframe <- filter(includeframe, expgroup != "msm") 
+    } else {
+      excludeframe <- bind_rows(excludeframe, 
+        filter(includeframe, !(expgroup %in% fExposure)))
+      includeframe <- filter(includeframe, expgroup %in% fExposure) 
+    }
   }
   
   if (fCob[1] != 'all') {
