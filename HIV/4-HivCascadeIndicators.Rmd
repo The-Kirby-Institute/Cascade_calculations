@@ -19,16 +19,14 @@ source(file.path(dirname(getwd()), "code", "PlotOptions.R"))
 ```
 
 ```{r Options}
-projectName <- "Undiagnosed_Metrics_Paper"  # "ASR_2021" 
-                                          # "HIV_Cascade_Paper"
-                                          # "Undiagnosed_Metrics_Paper"
+projectName <- "ASR_2022"   # "ASR_2022" 
+                            # "HIV_Cascade_Paper"
+                                         
 project <- file.path(basePath, "output", projectName)
 
-# cascadeList <- c("All-2021")
-
 # List for YDF paper
-resultsYear <- 2019
-cascadeList <- "MSM-Aus-2019" 
+resultsYear <- 2021
+cascadeList <- "All-2021" #(Include year) "All-2021"
 
 # Result files and specifications
 cascadeFile <- paste0("HIVcascadeEstimates-", resultsYear,".csv")
@@ -192,8 +190,8 @@ for (cascade in cascadeList) {
   
   results[[cascade]] <- tempResults  
   
-  # write_csv(results[[cascade]], file.path(project, cascade, 
-  #   "cascadeIndicators.csv"))
+  write_csv(results[[cascade]], file.path(project, cascade,
+    "cascadeIndicators.csv"))
   
 }
 

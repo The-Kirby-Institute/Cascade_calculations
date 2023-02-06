@@ -50,19 +50,19 @@ specified project folder and have a cascade file handle.
 
 ```{r Cascade and script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2019
+analysisYear <- 2021
 saveResults <- TRUE
 
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "Undiagnosed_Metrics_Paper" # "ASR_2022" for latest ASR
+projectOutput <- "ASR_2022" # "ASR_2022" for latest ASR
                             # "HIV_Cascade_Paper"
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entered via a file in project Output 
 # which need to exist
-paramsFile <- "ProjectParameters.csv"
+paramsFile <- "ProjectParametersExtra.csv"
                              
 # Cascade options----------------------------------------------------------
 # The following variables specify the characteristics and hence the 
@@ -139,20 +139,20 @@ if (is.null(paramsFile)) {
   saveUnique <- rep(FALSE, numCascades)
   
   # Settings for generating ECDC model inputs
-  ecdcData <- rep(TRUE, numCascades)
+  ecdcData <- rep(FALSE, numCascades)
   ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
-  excludeOS <- rep(FALSE, numCascades) # Default FALSE but need to run with
-                                       # TRUE for ASR as
-  
+  excludeOS <- rep(TRUE, numCascades) # Default FALSE but need to run with TRUE
+                                       # for ECDC calculations 
+
   # Leave projections chunk turned off so it is not called unless required. 
   # Simply run projections from within the chunk. 
   projectPldhiv <- rep(FALSE, numCascades) 
   
   # Manually set final year for projections and projection name
-  projectYear <- 2030 #rep(analysisYear + 10, numCascades)  
+  projectYear <- rep(analysisYear + 10, numCascades)  
   projectName <- rep("future_sq", numCascades)
   
-  # Specifiy projection option for future diagnoses - can project 
+  # Specify projection option for future diagnoses - can project 
   # under the current "status-quo" level or follow trend over last 5 years
   # or project a relative reduction
   projectOption <- rep("status-quo", numCascades) # status-quo, linear,

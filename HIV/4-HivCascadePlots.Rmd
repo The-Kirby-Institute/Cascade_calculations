@@ -79,13 +79,13 @@ startYear <- resultsYear - minYear + 1
 
 # Set up project - If ASR plot all populations otherwise just plot 
 # specified cascade
-projectName <- "HIV_Cascade_Paper" #"ASR_2022" "HIV_Cascade_Paper"
+projectName <- "State_Cascades_2022" #"ASR_2022" "HIV_Cascade_Paper"
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadePop <- "all"
 
 savePlots <- TRUE # save plots as separate files
-pubPlots <- TRUE   # create additional plots for publications
-newInfectsPlots <- TRUE
+pubPlots <- FALSE   # create additional plots for publications
+newInfectsPlots <- FALSE
 linkageplots <- ifelse(pubPlots, TRUE, FALSE)
 saveFormat <- ".png" # file extension for saved plots 
 excludeCare <- FALSE # Include linked and retained in care?
@@ -1266,7 +1266,7 @@ if (asrCascades) {
         factor(stage, levels(stage)[c(1, 3, 4, 2, 5)])) 
     
   }
-  excludeCare <- FALSE
+  # excludeCare <- FALSE
   
   # Set up state factor levels
   resultsStatesYear$population <- factor(resultsStatesYear$population)

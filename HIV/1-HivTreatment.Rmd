@@ -305,7 +305,7 @@ if (addTempRes) {
     pops <- c("act", "all", "female", "male", "nsw", "nt", "qld", "sa", 
       "tas", "vic", "wa")
     # treatFactor <- c(1, 1, atrasFemale, atrasMale, 1, 1, 1, 1, 1, 1, 1)
-    
+
     pbsIndices <- 14:(analysisYear - 2000 + 1) #2013:analysisYear
     for (ii in 1:length(pops)) {
       tempTreated <- filter(hivTreated, population == pops[ii])
