@@ -34,11 +34,11 @@ LoadLibrary(readxl)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2019
+analysisYear <- 2021
 saveResults <- TRUE 
-projectFolder <- "Undiagnosed_Metrics_Paper" # "ASR_2022"
-# "HIV_Cascade_Paper"
-cascadeFlag <- "MSM-Aus" # minus year
+projectFolder <-  "ASR_2022" #"ASR_2022"
+                                     # "HIV_Cascade_Paper"
+cascadeFlag <- "All" # minus year
 ecdcResults <- "exposure"
 ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky 
 # file name issues.
@@ -189,11 +189,25 @@ pldhiv <- read.csv(file.path(outputFolder, projectFolder, cascadeName,
 
 # Read in and tidy main ECDC results file - results for best fitting curve
 # Reported as the mean value in the ECDC model.
-mainUndiagnosed <- read_csv(file.path(outputFolder, projectFolder, 
+
+if (undiagnosedMethod == "exclude") {
+  # Can just get the OS exclude ECDC file. 
+  mainUndiagnosed <- read_csv(file.path(outputFolder, projectFolder, 
+  cascadeName, paste0(ecdcChart, "_exclude.csv"))) %>%
+  select(year, N_Alive_Diag_M, N_Und, N_Und_Alive_p) %>%
+  rename(ecdc_diagnosed = N_Alive_Diag_M, undiagnosed = N_Und, 
+    percent = N_Und_Alive_p)
+
+} else {
+  # Other methods need the include file
+  mainUndiagnosed <- read_csv(file.path(outputFolder, projectFolder, 
   cascadeName, paste0(ecdcChart, ".csv"))) %>%
   select(year, N_Alive_Diag_M, N_Und, N_Und_Alive_p) %>%
   rename(ecdc_diagnosed = N_Alive_Diag_M, undiagnosed = N_Und, 
     percent = N_Und_Alive_p)
+
+}
+
 
 # Read in and tidy ECDC confidence interval file - the bootstrapped 
 # confidence intervals are updated at the end of each run so we take 
@@ -292,25 +306,25 @@ if (getNewInfections) {
   # and exclude calculations have been done
   
   # For all diagnoses
-  
-  newInfections <- read_csv(file.path(outputFolder, projectFolder, 
-    cascadeName, paste0(ecdcChart, ".csv"))) %>%
-    select(year, N_Inf_M) %>%
-    rename(infections = N_Inf_M) %>%
-    mutate(exclude = "no")
-  
-  if (file.exists(file.path(outputFolder, projectFolder,
-  cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) & doUncertainty) {
-    confIntervalInfections <- read_csv(file.path(outputFolder, projectFolder, 
-      cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) %>%
-      filter(run == max(.$run)) %>%
-      select(year, N_Inf_M_LB, N_Inf_M_UB) %>%
-      rename(infections_lower = N_Inf_M_LB, infections_upper = N_Inf_M_UB)
+  if (undiagnosedMethod != "exclude") {
+    newInfections <- read_csv(file.path(outputFolder, projectFolder, 
+      cascadeName, paste0(ecdcChart, ".csv"))) %>%
+      select(year, N_Inf_M) %>%
+      rename(infections = N_Inf_M) %>%
+      mutate(exclude = "no")
     
-    newInfections <- left_join(newInfections, confIntervalInfections, 
-      by = "year") %>%
-      relocate(exclude, .after = last_col())
-  }
+    if (file.exists(file.path(outputFolder, projectFolder,
+      cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) & doUncertainty) {
+      confIntervalInfections <- read_csv(file.path(outputFolder, projectFolder, 
+        cascadeName, paste0(ecdcChart, "_confIntervals.csv"))) %>%
+        filter(run == max(.$run)) %>%
+        select(year, N_Inf_M_LB, N_Inf_M_UB) %>%
+        rename(infections_lower = N_Inf_M_LB, infections_upper = N_Inf_M_UB)
+      
+      newInfections <- left_join(newInfections, confIntervalInfections, 
+        by = "year") %>%
+        relocate(exclude, .after = last_col())
+    }
   # For all diagnoses when overseas born excluded
   newInfectionsExclude <- read_csv(file.path(outputFolder, projectFolder, 
     cascadeName, paste0(ecdcChart, "_exclude.csv"))) %>%
@@ -333,8 +347,32 @@ if (getNewInfections) {
   # Merge the two infections estimates
   newInfections <- bind_rows(newInfections, newInfectionsExclude)
   
+} else {
+  # For all diagnoses when overseas born excluded
+  newInfectionsExclude <- read_csv(file.path(outputFolder, projectFolder, 
+    cascadeName, paste0(ecdcChart, "_exclude.csv"))) %>%
+    select(year, N_Inf_M) %>%
+    rename(infections = N_Inf_M) %>%
+    mutate(exclude = "yes")
+  
+  if (file.exists(file.path(outputFolder, projectFolder,
+    cascadeName, paste0(ecdcChart, "_confIntervals_exclude.csv"))) & doUncertainty) {
+    confIntervalInfectionsExclude <- read_csv(file.path(outputFolder, projectFolder, 
+      cascadeName, paste0(ecdcChart, "_confIntervals_exclude.csv"))) %>%
+      filter(run == max(.$run)) %>%
+      select(year, N_Inf_M_LB, N_Inf_M_UB) %>%
+      rename(infections_lower = N_Inf_M_LB, infections_upper = N_Inf_M_UB)
+    
+    newInfectionsExclude <- left_join(newInfectionsExclude,
+      confIntervalInfectionsExclude, by = "year") %>%
+      relocate(exclude, .after = last_col())
+  }
+  
+  # Merge the two infections estimates
+  newInfections <- newInfectionsExclude
+  
 }
-
+}
 
 ```
 
