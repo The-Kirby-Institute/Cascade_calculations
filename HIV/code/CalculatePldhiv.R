@@ -1048,12 +1048,12 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       # excluding OS diagnosis
       dataAll <- EcdcFolders(ecdcFolder, ecdcModel, 
         includeOS = FALSE)
-      EcdcFiles(hivSetEcdc, dataAll, propUnique = subsetRates$cumunique,
+      EcdcFiles(hivSetEcdc, dataAll, propUnique = subsetRates$annunique,
         propKnown = normalizeFactor, nDataSets = ecdcImputeSets)
     } else {
       # including OS diagnosis
       dataAll <- EcdcFolders(ecdcFolder, ecdcModel)
-      EcdcFiles(hivSetEcdc, dataAll, propUnique = subsetRates$cumunique,
+      EcdcFiles(hivSetEcdc, dataAll, propUnique = subsetRates$annunique,
         propKnown = normalizeFactor, nDataSets = ecdcImputeSets) 
     }
     
