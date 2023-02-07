@@ -56,13 +56,13 @@ saveResults <- TRUE
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "ASR_2022" # "ASR_2022" for latest ASR
+projectOutput <- "ASR_2022" # "Undiagnosed_Metrics_Paper" # "ASR_2022" for latest ASR
                             # "HIV_Cascade_Paper"
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entered via a file in project Output 
 # which need to exist
-paramsFile <- "ProjectParametersExtra.csv"
+paramsFile <-  "ProjectParameters.csv"
                              
 # Cascade options----------------------------------------------------------
 # The following variables specify the characteristics and hence the 
@@ -139,10 +139,10 @@ if (is.null(paramsFile)) {
   saveUnique <- rep(FALSE, numCascades)
   
   # Settings for generating ECDC model inputs
-  ecdcData <- rep(FALSE, numCascades)
+  ecdcData <- rep(TRUE, numCascades)
   ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
-  excludeOS <- rep(TRUE, numCascades) # Default FALSE but need to run with TRUE
-                                       # for ECDC calculations 
+  excludeOS <- rep(FALSE, numCascades) # Default FALSE but need to run with TRUE
+                                      # for ECDC calculations 
 
   # Leave projections chunk turned off so it is not called unless required. 
   # Simply run projections from within the chunk. 
