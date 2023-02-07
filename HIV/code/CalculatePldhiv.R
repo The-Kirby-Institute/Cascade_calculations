@@ -1198,6 +1198,12 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       saveStringPldhiv <- file.path(resultsPath, 
         paste0("HIVpldhivEstimates-", toString(analysisYear)))
       write_csv(hivDiagnosed, paste0(saveStringPldhiv, "_exclude.csv"))
+      
+      saveStringDetails <- file.path(resultsPath, 
+        paste0("pldhiv-", toString(analysisYear), "-"))
+      write_csv(pldhivAll, paste0(saveStringDetails, "all_exclude.csv"))
+      write_csv(pldhivAllMin, paste0(saveStringDetails, "min_exclude.csv"))
+      write_csv(pldhivAllMax, paste0(saveStringDetails, "max_exclude.csv"))
 
     } else {
       if (doAge) {
