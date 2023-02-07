@@ -114,39 +114,69 @@ IndicatorResults <- function(cascadeName) {
     #   show_col_types = FALSE) %>% 
     #   select(year, diagnoses = N_HIV_D)
     
-    diagnosesAll <- pldhivAll %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(diagnoses = adjusted)
-    diagnosesLower <- pldhivLower %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(lower = adjusted)
-    diagnosesUpper <- pldhivUpper %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(upper = adjusted)
+    if (adjustDiagnoses) {
+      
+      diagnosesAll <- pldhivAll %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(diagnoses = adjusted)
+      diagnosesLower <- pldhivLower %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(lower = adjusted)
+      diagnosesUpper <- pldhivUpper %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(upper = adjusted)
+
+    } else {
+      
+      diagnosesAll <- pldhivAll %>% 
+        select(year, diagnoses)
+      diagnosesLower <- pldhivLower %>% 
+        select(year, diagnoses) %>% 
+        rename(lower = diagnoses)
+      diagnosesUpper <- pldhivUpper %>% 
+        select(year, diagnoses) %>% 
+        rename(upper = diagnoses)
+      
+    }
     
     diagnoses <- left_join(diagnosesAll, diagnosesLower, by = "year") %>%
-      left_join(diagnosesUpper, by = "year")
+        left_join(diagnosesUpper, by = "year")
     
   } else if (diagsCalculation == "exclude") {
     # diagnoses <- read_csv(file.path(project, cascadeName, ecdcFileExclude),
     #  show_col_types = FALSE) %>% 
     #  select(year, diagnoses = N_HIV_D)
     
-    diagnosesAll <- pldhivAllExclude %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(diagnoses = adjusted)
-    diagnosesLower <- pldhivLowerExclude %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(lower = adjusted)
-    diagnosesUpper <- pldhivUpperExclude %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(upper = adjusted)
+    if (adjustDiagnoses) {
+      
+      diagnosesAll <- pldhivAllExclude %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(diagnoses = adjusted)
+      diagnosesLower <- pldhivLowerExclude %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(lower = adjusted)
+      diagnosesUpper <- pldhivUpperExclude %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(upper = adjusted)
+    
+    } else {
+      
+      diagnosesAll <- pldhivAllExclude %>% 
+        select(year, diagnoses) 
+      diagnosesLower <- pldhivLowerExclude %>% 
+        select(year, diagnoses) %>% 
+        rename(lower = diagnoses)
+      diagnosesUpper <- pldhivUpperExclude %>% 
+        select(year, diagnoses) %>% 
+        rename(upper = diagnoses)
+      
+    }
     
     diagnoses <- left_join(diagnosesAll, diagnosesLower, by = "year") %>%
       left_join(diagnosesUpper, by = "year")
@@ -158,18 +188,31 @@ IndicatorResults <- function(cascadeName) {
     #   show_col_types = FALSE) %>% 
     #   select(year, diagnoses_include = N_HIV_D) 
     
-    diagnosesAllInclude <- pldhivAll %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(diagnoses_include = adjusted)
-    diagnosesLowerInclude <- pldhivLower %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(lower_include = adjusted)
-    diagnosesUpperInclude <- pldhivUpper %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(upper_include = adjusted)
+    if (adjustDiagnoses) { 
+      diagnosesAllInclude <- pldhivAll %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(diagnoses_include = adjusted)
+      diagnosesLowerInclude <- pldhivLower %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(lower_include = adjusted)
+      diagnosesUpperInclude <- pldhivUpper %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(upper_include = adjusted)
+      
+    } else {
+      
+      diagnosesAllInclude <- pldhivAll %>% 
+        select(year, diagnoses)
+      diagnosesLowerInclude <- pldhivLower %>% 
+        select(year, diagnoses) %>% 
+        rename(lower = diagnoses)
+      diagnosesUpperInclude <- pldhivUpper %>% 
+        select(year, diagnoses) %>% 
+        rename(upper = diagnoses)
+    } 
     
     diagnosesInclude <- left_join(diagnosesAllInclude, diagnosesLowerInclude, 
       by = "year") %>%
@@ -179,18 +222,33 @@ IndicatorResults <- function(cascadeName) {
     #   show_col_types = FALSE) %>% 
     #   select(year, diagnoses_exclude = N_HIV_D)
     
-    diagnosesAllExclude <- pldhivAllExclude %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(diagnoses_exclude = adjusted)
-    diagnosesLowerExclude <- pldhivLowerExclude %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(lower_exclude = adjusted)
-    diagnosesUpperExclude<- pldhivUpperExclude %>% 
-      mutate(adjusted = diagnoses - duplicates) %>% 
-      select(year, adjusted) %>% 
-      rename(upper_exclude = adjusted)
+    if (adjustDiagnoses) {
+      
+      diagnosesAllExclude <- pldhivAllExclude %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(diagnoses_exclude = adjusted)
+      diagnosesLowerExclude <- pldhivLowerExclude %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(lower_exclude = adjusted)
+      diagnosesUpperExclude<- pldhivUpperExclude %>% 
+        mutate(adjusted = diagnoses - duplicates) %>% 
+        select(year, adjusted) %>% 
+        rename(upper_exclude = adjusted)
+      
+    } else {
+      
+      diagnosesAllExclude  <- pldhivAllExclude %>% 
+        select(year, diagnoses) 
+      diagnosesLowerExclude  <- pldhivLowerExclude %>% 
+        select(year, diagnoses) %>% 
+        rename(lower = diagnoses)
+      diagnosesUpperExclude  <- pldhivUpperExclude %>% 
+        select(year, diagnoses) %>% 
+        rename(upper = diagnoses)
+      
+    }
     
     diagnosesExclude <- left_join(diagnosesAllExclude, diagnosesLowerExclude, 
       by = "year") %>%
