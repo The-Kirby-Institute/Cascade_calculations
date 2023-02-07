@@ -19,14 +19,14 @@ source(file.path(dirname(getwd()), "code", "PlotOptions.R"))
 ```
 
 ```{r Options}
-projectName <- "ASR_2022"   # "ASR_2022" 
-                            # "HIV_Cascade_Paper"
-                                         
+projectName <- "Undiagnosed_Metrics_Test"   # "ASR_2022" 
+# "HIV_Cascade_Paper"
+
 project <- file.path(basePath, "output", projectName)
 
 # List for YDF paper
-resultsYear <- 2021
-cascadeList <- "All-2021" #(Include year) "All-2021"
+resultsYear <- 2019
+cascadeList <- "MSM-Aus-2019" #(Include year) "All-2021"
 
 # Result files and specifications
 cascadeFile <- paste0("HIVcascadeEstimates-", resultsYear,".csv")
@@ -34,21 +34,32 @@ infectionsFile <- paste0("newInfectionsEstimates-", resultsYear,".csv")
 undiagnosedFile <- paste0("plhivEstimates-", resultsYear, ".csv")
 
 # Need all pldhiv files (which include previously diagnosed 
-# overseas)to get range in deaths
+# overseas)to get range in deaths and the estimated annual 
+# number of diagnoses
 diagnosesFile <- paste0("pldhiv-", resultsYear, "-all.csv")
 diagnosesFileLower <- paste0("pldhiv-", resultsYear, "-min.csv")
 diagnosesFileUpper <- paste0("pldhiv-", resultsYear, "-max.csv")
 
-# Read in file with diagnoses excluding previously diagnosed overseas
+# Read in files with diagnoses excluding previously diagnosed overseas as 
+# well 
 
-ecdcFileInclude <- "All_ECDC.csv"
-ecdcFileExclude <- "All_ECDC_exclude.csv"
+# ecdcFileInclude <- "All_ECDC.csv"
+# ecdcFileExclude <- "All_ECDC_exclude.csv"
+
+diagnosesExcludeFile <- paste0("pldhiv-", resultsYear, "-all_exclude.csv")
+diagnosesExcludeFileLower <- paste0("pldhiv-", resultsYear, "-min_exclude.csv")
+diagnosesExcludeFileUpper <- paste0("pldhiv-", resultsYear, "-max_exclude.csv")
 
 startYear <- 2000
 
-# New infections parameters -- Default is "exclude" because we consider
-# people previously diagnosed overseas are aware of there status. 
-infectsCalculation <- "exclude" # "include", "exclude" or "middle"
+# New diagnoses and infections parameters -- Default is "exclude" because we 
+# consider people previously diagnosed overseas are aware of there status. 
+# Should generally use the same option for both infections and diagnoses. 
+infectsCalculation <- "exclude" # "include", "exclude" (default)) or "middle"
+diagsCalculation <- "exclude" # "include", "exclude" (default)) or "middle"
+
+adjustDiagnoses <- TRUE # adjust annual diagnoses to exclude duplicates. Matches
+# inputs into ECDC model.
 
 ```
 
@@ -68,16 +79,29 @@ IndicatorResults <- function(cascadeName) {
       uplower = undiag_percent_lower,
       upupper = undiag_percent_upper) 
   
-  # Read in PLDHIV files for deaths
+  # Read in PLDHIV files for diagnoses and deaths
   pldhivAll <- read_csv(file.path(project, cascadeName, diagnosesFile),
     col_types = cols(.default = "d"), show_col_types = FALSE) %>%
-    select(year, diagnoses, deaths)
+    select(year, diagnoses, duplicates, deaths)
   pldhivLower <- read_csv(file.path(project, cascadeName, diagnosesFileLower),
     col_types = cols(.default = "d"), show_col_types = FALSE) %>%
-    select(year, deaths)
+    select(year, diagnoses, duplicates,deaths)
   pldhivUpper <- read_csv(file.path(project, cascadeName, diagnosesFileUpper),
     col_types = cols(.default = "d"), show_col_types = FALSE) %>%
-    select(year, deaths)
+    select(year, diagnoses, duplicates,deaths)
+  
+  pldhivAllExclude <- read_csv(file.path(project, cascadeName, 
+    diagnosesExcludeFile), col_types = cols(.default = "d"), 
+    show_col_types = FALSE) %>%
+    select(year, diagnoses, duplicates, deaths)
+  pldhivLowerExclude <- read_csv(file.path(project, cascadeName,
+    diagnosesExcludeFileLower), col_types = cols(.default = "d"), 
+    show_col_types = FALSE) %>%
+    select(year, diagnoses, duplicates,deaths)
+  pldhivUpperExclude <- read_csv(file.path(project, cascadeName,
+    diagnosesExcludeFileUpper), col_types = cols(.default = "d"), 
+    show_col_types = FALSE) %>%
+    select(year, diagnoses, duplicates,deaths)
   
   plhiv <- read_csv(file.path(project, cascadeName, cascadeFile),
     show_col_types = FALSE) %>%
@@ -85,43 +109,114 @@ IndicatorResults <- function(cascadeName) {
     select(year, value, lower, upper) 
   
   # Read in adjusted diagnoses
-  if (infectsCalculation == "include") {
-    diagnoses <- read_csv(file.path(project, cascadeName, ecdcFileInclude),
-      show_col_types = FALSE) %>% 
-      select(year, diagnoses = N_HIV_D)
+  if (diagsCalculation == "include") {
+    # diagnoses <- read_csv(file.path(project, cascadeName, diagnosesFile),
+    #   show_col_types = FALSE) %>% 
+    #   select(year, diagnoses = N_HIV_D)
     
-  } else if (infectsCalculation == "exclude") {
-     diagnoses <- read_csv(file.path(project, cascadeName, ecdcFileExclude),
-      show_col_types = FALSE) %>% 
-      select(year, diagnoses = N_HIV_D)
+    diagnosesAll <- pldhivAll %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(diagnoses = adjusted)
+    diagnosesLower <- pldhivLower %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(lower = adjusted)
+    diagnosesUpper <- pldhivUpper %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(upper = adjusted)
+    
+    diagnoses <- left_join(diagnosesAll, diagnosesLower, by = "year") %>%
+      left_join(diagnosesUpper, by = "year")
+    
+  } else if (diagsCalculation == "exclude") {
+    # diagnoses <- read_csv(file.path(project, cascadeName, ecdcFileExclude),
+    #  show_col_types = FALSE) %>% 
+    #  select(year, diagnoses = N_HIV_D)
+    
+    diagnosesAll <- pldhivAllExclude %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(diagnoses = adjusted)
+    diagnosesLower <- pldhivLowerExclude %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(lower = adjusted)
+    diagnosesUpper <- pldhivUpperExclude %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(upper = adjusted)
+    
+    diagnoses <- left_join(diagnosesAll, diagnosesLower, by = "year") %>%
+      left_join(diagnosesUpper, by = "year")
+    
+    
   } else {
     # Its "middle"
-     diagnosesInclude <- read_csv(file.path(project, cascadeName, ecdcFileInclude),
-      show_col_types = FALSE) %>% 
-      select(year, diagnoses_include = N_HIV_D)
-     
-     diagnosesExclude <- read_csv(file.path(project, cascadeName, ecdcFileExclude),
-      show_col_types = FALSE) %>% 
-      select(year, diagnoses_exclude = N_HIV_D)
-     
-     diagnoses <- diagnosesInclude %>%
-         left_join(diagnosesExclude, by = "year") %>%
-       mutate(diagnoses = (diagnoses_include + diagnoses_exclude) / 2) %>%
-       select(year, diagnoses)
+    # diagnosesInclude <- read_csv(file.path(project, cascadeName, ecdcFileInclude),
+    #   show_col_types = FALSE) %>% 
+    #   select(year, diagnoses_include = N_HIV_D) 
+    
+    diagnosesAllInclude <- pldhivAll %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(diagnoses_include = adjusted)
+    diagnosesLowerInclude <- pldhivLower %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(lower_include = adjusted)
+    diagnosesUpperInclude <- pldhivUpper %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(upper_include = adjusted)
+    
+    diagnosesInclude <- left_join(diagnosesAllInclude, diagnosesLowerInclude, 
+      by = "year") %>%
+      left_join(diagnosesUpperInclude, by = "year")
+    
+    # diagnosesExclude <- read_csv(file.path(project, cascadeName, ecdcFileExclude),
+    #   show_col_types = FALSE) %>% 
+    #   select(year, diagnoses_exclude = N_HIV_D)
+    
+    diagnosesAllExclude <- pldhivAllExclude %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(diagnoses_exclude = adjusted)
+    diagnosesLowerExclude <- pldhivLowerExclude %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(lower_exclude = adjusted)
+    diagnosesUpperExclude<- pldhivUpperExclude %>% 
+      mutate(adjusted = diagnoses - duplicates) %>% 
+      select(year, adjusted) %>% 
+      rename(upper_exclude = adjusted)
+    
+    diagnosesExclude <- left_join(diagnosesAllExclude, diagnosesLowerExclude, 
+      by = "year") %>%
+      left_join(diagnosesUpperExclude, by = "year")
+    
+    diagnoses <- diagnosesInclude %>%
+      left_join(diagnosesExclude, by = "year") %>%
+      mutate(diagnoses = (diagnoses_include + diagnoses_exclude) / 2,
+        lower = (lower_include + lower_exclude) / 2, 
+        upper = (upper_include + upper_exclude) / 2) %>%
+      select(year, diagnoses, lower, upper)
+    
   }
   
   # Tidy up new infections estimates
   if (infectsCalculation == "include") {
     infectionsResults <- filter(infections, exclude == "no") %>%
-       select(-exclude)
+      select(-exclude)
   } else if (infectsCalculation == "exclude") {
     infectionsResults <- filter(infections, exclude == "yes") %>%
-       select(-exclude)
+      select(-exclude)
   } else {
     # Its "middle"
     infectionsInclude <- filter(infections, exclude == "no")
     infectionsExclude <- filter(infections, exclude == "yes")
-   
+    
     infectionsResults <- tibble(year = infectionsInclude$year,
       infections = (infectionsInclude$infections +
           infectionsExclude$infections)/2,
@@ -129,12 +224,12 @@ IndicatorResults <- function(cascadeName) {
       infections_upper = infectionsInclude$infections_upper)
   }
   
-
+  
   # For PLHIV create start year values for IPR calculation by shifting
   plhiv$start_plhiv <- c(plhiv$value[1], plhiv$value[1:(nrow(plhiv)-1)])
   plhiv$start_plhiv_lower <- c(plhiv$lower[1], plhiv$lower[1:(nrow(plhiv)-1)])
   plhiv$start_plhiv_upper <- c(plhiv$upper[1], plhiv$upper[1:(nrow(plhiv)-1)])
-
+  
   plhiv <- plhiv %>%
     select(year, start_plhiv, start_plhiv_lower, start_plhiv_upper)
   
@@ -155,11 +250,14 @@ IndicatorResults <- function(cascadeName) {
 }
 
 # Calculate ydf and cdr
+# To calculate ydf and produce a lower and upper bound rewrite into an 
+# alternative for: diagnoses/(diagnoses + undiag) = 1/(1+undiag/diagnoses)
+
 AddResults <- function(results) {
   newResults <- results %>%
     mutate(ydf = diagnoses/(diagnoses + undiag),
-      ydf_lower = diagnoses/(diagnoses + undiag_upper),
-      ydf_upper = diagnoses/(diagnoses + undiag_lower),
+      ydf_lower = 1/(1 + undiag_upper/diagnoses_lower),
+      ydf_upper = 1/(1 + undiag_lower/diagnoses_upper),
       cdr = diagnoses/infections,
       cdr_lower = diagnoses/infections_upper,
       cdr_upper = diagnoses/infections_lower,
@@ -260,9 +358,9 @@ plotUndiag <- function(df, title, ymax, indicator) {
   }
   
   plot <- plot +
-     scale_x_continuous(breaks = 2010:resultsYear,
-    labels =  EveryNth(2010:resultsYear, 2, inverse = FALSE),
-    limits = c(2010, resultsYear)) +
+    scale_x_continuous(breaks = 2010:resultsYear,
+      labels =  EveryNth(2010:resultsYear, 2, inverse = FALSE),
+      limits = c(2010, resultsYear)) +
     PlotOptions() 
   
   return(plot)
