@@ -155,14 +155,18 @@ typeDiag <- function(hivData, type, minYear = 1980,
     # diagType <- arrange(diagType, year)
     
     if (!is.null(adjustUnique)) {
-      diagType$hetero <- AnnualUnique(diagType$hetero, 
-        adjustUnique[1:length(diagType$hetero)])
-      diagType$msm <- AnnualUnique(diagType$msm, 
-        adjustUnique[1:length(diagType$msm)])
-      diagType$pwid <- AnnualUnique(diagType$pwid, 
-        adjustUnique[1:length(diagType$pwid)])
-      diagType$otherexp <- AnnualUnique(diagType$otherexp, 
-        adjustUnique[1:length(diagType$otherexp)])
+      # diagType$hetero <- AnnualUnique(diagType$hetero, 
+      #   adjustUnique[1:length(diagType$hetero)])
+      diagType$hetero <- diagType$hetero * adjustUnique[1:length(diagType$hetero)]
+      # diagType$msm <- AnnualUnique(diagType$msm, 
+      #   adjustUnique[1:length(diagType$msm)])
+      diagType$msm <- diagType$msm * adjustUnique[1:length(diagType$msm)]
+      # diagType$pwid <- AnnualUnique(diagType$pwid, 
+      #   adjustUnique[1:length(diagType$pwid)])
+      diagType$pwid <- diagType$pwid * adjustUnique[1:length(diagType$pwid)]
+      # diagType$otherexp <- AnnualUnique(diagType$otherexp, 
+      #   adjustUnique[1:length(diagType$otherexp)])
+      diagType$otherexp <- diagType$otherexp * adjustUnique[1:length(diagType$otherexp)]
     } else {
       warning("Notifications not adjusted for duplicates")
     }
@@ -224,8 +228,10 @@ typeDiag <- function(hivData, type, minYear = 1980,
     # diagType <- arrange(diagType, year)
     
     if (!is.null(adjustUnique)) {
-      diagType$all <- AnnualUnique(diagType$all, 
-        adjustUnique[1:length(diagType$all)])
+      # diagType$all <- AnnualUnique(diagType$all, 
+      #   adjustUnique[1:length(diagType$all)])
+      diagType$all <- diagType$all * adjustUnique[1:length(diagType$all)]
+      
     } else {
       warning("Notifications not adjusted for duplicates")
     }
@@ -332,7 +338,8 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
     arrange(year)
   
   if (!is.null(adjustUnique)) {
-    cd4Diags$all <- AnnualUnique(cd4Diags$all, adjustUnique)
+    # cd4Diags$all <- AnnualUnique(cd4Diags$all, adjustUnique)
+    cd4Diags$all <- cd4Diags$all * adjustUnique
   }
   
   #remove rows with all NAs
@@ -424,10 +431,14 @@ cd4Exposure <- function(hivData, cd4binGroup,
   }
   
   if (!is.null(adjustUnique)) {
-    cd4ExpBin$hetero <- AnnualUnique(cd4ExpBin$hetero , adjustUnique)
-    cd4ExpBin$msm <- AnnualUnique(cd4ExpBin$msm , adjustUnique)
-    cd4ExpBin$pwid <- AnnualUnique(cd4ExpBin$pwid , adjustUnique)
-    cd4ExpBin$otherexp <- AnnualUnique(cd4ExpBin$otherexp , adjustUnique)
+    # cd4ExpBin$hetero <- AnnualUnique(cd4ExpBin$hetero , adjustUnique)
+    cd4ExpBin$hetero <- cd4ExpBin$hetero * adjustUnique
+    # cd4ExpBin$msm <- AnnualUnique(cd4ExpBin$msm , adjustUnique)
+    cd4ExpBin$msm <- cd4ExpBin$msm * adjustUnique
+    # cd4ExpBin$pwid <- AnnualUnique(cd4ExpBin$pwid , adjustUnique)
+    cd4ExpBin$pwid <- cd4ExpBin$pwid * adjustUnique
+    # cd4ExpBin$otherexp <- AnnualUnique(cd4ExpBin$otherexp , adjustUnique)
+    cd4ExpBin$otherexp <- cd4ExpBin$otherexp * adjustUnique
   }
   
   #remove rows with all NAs
