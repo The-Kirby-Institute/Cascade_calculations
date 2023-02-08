@@ -217,10 +217,13 @@ sexcdr <- sexData("cdr")
 
 # Produce plots
 sextdfPlot <- PopPlot(sextdf, "Total diagnosed fraction  (%)") +
-  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0,1))
+  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0, 1)) +
+  geom_hline(yintercept = 0.95, linetype = 'longdash')
 sexydfPlot <- PopPlot(sexydf, "Yearly diagnosed fraction (%)") +
-  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0,0.4))
-sexcdrPlot <- PopPlot(sexcdr, "Case detection rate") + expand_limits(y =0)
+  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0, 0.5))
+sexcdrPlot <- PopPlot(sexcdr, "Case detection rate") + 
+  scale_y_continuous(limits = c(0, 8)) +
+  geom_hline(yintercept = 1.0, linetype = 'longdash')
 
 SaveFigure(resultsPath, "YDF_Sex", sexydfPlot)
 SaveFigure(resultsPath, "CDR_Sex", sexcdrPlot)
@@ -249,10 +252,13 @@ msmcdr <- msmData("cdr")
 
 # Produce plots
 msmtdfPlot <- PopPlot(msmtdf, "Total diagnosed fraction  (%)") +
-  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0,1))
+  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0, 1)) +
+  geom_hline(yintercept = 0.95, linetype = 'longdash')
 msmydfPlot <- PopPlot(msmydf, "Yearly diagnosed fraction (%)") +
-  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0,0.5))
-msmcdrPlot <- PopPlot(msmcdr, "Case detection rate") + expand_limits(y =0)
+  scale_y_continuous(labels = label_percent(accuracy = 1), limits = c(0, 0.5))
+msmcdrPlot <- PopPlot(msmcdr, "Case detection rate") + 
+  scale_y_continuous(limits = c(0, 8)) +
+  geom_hline(yintercept = 1.0, linetype = 'longdash')
 
 
 SaveFigure(resultsPath, "TDF_MSM", msmtdfPlot)

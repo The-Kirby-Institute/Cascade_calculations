@@ -19,7 +19,7 @@ source(file.path(dirname(getwd()), "code", "PlotOptions.R"))
 ```
 
 ```{r Options}
-projectName <- "Undiagnosed_Metrics_Test"   # "ASR_2022" 
+projectName <- "Undiagnosed_Metrics_Paper"   # "ASR_2022" 
 # "HIV_Cascade_Paper"
 
 project <- file.path(basePath, "output", projectName)
@@ -123,11 +123,11 @@ IndicatorResults <- function(cascadeName) {
       diagnosesLower <- pldhivLower %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
         select(year, adjusted) %>% 
-        rename(lower = adjusted)
+        rename(diagnoses_lower = adjusted)
       diagnosesUpper <- pldhivUpper %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
         select(year, adjusted) %>% 
-        rename(upper = adjusted)
+        rename(diagnoses_upper = adjusted)
 
     } else {
       
@@ -135,10 +135,10 @@ IndicatorResults <- function(cascadeName) {
         select(year, diagnoses)
       diagnosesLower <- pldhivLower %>% 
         select(year, diagnoses) %>% 
-        rename(lower = diagnoses)
+        rename(diagnoses_lower = diagnoses)
       diagnosesUpper <- pldhivUpper %>% 
         select(year, diagnoses) %>% 
-        rename(upper = diagnoses)
+        rename(diagnoses_upper = diagnoses)
       
     }
     
@@ -159,11 +159,11 @@ IndicatorResults <- function(cascadeName) {
       diagnosesLower <- pldhivLowerExclude %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
         select(year, adjusted) %>% 
-        rename(lower = adjusted)
+        rename(diagnoses_lower = adjusted)
       diagnosesUpper <- pldhivUpperExclude %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
         select(year, adjusted) %>% 
-        rename(upper = adjusted)
+        rename(diagnoses_upper = adjusted)
     
     } else {
       
@@ -171,10 +171,10 @@ IndicatorResults <- function(cascadeName) {
         select(year, diagnoses) 
       diagnosesLower <- pldhivLowerExclude %>% 
         select(year, diagnoses) %>% 
-        rename(lower = diagnoses)
+        rename(diagnoses_lower = diagnoses)
       diagnosesUpper <- pldhivUpperExclude %>% 
         select(year, diagnoses) %>% 
-        rename(upper = diagnoses)
+        rename(diagnoses_upper = diagnoses)
       
     }
     
@@ -257,8 +257,8 @@ IndicatorResults <- function(cascadeName) {
     diagnoses <- diagnosesInclude %>%
       left_join(diagnosesExclude, by = "year") %>%
       mutate(diagnoses = (diagnoses_include + diagnoses_exclude) / 2,
-        lower = (lower_include + lower_exclude) / 2, 
-        upper = (upper_include + upper_exclude) / 2) %>%
+        diagnoses_lower = (lower_include + lower_exclude) / 2, 
+        diagnoses_upper = (upper_include + upper_exclude) / 2) %>%
       select(year, diagnoses, lower, upper)
     
   }
@@ -317,8 +317,8 @@ AddResults <- function(results) {
       ydf_lower = 1/(1 + undiag_upper/diagnoses_lower),
       ydf_upper = 1/(1 + undiag_lower/diagnoses_upper),
       cdr = diagnoses/infections,
-      cdr_lower = diagnoses/infections_upper,
-      cdr_upper = diagnoses/infections_lower,
+      cdr_lower = diagnoses_lower/infections_upper,
+      cdr_upper = diagnoses_upper/infections_lower,
       ipr = infections/start_plhiv,
       ipr_lower = infections_lower/start_plhiv_upper,
       ipr_upper = infections_upper/start_plhiv_lower,
