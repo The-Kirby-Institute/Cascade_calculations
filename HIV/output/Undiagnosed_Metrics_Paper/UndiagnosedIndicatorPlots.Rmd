@@ -30,7 +30,7 @@ estimatesFile <- file.path(resultsPath, "cascadeIndicatorsAll.csv")
 cascadeIndicators <- read_csv(estimatesFile, show_col_types = FALSE) %>%
   filter(year >= 2008) %>%
   select(year, population, 
-    diagnoses, 
+    diagnoses, diagnoses_lower, diagnoses_upper, 
     undiag, undiag_lower, undiag_upper, 
     infections, infections_lower, infections_upper,
     start_plhiv, start_plhiv_lower, start_plhiv_upper,
@@ -312,30 +312,24 @@ IndRow <- function(pop, ind, type = c("number", "percent", "decimal")) {
   
 }
 
-# Function to produce diagnoses row
-DiagRow <- function(pop) {
-  row <- cascadeIndicators %>%
-    filter(population == pop) %>%
-    select(year, diagnoses) %>% 
-    mutate(diagnoses = FormatData(diagnoses, places = 0)) %>%
-    spread(year, diagnoses)
-  return(row)
-}
-
 metricList <- c("diagnoses", "infections", "undiag", "plhiv", "tdf", "ydf", "cdr")
 
 # Generate rows for each population
 totalDiags <- cascadeIndicators %>%
   group_by(year) %>%
-  summarise(total_diags = sum(diagnoses)) %>%
+  summarise(total_diags = sum(diagnoses),
+    total_diags_lower = sum(diagnoses_lower),
+    total_diags_upper = sum(diagnoses_upper)) %>%
   ungroup() %>%
-  mutate(total_diags = FormatData(total_diags, places = 0)) %>%
-  spread(year, total_diags) %>%
+  mutate(diags = FormatData(total_diags, total_diags_lower, 
+    total_diags_upper, places = 0)) %>%
+  select(year, diags) %>%
+  spread(year, diags) %>%
   mutate(population = "all", 
     metric = "diagnoses") %>%
   select(population, metric, everything())
 
-msmAusResults <- DiagRow("msm_aus") %>% 
+msmAusResults <- IndRow("msm_aus", "diagnoses", "number") %>% 
   bind_rows(IndRow("msm_aus", "infections", "number")) %>% 
   bind_rows(IndRow("msm_aus", "undiag", "number")) %>% 
   bind_rows(IndRow("msm_aus", "plhiv", "number")) %>% 
@@ -346,7 +340,7 @@ msmAusResults <- DiagRow("msm_aus") %>%
     metric = metricList) %>%
   select(population, metric, everything())
 
-msmosResults <- DiagRow("msm_os") %>%
+msmosResults <- IndRow("msm_os", "diagnoses", "number") %>%
   bind_rows(IndRow("msm_os", "infections", "number")) %>% 
   bind_rows(IndRow("msm_os", "undiag", "number")) %>% 
   bind_rows(IndRow("msm_os", "plhiv", "number")) %>% 
@@ -357,7 +351,7 @@ msmosResults <- DiagRow("msm_os") %>%
     metric = metricList) %>%
   select(population, metric, everything())
 
-femaleResults <- DiagRow("female") %>%
+femaleResults <- IndRow("female", "diagnoses", "number") %>%
   bind_rows(IndRow("female", "infections", "number")) %>% 
   bind_rows(IndRow("female", "undiag", "number")) %>% 
   bind_rows(IndRow("female", "plhiv", "number")) %>% 
@@ -368,7 +362,7 @@ femaleResults <- DiagRow("female") %>%
     metric = metricList) %>%
   select(population, metric, everything())
 
-maleResults <- DiagRow("male") %>%
+maleResults <- IndRow("male", "diagnoses", "number") %>%
   bind_rows(IndRow("male", "infections", "number")) %>% 
   bind_rows(IndRow("male", "undiag", "number")) %>% 
   bind_rows(IndRow("male", "plhiv", "number")) %>% 
@@ -390,20 +384,30 @@ write_excel_csv(tableResults, file.path(resultsPath, "TableResults.csv"))
 # Totals
 totalMetrics <- function(pop) {
   filter(cascadeIndicators, population == pop) %>% 
-    summarise(pop = pop, total_diags =   sum(diagnoses), 
-      total_infects = sum(infections))
+    summarise(pop = pop, total_diags = sum(diagnoses),
+      total_diags_lower =   sum(diagnoses_lower), 
+      total_diags_upper=   sum(diagnoses_upper),
+      total_infects = sum(infections), 
+      total_infects_lower = sum(infections_lower), 
+      total_infects_upper = sum(infections_upper))
 }
 
 totals <- cascadeIndicators %>%
-  summarise(pop = "all", total_diags = sum(diagnoses), 
-    total_infects = sum(infections)) %>%
+  summarise(pop = "all", 
+    total_diags = sum(diagnoses),
+    total_diags_lower =   sum(diagnoses_lower), 
+    total_diags_upper=   sum(diagnoses_upper),
+    total_infects = sum(infections),
+    total_infects_lower = sum(infections_lower), 
+    total_infects_upper = sum(infections_upper)) %>%
   bind_rows(totalMetrics("msm_aus")) %>% 
   bind_rows(totalMetrics("msm_os")) %>%
   bind_rows(totalMetrics("female")) %>%
   bind_rows(totalMetrics("male")) %>%
-  gather("year", "total", 2:3) %>%
-  mutate(total = FormatData(total, places = 0)) %>%
-  arrange(pop)
+  mutate(diags = FormatData(total_diags, total_diags_lower, total_diags_upper, places = 0),
+    infects =  FormatData(total_infects, total_infects_lower, total_infects_upper, places = 0)) %>%
+  arrange(pop) %>%
+  select(pop, Ddiagnoses = diags, Infections = infects)
 
 write_excel_csv(totals, file.path(resultsPath, "TableResultsTotals.csv"))
 
