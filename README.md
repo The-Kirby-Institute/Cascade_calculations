@@ -75,8 +75,8 @@ Contains all the code and materials used for the Australian HIV diagnosis and ca
 The following publications are associated with this project and used code in this repository to generate the results and figures. 
 
 - The Kirby Institute. HIV, viral hepatitis and sexually transmissible infections in Australia: Annual Surveillance Report. The Kirby Institute, UNSW Australia, Sydney NSW 2052.
-	- For the years 2015-2020. Available from the [Kirby Institute website](https://kirby.unsw.edu.au/report-type/annual-surveillance-reports)
-	- The HIV and Chlamydia cascade estimates were produced using [version 1.0_2015_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v1.0_2015_ASR) in 2015, [version v2.0_2016_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v2.0_2016_ASR) in 2016, [version 3.0_2017_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR) in 2017, [version v3.6_2018_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.6_2018_ASR) in 2018, [version v4.15_ASR_2019](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.15_ASR_2019) in 2019, [version v4.2_ASR_2020](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.2_ASR_2020) in 2020, and [v4.3_ASR_2021](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.3_ASR_2021) in 2021. 
+	- For the years 2015-2022. Available from the [Kirby Institute website](https://kirby.unsw.edu.au/report-type/annual-surveillance-reports)
+	- The HIV and Chlamydia cascade estimates were produced using [version 1.0_2015_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v1.0_2015_ASR) in 2015, [version v2.0_2016_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v2.0_2016_ASR) in 2016, [version 3.0_2017_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.0_2017_ASR) in 2017, [version v3.6_2018_ASR](https://github.com/leftygray/Cascade_calculations/releases/tag/v3.6_2018_ASR) in 2018, [version v4.15_ASR_2019](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.15_ASR_2019) in 2019, [version v4.2_ASR_2020](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.2_ASR_2020) in 2020, [v4.3_ASR_2021](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.3_ASR_2021) in 2021, and [v5.0_ASR_HIV_2022](https://github.com/The-Kirby-Institute/Cascade_calculations/releases/tag/v5.0_ASR_HIV_2022) in 2022. 
 <br></br>
 - B Hajarizadeh, J Grebely, H McManus, C Estes, H Razavi, RT Gray, et al. Chronic hepatitis C burden and care cascade in Australia in the era of interferon-based treatment. Journal of gastroenterology and hepatology 2017; 32:229–236.
 <br></br>
@@ -101,6 +101,11 @@ The following publications are associated with this project and used code in thi
 - PG Patel, P Keen, H McManus, T Duck, D Callander, C Selvey, C Power, et al. Increased Targeted HIV Testing and Reduced Undiagnosed HIV Infections among Gay and Bisexual Men. HIV Medicine 2021;22:605–16. https://doi.org/10.1111/hiv.13102.
     - Results produced using [version v4.15_ASR_2019](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.15_ASR_2019) 
 <br></br>
-- JH Stephens,RT Gray, R Guy, T Vickers, J Ward. A HIV Diagnosis and Treatment Cascade for Aboriginal and Torres Strait Islander Peoples of Australia. AIDS Care 2021. https://doi.org/10.1080/09540121.2021.2001416.
+- JH Stephens, RT Gray, R Guy, T Vickers, J Ward. A HIV Diagnosis and Treatment Cascade for Aboriginal and Torres Strait Islander Peoples of Australia. AIDS Care 2023;35:83-90. https://doi.org/10.1080/09540121.2021.2001416.
     - Results produced using [version v4.15_ASR_2019](https://github.com/leftygray/Cascade_calculations/releases/tag/v4.15_ASR_2019) 
+<br></br>
+- (Pre-print) RT Gray, H Camara, L Khawar, A Grulich, R Guy, S McGregor, N Medland. National Trends in Rates of Undiagnosed HIV in Key Populations in Australia: A Retrospective Observational Analysis from 2008 to 2019. medRxiv, September 23, 2022. https://doi.org/10.1101/2022.09.23.22280259.
+    - Submitted results produced using [v5.1_Undiagnosed_metrics_paper](https://github.com/The-Kirby-Institute/Cascade_calculations/releases/tag/v5.1_Undiagnosed_metrics_paper); doi:[10.5281/zenodo.7058987](https://zenodo.org/record/7058987).
+    - Revised results produced using [v5.11_Undiagnosed_metrics_paper-revisions](https://github.com/The-Kirby-Institute/Cascade_calculations/releases/tag/v5.11_Undiagnosed_metrics_paper-revisions); doi:[10.5281/zenodo.7750966](https://zenodo.org/record/7750966)
+
 
