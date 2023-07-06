@@ -1547,7 +1547,7 @@ for (ii in steps) {
     minimum =  filter(trendData, stage == ii)$lower,
     maximum = filter(trendData, stage == ii)$upper, 
     # min_gap = 3, allow_end_gap = TRUE,
-    yLabels[ii], save = TRUE, offset = offsets[[ii]], 
+    yLabels[ii], save = savePlots, offset = offsets[[ii]], 
     yPercent = yPercent[ii])
 }
 
