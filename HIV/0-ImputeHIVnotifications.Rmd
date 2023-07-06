@@ -47,7 +47,7 @@ source(file.path(Rcode, "FormatData.R"))
 
 
 # Script options
-dataYear <- 2021
+dataYear <- 2022
 
 runImpute <- TRUE
 saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 
@@ -152,7 +152,7 @@ saveStringDetails <- file.path(setsPath, "imputedHIVset")
 # variables, making sure impute character variables are factors, and 
 # replacing unknown/missing/not reported as NA. 
 cascadeData <- hivData %>%
-  select(c(impVars, otherVars, postcode)) %>% # Drop postcode later
+  select(c(all_of(impVars), otherVars, postcode)) %>% # Drop postcode later
   mutate(sex = ifelse(sex == "unknown", NA, sex),
     cob = ifelse(cob == "Not Reported", NA, cob),
     expgroup = ifelse(expgroup == "unknown", NA, expgroup)) %>%
