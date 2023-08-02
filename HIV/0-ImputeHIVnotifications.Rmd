@@ -135,7 +135,7 @@ impVars <- c("yeardiagnosis", "state", "diag_region", "sex", "cob",
   "agehiv", "expgroup")
 otherVars <- c("dob", "cd4bin", "cd4London", "yearaids", "typediagnosis",
   "aboriggroup", "yeardeath", "globalregion",
-  "countrygroup", "agebin", "dateill", "previ_diag_overseas")
+  "countrygroup", "agebin", "dateill", "previ_diag_overseas", "newly_acq")
 
 # Create directory for storing imputed sets
 setsPath <- file.path(outputFolder,
@@ -266,8 +266,6 @@ waErr <- which(cascadeData$state == "wa" &
 # length(waErr)
 # imputeData[waErr, ]
 if (length(waErr) != 0) cascadeData[waErr, ]$postcode <- NA
-
-
 
 ```
 
