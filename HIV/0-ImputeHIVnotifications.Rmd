@@ -47,7 +47,7 @@ source(file.path(Rcode, "FormatData.R"))
 
 
 # Script options
-dataYear <- 2022
+dataYear <- 2021
 
 runImpute <- TRUE
 saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 
@@ -134,8 +134,8 @@ allYears <- min(hivData$yeardiagnosis):dataYear # all years of data
 impVars <- c("yeardiagnosis", "state", "diag_region", "sex", "cob",
   "agehiv", "expgroup")
 otherVars <- c("dob", "cd4bin", "cd4London", "yearaids", "typediagnosis",
-  "aboriggroup", "yeardeath", "globalregion",
-  "countrygroup", "agebin", "dateill", "previ_diag_overseas", "newly_acq")
+  "aboriggroup", "yeardeath", "globalregion", "countrygroup", "agebin", 
+  "dateill", "previ_diag_overseas", "newly_acq", "seroconverter")
 
 # Create directory for storing imputed sets
 setsPath <- file.path(outputFolder,
