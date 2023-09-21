@@ -11,26 +11,26 @@ This script explores the number of people taking antiretroviral therapy
 (ART) in Australia over 2000-2020. It estimates the number taking ART 
 during each year by merging and fitting to multiple data sources. 
 
-1. Australian HIV Observational Database (AHOD) which provides estimates 
-for ART use up to 2012. The estimates over 2010-2012 are actually 
-projections rather than estimates from raw data.
-2. The Pharmaceutical Benefits Scheme (PBS) 10% longitudinal sample 
-provided by the company Prospection. This data is only available since
-2013. It is considered a more reliable as it is a more direct estimate. As 
-the PBS data does not include people who are ineligible for Medicare there 
-is the option to add the estimates for the number of PLHIV ineligible for 
-Medicare from the NAPWHA and KI report
-(from: https://napwha.org.au/medicare-ineligibles/) to the PBS data.  
-3. The Pharmaceutical Benefits Scheme (PBS) 100% longitudinal sample 
-provided to the Kirby Institute directly from the department of Health.
-This data is only available from 2014. This data is considered to be the
-most reliable and direct estimate. Though there is uncertainty given the 
-difficulties in cleaning the data to remove ART drug scripts used for 
-other purposes such as Hep B, HIV PrEP and PEP. 
+1. Australian HIV Observational Database (AHOD) which provides estimates for ART
+use up to 2012. The estimates over 2010-2012 are actually projections rather
+than estimates from raw data.
+2. The Pharmaceutical Benefits Scheme (PBS) 10% longitudinal sample provided by
+the company Prospection. This data is only available since 2013. It is
+considered a more reliable as it is a more direct estimate. As the PBS data does
+not include people who are ineligible for Medicare there is the option to add
+the estimates for the number of PLHIV ineligible for Medicare from the NAPWHA
+and KI report (from: https://napwha.org.au/medicare-ineligibles/) to the PBS
+data.
+3. The Pharmaceutical Benefits Scheme (PBS) 100% longitudinal sample provided to
+the Kirby Institute directly from the department of Health. This data is only
+available from 2014. This data is considered to be the most reliable and direct
+estimate. Though there is uncertainty given the difficulties in cleaning the
+data to remove ART drug scripts used for other purposes such as Hep B, HIV PrEP
+and PEP.
 
-The primary purpose of this analysis is to explore how to cover the 
-change over period from the AHOD estimates to the PBS data. The results
-are reported in the Australian HIV Cascade manuscript. 
+The primary purpose of this analysis is to explore how to cover the change over
+period from the AHOD estimates to the PBS data. The results are reported in the
+Australian HIV Cascade manuscript.
 
 ```{r knitr_options, include=FALSE} 
 knitr::opts_chunk$set(echo = FALSE, 
