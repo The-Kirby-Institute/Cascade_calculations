@@ -1,0 +1,160 @@
+year,stage,region,context,sex,proportion,prop_lower,prop_upper,source,reference
+2018,notifications,urban,all,all,0.744113966,0.744113966,0.744113966,notifications data,
+2018,notifications,regional,all,all,0.21574954,0.21574954,0.21574954,notifications data,
+2018,notifications,remote,all,all,0.040136493,0.040136493,0.040136493,notifications data,
+2018,diagnoses,all,shc,all,0.11,0.11,0.11,"(Grulich et al. 2014, table 4, usual GP %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2018,diagnoses,all,gp,all,0.797,0.797,0.797,"(Grulich et al. 2014, table 4, sexual health clini %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2018,diagnoses,all,other,all,0.092,0.092,0.092,"(Grulich et al. 2014, table 4, Other + pharmacy %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2018,treated,urban,gp,all,0.92,0.92,0.92,(Bangor-Jones 2011),Bangor-Jones R. Sexual health in general practice: do practitioners comply with the sexually transmitted infections guidelines for management of suspected chlamydial infections? International journal of STD & AIDS 2011; 22:523–524.
+2018,treated,regional,gp,all,0.92,0.92,0.92,(Bangor-Jones 2011),Bangor-Jones R. Sexual health in general practice: do practitioners comply with the sexually transmitted infections guidelines for management of suspected chlamydial infections? International journal of STD & AIDS 2011; 22:523–524.
+2018,treated,urban,other,all,0.99,0.99,0.99,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2018,treated,regional,other,all,1,1,1,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2018,treated,remote,shc,all,0.96,0.96,0.96,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2018,treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),"Guy R, et al. The impact of sexually transmissible infection programs in remote Aboriginal communities in Australia: a systematic review. Sexual Health. 2012;9 (3):205-12."
+2018,retested,urban,shc,males,0.571231829,0.559117764,0.583261665,ACCESS shc urban,
+2018,retested,regional,shc,males,0.471389646,0.434845077,0.50823773,ACCESS shc regional+remote,
+2018,retested,remote,shc,males,0.471389646,0.434845077,0.50823773,ACCESS shc regional+remote,
+2018,retested,urban,gp,males,0.1,0.056473475,0.168134349,ACCEPt 2014 (assumption) as ACCESS is biased,
+2018,retested,regional,gp,males,0.1,0.056473475,0.168134349,ACCEPT,2014 data
+2018,retested,remote,gp,males,0.1,0.056473475,0.168134349,ACCEPT,assumed same as regional
+2018,retested,urban,shc,females,0.392374517,0.37132932,0.413822616,ACCESS shc urban,
+2018,retested,regional,shc,females,0.352040816,0.305180567,0.401849878,ACCESS shc regional+remote,
+2018,retested,remote,shc,females,0.352040816,0.305180567,0.401849878,ACCESS shc regional+remote,
+2018,retested,urban,gp,females,0.193548387,0.147410171,0.24941418,ACCEPt 2014 (assumption) as ACCESS is biased,
+2018,retested,regional,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,2014 data
+2018,retested,remote,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,assumed same as regional
+2018,retested,urban,shc,all,0.528903731,0.518337044,0.539444717,ACCESS shc urban,
+2018,retested,regional,shc,all,0.430851064,0.401797576,0.460381121,ACCESS shc regional+remote,
+2018,retested,remote,shc,all,0.430851064,0.401797576,0.460381121,ACCESS shc regional+remote,
+2018,retested,urban,gp,all,0.161375661,0.126538234,0.203267217,ACCEPt 2014 (assumption) as ACCESS is biased,
+2018,retested,regional,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,2014 data
+2018,retested,remote,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,assumed same as regional
+2019,notifications,urban,all,all,0.74735321,0.74735321,0.74735321,notifications data,
+2019,notifications,regional,all,all,0.214122634,0.214122634,0.214122634,notifications data,
+2019,notifications,remote,all,all,0.038524156,0.038524156,0.038524156,notifications data,
+2019,diagnoses,all,shc,all,0.11,0.11,0.11,"(Grulich et al. 2014, table 4, usual GP %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2019,diagnoses,all,gp,all,0.797,0.797,0.797,"(Grulich et al. 2014, table 4, sexual health clini %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2019,diagnoses,all,other,all,0.092,0.092,0.092,"(Grulich et al. 2014, table 4, Other + pharmacy %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2019,treated,urban,gp,all,0.92,0.92,0.92,(Bangor-Jones 2011),Bangor-Jones R. Sexual health in general practice: do practitioners comply with the sexually transmitted infections guidelines for management of suspected chlamydial infections? International journal of STD & AIDS 2011; 22:523–524.
+2019,treated,regional,gp,all,0.92,0.92,0.92,(Bangor-Jones 2011),Bangor-Jones R. Sexual health in general practice: do practitioners comply with the sexually transmitted infections guidelines for management of suspected chlamydial infections? International journal of STD & AIDS 2011; 22:523–524.
+2019,treated,urban,other,all,0.99,0.99,0.99,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2019,treated,regional,other,all,1,1,1,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2019,treated,remote,shc,all,0.96,0.96,0.96,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2019,treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),"Guy R, et al. The impact of sexually transmissible infection programs in remote Aboriginal communities in Australia: a systematic review. Sexual Health. 2012;9 (3):205-12."
+2019,retested,urban,shc,males,0.535906272,0.524345662,0.547428649,ACCESS shc urban,
+2019,retested,regional,shc,males,0.45474373,0.422230469,0.487640955,ACCESS shc regional+remote,
+2019,retested,remote,shc,males,0.45474373,0.422230469,0.487640955,ACCESS shc regional+remote,
+2019,retested,urban,gp,males,0.1,0.056473475,0.168134349,ACCEPt 2014 (assumption) as ACCESS is biased,
+2019,retested,regional,gp,males,0.1,0.056473475,0.168134349,ACCEPT,2014 data
+2019,retested,remote,gp,males,0.1,0.056473475,0.168134349,ACCEPT,assumed same as regional
+2019,retested,urban,shc,females,0.357589286,0.337780229,0.377891436,ACCESS shc urban,
+2019,retested,regional,shc,females,0.374015748,0.332077252,0.417889369,ACCESS shc regional+remote,
+2019,retested,remote,shc,females,0.374015748,0.332077252,0.417889369,ACCESS shc regional+remote,
+2019,retested,urban,gp,females,0.193548387,0.147410171,0.24941418,ACCEPt 2014 (assumption) as ACCESS is biased,
+2019,retested,regional,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,2014 data
+2019,retested,remote,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,assumed same as regional
+2019,retested,urban,shc,all,0.495559503,0.485494437,0.50562815,ACCESS shc urban,
+2019,retested,regional,shc,all,0.426573427,0.400823754,0.452721898,ACCESS shc regional+remote,
+2019,retested,remote,shc,all,0.426573427,0.400823754,0.452721898,ACCESS shc regional+remote,
+2019,retested,urban,gp,all,0.161375661,0.126538234,0.203267217,ACCEPt 2014 (assumption) as ACCESS is biased,
+2019,retested,regional,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,2014 data
+2019,retested,remote,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,assumed same as regional
+2020,notifications,urban,all,all,0.742290994,0.742290994,0.742290994,notifications data,
+2020,notifications,regional,all,all,0.218969164,0.218969164,0.218969164,notifications data,
+2020,notifications,remote,all,all,0.038739842,0.038739842,0.038739842,notifications data,
+2020,diagnoses,all,shc,all,0.11,0.11,0.11,"(Grulich et al. 2014, table 4, usual GP %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2020,diagnoses,all,gp,all,0.797,0.797,0.797,"(Grulich et al. 2014, table 4, sexual health clini %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2020,diagnoses,all,other,all,0.092,0.092,0.092,"(Grulich et al. 2014, table 4, Other + pharmacy %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2020,treated,urban,gp,all,0.92,0.92,0.92,(Bangor-Jones 2011),Bangor-Jones R. Sexual health in general practice: do practitioners comply with the sexually transmitted infections guidelines for management of suspected chlamydial infections? International journal of STD & AIDS 2011; 22:523–524.
+2020,treated,regional,gp,all,0.92,0.92,0.92,(Bangor-Jones 2011),Bangor-Jones R. Sexual health in general practice: do practitioners comply with the sexually transmitted infections guidelines for management of suspected chlamydial infections? International journal of STD & AIDS 2011; 22:523–524.
+2020,treated,urban,other,all,0.99,0.99,0.99,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2020,treated,regional,other,all,1,1,1,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2020,treated,remote,shc,all,0.96,0.96,0.96,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2020,treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),"Guy R, et al. The impact of sexually transmissible infection programs in remote Aboriginal communities in Australia: a systematic review. Sexual Health. 2012;9 (3):205-12."
+2020,retested,urban,shc,males,0.486605358,0.472669846,0.500561576,ACCESS shc urban,
+2020,retested,regional,shc,males,0.461180124,0.422256683,0.500573197,ACCESS shc regional+remote,
+2020,retested,remote,shc,males,0.461180124,0.422256683,0.500573197,ACCESS shc regional+remote,
+2020,retested,urban,gp,males,0.1,0.056473475,0.168134349,ACCEPt 2014 (assumption) as ACCESS is biased,
+2020,retested,regional,gp,males,0.1,0.056473475,0.168134349,ACCEPT,2014 data
+2020,retested,remote,gp,males,0.1,0.056473475,0.168134349,ACCEPT,assumed same as regional
+2020,retested,urban,shc,females,0.304018196,0.279423413,0.329768571,ACCESS shc urban,
+2020,retested,regional,shc,females,0.388888889,0.332733861,0.44805856,ACCESS shc regional+remote,
+2020,retested,remote,shc,females,0.388888889,0.332733861,0.44805856,ACCESS shc regional+remote,
+2020,retested,urban,gp,females,0.193548387,0.147410171,0.24941418,ACCEPt 2014 (assumption) as ACCESS is biased,
+2020,retested,regional,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,2014 data
+2020,retested,remote,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,assumed same as regional
+2020,retested,urban,shc,all,0.449624531,0.437385362,0.4619246,ACCESS shc urban,
+2020,retested,regional,shc,all,0.439701174,0.407703114,0.472199885,ACCESS shc regional+remote,
+2020,retested,remote,shc,all,0.439701174,0.407703114,0.472199885,ACCESS shc regional+remote,
+2020,retested,urban,gp,all,0.161375661,0.126538234,0.203267217,ACCEPt 2014 (assumption) as ACCESS is biased,
+2020,retested,regional,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,2014 data
+2020,retested,remote,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,assumed same as regional
+2021,notifications,urban,all,all,0.731510341,0.731510341,0.731510341,notifications data,
+2021,notifications,regional,all,all,0.226591739,0.226591739,0.226591739,notifications data,
+2021,notifications,remote,all,all,0.04189792,0.04189792,0.04189792,notifications data,
+2021,diagnoses,all,shc,all,0.11,0.11,0.11,"(Grulich et al. 2014, table 4, usual GP %)",
+2021,diagnoses,all,gp,all,0.797,0.797,0.797,"(Grulich et al. 2014, table 4, sexual health clini %)",
+2021,diagnoses,all,other,all,0.092,0.092,0.092,"(Grulich et al. 2014, table 4, Other + pharmacy %)",
+2021,treated,urban,gp,all,0.92,0.92,0.92,(Bangor-Jones 2011),
+2021,treated,regional,gp,all,0.92,0.92,0.92,(Bangor-Jones 2011),
+2021,treated,urban,other,all,0.99,0.99,0.99,(Foster et al. 2016),
+2021,treated,regional,other,all,1,1,1,(Foster et al. 2016),
+2021,treated,remote,shc,all,0.96,0.96,0.96,(Foster et al. 2016),
+2021,treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),
+2021,retested,urban,shc,males,0.533276632,0.518890573,0.547607969,ACCESS shc urban,
+2021,retested,regional,shc,males,0.320819113,0.283475961,0.36054866,ACCESS shc regional+remote,
+2021,retested,remote,shc,males,0.320819113,0.283475961,0.36054866,ACCESS shc regional+remote,
+2021,retested,urban,gp,males,0.1,0.056473475,0.168134349,ACCEPt 2014 (assumption) as ACCESS is biased,
+2021,retested,regional,gp,males,0.1,0.056473475,0.168134349,ACCEPT,
+2021,retested,remote,gp,males,0.1,0.056473475,0.168134349,ACCEPT,
+2021,retested,urban,shc,females,0.349892009,0.319323903,0.38172215,ACCESS shc urban,
+2021,retested,regional,shc,females,0.262839879,0.216928284,0.314365161,ACCESS shc regional+remote,
+2021,retested,remote,shc,females,0.262839879,0.216928284,0.314365161,ACCESS shc regional+remote,
+2021,retested,urban,gp,females,0.193548387,0.147410171,0.24941418,ACCEPt 2014 (assumption) as ACCESS is biased,
+2021,retested,regional,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,
+2021,retested,remote,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,
+2021,retested,urban,shc,all,0.502996123,0.489900771,0.516087392,ACCESS shc urban,
+2021,retested,regional,shc,all,0.302603037,0.27329487,0.333579149,ACCESS shc regional+remote,
+2021,retested,remote,shc,all,0.302603037,0.27329487,0.333579149,ACCESS shc regional+remote,
+2021,retested,urban,gp,all,0.161375661,0.126538234,0.203267217,ACCEPt 2014 (assumption) as ACCESS is biased,
+2021,retested,regional,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,
+2021,retested,remote,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,
+2022,notifications,urban,all,all,0.734478647,0.734478647,0.734478647,notifications data,
+2022,notifications,regional,all,all,0.223704747,0.223704747,0.223704747,notifications data,
+2022,notifications,remote,all,all,0.041816605,0.041816605,0.041816605,notifications data,
+2022,diagnoses,all,shc,all,0.11,0.11,0.11,"(Grulich et al. 2014, table 4, usual GP %)",
+2022,diagnoses,all,gp,all,0.797,0.797,0.797,"(Grulich et al. 2014, table 4, sexual health clini %)",
+2022,diagnoses,all,other,all,0.092,0.092,0.092,"(Grulich et al. 2014, table 4, Other + pharmacy %)",
+2022,treated,urban,gp,all,0.92,0.92,0.92,(Bangor-Jones 2011),
+2022,treated,regional,gp,all,0.92,0.92,0.92,(Bangor-Jones 2011),
+2022,treated,urban,other,all,0.99,0.99,0.99,(Foster et al. 2016),
+2022,treated,regional,other,all,1,1,1,(Foster et al. 2016),
+2022,treated,remote,shc,all,0.96,0.96,0.96,(Foster et al. 2016),
+2022,treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),
+2022,retested,urban,shc,males,0.407752516,0.394582007,0.421055943,ACCESS shc urban,
+2022,retested,regional,shc,males,0.266990291,0.232858714,0.304067245,ACCESS shc regional+remote,
+2022,retested,remote,shc,males,0.266990291,0.232858714,0.304067245,ACCESS shc regional+remote,
+2022,retested,urban,gp,males,0.1,0.056473475,0.168134349,ACCEPt 2014 (assumption) as ACCESS is biased,
+2022,retested,regional,gp,males,0.1,0.056473475,0.168134349,ACCEPT,
+2022,retested,remote,gp,males,0.1,0.056473475,0.168134349,ACCEPT,
+2022,retested,urban,shc,females,0.206896552,0.183585183,0.232282809,ACCESS shc urban,
+2022,retested,regional,shc,females,0.170483461,0.13538533,0.212177529,ACCESS shc regional+remote,
+2022,retested,remote,shc,females,0.170483461,0.13538533,0.212177529,ACCESS shc regional+remote,
+2022,retested,urban,gp,females,0.193548387,0.147410171,0.24941418,ACCEPt 2014 (assumption) as ACCESS is biased,
+2022,retested,regional,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,
+2022,retested,remote,gp,females,0.193548387,0.147410171,0.24941418,ACCEPT,
+2022,retested,urban,shc,all,0.373567609,0.36184945,0.385435061,ACCESS shc urban,
+2022,retested,regional,shc,all,0.229249012,0.203930776,0.256653927,ACCESS shc regional+remote,
+2022,retested,remote,shc,all,0.229249012,0.203930776,0.256653927,ACCESS shc regional+remote,
+2022,retested,urban,gp,all,0.161375661,0.126538234,0.203267217,ACCEPt 2014 (assumption) as ACCESS is biased,
+2022,retested,regional,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,
+2022,retested,remote,gp,all,0.161375661,0.126538234,0.203267217,ACCEPT,
