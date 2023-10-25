@@ -45,7 +45,7 @@ source(file.path(HIVcode, "GetMigrate.R"))
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2021
+analysisYear <- 2022
 startYear <- 1980 # First year in HIV registry is 1980
 
 allYears <- startYear:analysisYear 
@@ -286,7 +286,6 @@ hivCobCumState <- hivSet %>%
   spread(countrygroup, propnotifications) %>%
   rename(year = yeardiagnosis) 
 
-
 ```
 
 ```{r Annual proportion unique}
@@ -384,6 +383,15 @@ mainDataFolder <- file.path(dirname(getwd()), "data")
 absMigration <- read.csv(file.path(mainDataFolder, 
   paste0("ABS_migration_clean-", analysisYear, ".csv")), 
   as.is = 1)
+
+if (analysisYear >= 2022) {
+  # Will use overall NOM departures and Australian citizen departures to 
+  # estimate the migration rate
+  absMigrationAus <- absMigration |> filter(grouping == "australian")
+  absMigration <- absMigration |> filter(grouping == "total") 
+  
+}
+
 if (analysisYear >= 2017) {
   # Given issues with >= 2017 data for permanent removals use 2016 data and
   # then add estimates up to the current year
@@ -403,7 +411,50 @@ absInterstate <- read.csv(file.path(mainDataFolder,
 
 # Base migration rate ----------------------------------------------------
 
-if (analysisYear >= 2017) {
+if (analysisYear >= 2022) {
+  # Use 2016 data and then appended Australian Citizen NOM departures data for
+  # 2017-Analysis year becaue the numbers closerly align. 
+  
+  absDeparts <- mutate(absDeparts, migrate = permanent / erp)
+  mrateAll <- absDeparts |> 
+    select(year, departures = permanent, migrate)
+  
+  absDepartsAus <- absMigrationAus |>
+    filter(state == "all") |>
+    mutate(migrate = departures / erp)
+  mrateAus <- absDepartsAus |>
+    select(year, departures, migrate)
+  
+  # Save a combined data set for testing and comparison
+  testMrate <- 
+    bind_rows(
+      mutate(mrateAll, type = "all"), 
+      mutate(mrateAus, type = "aus")
+    ) |>
+    filter(year >= 2004)
+  
+  write_csv(
+    testMrate, 
+    file.path(dataFolder, 
+      paste0("Migration_Permanent_NOM_Test-", analysisYear,".csv")
+    )
+  )
+  
+  # Generate final mrate - for 2022 the post-covid data is missing for the 
+  # year 2022 assume same data as for 2019 (pre-covid)
+  absDepartsMerged <- bind_rows(mrateAll, mrateAus |> filter(year >= 2017))
+  absDepartsMerged <- bind_rows(
+    absDepartsMerged, 
+    tibble(
+      year = 2022,
+      departures = filter(absDepartsMerged, year == 2019)$departures,
+      migrate = filter(absDepartsMerged, year == 2019)$departures
+    )
+  )
+
+  mrate <- absDepartsMerged$migrate
+  
+} else if (analysisYear %in%  2017:2021) {
   # Use 2016 data and then estimate rate for following years. Estimates
   # are generated using the NOM Departures data with an adjustment factor 
   # estimated using the data for 2004-2016. These estimates and associated
@@ -417,7 +468,7 @@ if (analysisYear >= 2017) {
   # Read in Excel file and extract estimates for permanent departure rate 
   # after 2017. NEEDS TO BE UPDATED ANNUALLY
   estimatedMrate <- read_xlsx(file.path(dataFolder,
-    "Migration_Permanent_NOM_Comparison.xlsx"), skip = 3) %>%
+    "Migration_Permanent_NOM_Comparison_2017-2021.xlsx"), skip = 3) %>%
     select(year = Year, mrate = "Base (Permanent)") 
   
   if (tail(estimatedMrate$year, 1) < analysisYear) {
@@ -427,9 +478,6 @@ if (analysisYear >= 2017) {
   estimatedMrate <- estimatedMrate %>%
     filter(year >= 2017, year <= analysisYear)
   
-  # Append estimateMrate to mrate
-  # mrate <- c(mrate, rep(tail(mrate, 1), 
-  #   length(allYears) - length(startYear:2016)))
   mrate <- c(mrate, estimatedMrate$mrate)
   
 } else {
@@ -507,7 +555,7 @@ males15 <- cleanNom %>%
   filter(year %in% 2004:2014) %>%
   filter(cob == "all", !(age %in% c("a0_4", "a5_9", "a10_14",
     "a80_84", "a85+", "all")), 
-  state == "all", gender == "male") %>% 
+    state == "all", gender == "male") %>% 
   group_by(year) %>%
   summarise(departures = sum(nom),
     erp = sum(erp)) %>%
@@ -517,7 +565,7 @@ females15 <- cleanNom %>%
   filter(year %in% 2004:2014) %>%
   filter(cob == "all", !(age %in% c("a0_4", "a5_9", "a10_14", 
     "a80_84", "a85+", "all")), 
-  state == "all", gender == "female") %>% 
+    state == "all", gender == "female") %>% 
   group_by(year) %>%
   summarise(departures = sum(nom),
     erp = sum(erp)) %>%
@@ -526,12 +574,12 @@ females15 <- cleanNom %>%
 allPop <- cleanNom %>% 
   filter(year %in% 2004:2014) %>%
   filter(cob == "all", age == "all", 
-  state == "all", gender == "all") %>% 
+    state == "all", gender == "all") %>% 
   group_by(year) %>%
   summarise(departures = sum(nom),
     erp = sum(erp)) %>%
   mutate(migrate = departures / erp)
-    
+
 adultMale <- data.frame(relrate = males15$migrate / allPop$migrate, 
   year = 2004:2014)
 lmAdultMale <- lm(relrate ~ year, data = adultMale)
@@ -620,7 +668,7 @@ for (region in states) {
 # diagnosed. There is lots of uncertainty and limited data but we use the
 # data for Australian born and overseas born from NSW to estimate this
 # post-diagnosis movement for east state and territory and Australia overall. 
-  
+
 # Specific NSW estimates (hardcodede) -- based on 6-monthly follow-up data 
 # from NSW Health cumulatively over 2013-2019 and 2020-2021 (COVID era). We 
 # Separate the pre-COVID and COVID data given the massive interuption to 
@@ -636,6 +684,9 @@ osBornEmigrate19 <- 0.0904007
 
 ausBornEmigrateCOVID <- 0.0
 osBornEmigrateCOVID <- 0.0298507
+
+
+
 
 ausBornEmigrate <- c(rep(ausBornEmigrate19, length(startYear:2019)),
   rep(ausBornEmigrateCOVID, length(2020:analysisYear))) 
@@ -937,7 +988,7 @@ for (ii in 2:length(annDiags)) {
   # numLiving_max[ii] <- numLiving_max[ii-1] + annDiags[ii] -
   #   (1-hivBaseRates$propstay_lower[ii-1]) * annDiags[ii-1] -
   #   deaths_min[ii-1] - numLiving_max[ii-1] * allMigrateLower[ii-1]
-
+  
   # New formula: Used since mid-2022. Calculations provide the number at 
   # the end of the year using the number at the end of the previous year and
   # changes through the year (assumes new diagnoses stay in the population 
@@ -950,7 +1001,7 @@ for (ii in 2:length(annDiags)) {
   numLiving_max[ii] <- numLiving_max[ii-1] +
     hivBaseRates$propstay_lower[ii] * annDiags[ii] -
     deaths_min[ii] - numLiving_max[ii-1] * allMigrateLower[ii]
-
+  
 }
 
 # Old formula Calculation of crude average annual mortality rates up to 2003
@@ -1169,8 +1220,8 @@ for (region in head(states, -1)) {
 hivInterstate <- hivInterstate %>% 
   mutate(departrate = departures / erp,
     departures2 = departrate2 * erp) 
- 
-  
+
+
 # Calculate arrival rate
 hivInterstate$arrivals <- as.numeric(NA)
 hivInterstate$arriverate2 <- as.numeric(NA)
@@ -1226,8 +1277,8 @@ nyears <- analysisYear - 1980 + 1
 nages <- 18
 
 ageList <- c("a0_4", "a5_9","a10_14", "a15_19", "a20_24", "a25_29", 
-             "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
-             "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
+  "a30_34", "a35_39", "a40_44", "a45_49", "a50_54", "a55_59", 
+  "a60_64", "a65_69", "a70_74", "a75_79", "a80_84", "a85+")
 
 yearList <- paste("y", as.character(1980:analysisYear), sep = "")
 
@@ -1385,7 +1436,7 @@ for (ii in 1:nyears) {
     filter(yeardeath == year, sex == "male") %>%
     mutate(agedeath = agehiv + (yeardeath - yeardiagnosis)) %>%
     select(agedeath)
-
+  
   deathbinsMale <- table(AgeCat(yearDeathsMale$agedeath, lower = 0, 
     upper = 85, by = 5))
   
@@ -1395,7 +1446,7 @@ for (ii in 1:nyears) {
     filter(yeardeath == year, sex != "male") %>%
     mutate(agedeath = agehiv + (yeardeath - yeardiagnosis)) %>%
     select(agedeath)
-
+  
   deathbinsFemale <- table(AgeCat(yearDeathsFemale$agedeath, lower = 0, 
     upper = 85, by = 5))
   
@@ -1430,11 +1481,11 @@ absDeathRates <- read.csv(file.path(dirname(basePath),
 
 # Use male deathrates for overall
 absDeathRatesAll <- filter(absDeathRates, gender == "males", 
-                           state == "all") %>% as_tibble()
+  state == "all") %>% as_tibble()
 absDeathRatesMale <- filter(absDeathRates, gender == "males",
-                            state == "all") %>% as_tibble()
+  state == "all") %>% as_tibble()
 absDeathRatesFemale <- filter(absDeathRates, gender == "females",
-                              state == "all") %>% as_tibble()
+  state == "all") %>% as_tibble()
 
 yearsVec <- 1980:analysisYear
 
@@ -1482,11 +1533,11 @@ for (ii in 2:nyears) {
     absDeathsFemale <- filter(absDeathRatesFemale, year == 2014)$deathrate
   } else {
     absDeaths <- filter(absDeathRatesAll, 
-                        year == yearsVec[ii - 1])$deathrate
+      year == yearsVec[ii - 1])$deathrate
     absDeathsMale <- filter(absDeathRatesMale, 
-                          year == yearsVec[ii - 1])$deathrate
+      year == yearsVec[ii - 1])$deathrate
     absDeathsFemale <- filter(absDeathRatesFemale, 
-                          year == yearsVec[ii - 1])$deathrate
+      year == yearsVec[ii - 1])$deathrate
   }
   
   # Adjust numbers per 1000 to rate and remove deaths for those aged 0
@@ -1501,7 +1552,7 @@ for (ii in 2:nyears) {
   deathsABSrate <- absDeaths * agePldhiv[, ii - 1]
   deathsABSrateMale <- absDeathsMale * agePldhivMale[, ii - 1]
   deathsABSrateFemale <- absDeathsFemale * agePldhivFemale[, ii - 1]
-
+  
   # Determine the difference in deaths between the estimate using the 
   # overall deathrate and the known deaths from notifications - if there
   # are negative numbers it is okay because we will end
@@ -1522,7 +1573,7 @@ for (ii in 2:nyears) {
   unknownFemale <- sum(agePldhivFemale[, ii-1]) * 
     hivBaseRates$deathrate[ii-1] * hivAdjustments$drate_female[ii-1] -
     sum(ageDeathFemale[, ii-1])
-
+  
   
   if (sum(deathsABSrate) !=0) {
     adjustFactor <- unknownAll / sum(deathsABSrate)
@@ -1545,7 +1596,7 @@ for (ii in 2:nyears) {
     unknownAgeDeathsFemale <- rep(0, nages)
   }
   
-    
+  
   for (jj in 1:nages) {
     
     # Calculate number of people moving up in age
@@ -1566,10 +1617,10 @@ for (ii in 2:nyears) {
     agePldhiv[jj, ii] <- agePldhiv[jj, ii - 1] + 
       hivBaseRates$annunique_all[ii] * ageDiag[jj, ii] - 
       (1-hivBaseRates$propstay[ii-1]) * hivBaseRates$annunique_all[ii-1] *
-        ageDiag[jj, ii-1] - 
+      ageDiag[jj, ii-1] - 
       ageDeath[jj, ii - 1] - unknownAgeDeaths[jj] - 
       agePldhiv[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] *
-        relAgeMigrate[jj, ii - 1] - 
+      relAgeMigrate[jj, ii - 1] - 
       agePldhiv[jj, ii - 1] * ageRate[jj] + ageUp  
     
     ageMortality[jj, ii-1] <- ageDeath[jj, ii-1] + abs(unknownAgeDeaths[jj])
@@ -1584,10 +1635,10 @@ for (ii in 2:nyears) {
     agePldhivMale[jj, ii] <- agePldhivMale[jj, ii - 1] + 
       hivBaseRates$annunique_male[ii] * ageDiagMale[jj, ii] - 
       (1-hivBaseRates$propstay[ii-1]) * 
-        hivBaseRates$annunique_male[ii-1] * ageDiagMale[jj, ii] - 
+      hivBaseRates$annunique_male[ii-1] * ageDiagMale[jj, ii] - 
       ageDeathMale[jj, ii - 1] - unknownAgeDeathsMale[jj] - 
       agePldhivMale[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] * 
-        relAgeMigrate[jj, ii - 1] - 
+      relAgeMigrate[jj, ii - 1] - 
       agePldhivMale[jj, ii - 1] * ageRate[jj] + ageUpMale 
     
     ageMortalityMale[jj, ii-1] <- ageDeathMale[jj, ii-1] +
@@ -1601,10 +1652,10 @@ for (ii in 2:nyears) {
     agePldhivFemale[jj, ii] <- agePldhivFemale[jj, ii - 1] + 
       hivBaseRates$annunique_female[ii] * ageDiagFemale[jj, ii] - 
       (1-hivBaseRates$propstay[ii-1]) * 
-        hivBaseRates$annunique_female[ii-1] * ageDiagFemale[jj, ii] - 
+      hivBaseRates$annunique_female[ii-1] * ageDiagFemale[jj, ii] - 
       ageDeathFemale[jj, ii - 1] - unknownAgeDeathsFemale[jj] - 
       agePldhivFemale[jj, ii - 1] * hivBaseRates$migrationrate[ii-1] * 
-        relAgeMigrateFemale[jj, ii - 1] - 
+      relAgeMigrateFemale[jj, ii - 1] - 
       agePldhivFemale[jj, ii - 1] * ageRate[jj] + ageUpFemale 
     
     ageMortalityFemale[jj, ii-1] <- ageDeathFemale[jj, ii-1] +
@@ -1692,7 +1743,7 @@ ageDataFemale <- agePldhivDfFemale %>%
   mutate(reldeathrate = ifelse(deathrate_all == 0, 1, 
     deathrate / deathrate_all)) %>%
   as_tibble()
-  
+
 # Put it all in one data frame
 ageData <- bind_rows(ageDataAll, ageDataMale) %>%
   bind_rows(ageDataFemale)
