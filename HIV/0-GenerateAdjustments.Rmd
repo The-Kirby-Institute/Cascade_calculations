@@ -74,8 +74,11 @@ countryCodes <- read.csv(file.path(dataFolder, "countryRegionCodes.csv"))
 regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
 
 # Tidy up notifications for calculations
-hivData <- TidyNotifications(rawNotifications, analysisYear, countryCodes,
-  regionCodes)
+hivData <- 
+  TidyNotifications(
+    rawNotifications, analysisYear, countryCodes, regionCodes
+  ) |> 
+  mutate(state = tolower(state))
 
 # Quick checks that we are not doing analysis outside of the data or
 # have the wrong notifications file
@@ -88,7 +91,8 @@ if (min(hivData$yeardiagnosis) > startYear) {
 }
 
 # Setup our working data frame
-hivSet <- filter(hivData, yeardiagnosis <= analysisYear)
+hivSet <- filter(hivData, yeardiagnosis <= analysisYear) 
+  
 
 # Start storing things
 hivBaseRates <- data.frame(year = allYears) 
@@ -100,10 +104,10 @@ hivBaseRates <- data.frame(year = allYears)
 # TODO: convert into a function?
 
 # Overall 
-hivResults <- hivSet %>% 
-  group_by(yeardiagnosis) %>% 
-  summarise(notifications = n()) %>%
-  mutate(totalnotifications = cumsum(notifications)) %>%
+hivResults <- hivSet |>
+  group_by(yeardiagnosis) |>
+  summarise(notifications = n()) |>
+  mutate(totalnotifications = cumsum(notifications)) |> 
   rename(year = yeardiagnosis)
 
 # Exposure - reallocate unknown proportionally by calculating proportion
@@ -697,14 +701,14 @@ ausBornEmigrate <-
   c(
     rep(ausBornEmigrate19, length(startYear:2019)),
     rep(ausBornEmigrateCOVID, length(2020:2021)), 
-    rep(ausBornEmigrateCOVID, length(2022:analysisYear))
+    rep(ausBornEmigrate2022, length(2022:analysisYear))
   ) 
 
 osBornEmigrate <- 
   c(
     rep(osBornEmigrate19, length(startYear:2019)),
     rep(osBornEmigrateCOVID, length(2020:2021)),
-    rep(osBornEmigrateCOVID, length(2022:analysisYear))
+    rep(osBornEmigrate2022, length(2022:analysisYear))
   ) 
 
 # Overall estimates
@@ -900,7 +904,7 @@ for (ii in 1:nrow(hivParams)) {
 ahodData <- read.csv(file.path(dataFolder, 
   paste0("ahod", analysisYear, ".csv")))
 
-# Load gender deathrate ratios - NNED TO UPDATE THE ESTIMATES IN THIS FILE EACH
+# Load gender deathrate ratios - NEED TO UPDATE THE ESTIMATES IN THIS FILE EACH
 # YEAR
 sexDrates <- read_excel(file.path(dataFolder,
   "HIV_Gender_Deathrates.xlsx"),
