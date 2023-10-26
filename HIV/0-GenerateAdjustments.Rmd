@@ -433,6 +433,11 @@ if (analysisYear >= 2022) {
     ) |>
     filter(year >= 2004)
   
+  ggplot(data = testMrate, aes(x = year, y = departures, colour = type)) +
+    geom_line() + 
+    ylim(c(0, NA)) +
+    PlotOptions()
+  
   write_csv(
     testMrate, 
     file.path(dataFolder, 
@@ -448,7 +453,7 @@ if (analysisYear >= 2022) {
     tibble(
       year = 2022,
       departures = filter(absDepartsMerged, year == 2019)$departures,
-      migrate = filter(absDepartsMerged, year == 2019)$departures
+      migrate = filter(absDepartsMerged, year == 2019)$migrate
     )
   )
 
@@ -515,7 +520,7 @@ removeCountries <- c("Adelie Land (France)",
   "At Sea")
 
 # Read in the ABS nom data (only available for years 2004 to 2014. Does
-# contain 2015 data but this is only for first siz months. 
+# contain 2015 data but this is only for first six months. 
 nomData <- read.csv(file.path(mainDataFolder, "ABS_nom_2015.csv"))
 
 # Clean up NOM data for analysis
@@ -669,15 +674,15 @@ for (region in states) {
 # data for Australian born and overseas born from NSW to estimate this
 # post-diagnosis movement for east state and territory and Australia overall. 
 
-# Specific NSW estimates (hardcodede) -- based on 6-monthly follow-up data 
-# from NSW Health cumulatively over 2013-2019 and 2020-2021 (COVID era). We 
-# Separate the pre-COVID and COVID data given the massive interuption to 
-# migration that occured during the COVID period. 
+# Specific NSW estimates (hardcoded) -- based on 6-monthly follow-up data 
+# from NSW Health cumulatively over 2013-2019, 2020-2021 (COVID era), and 2022 
+# (post COVID). We separate the pre-COVID and COVID data given the massive 
+# interruption to migration that occurred during the COVID period. 
 # 
-# Data for 2013-2021 in the local file 
-# ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_Sep2022.xlsx.
+# Data for 2013-2022 in the local file 
+# ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_Oct2023.xlsx.
 # The variables below store the cumulative emigration proportion for 
-# Australian born diagnosed and overseas born to end 2021 with the COVID data 
+# Australian born diagnosed and overseas born to end 2022 with the COVID data 
 # separated out.  
 ausBornEmigrate19 <- 0.0076923
 osBornEmigrate19 <- 0.0904007
@@ -685,13 +690,22 @@ osBornEmigrate19 <- 0.0904007
 ausBornEmigrateCOVID <- 0.0
 osBornEmigrateCOVID <- 0.0298507
 
+ausBornEmigrate2022 <- 0.01369863
+osBornEmigrate2022 <- 0.023809524
 
+ausBornEmigrate <- 
+  c(
+    rep(ausBornEmigrate19, length(startYear:2019)),
+    rep(ausBornEmigrateCOVID, length(2020:2021)), 
+    rep(ausBornEmigrateCOVID, length(2022:analysisYear))
+  ) 
 
-
-ausBornEmigrate <- c(rep(ausBornEmigrate19, length(startYear:2019)),
-  rep(ausBornEmigrateCOVID, length(2020:analysisYear))) 
-osBornEmigrate <- c(rep(osBornEmigrate19, length(startYear:2019)),
-  rep(osBornEmigrateCOVID, length(2020:analysisYear))) 
+osBornEmigrate <- 
+  c(
+    rep(osBornEmigrate19, length(startYear:2019)),
+    rep(osBornEmigrateCOVID, length(2020:2021)),
+    rep(osBornEmigrateCOVID, length(2022:analysisYear))
+  ) 
 
 # Overall estimates
 propAus <- hivCobCum$australia
