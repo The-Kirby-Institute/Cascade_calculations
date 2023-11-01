@@ -50,19 +50,19 @@ specified project folder and have a cascade file handle.
 
 ```{r Cascade and script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2019
+analysisYear <- 2022
 saveResults <- TRUE
 
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "Undiagnosed_Metrics_Paper" # "Undiagnosed_Metrics_Paper" # "ASR_2022" for latest ASR
+projectOutput <- "ASR_2023" # "Undiagnosed_Metrics_Paper" # "ASR_2022" for latest ASR
                             # "HIV_Cascade_Paper"
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entered via a file in project Output 
 # which need to exist
-paramsFile <-  "ProjectParameters.csv"
+paramsFile <- "ProjectParameters.csv"
                              
 # Cascade options----------------------------------------------------------
 # The following variables specify the characteristics and hence the 
@@ -89,7 +89,7 @@ if (is.null(paramsFile)) {
   
   numCascades <- 1
   
-  cascadeName <- "All-2021" # (single)
+  cascadeName <- "All-2022" # (single)
   targetGender <- rep("all", numCascades) # all, male, female (single)
   targetAge <- rep("all", numCascades) # all or split (single)
   # Note regarding ageing: The calculations don't specifically target 

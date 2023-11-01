@@ -77,8 +77,7 @@ regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
 hivData <- 
   TidyNotifications(
     rawNotifications, analysisYear, countryCodes, regionCodes
-  ) |> 
-  mutate(state = tolower(state))
+  ) 
 
 # Quick checks that we are not doing analysis outside of the data or
 # have the wrong notifications file
