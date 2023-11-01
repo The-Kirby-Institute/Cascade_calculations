@@ -141,10 +141,12 @@ if (is.null(paramsFile)) {
   # Settings for generating ECDC model inputs
   ecdcData <- rep(TRUE, numCascades)
   ecdcVersion <- rep("1.3.0", numCascades) # Has to be the same
-  excludeOS <- rep(TRUE, numCascades) # Default FALSE to obtain total living 
-                                      # with diagnosed HIV. Exclude previous 
-                                      # diagnosed overseas and newly acquired 
-                                      # for ECDC calculations. 
+  excludeOS <- rep(FALSE, numCascades) # Default FALSE to obtain total living 
+                                       # with diagnosed HIV. Exclude previous 
+                                       # diagnosed overseas for ECDC calculations. 
+  excludeNew <- rep(FALSE, numCascades) # Default FALSE to obtain total living 
+                                        # with diagnosed HIV. Exclude newly 
+                                        # acquired diagnoses for ECDC calculations. 
 
   # Leave projections chunk turned off so it is not called unless required. 
   # Simply run projections from within the chunk. 
@@ -202,6 +204,7 @@ if (is.null(paramsFile)) {
   ecdcData <- cascadeParameters$ecdcData # Default: TRUE
   ecdcVersion <- cascadeParameters$ecdcVersion # Default: "1.3.0"
   excludeOS <- cascadeParameters$excludeOS # Default: FALSE
+  excludeNew <- cascadeParameters$excludeNew # Default: FALSE
   
   # Projections - defaults set to status quo for 10 years 
   projectPldhiv <- cascadeParameters$projectPldhiv # Default: FALSE
@@ -444,21 +447,24 @@ for (ii in 1:numCascades) {
       targetLocalRegion[ii]))
     
   } else {
-    pldhivCalculations[[ii]] <- CalculatePldhiv(analysisYear, saveResults, 
-      projectOutput, 
+    pldhivCalculations[[ii]] <- CalculatePldhiv(
+      analysisYear, saveResults, projectOutput, 
       # Cascade parameters
       cascadeName[ii], targetGender[ii], targetAge[ii], targetCob[ii], 
-      targetExposure[ii], targetAtsi[ii], targetState[ii], 
-      targetLocalRegion[ii], targetGlobalRegion[ii], 
+      targetExposure[ii], targetAtsi[ii], targetState[ii], targetLocalRegion[ii],
+      targetGlobalRegion[ii], 
       # Specifications
-      useImputed[ii], nImputedSets[ii], excludeAborig[ii], 
-      doRetained[ii], doUnique[ii], yearUnique[ii], ecdcData[ii], 
-      ecdcVersion[ii], excludeOS[ii], projectPldhiv[ii], projectYear[ii], 
-      projectName[ii], projectOption[ii], projectDecrease[ii], 
+      useImputed[ii], nImputedSets[ii], excludeAborig[ii], doRetained[ii], 
+      doUnique[ii], yearUnique[ii], ecdcData[ii], ecdcVersion[ii], excludeOS[ii],
+      excludeNew[ii],
+      # Projection specifications 
+      projectPldhiv[ii], projectYear[ii], projectName[ii], projectOption[ii],
+      projectDecrease[ii], 
       # Data
-      pldhivData, allYears, hivBase, hivAdjustments, cleanNom,
-      absInterstate, absInterRegion, ageList, yearList, hivAgeDeath)
-   }
+      pldhivData, allYears, hivBase, hivAdjustments, cleanNom, absInterstate, 
+      absInterRegion, ageList, yearList, hivAgeDeath
+    )
+  }
 }
 
 ```
