@@ -31,11 +31,13 @@ PHC CT request_NSW data only_updated_26July2016.xlsx
 # HIV directory
 HIV/*.nb.html
 HIV/data/*
+HIV/data/HIVbaseEstimates-2022_Store.csv
 !HIV/data/countryRegionCodes.csv
 !HIV/data/Hard_coded_estimates.csv
 !HIV/data/HIVadjustments-*.csv
 !HIV/data/HIVbaseEstimates-*.csv
 HIV/data/HIVbaseEstimates-2021_Testing.csv
+HIV/data/HIVbaseEstimates-2022_Store.csv
 !HIV/data/individualHIVparameters.csv
 !HIV/data/README.md
 HIV/output/*
@@ -83,4 +85,5 @@ Chlamydia/ChlamydiaCascade.nb.html
 HCV cascade/
 
 .849C9593-D756-4E56-8D6E-42412F2A707B
+
 
