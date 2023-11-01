@@ -47,7 +47,7 @@ source(file.path(Rcode, "FormatData.R"))
 
 
 # Script options
-dataYear <- 2021
+dataYear <- 2022
 
 runImpute <- TRUE
 saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 

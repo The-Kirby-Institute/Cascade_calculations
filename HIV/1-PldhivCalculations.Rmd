@@ -56,14 +56,12 @@ saveResults <- TRUE
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-
 projectOutput <- "ASR_2023" # "Undiagnosed_Metrics_Paper" # "ASR_2022" for latest ASR
                             # "HIV_Cascade_Paper"
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
 # otherwise cascade parameters are entered via a file in project Output 
 # which need to exist
-
 paramsFile <- "ProjectParameters.csv"
 
 # Cascade options----------------------------------------------------------
@@ -91,7 +89,6 @@ if (is.null(paramsFile)) {
   
   numCascades <- 1
   
-
   cascadeName <- "All-2022" # (single)
   targetGender <- rep("all", numCascades) # all, male, female (single)
   targetAge <- rep("all", numCascades) # all or split (single)
@@ -102,7 +99,7 @@ if (is.null(paramsFile)) {
   # a10_14,...,a85+ (5 year age bins). To estimate for specific age run with
   # split and then filter out age estimates as required essentially turns on 
   # doAge below. 
-  targetCob <- rep("non-australia", numCascades) # all=including n/a, Thailand, etc.
+  targetCob <- rep("all", numCascades) # all=including n/a, Thailand, etc.
   # (combination). "Australia", "non-australia", "non-aus-nz"
   targetExposure <- rep("all", numCascades) #msm, hetero, pwid, otherexp 
   # (combination)
