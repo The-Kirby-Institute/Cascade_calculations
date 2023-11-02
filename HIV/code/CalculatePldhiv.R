@@ -17,13 +17,12 @@
 #' @import tidyverse
 #'  
 CalculatePldhiv <- function(analysisYear, saveResults, projectOutput, 
-  cascadeName, targetGender, targetAge, targetCob, targetExposure, 
-  targetAtsi, targetState, targetLocalRegion, targetGlobalRegion, 
-  useImputed, nImputedSets, excludeAborig, doRetained, doUnique, 
-  yearUnique, ecdcData, ecdcVersion, excludeOS, projectPldhiv, projectYear, 
-  projectName, projectOption, projectDecrease, hivData, allYears, hivBase, 
-  hivAdjustments, cleanNom, absInterstate, absInterRegion, ageList, 
-  yearList, hivAgeDeath) {
+  cascadeName, targetGender, targetAge, targetCob, targetExposure, targetAtsi,
+  targetState, targetLocalRegion, targetGlobalRegion, useImputed, nImputedSets, 
+  excludeAborig, doRetained, doUnique, yearUnique, ecdcData, ecdcVersion, 
+  excludeOS, excludeNew, projectPldhiv, projectYear, projectName, projectOption,
+  projectDecrease, hivData, allYears, hivBase, hivAdjustments, cleanNom, 
+  absInterstate, absInterRegion, ageList, yearList, hivAgeDeath) {
   
   # Initialise optional outputs
   uniqueNotifications <- NULL
@@ -109,8 +108,12 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   # Look at the overall notifications first
   if (excludeOS) {
     # Exclude those aged < 15 as well as previously diagnosed overseas
-    hivData <- filter(hivData, is.na(previ_diag_overseas), seroconverter == 0, 
+    hivData <- filter(hivData, is.na(previ_diag_overseas), 
       is.na(agehiv) | agehiv >= 15) # assume missing ages are older than 15 years
+  }
+  
+  if (excludeNew) {
+    hivData <- filter(hivData, seroconverter ==0)
   }
   
   hivSetAll <- filter(hivData, yeardiagnosis <= analysisYear)
