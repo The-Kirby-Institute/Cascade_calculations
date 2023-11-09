@@ -56,7 +56,7 @@ saveResults <- TRUE
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "ASR_2023" # "Undiagnosed_Metrics_Paper" # "ASR_2022" for latest ASR
+projectOutput <- "ASR_2023" # "Undiagnosed_Metrics_Paper" # "ASR_2023" for latest ASR
                             # "HIV_Cascade_Paper"
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
@@ -149,7 +149,7 @@ if (is.null(paramsFile)) {
                                         # acquired diagnoses for ECDC calculations. 
 
   # Parameter for adjusting migration rate to match data
-  adjustment <- rep(1.0, numCascades) # Default = 1 = no adjustment
+  adjustment <- rep(1.28, numCascades) # All 2022 = 1.28; Default = 1 = no adjustment
   
   # Leave projections chunk turned off so it is not called unless required. 
   # Simply run projections from within the chunk. 
