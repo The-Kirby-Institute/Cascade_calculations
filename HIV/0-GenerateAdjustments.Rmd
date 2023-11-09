@@ -436,10 +436,19 @@ if (analysisYear >= 2022) {
     ) |>
     filter(year >= 2004)
   
-  ggplot(data = testMrate, aes(x = year, y = departures, colour = type)) +
+  plotMrate <- ggplot(data = testMrate, aes(x = year, y = departures, colour = type)) +
     geom_line() + 
-    ylim(c(0, NA)) +
+    expand_limits(y = 0) +
+    scale_colour_manual("",
+      limits = c("all","aus"),
+      values = c("blue", "red"),
+      labels = c("Permanent departures", "Australian citizen NOM departures")) +
+    xlab("Year") + ylab("Departures") +
     PlotOptions()
+  
+  ggsave(file.path(dataFolder, 
+      paste0("Migration_Permanent_NOM_Test-", analysisYear,".png")), 
+    plot = plotMrate, width = 15, height = 10, units = "cm")
   
   write_csv(
     testMrate, 

@@ -273,8 +273,9 @@ if (analysisYear < 2020) {
 if (addTempRes) {
   # Load from file ATRAS estimates merged with NAPHWA estimates in March 
   # 2019 report.
-  tempResData <- read.csv(file.path(dataFolder,
-    paste0("ART_medicare_ineligible-", analysisYear, ".csv")))
+  tempResData <- read_csv(file.path(dataFolder,
+    paste0("ART_medicare_ineligible-", analysisYear, ".csv"))) |>
+    mutate(year = as.integer(year))
   
   tempResArt <- filter(tempResData, year <= analysisYear)
   
@@ -366,6 +367,20 @@ if (addTempRes) {
   }
 }
 
+# Plot temporary resident ART estimates
+tempResArtPlot <- ggplot(tibble(tempResArt), aes(x = year, y = value)) + 
+  geom_line(colour = "blue") +
+  geom_point(colour = "blue") +
+  expand_limits(y = 0) +
+  scale_x_continuous(breaks = tempResArt$year) + 
+  xlab("Year") + ylab("Number on ART") +
+  PlotOptions()
+
+ggsave(
+  file.path(dataFolder, 
+    paste0("ART_Medicare_ineligible_Plot-", analysisYear, ".png")),
+  plot = tempResArtPlot, width = 12, height = 8, units = "cm")
+
 # Replace values with hard coded if necessary
 # hardCodeValues <- read.csv(file.path(dataFolder,
 #                                      "Hard_coded_estimates.csv"))
@@ -394,7 +409,20 @@ hivSuppressed <- data.frame(stage = character(),
 
 # Load all the data we need
 ahodData <- read_csv(file.path(dataFolder, 
-  paste0("ahod", analysisYear, ".csv"))) 
+  paste0("ahod", analysisYear, ".csv")),
+  cols(
+    year = col_integer(),
+    state = col_character(),
+    population = col_character(),
+    number = col_double(),
+    num_viro = col_integer(),
+    mean_age = col_double(),
+    n_death = col_integer(),
+    n_rx = col_integer(),
+    n_rx50 = col_integer(),
+    n_rx200 = col_integer(),
+    n_rx400 = col_integer()
+  )) 
 
 # Extract the viral suppression data
 
