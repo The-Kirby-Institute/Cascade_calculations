@@ -87,6 +87,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   ecdcData <- ifelse(doAge, FALSE, ecdcData) # Turn off for ageing
   ecdcData <- ifelse(targetLocalRegion != "all", FALSE, ecdcData)
   excludeOS <- ifelse(!ecdcData, FALSE, excludeOS) # Turn off
+  excludeNew <- ifelse(!ecdcData, FALSE, excludeNew) # Turn off
   ecdcModel <- cascadeName # name
   if (excludeOS) {
     # If excludeOS don't do extra calculations
@@ -97,8 +98,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   # Store paramaters for saving-------------------------------------------
   hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
     targetExposure, targetAtsi, targetState, targetLocalRegion,
-    targetGlobalRegion, excludeAborig, doRetained,
-    doUnique, yearUnique, ecdcData, ecdcVersion, excludeOS, projectPldhiv,
+    targetGlobalRegion, excludeAborig, doRetained, doUnique, yearUnique, 
+    ecdcData, ecdcVersion, excludeOS, excludeNew, adjustment, projectPldhiv,
     projectYear, projectName, projectOption, projectDecrease, analysisYear, 
     interState, doAge)
   
@@ -548,6 +549,9 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   # We assume the same deathrate, emigration rate and proportion stay for
   # all local regions based on state, so no targetLocalRegion in call. 
 
+  # Adjust base migration rate
+  hivBase$migrationrate <- adjustment * hivBase$migrationrate
+  
   subsetRates <- GetAdjustments(hivBase, hivAdjustments, 
     "all", targetGender, targetExposure, targetCob, targetAtsi, 
     targetLocalRegion, targetState, targetGlobalRegion) 
@@ -576,9 +580,9 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   }
   
   # Final migration rates
-  subsetRates$mrate <- relMigration * adjustment * hivBase$migrationrate
-  subsetRates$mrate_lower <- relMigration * adjustment * hivBase$migrationrate_lower
-  subsetRates$mrate_upper <- relMigration * adjustment * hivBase$migrationrate_upper
+  subsetRates$mrate <- relMigration * hivBase$migrationrate
+  subsetRates$mrate_lower <- relMigration * hivBase$migrationrate_lower
+  subsetRates$mrate_upper <- relMigration * hivBase$migrationrate_upper
   
   # Initialize interstate movement rates
   subsetRates$inter_arriverate <- 0
@@ -614,11 +618,9 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     }
     
     # Final migration rates
-    subsetRatesAll$mrate <- relMigrationAll * adjustment * hivBase$migrationrate
-    subsetRatesAll$mrate_lower <- relMigrationAll * adjustment * 
-      hivBase$migrationrate_lower
-    subsetRatesAll$mrate_upper <- relMigrationAll * adjustment *
-      hivBase$migrationrate_upper
+    subsetRatesAll$mrate <- relMigrationAll * hivBase$migrationrate
+    subsetRatesAll$mrate_lower <- relMigrationAll * hivBase$migrationrate_lower
+    subsetRatesAll$mrate_upper <- relMigrationAll * hivBase$migrationrate_upper
     
     # Get interstate or inter-region rates - only have data since 1982 
     # assume zero rate for 1980-81. 
@@ -710,7 +712,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       pldhivAgeAll <- LivingDiagnosedAge(hivResultsAgeAll,
         subsetRatesAll$annunique, 
         subsetRatesAll$deathrate,
-        adjustment * hivBase$migrationrate, 
+        hivBase$migrationrate, 
         subsetRatesAll$propstay,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrateAll,
@@ -719,7 +721,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       pldhivAgeAllMin <- LivingDiagnosedAge(hivResultsAgeAllMin,
         subsetRatesAll$annunique, 
         subsetRatesAll$deathrate_upper,
-        adjustment * hivBase$migrationrate_upper, 
+        hivBase$migrationrate_upper, 
         subsetRatesAll$propstay_lower,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
@@ -728,7 +730,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       pldhivAgeAllMax <- LivingDiagnosedAge(hivResultsAgeAllMax,
         subsetRatesAll$annunique, 
         subsetRatesAll$deathrate_lower,
-        adjustment * hivBase$migrationrate_lower, 
+        hivBase$migrationrate_lower, 
         subsetRatesAll$propstay_upper,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
@@ -777,7 +779,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       pldhivAll <- LivingDiagnosedAge(hivResultsAge,
         subsetRates$annunique, 
         subsetRates$deathrate,
-        adjustment * hivBase$migrationrate, 
+        hivBase$migrationrate, 
         subsetRates$propstay,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
@@ -789,7 +791,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       pldhivAllMin <- LivingDiagnosedAge(hivResultsAgeMin,
         subsetRates$annunique, 
         subsetRates$deathrate_upper,
-        adjustment * hivBase$migrationrate_upper, 
+        hivBase$migrationrate_upper, 
         subsetRates$propstay_lower,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
@@ -801,7 +803,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       pldhivAllMax <- LivingDiagnosedAge(hivResultsAgeMax,
         subsetRates$annunique, 
         subsetRates$deathrate_lower,
-        adjustment * hivBase$migrationrate_lower, 
+        hivBase$migrationrate_lower, 
         subsetRates$propstay_upper,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
@@ -923,7 +925,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       pldhivAll <- LivingDiagnosedAge(hivResultsAge,
         subsetRates$annunique, 
         subsetRates$deathrate,
-        adjustment * hivBase$migrationrate, 
+        hivBase$migrationrate, 
         subsetRates$propstay,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
@@ -932,7 +934,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       pldhivAllMin <- LivingDiagnosedAge(hivResultsAgeMin,
         subsetRates$annunique, 
         subsetRates$deathrate_upper,
-        adjustment * hivBase$migrationrate_upper, 
+        hivBase$migrationrate_upper, 
         subsetRates$propstay_lower,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
@@ -941,7 +943,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       pldhivAllMax <- LivingDiagnosedAge(hivResultsAgeMax,
         subsetRates$annunique, 
         subsetRates$deathrate_lower,
-        adjustment * hivBase$migrationrate_lower, 
+        hivBase$migrationrate_lower, 
         subsetRates$propstay_upper,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
@@ -1382,7 +1384,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         pldhivAgeAllFuture <- LivingDiagnosedAge(diagnosesFutureAll[[2]],
           ProjVec(subsetRatesAll$annunique, nprojYears),
           ProjVec(subsetRatesAll$deathrate, nprojYears),
-          ProjVec(adjustment * hivBase$migrationrate, nprojYears),
+          ProjVec(hivBase$migrationrate, nprojYears),
           ProjVec(subsetRatesAll$propstay, nprojYears),
           agedeath = relAgeDeathFuture,
           agemigrate = relAgeMigrateFutureAll,
@@ -1391,7 +1393,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         pldhivAgeAllMinFuture <- LivingDiagnosedAge(diagnosesFutureAllMin[[2]],
           ProjVec(subsetRatesAll$annunique, nprojYears),
           ProjVec(subsetRatesAll$deathrate_upper, nprojYears),
-          ProjVec(adjustment * hivBase$migrationrate_upper, nprojYears),
+          ProjVec(hivBase$migrationrate_upper, nprojYears),
           ProjVec(subsetRatesAll$propstay_lower, nprojYears),
           agedeath = relAgeDeathFuture,
           agemigrate = relAgeMigrateFutureAll,
@@ -1400,7 +1402,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         pldhivAgeAllMaxFuture <- LivingDiagnosedAge(diagnosesFutureAllMax[[2]],
           ProjVec(subsetRatesAll$annunique, nprojYears),
           ProjVec(subsetRatesAll$deathrate_lower, nprojYears),
-          ProjVec(adjustment * hivBase$migrationrate_lower, nprojYears),
+          ProjVec(hivBase$migrationrate_lower, nprojYears),
           ProjVec(subsetRatesAll$propstay_upper, nprojYears),
           agedeath = relAgeDeathFuture,
           agemigrate = relAgeMigrateFutureAll,
@@ -1449,7 +1451,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         pldhivAllFuture <- LivingDiagnosedAge(diagnosesFuture[[2]],
           ProjVec(subsetRates$annunique, nprojYears),
           ProjVec(subsetRates$deathrate, nprojYears),
-          ProjVec(adjustment * hivBase$migrationrate, nprojYears),
+          ProjVec(hivBase$migrationrate, nprojYears),
           ProjVec(subsetRates$propstay, nprojYears),
           agedeath = relAgeDeathFuture,
           agemigrate = relAgeMigrateFuture,
@@ -1461,7 +1463,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         pldhivAllMinFuture <- LivingDiagnosedAge(diagnosesFutureMin[[2]],
           ProjVec(subsetRates$annunique, nprojYears),
           ProjVec(subsetRates$deathrate_upper, nprojYears),
-          ProjVec(adjustment * hivBase$migrationrate_upper, nprojYears),
+          ProjVec(hivBase$migrationrate_upper, nprojYears),
           ProjVec(subsetRates$propstay_lower, nprojYears),
           agedeath = relAgeDeathFuture,
           agemigrate = relAgeMigrateFuture,
@@ -1473,7 +1475,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         pldhivAllMaxFuture <- LivingDiagnosedAge(diagnosesFutureMax[[2]],
           ProjVec(subsetRates$annunique, nprojYears),
           ProjVec(subsetRates$deathrate_lower, nprojYears),
-          ProjVec(adjustment * hivBase$migrationrate_lower, nprojYears),
+          ProjVec(hivBase$migrationrate_lower, nprojYears),
           ProjVec(subsetRates$propstay_upper, nprojYears),
           agedeath = relAgeDeathFuture,
           agemigrate = relAgeMigrateFuture,
@@ -1633,7 +1635,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         pldhivAllFuture <- LivingDiagnosedAge(diagnosesFuture[[2]],
           ProjVec(subsetRates$annunique, nprojYears),
           ProjVec(subsetRates$deathrate, nprojYears),
-          ProjVec(adjustment * hivBase$migrationrate, nprojYears),
+          ProjVec(hivBase$migrationrate, nprojYears),
           ProjVec(subsetRates$propstay, nprojYears),
           agedeath = relAgeDeathFuture,
           agemigrate = relAgeMigrateFuture,
@@ -1642,7 +1644,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         pldhivAllMinFuture <- LivingDiagnosedAge(diagnosesFutureMin[[2]],
           ProjVec(subsetRates$annunique, nprojYears),
           ProjVec(subsetRates$deathrate_upper, nprojYears),
-          ProjVec(adjustment * hivBase$migrationrate_upper, nprojYears),
+          ProjVec(hivBase$migrationrate_upper, nprojYears),
           ProjVec(subsetRates$propstay_lower, nprojYears),
           agedeath = relAgeDeathFuture,
           agemigrate = relAgeMigrateFuture,
@@ -1651,7 +1653,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         pldhivAllMaxFuture <- LivingDiagnosedAge(diagnosesFutureMax[[2]],
           ProjVec(subsetRates$annunique, nprojYears),
           ProjVec(subsetRates$deathrate_lower, nprojYears),
-          ProjVec(adjustment * hivBase$migrationrate_lower, nprojYears),
+          ProjVec(hivBase$migrationrate_lower, nprojYears),
           ProjVec(subsetRates$propstay_upper, nprojYears),
           agedeath = relAgeDeathFuture,
           agemigrate = relAgeMigrateFuture,
