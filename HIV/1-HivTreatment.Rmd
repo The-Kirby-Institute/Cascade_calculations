@@ -22,7 +22,6 @@ HIVcode <- file.path(basePath, "code")
 
 # Load standard libraries and options ----------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
-# source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 LoadLibrary(readxl)
@@ -33,10 +32,13 @@ replaceValues <- TRUE
 saveResults <- TRUE
 
 fitYear <- 2019 # ART Estimates analysis year 2014, 2017, or 2019 for 
-# replacing 2011-2013 values
+                # replacing 2011-2013 values
 
 addTempRes <- TRUE # Add estimates for temporary residents on ART
-usePercent <- TRUE # To add temporary residents for subpopulations
+tempResMethod <- "percentAll"  # Options: 
+                            # "percentAll" = (default)
+                            # "percentEnd" = Assume same proportion as latest year
+                            # "rawData" = use raw data
 
 ```
 
@@ -269,7 +271,7 @@ if (analysisYear < 2020) {
   }
 }
 
-# Add medicare ineligibles
+# Add medicare ineligibles -----------------------------------------------------
 if (addTempRes) {
   # Load from file ATRAS estimates merged with NAPHWA estimates in March 
   # 2019 report.
@@ -279,10 +281,22 @@ if (addTempRes) {
   
   tempResArt <- filter(tempResData, year <= analysisYear)
   
-  if (usePercent) {
-    # Use percentage Medicare ineligible to inflate past treatment
-    # estimates for > 2013 (AHOD estimates already include temporary 
-    # residents)
+  # Gender ratio from ATRAS
+  atrasMale <- 133/180
+  atrasFemale <- 47/180
+  
+  # Treatment indices that align with temporary resident data 
+  pbsIndices <- 14:(analysisYear - 2000 + 1) #2013:analysisYear
+  
+  # Populations to add temporary resident treatment estimates
+  pops <- c("act", "all", "female", "male", "nsw", "nt", "qld", "sa", 
+    "tas", "vic", "wa")
+  
+  if (tempResMethod == "percentEnd") {
+    # Use percentage Medicare ineligible for most recent estimate to inflate 
+    # past treatment estimates for > 2013 (AHOD estimates already include 
+    # temporary residents). This assumes the most recent figure is the most 
+    # accurate and the percentage is constant over time. 
     
     endTempRes <- tail(tempResArt$value, 1)  
     endTempResMin <- tail(tempResArt$lower, 1)
@@ -295,19 +309,8 @@ if (addTempRes) {
     tempResPropAll <- endTempRes/(endTempRes + endAll)
     tempResPropMin <- endTempResMin/(endTempResMin + endLower)
     tempResPropMax <- endTempResMax/(endTempResMax + endUpper)
-    
-    # Gender
-    atrasMale <- 133/180
-    atrasFemale <- 47/180
-    
-    # States
-    
-    # Do adjustments for all subpopulations
-    pops <- c("act", "all", "female", "male", "nsw", "nt", "qld", "sa", 
-      "tas", "vic", "wa")
-    # treatFactor <- c(1, 1, atrasFemale, atrasMale, 1, 1, 1, 1, 1, 1, 1)
 
-    pbsIndices <- 14:(analysisYear - 2000 + 1) #2013:analysisYear
+    # Do adjustments for all subpopulations
     for (ii in 1:length(pops)) {
       tempTreated <- filter(hivTreated, population == pops[ii])
       
@@ -342,9 +345,61 @@ if (addTempRes) {
         tempTreated$upper[pbsIndices] /(1-tempPropMax)
     }
     
-  } else {
+  } else if (tempResMethod == "percentAll") {
+    # Use all years of data to estimate allocation of Medicare ineligible 
+    # to each population 
     
-    # Replace with updated values
+    tempRes <- filter(tempResArt, population == "all")$value 
+    tempResMin <- filter(tempResArt, population == "all")$lower
+    tempResMax <- filter(tempResArt, population == "all")$upper
+    
+    treatAll <- filter(hivTreated, population == "all")$value[pbsIndices]
+    treatLower <- filter(hivTreated, population == "all")$lower[pbsIndices]
+    treatUpper <- filter(hivTreated, population == "all")$upper[pbsIndices]
+    
+    tempResPropAll <- tempRes / (tempRes + treatAll)
+    tempResPropMin <- tempResMin / (tempResMin + treatLower)
+    tempResPropMax <- tempResMax / (tempResMax + treatUpper)
+    
+    # Do adjustments for all subpopulations
+    for (pop in pops) {
+      tempTreated <- filter(hivTreated, population == pop)
+      
+      tempValue <- tempTreated$value[pbsIndices]
+      tempLower <- tempTreated$lower[pbsIndices]
+      tempUpper <- tempTreated$upper[pbsIndices]
+      
+      if (pop == "female") {
+        tempPop <- atrasFemale * tempRes
+        tempPopMin <- atrasFemale * tempResMin
+        tempPopMax <- atrasFemale * tempResMax
+      } else if (pop == "male") {
+        tempPop <- atrasMale * tempRes
+        tempPopMin <- atrasMale * tempResMin
+        tempPopMax <- atrasMale * tempResMax
+      } else {
+        tempPop <- tempRes * tempValue / treatAll
+        tempPopMin <- tempResMin * tempLower / treatLower
+        tempPopMax <- tempResMax * tempUpper / treatUpper
+      }
+      
+      # Estimate proportion using total overall number rather than max/min values
+      tempProp <- tempPop/(tempPop + tempValue)
+      tempPropMin <- tempPopMin/(tempPopMin + tempValue)
+      tempPropMax <- tempPopMax/(tempPopMax + tempValue)
+      
+      # Update treatment numbers
+      hivTreated$value[hivTreated$population == pop][pbsIndices] <- 
+        tempTreated$value[pbsIndices] / (1 - tempProp)
+      hivTreated$lower[hivTreated$population == pop][pbsIndices] <- 
+        tempTreated$lower[pbsIndices] / (1 - tempPropMin)
+      hivTreated$upper[hivTreated$population == pop][pbsIndices] <- 
+        tempTreated$upper[pbsIndices] / (1 - tempPropMax)
+    }
+    
+  } else if (tempResMethod == "rawData") {
+    
+    # Simply add the data available to the PBS numbers.  
     
     for (ii in 1:nrow(tempResArt)) {
       hivTreated <- hivTreated %>%
@@ -364,6 +419,8 @@ if (addTempRes) {
             upper + tempResArt$upper[ii],
             upper))
     }
+  } else {
+    stop("Unknwon Medicare ineligble option") 
   }
 }
 
@@ -410,7 +467,7 @@ hivSuppressed <- data.frame(stage = character(),
 # Load all the data we need
 ahodData <- read_csv(file.path(dataFolder, 
   paste0("ahod", analysisYear, ".csv")),
-  cols(
+  col_types = cols(
     year = col_integer(),
     state = col_character(),
     population = col_character(),
@@ -540,8 +597,6 @@ for (pop in populations) {
   tempTreat <- treatDf$value
   tempTreatMin <- treatDf$lower
   tempTreatMax <- treatDf$upper
-  
-  # nyears <- length(tempDf$year)
   
   # Number suppressed
   hivSuppressed <- rbind(hivSuppressed, 
