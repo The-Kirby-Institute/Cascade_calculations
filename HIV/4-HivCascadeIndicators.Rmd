@@ -19,38 +19,32 @@ source(file.path(dirname(getwd()), "code", "PlotOptions.R"))
 ```
 
 ```{r Options}
-projectName <- "Undiagnosed_Metrics_Paper"   # "ASR_2022" 
-# "HIV_Cascade_Paper"
+projectName <- "ASR_2023"   # "ASR_2023", "HIV_Cascade_Paper"
 
 project <- file.path(basePath, "output", projectName)
 
-# List for YDF paper
-resultsYear <- 2019
-cascadeList <- "MSM-Aus-2019" #(Include year) "All-2021"
+resultsYear <- 2022
+cascadeList <- "All-2022" #(Include year) "All-2022"
 
 # Result files and specifications
 cascadeFile <- paste0("HIVcascadeEstimates-", resultsYear,".csv")
 infectionsFile <- paste0("newInfectionsEstimates-", resultsYear,".csv")
 undiagnosedFile <- paste0("plhivEstimates-", resultsYear, ".csv")
 
-# Need all pldhiv files (which include previously diagnosed 
-# overseas)to get range in deaths and the estimated annual 
-# number of diagnoses
+# Need all pldhiv files (which include previously diagnosed overseas)to get 
+# range in deaths and the estimated annual number of diagnoses
 diagnosesFile <- paste0("pldhiv-", resultsYear, "-all.csv")
 diagnosesFileLower <- paste0("pldhiv-", resultsYear, "-min.csv")
 diagnosesFileUpper <- paste0("pldhiv-", resultsYear, "-max.csv")
 
-# Read in files with diagnoses excluding previously diagnosed overseas as 
-# well 
-
-# ecdcFileInclude <- "All_ECDC.csv"
-# ecdcFileExclude <- "All_ECDC_exclude.csv"
+# Read in files with diagnoses excluding previously diagnosed overseas as well 
 
 diagnosesExcludeFile <- paste0("pldhiv-", resultsYear, "-all_exclude.csv")
 diagnosesExcludeFileLower <- paste0("pldhiv-", resultsYear, "-min_exclude.csv")
 diagnosesExcludeFileUpper <- paste0("pldhiv-", resultsYear, "-max_exclude.csv")
 
 startYear <- 2000
+plotStartYear <- 2004
 
 # New diagnoses and infections parameters -- Default is "exclude" because we 
 # consider people previously diagnosed overseas are aware of there status. 
@@ -356,7 +350,7 @@ for (cascade in cascadeList) {
 ```{r Plotting function}
 cols <- unname(PlotColors()[c("Blue", "Red")])
 
-plotUndiag <- function(df, title, ymax, indicator) {
+plotIndicators <- function(df, title, ymax, indicator, plotStart = 2010) {
   if (indicator == "infections") {
     # New infections
     plot <- ggplot(df, aes(x = year)) + 
@@ -416,9 +410,9 @@ plotUndiag <- function(df, title, ymax, indicator) {
   }
   
   plot <- plot +
-    scale_x_continuous(breaks = 2010:resultsYear,
-      labels =  EveryNth(2010:resultsYear, 2, inverse = FALSE),
-      limits = c(2010, resultsYear)) +
+    scale_x_continuous(breaks = plotStart:resultsYear,
+      labels =  EveryNth(plotStart:resultsYear, 2, inverse = FALSE),
+      limits = c(plotStart, resultsYear)) +
     PlotOptions() 
   
   return(plot)
@@ -434,28 +428,28 @@ for (cascade in cascadeList) {
   print(cascade)
   
   # New infections
-  tempPlot1 <- plotUndiag(results[[cascade]], cascade, 
-    ceiling(max(results[[cascade]]$infections_upper)), "infections")
+  tempPlot1 <- plotIndicators(results[[cascade]], cascade, 
+    ceiling(max(results[[cascade]]$infections_upper)), "infections", plotStartYear)
   
   # % Undiagnosed
-  tempPlot2 <- plotUndiag(results[[cascade]], cascade, 
-    ceiling(max(results[[cascade]]$upupper))/100, "percent")
+  tempPlot2 <- plotIndicators(results[[cascade]], cascade, 
+    ceiling(max(results[[cascade]]$upupper))/100, "percent", plotStartYear)
   
   # YDF
-  tempPlot3 <- plotUndiag(results[[cascade]], cascade, 
-    ceiling(max(results[[cascade]]$ydf_upper))/2, "ydf")
+  tempPlot3 <- plotIndicators(results[[cascade]], cascade, 
+    ceiling(max(results[[cascade]]$ydf_upper))/2, "ydf", plotStartYear)
   
   # CDR
-  tempPlot4 <- plotUndiag(results[[cascade]], cascade, 
-    ceiling(max(results[[cascade]]$cdr_upper)), "cdr")
+  tempPlot4 <- plotIndicators(results[[cascade]], cascade, 
+    ceiling(max(results[[cascade]]$cdr_upper)), "cdr", plotStartYear)
   
   # IPR
-  tempPlot5 <- plotUndiag(results[[cascade]], cascade, 
-    max(results[[cascade]]$ipr_upper), "ipr")
+  tempPlot5 <- plotIndicators(results[[cascade]], cascade, 
+    max(results[[cascade]]$ipr_upper), "ipr", plotStartYear)
   
   # IMR
-  tempPlot6 <- plotUndiag(results[[cascade]], cascade, 
-    max(results[[cascade]]$imr_upper), "imr")
+  tempPlot6 <- plotIndicators(results[[cascade]], cascade, 
+    max(results[[cascade]]$imr_upper), "imr", plotStartYear)
   
   
   ggsave(file.path(project, cascade, "new_infections.png"), tempPlot1, 
