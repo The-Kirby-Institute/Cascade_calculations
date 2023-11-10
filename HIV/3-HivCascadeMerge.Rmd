@@ -17,13 +17,11 @@ HIVcode <- file.path(basePath, "code")
 
 # Load standard libraries and options -----------------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
-# source(file.path(Rcode, "DataLibraries.R"), echo=TRUE)
-# source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
-analysisYear <- 2019
-projectName <-  "Undiagnosed_Metrics_Paper" # "ASR_2022"; "HIV_Cascade_Paper"
+analysisYear <- 2022
+projectName <-  "ASR_2023" # "ASR_2023"; "HIV_Cascade_Paper"
 
 multipleCascades <- TRUE
 artNames <- NULL
@@ -35,7 +33,7 @@ if (multipleCascades && projectName == "ASR_2022") {
     "Othercob")
 } else {
   # Specify cascades manually (without year)
-  cascadeNames <- "MSM-Aus" # specify cascades with project 
+  cascadeNames <- "All" # specify cascades with project 
 }
 
 if (is.null(artNames)) {

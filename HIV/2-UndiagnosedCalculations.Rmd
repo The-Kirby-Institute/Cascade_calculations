@@ -34,11 +34,11 @@ LoadLibrary(readxl)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2019
+analysisYear <- 2022
 saveResults <- TRUE 
-projectFolder <-  "Undiagnosed_Metrics_Paper" #"ASR_2022"
+projectFolder <-  "ASR_2023" #"ASR_2023"
                                      # "HIV_Cascade_Paper"
-cascadeFlag <- "MSM-Aus" # minus year
+cascadeFlag <- "All" # minus year
 ecdcResults <- "exposure"
 ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky 
 # file name issues.
