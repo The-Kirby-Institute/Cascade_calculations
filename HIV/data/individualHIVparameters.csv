@@ -16,9 +16,12 @@ linkage2003-upperCI,0.0171,2003 linkage,Standardised mortality ratio HIV without
 vicClinicRetained2013,0.95,2015 McMahon Paper,Proportion retained in care,"McMahon J, Moore R, Eu B, Tee B, Chen M, El-Hayek C, et al. Clinic Network Collaboration and Patient Tracing to Maximize Retention in HIV Care. PloS one 2015; 10:e0127726.",
 vicClinicRetainedLower2013,0.914,2015 McMahon Paper,Proportion retained in care (lower range),"McMahon J, Moore R, Eu B, Tee B, Chen M, El-Hayek C, et al. Clinic Network Collaboration and Patient Tracing to Maximize Retention in HIV Care. PloS one 2015; 10:e0127726.",
 vicClinicRetainedUpper2013,0.988,2015 McMahon Paper,Proportion retained in care (upper range),"McMahon J, Moore R, Eu B, Tee B, Chen M, El-Hayek C, et al. Clinic Network Collaboration and Patient Tracing to Maximize Retention in HIV Care. PloS one 2015; 10:e0127726.",
-vicClinicRetained,0.9624,2019 McMahon ASHM Poster,Proportion retained in care,,Poster presentation at ASHM
-vicClinicRetainedLower,0.93,2019 McMahon ASHM Poster,Proportion retained in care (lower range),,Poster presentation at ASHM
-vicClinicRetainedUpper,0.99,2019 McMahon ASHM Poster,Proportion retained in care (upper range),,Poster presentation at ASHM
+vicClinicRetained2019,0.9624,2019 McMahon ASHM Poster,Proportion retained in care,,Poster presentation at ASHM
+vicClinicRetainedLower2019,0.93,2019 McMahon ASHM Poster,Proportion retained in care (lower range),,Poster presentation at ASHM
+vicClinicRetainedUpper2019,0.99,2019 McMahon ASHM Poster,Proportion retained in care (upper range),,Poster presentation at ASHM
+linkageRetained2020,0.967,HIV linkage 2020 estimate (Nov 2023),,,
+linkageRetainedLower2020,0.94,Assumption,,,
+linkageRetainedUpper2020,0.99,Assumption,,,
 ahodMortality,0.0108,,,,Annual rate of death per 100 person-years
 ahodMortalityLower,0.008,,,,
 ahodMortalityUpper,0.015,,,,

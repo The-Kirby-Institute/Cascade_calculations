@@ -1162,11 +1162,15 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     # retained after follow-up in McMahon et al., Clinic Network 
     # Collaboration and Patient Tracing to Maximize Retention in HIV Care, 
     # PLOS One, May 26, 2015.
+    # 
     # A repeat study in 2019 produced an estimate of 96.24% which is only 
     # slightly than the previous estimate. We assume a range of 93% to 99%.
     # 
-    # We assume a linear change form the 2013 to the latest value 
-    # (currently in 2019). 
+    # The HIV linkage data available in 2023 then provided an estimate for 
+    # 2020. 
+    #
+    # We assume a linear change form the 2013 to the 2019 value. We then assume 
+    # a linear change from the 2020 linkage estimate to the latest year. 
 
     hivParameters <- read.csv(file.path(dataFolder, 
       "individualHIVparameters.csv"), as.is = 1)
@@ -1176,12 +1180,57 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       assign(hivParameters$parameter[ii], hivParameters$value[ii])
     }
 
-    retained <- seq(vicClinicRetained2013, vicClinicRetained, 
-      length.out = length(retainedYears))
-    retainedLower <- seq(vicClinicRetainedLower2013, vicClinicRetainedLower,
-      length.out = length(retainedYears))
-    retainedUpper <- seq(vicClinicRetainedUpper2013, vicClinicRetainedUpper,
-      length.out = length(retainedYears))
+    if (analysisYear <= 2019) {
+      
+      retained <- seq(vicClinicRetained2013, vicClinicRetained2019, 
+        length.out = length(retainedYears))
+      retainedLower <- seq(vicClinicRetainedLower2013, vicClinicRetainedLower2019,
+        length.out = length(retainedYears))
+      retainedUpper <- seq(vicClinicRetainedUpper2013, vicClinicRetainedUpper2019,
+        length.out = length(retainedYears))
+      
+    } else {
+      
+      retained <- c(
+        seq(
+          vicClinicRetained2013, 
+          vicClinicRetained2019, 
+          length.out = length(retainedYears[1]:2019)
+        ), 
+        seq(
+          linkageRetained2020, 
+          linkageRetained2020, 
+          length.out = length(2020:analysisYear)
+        )
+      )
+      
+      retainedLower <- c(
+        seq(
+          vicClinicRetainedLower2013, 
+          vicClinicRetainedLower2019,
+          length.out = length(retainedYears[1]:2019)
+        ), 
+        seq(
+          linkageRetained2020 , 
+          linkageRetained2020, 
+          length.out = length(2020:analysisYear)
+        )
+      )
+      
+      retainedUpper <- c(
+        seq(
+          vicClinicRetainedUpper2013, 
+          vicClinicRetainedUpper2019,
+          length.out = length(retainedYears[1]:2019)
+        ), 
+        seq(
+          linkageRetained2020 , 
+          linkageRetained2020, 
+          length.out = length(2020:analysisYear)
+        )
+      )
+      
+    }
     
     hivRetained <- RetainedCare(hivDiagnosed, retained, retainedLower,
       retainedUpper, retainedYears)
