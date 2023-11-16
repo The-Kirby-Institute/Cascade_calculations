@@ -66,7 +66,7 @@ IndicatorResults <- function(cascadeName) {
   
   undiagnosed <- read_csv(file.path(project, cascadeName, undiagnosedFile),
     show_col_types = FALSE) %>%
-    select(year, undiag = final_undiagnosed, 
+    dplyr::select(year, undiag = final_undiagnosed, 
       undiag_lower = final_undiagnosed_lower, 
       undiag_upper = final_undiagnosed_upper, 
       undiag_percent, 
@@ -76,31 +76,31 @@ IndicatorResults <- function(cascadeName) {
   # Read in PLDHIV files for diagnoses and deaths
   pldhivAll <- read_csv(file.path(project, cascadeName, diagnosesFile),
     col_types = cols(.default = "d"), show_col_types = FALSE) %>%
-    select(year, diagnoses, duplicates, deaths)
+    dplyr::select(year, diagnoses, duplicates, deaths)
   pldhivLower <- read_csv(file.path(project, cascadeName, diagnosesFileLower),
     col_types = cols(.default = "d"), show_col_types = FALSE) %>%
-    select(year, diagnoses, duplicates,deaths)
+    dplyr::select(year, diagnoses, duplicates,deaths)
   pldhivUpper <- read_csv(file.path(project, cascadeName, diagnosesFileUpper),
     col_types = cols(.default = "d"), show_col_types = FALSE) %>%
-    select(year, diagnoses, duplicates,deaths)
+    dplyr::select(year, diagnoses, duplicates,deaths)
   
   pldhivAllExclude <- read_csv(file.path(project, cascadeName, 
     diagnosesExcludeFile), col_types = cols(.default = "d"), 
     show_col_types = FALSE) %>%
-    select(year, diagnoses, duplicates, deaths)
+    dplyr::select(year, diagnoses, duplicates, deaths)
   pldhivLowerExclude <- read_csv(file.path(project, cascadeName,
     diagnosesExcludeFileLower), col_types = cols(.default = "d"), 
     show_col_types = FALSE) %>%
-    select(year, diagnoses, duplicates,deaths)
+    dplyr::select(year, diagnoses, duplicates,deaths)
   pldhivUpperExclude <- read_csv(file.path(project, cascadeName,
     diagnosesExcludeFileUpper), col_types = cols(.default = "d"), 
     show_col_types = FALSE) %>%
-    select(year, diagnoses, duplicates,deaths)
+    dplyr::select(year, diagnoses, duplicates,deaths)
   
   plhiv <- read_csv(file.path(project, cascadeName, cascadeFile),
     show_col_types = FALSE) %>%
     filter(stage == "infected") %>%
-    select(year, value, lower, upper) 
+    dplyr::select(year, value, lower, upper) 
   
   # Read in adjusted diagnoses
   if (diagsCalculation == "include") {
@@ -112,26 +112,26 @@ IndicatorResults <- function(cascadeName) {
       
       diagnosesAll <- pldhivAll %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(diagnoses = adjusted)
       diagnosesLower <- pldhivLower %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(diagnoses_lower = adjusted)
       diagnosesUpper <- pldhivUpper %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(diagnoses_upper = adjusted)
 
     } else {
       
       diagnosesAll <- pldhivAll %>% 
-        select(year, diagnoses)
+        dplyr::select(year, diagnoses)
       diagnosesLower <- pldhivLower %>% 
-        select(year, diagnoses) %>% 
+        dplyr::select(year, diagnoses) %>% 
         rename(diagnoses_lower = diagnoses)
       diagnosesUpper <- pldhivUpper %>% 
-        select(year, diagnoses) %>% 
+        dplyr::select(year, diagnoses) %>% 
         rename(diagnoses_upper = diagnoses)
       
     }
@@ -148,26 +148,26 @@ IndicatorResults <- function(cascadeName) {
       
       diagnosesAll <- pldhivAllExclude %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(diagnoses = adjusted)
       diagnosesLower <- pldhivLowerExclude %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(diagnoses_lower = adjusted)
       diagnosesUpper <- pldhivUpperExclude %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(diagnoses_upper = adjusted)
     
     } else {
       
       diagnosesAll <- pldhivAllExclude %>% 
-        select(year, diagnoses) 
+        dplyr::select(year, diagnoses) 
       diagnosesLower <- pldhivLowerExclude %>% 
-        select(year, diagnoses) %>% 
+        dplyr::select(year, diagnoses) %>% 
         rename(diagnoses_lower = diagnoses)
       diagnosesUpper <- pldhivUpperExclude %>% 
-        select(year, diagnoses) %>% 
+        dplyr::select(year, diagnoses) %>% 
         rename(diagnoses_upper = diagnoses)
       
     }
@@ -185,26 +185,26 @@ IndicatorResults <- function(cascadeName) {
     if (adjustDiagnoses) { 
       diagnosesAllInclude <- pldhivAll %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(diagnoses_include = adjusted)
       diagnosesLowerInclude <- pldhivLower %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(lower_include = adjusted)
       diagnosesUpperInclude <- pldhivUpper %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(upper_include = adjusted)
       
     } else {
       
       diagnosesAllInclude <- pldhivAll %>% 
-        select(year, diagnoses)
+        dplyr::select(year, diagnoses)
       diagnosesLowerInclude <- pldhivLower %>% 
-        select(year, diagnoses) %>% 
+        dplyr::select(year, diagnoses) %>% 
         rename(lower = diagnoses)
       diagnosesUpperInclude <- pldhivUpper %>% 
-        select(year, diagnoses) %>% 
+        dplyr::select(year, diagnoses) %>% 
         rename(upper = diagnoses)
     } 
     
@@ -220,26 +220,26 @@ IndicatorResults <- function(cascadeName) {
       
       diagnosesAllExclude <- pldhivAllExclude %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(diagnoses_exclude = adjusted)
       diagnosesLowerExclude <- pldhivLowerExclude %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(lower_exclude = adjusted)
       diagnosesUpperExclude<- pldhivUpperExclude %>% 
         mutate(adjusted = diagnoses - duplicates) %>% 
-        select(year, adjusted) %>% 
+        dplyr::select(year, adjusted) %>% 
         rename(upper_exclude = adjusted)
       
     } else {
       
       diagnosesAllExclude  <- pldhivAllExclude %>% 
-        select(year, diagnoses) 
+        dplyr::select(year, diagnoses) 
       diagnosesLowerExclude  <- pldhivLowerExclude %>% 
-        select(year, diagnoses) %>% 
+        dplyr::select(year, diagnoses) %>% 
         rename(lower = diagnoses)
       diagnosesUpperExclude  <- pldhivUpperExclude %>% 
-        select(year, diagnoses) %>% 
+        dplyr::select(year, diagnoses) %>% 
         rename(upper = diagnoses)
       
     }
@@ -253,17 +253,17 @@ IndicatorResults <- function(cascadeName) {
       mutate(diagnoses = (diagnoses_include + diagnoses_exclude) / 2,
         diagnoses_lower = (lower_include + lower_exclude) / 2, 
         diagnoses_upper = (upper_include + upper_exclude) / 2) %>%
-      select(year, diagnoses, lower, upper)
+      dplyr::select(year, diagnoses, lower, upper)
     
   }
   
   # Tidy up new infections estimates
   if (infectsCalculation == "include") {
     infectionsResults <- filter(infections, exclude == "no") %>%
-      select(-exclude)
+      dplyr::select(-exclude)
   } else if (infectsCalculation == "exclude") {
     infectionsResults <- filter(infections, exclude == "yes") %>%
-      select(-exclude)
+      dplyr::select(-exclude)
   } else {
     # Its "middle"
     infectionsInclude <- filter(infections, exclude == "no")
@@ -283,11 +283,11 @@ IndicatorResults <- function(cascadeName) {
   plhiv$start_plhiv_upper <- c(plhiv$upper[1], plhiv$upper[1:(nrow(plhiv)-1)])
   
   plhiv <- plhiv %>%
-    select(year, start_plhiv, start_plhiv_lower, start_plhiv_upper)
+    dplyr::select(year, start_plhiv, start_plhiv_lower, start_plhiv_upper)
   
   # Tidy up deaths
   deaths <- pldhivAll %>%
-    select(year, deaths) %>%
+    dplyr::select(year, deaths) %>%
     mutate(deaths_lower = pldhivUpper$deaths, # opposite because we will be dividing
       deaths_upper = pldhivLower$deaths)
   
