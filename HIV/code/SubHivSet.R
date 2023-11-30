@@ -144,6 +144,15 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
         cob %in% c('Australia', 'New Zealand')))
       includeframe <- filter(includeframe, 
         !(cob %in% c('Australia', 'New Zealand')))
+    } else if (fCob[1] =='non-aus-eng') {
+      # Special case - not born in Australia or non-English speaking countries
+      # Definition used in CALD report
+      excludeframe <- bind_rows(excludeframe, filter(includeframe, 
+        cob %in% c('Australia', 'Canada', 'Ireland', 'New Zealand', 
+          'South Africa', 'United Kingdom', 'United States')))
+      includeframe <- filter(includeframe, 
+        !(cob %in% c('Australia', 'Canada', 'Ireland', 'New Zealand', 
+          'South Africa', 'United Kingdom', 'United States')))
     } else {
       excludeframe <- bind_rows(excludeframe,
         filter(includeframe, !(cob %in% fCob)))
