@@ -9,8 +9,9 @@
 extractData <- function(data, fcob, fage, fstate, fgender) {
 
   # Do cob separately because it is a bit tricky
-  if (fcob == 'non-australia') {
+  if (fcob %in% c('non-australia', 'non-aus-eng')) {
     # Special case - not born in Australia/born overseas
+    # Use same migration rate for CALD and overseas born generally
     subDataOz <- data %>% 
       filter(year %in% 2004:2014) %>%
       filter(age %in% fage, cob == 'Australia', 
