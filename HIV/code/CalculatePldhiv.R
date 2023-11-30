@@ -107,14 +107,52 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   # Create subsetted notifications dataframe. 
   
   # Look at the overall notifications first
+  ExcludedNotifications <- tibble(
+    year = allYears, 
+    ausDiagnoses = 0,
+    excludedDiagnoses = 0,
+    seroconverters = 0
+  )
+  
   if (excludeOS) {
     # Exclude those aged < 15 as well as previously diagnosed overseas
+    excludedDiagnoses <- filter(hivData, 
+      previ_diag_overseas == 1 | agehiv < 15) |>
+      group_by(yeardiagnosis) %>%
+      summarise(notifications = n()/nImputedSets)
+    # Fill in missing years
+    excludedDiagnoses <- FillDataFrame(allYears, 
+      as.data.frame(excludedDiagnoses))
+    
+    ExcludedNotifications$excludedDiagnoses <- excludedDiagnoses$notifications
+    
+    # Main data frame
     hivData <- filter(hivData, is.na(previ_diag_overseas), 
       is.na(agehiv) | agehiv >= 15) # assume missing ages are older than 15 years
+    
+    # First diagnosis in Australia - always at least one
+    ExcludedNotifications$ausDiagnoses <- hivData |> 
+      group_by(yeardiagnosis) %>%
+      summarise(notifications = n()/nImputedSets) |>
+      pull(notifications)
   }
   
   if (excludeNew) {
+    # Exclude those who have seroconverted - infection and diagnosis are assumed 
+    # to occur in the same year. These need to be saved to add on for the 
+    # indicator calculations. 
+    seroconverters <- hivData |>
+      filter(seroconverter == 1) |>
+      group_by(yeardiagnosis) %>%
+      summarise(notifications = n()/nImputedSets)
+    seroconverters <- FillDataFrame(allYears, 
+      as.data.frame(seroconverters))
+    # Fill in missing years
+    ExcludedNotifications$seroconverters <- seroconverters$notifications
+    
+    # Main data frame
     hivData <- filter(hivData, seroconverter == 0)
+    
   }
   
   hivSetAll <- filter(hivData, yeardiagnosis <= analysisYear)
@@ -1088,6 +1126,12 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
             inter_arrivals) %>%
         select(year, total) %>%
         rename(all = total)
+      # print(pldhivAll %>% 
+      #     select(year, emigrants, diag_departs, inter_departs,
+      #       inter_arrivals) %>%
+      #     mutate(total = emigrants + diag_departs + inter_departs -
+      #         inter_arrivals))
+      
     } else {
       emigrants <- pldhivAll %>% 
         select(year, emigrants, diag_departs) %>%
@@ -1258,7 +1302,11 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       write_csv(pldhivAll, paste0(saveStringDetails, "all_exclude.csv"))
       write_csv(pldhivAllMin, paste0(saveStringDetails, "min_exclude.csv"))
       write_csv(pldhivAllMax, paste0(saveStringDetails, "max_exclude.csv"))
-
+      
+      # Save excluded notifications
+      saveStringExclude <- file.path(resultsPath, "ExcludedNotifications")
+      write_csv(ExcludedNotifications, paste0(saveStringExclude, ".csv"))
+      
     } else {
       if (doAge) {
         saveStringDetails <- file.path(resultsPath, 
