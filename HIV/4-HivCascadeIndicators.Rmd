@@ -51,6 +51,8 @@ plotStartYear <- 2004
 # Should generally use the same option for both infections and diagnoses. 
 infectsCalculation <- "exclude" # "include", "exclude" (default)) or "middle"
 diagsCalculation <- "exclude" # "include", "exclude" (default)) or "middle"
+addSeroconversions <- TRUE # Add seroconvertors to excluded diagnoses. 
+                           # TRUE = default. But depends on ECDC model settings.
 
 adjustDiagnoses <- TRUE # adjust annual diagnoses to exclude duplicates. Matches
 # inputs into ECDC model.
@@ -101,6 +103,13 @@ IndicatorResults <- function(cascadeName) {
     show_col_types = FALSE) %>%
     filter(stage == "infected") %>%
     dplyr::select(year, value, lower, upper) 
+  
+  # Read in seroconversions
+  seroconversions <- read_csv(
+    file.path(project, cascadeName, "ExcludedNotifications.csv"),
+    show_col_types = FALSE
+    ) |>
+    dplyr::select(year,seroconverters)
   
   # Read in adjusted diagnoses
   if (diagsCalculation == "include") {
@@ -175,6 +184,14 @@ IndicatorResults <- function(cascadeName) {
     diagnoses <- left_join(diagnosesAll, diagnosesLower, by = "year") %>%
       left_join(diagnosesUpper, by = "year")
     
+    if (addSeroconversions) {
+      diagnoses <- diagnoses |>
+        mutate(
+          diagnoses = diagnoses + seroconversions$seroconverters,
+          diagnoses_lower = diagnoses_lower + seroconversions$seroconverters,
+          diagnoses_upper = diagnoses_upper + seroconversions$seroconverters,
+        )
+    }
     
   } else {
     # Its "middle"
@@ -247,6 +264,15 @@ IndicatorResults <- function(cascadeName) {
     diagnosesExclude <- left_join(diagnosesAllExclude, diagnosesLowerExclude, 
       by = "year") %>%
       left_join(diagnosesUpperExclude, by = "year")
+    
+    if (addSeroconversions) {
+      diagnosesExclude <- diagnosesExclude |>
+        mutate(
+          diagnoses = diagnoses + seroconversions$seroconverters,
+          diagnoses_lower = diagnoses_lower + seroconversions$seroconverters,
+          diagnoses_upper = diagnoses_upper + seroconversions$seroconverters,
+        )
+    }
     
     diagnoses <- diagnosesInclude %>%
       left_join(diagnosesExclude, by = "year") %>%
