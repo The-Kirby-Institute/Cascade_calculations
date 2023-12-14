@@ -73,13 +73,13 @@ source(file.path(HIVcode, "GetAdjustments.R"))
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters ------------------------------------------------------
-resultsYear <- 2021  # year of cascade we will plot
-minYear <- 18 # how long ago do we plot things (from 2004)
+resultsYear <- 2022  # year of cascade we will plot
+minYear <- 19 # how long ago do we plot things (from 2004)
 startYear <- resultsYear - minYear + 1 
 
 # Set up project - If ASR plot all populations otherwise just plot 
 # specified cascade
-projectName <- "HIV_Cascade_Paper" #"ASR_2022" "HIV_Cascade_Paper"
+projectName <- "ASR_2023" #"ASR_2023" "HIV_Cascade_Paper"
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadePop <- "all"
 
@@ -95,7 +95,7 @@ infectsCalculation <- "exclude" # "include", "exclude" or "middle"
 
 # Setup based on specs
 asrcols <- PlotColors("hivcascade5")
-if (projectName %in% c("ASR_2022", "ASR_2021", "ASR_2020", "ASR_2019", "ASR_2018", 
+if (projectName %in% c("ASR_2023", "ASR_2022", "ASR_2021", "ASR_2020", "ASR_2019", "ASR_2018", 
   "ASR_2017", "ASR_2016")) {
   # ASR do many populations otherwise do the specified one
   cascadePop <- "all" 
@@ -106,7 +106,7 @@ if (projectName %in% c("ASR_2022", "ASR_2021", "ASR_2020", "ASR_2019", "ASR_2018
 } else {
   # Turn off newInfectsPlots
   asrCascades <- FALSE 
-  newInfectsPlots <- FALSE
+  newInfectsPlots <- TRUE
 }
 
 if (excludeCare) {
@@ -257,6 +257,17 @@ resultsAll <- filter(hivCascade,
   year >= startYear)
 
 resultsAllYear <- filter(resultsAll, year == resultsYear)
+
+resultsAllYear |>
+  mutate(
+    value = FormatData(value, places = -1), 
+    lower = FormatData(lower, places = -1),
+    upper = FormatData(upper, places = -1)
+  ) |> 
+  write_csv(
+    file = file.path(figFolder, paste0("HIVcascade-all-", 
+    resultsYear, ".csv"))
+  )
 
 # Plot a bar chart for the results year ----------------------------------
 plotBarAll <- ggplot(data = resultsAllYear, aes(x = stage, y = value)) + 
