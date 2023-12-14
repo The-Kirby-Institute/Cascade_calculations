@@ -27,10 +27,11 @@ multipleCascades <- TRUE
 artNames <- NULL
 
 # If this is an ASR project already have specific populations
-if (multipleCascades && projectName == "ASR_2022") {
-  cascadeNames <- c("All", "Male", "Female", "Indigenous", 
-    "AusNonIndigenous", "MSM", "Hetero", "Pwid", "SSA", "SEA", "SCA", 
-    "Othercob")
+if (multipleCascades && projectName == "ASR_2023") {
+  cascadeNames <- c("All", "Male", "Female", "Indigenous", "AusNonIndigenous", 
+    "MSM", "MSM_Aus", "MSM_OS", "Hetero", "Hetero_Aus", 
+    "Hetero_OS", "Pwid", "Otherexp", "SSA", "SEA", "SCA" #, Othercob was unable to run
+    )
 } else {
   # Specify cascades manually (without year)
   cascadeNames <- "All" # specify cascades with project 
