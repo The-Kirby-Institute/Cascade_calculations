@@ -43,8 +43,8 @@ source(file.path(Rcode, "AgeCat.R"))
 source(file.path(HIVcode, "TidyNotifications.R"))
 
 # Script parameters
-resultsYear <- 2021  # year of cascade we will plot
-minYear <- 18      # how long ago do we plot things
+resultsYear <- 2022  # year of cascade we will plot
+minYear <- 19      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE
 years <- startYear:resultsYear
@@ -52,7 +52,7 @@ years <- startYear:resultsYear
 # Set up project and cascade to analyse
 projectName <- "HIV_Cascade_Paper"  
 resultsFolder <- file.path(resultsFolder, projectName)
-cascadeName <- "All-2021"
+cascadeName <- "All-2022"
 cascadePop <- "all"
 
 # New infections parameters
@@ -106,7 +106,7 @@ indicatorNamesNeat <- c("infected" = "Number living with HIV",
 
 # Create output directory
 if (savePlots) {
-  saveFormat <- ".svg"
+  saveFormat <- ".png" #".svg"
   figFolder <- file.path(resultsFolder, "figures", resultsYear)
   dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
 }
@@ -736,6 +736,8 @@ cdr <- hivCascadeIndicators$cdr
 ipr <- hivCascadeIndicators$ipr
 imr <- hivCascadeIndicators$imr
 
+
+
 # Add to trend data and save
 trendData <- bind_rows(trendData, tibble(year = year,
   stage = "ydf", 
@@ -840,7 +842,7 @@ ydfPlot <- plotProp(ydf, ydfModel, expTrendData$ydfoffest, yLabels["ydf"],
     aes(ymin = lower, ymax = upper), fill = asrcols[2], alpha = 0.4)
 
 cdrPropPlot <- plotProp(cdr, cdrModel, 
-  expTrendData$cdroffset, yLabels["cdr"], 
+  expTrendData$infections, yLabels["cdr"], 
   trend = plotTrends) +
   # Fix up y axis - will get warnings about replacement
   scale_y_continuous(labels = number, limits = c(0, NA)) +
@@ -1489,12 +1491,12 @@ ymax <- c("infected" = 35000,
   "diagnoses_exclude" = 1500,
   "diagnoses_include" = 1500,
   "infections" = 1500, 
-  "propdiagnosed" = 1, 
-  "proptreated" = 1,       
-  "propsuppressed" = 1,
-  "propoverall" = 1,
+  "propdiagnosed" = 1.01, 
+  "proptreated" = 1.01,       
+  "propsuppressed" = 1.01,
+  "propoverall" = 1.01,
   "ydf" = 0.5,  
-  "cdr"=  4.0,
+  "cdr"=  6.5,
   "ipr" = 0.1,
   "imr" = 20)
 
@@ -1546,9 +1548,8 @@ for (ii in steps) {
   segResults[[ii]] <- Segment(ii, initialbp, ymax[ii], 
     minimum =  filter(trendData, stage == ii)$lower,
     maximum = filter(trendData, stage == ii)$upper, 
-    # min_gap = 3, allow_end_gap = TRUE,
     yLabels[ii], save = savePlots, offset = offsets[[ii]], 
-    yPercent = yPercent[ii])
+    yPercent = yPercent[ii], mingap = 3)
 }
 
 save(segResults, file = file.path(figFolder, "CascadeSegmentedModels.Rda"))
