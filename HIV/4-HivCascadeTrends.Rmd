@@ -951,9 +951,9 @@ forchanges in mean (or variance) rather than slope. Here we just look for
 one changepoint using the mean.
 
 The main analysis was done using the breakpoints() function in the 
-strucchange package. As there are only 14 time points of data we have to 
+strucchange package. As there are only 19 time points of data we have to 
 set h = 3 (the minimal number of points in each segment for a linear 
-regression to be fitted) for the function to work. Given there are only 14 data
+regression to be fitted) for the function to work. Given there are only 19 data
 points any models with >= 2 breakpoints are unlikely to be statistically 
 robust and are more likely reflect over-fitting. 
 
@@ -1191,19 +1191,20 @@ if (savePlots) {
 # Segmented trends
 
 This section explores the trends in each step of the HIV cascade and 
-notifications using a segmented Poisson regression which allows the 
-presence of a continuous change point. To perform this analysis requires an
-initial estimate for the location of the change point. Used the previous 
-analyses and visual inspection to inform this for this estimate but varied 
-the estimate from 2007 to 2013. This produced no change in the fitted 
-curve. 
+notifications using a segmented negative-binomial/Poisson regression which 
+allows the presence of a continuous change point. To perform this analysis 
+requires an initial estimate for the location of the change point. We used the 
+previous analyses and visual inspection to inform this estimate but also 
+varied the initial estimate from 2007 to 2013. This produced no change in the 
+fitted curve. 
 
 ```{r Segmented trends}
 # This chuck is used to explore the change in trends for each cascade step, gap,
 # and indicator. Some seem to have a change point. We try to find a change point
-# for each stage using the segmented package and with Poisson models. Note
-# if one change point is not found using the segmented package then the 
-# Poisson model is plotted instead (suggests it is a better model). 
+# for each stage using the segmented package and with the 
+# negative-binomial/Poisson models. Note if one change point is not found using 
+# the segmented package then the negative-binomial/Poisson model is plotted 
+# instead (suggests it is a better model). 
 
 LoadLibrary(segmented)
 
@@ -1286,8 +1287,8 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
   # Calculate minimum gap between breakpoints and ends
   
   if (allow_end_gap) {
-    # Allow gap at end to be less than min_gap. Means can have a change point 
-    # after 2019 which is justifiable I think due to COVID. 
+    # Allow gap at end to be less than min_gap. Means can potentially have a 
+    # change point after 2019 which is justifiable I think due to COVID. 
     modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
       "segModel2", "segModel3","segModel4"),
       minimum_gap = c(Inf, # No breakpoints 
@@ -1448,11 +1449,6 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
   
   if (save) {
     # Save the current plot as a combined plot
-    
-    # segPlotCombine <- plot_grid(segPlotAll, 
-    #   segPlotBest + theme(legend.position = "right"),
-    #   ncol = 1, labels = c("A", "B"))
-    
     legend1 <- get_legend(segPlotAll)
     legend2 <- get_legend(segPlotBest + theme(legend.position = "right"))
     
@@ -1499,10 +1495,10 @@ ymax <- c("infected" = 35000,
   "diagnoses_exclude" = 1500,
   "diagnoses_include" = 1500,
   "infections" = 1500, 
-  "propdiagnosed" = 1.01, 
-  "proptreated" = 1.01,       
-  "propsuppressed" = 1.01,
-  "propoverall" = 1.01,
+  "propdiagnosed" = 1.0, 
+  "proptreated" = 1.0,       
+  "propsuppressed" = 1.0,
+  "propoverall" = 1.0,
   "ydf" = 0.5,  
   "cdr"=  6.5,
   "ipr" = 0.1,
@@ -1557,7 +1553,7 @@ for (ii in steps) {
     minimum =  filter(trendData, stage == ii)$lower,
     maximum = filter(trendData, stage == ii)$upper, 
     yLabels[ii], save = savePlots, offset = offsets[[ii]], 
-    yPercent = yPercent[ii], mingap = 3)
+    yPercent = yPercent[ii], min_gap = 3, allow_end_gap = TRUE)
 }
 
 save(segResults, file = file.path(figFolder, "CascadeSegmentedModels.Rda"))
@@ -1622,7 +1618,7 @@ plotCascadeAll <- PlotCascade(latestCascade, retained = TRUE, ymax = 35000,
   steplabels = c("Living\nwith HIV", "Diagnosed", "Retained\nin care",
     "Receiving\ntreatment", "Suppressed\n(VL < 200)"), 
   percentages = TRUE,
-  targetlines = "90", targetlabels = FALSE) + 
+  targetlines = "95", targetlabels = FALSE) + 
   scale_y_continuous(breaks = seq(0, 40000, by = 10000),
     labels =  comma,
     limits = c(0, 35000))
@@ -1686,10 +1682,9 @@ cascadeFullPlot <- ggdraw() +
     size = 12)
 
 # Figure captions
-captions[["cascadeFull"]] <- "HIV notifications in Australia and Australia's HIV cascade to the end of 2021. A) Annual notifications data. B) HIV cascade at end of 2021 including estimates for retained in care (note lower range of Diagnosed and Retained in care adjusted to equal lower range of number Receiving treatment). Horizontal lines show the UNAIDS 90-90-90 targets. C) Estimate numbers and percentages of people living with HIV in each step of the HIV cascade over 2004-2021.  "
+captions[["cascadeFull"]] <- "HIV notifications in Australia and Australia's HIV cascade to the end of 2022. A) Annual notifications data. B) HIV cascade at end of 2022 including estimates for retained in care (note lower range of Diagnosed and Retained in care adjusted to equal lower range of number Receiving treatment). Horizontal lines show the UNAIDS 90-90-90 targets. C) Estimate numbers and percentages of people living with HIV in each step of the HIV cascade over 2004-2022.  "
 
 # Cascade trends ---------------------------------------------------------------
-
 legend <- get_legend(segResults[["infected"]]$plotBest)
 
 cascadeTrendPlot <- ggdraw() + 
@@ -1702,10 +1697,9 @@ cascadeTrendPlot <- ggdraw() +
       ncol = 2, nrow = 2, align = "v",
       labels = c("A", "B", "C", "D", "E", "F")), 0, 0, 1, 0.95)
 
-captions[["stepTrends"]] <- "Estimates and trends for each HIV cascade step over 2004-2021. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points. "
+captions[["stepTrends"]] <- "Estimates and trends for each HIV cascade step over 2004-2022. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points. "
 
 # Cascade gaps -----------------------------------------------------------------
-
 legend <- get_legend(segResults[["undiagnosed"]]$plotBest)
 
 gapsFullPlot <- ggdraw() +
@@ -1721,10 +1715,9 @@ gapsFullPlot <- ggdraw() +
       ncol = 2, nrow = 3, align = "v",
       labels = c("A", "B", "C", "D", "E", "F")), 0, 0, 1, 0.95)
 
-captions[["cascadeGaps"]] <- "Trends in the estimated gaps of the HIV cascade over 2004-2021. Red lines show the estimated values from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
+captions[["cascadeGaps"]] <- "Trends in the estimated gaps of the HIV cascade over 2004-2022. Red lines show the estimated values from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
 
 # Remaining cascade indicators --------------------------------------------------- 
-
 legend <- get_legend(segResults[["diagnoses_include"]]$plotBest)
 
 indicatorsFullPlot <-  ggdraw() +
@@ -1740,7 +1733,7 @@ indicatorsFullPlot <-  ggdraw() +
       ncol = 2, nrow = 4, align = "v",
       labels = c("A", "B", "C", "D", "E", "F", "G")), 0, 0, 1, 0.95)
 
-captions[["cascadeIndicators"]] <- "Trends in cascade related indicators over 2004-2021. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
+captions[["cascadeIndicators"]] <- "Trends in cascade related indicators over 2004-2022. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
 
 # Save combined plots ----------------------------------------------------------
 if (savePlots) {
@@ -1773,7 +1766,6 @@ if (savePlots) {
     plot = indicatorsFullPlot, width = 22, height = 35, units = "cm")
   
 }
-
 ```
 
 ```{r Combined table}
