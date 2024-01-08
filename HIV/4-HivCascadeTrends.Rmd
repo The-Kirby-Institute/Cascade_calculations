@@ -441,16 +441,16 @@ if (savePlots) {
 
 ```
 
-# Trends in the UNAIDS 90-90-90 targets and Cascade Indicators
+# Trends in the UNAIDS 95-95-95 targets and Cascade Indicators
 
-This section looks at the trends in the UNAIDS 90-90-90 targets and other
-cascade indicators which are proportions or ratios. We used a Poisson model
-with an offset to get a rate ratio. For each gap we obtain linear, logistic, 
-and exponential trends for comparison but used the exponential models for 
-ease of interpretability. 
+This section looks at the trends in the UNAIDS 95-95-95 targets and other
+cascade indicators which are proportions or ratios. We used a 
+Poisson/negative-binomial model with an offset to get a rate ratio. For each gap 
+we obtain linear, logistic, and exponential trends for comparison but used the 
+exponential models for ease of interpretability. 
 
-```{r Trends 90-90-90}
-# This chunk looks at the trends in the UNAIDS 90-90-90 targets.
+```{r Trends 95-95-95}
+# This chunk looks at the trends in the UNAIDS 95-95-95 targets.
 
 # Produce the proportions
 diagnosedProp <- filter(trendData, stage == "pldhiv")$value / 
@@ -544,33 +544,36 @@ p_overall <- summary(overallModel)$coefficients["year", "Pr(>|z|)"]
 trendModelsProp <- list()
 trendPlotsProp <- list()
 
-# Set-up data for Poisson/exponential models
+# Set-up data for Poisson/negative-binomial exponential models
 expTrendData <- trendData %>% 
   dplyr::select(year, stage, value) %>% 
   mutate(value = round(value)) %>%
   tidyr::spread(stage, value)
 
 # Models - using denominator as an offset 
-# diagsExpModel <- glm(pldhiv ~ year, offset = log(infected), 
-#   data = expTrendData, family = "poisson")
-# treatedExpModel  <- glm(numART ~ year, offset = log(pldhiv), 
-#   data = expTrendData, family = "poisson")
-# suppressedExpModel  <- glm(suppressed ~ year, offset = log(numART), 
-#   data = expTrendData, family = "poisson")
-# overallExpModel  <- glm(suppressed ~ year, offset = log(infected), 
-#   data = expTrendData, family = "poisson")
+if (expModelType == "nb") {
+  # For diagnosed proportion get warnings about iteration limit and
+  # a very large theta using glm.nb however still seem to get a good fit
+  diagsExpModel <- glm.nb(pldhiv ~ year + offset(log(infected)), 
+    data = expTrendData)  
+  
+  treatedExpModel  <- glm.nb(numART ~ year +offset(log(pldhiv)), 
+    data = expTrendData)
+  suppressedExpModel  <- glm.nb(suppressed ~ year + offset(log(numART)), 
+    data = expTrendData)
+  overallExpModel  <- glm.nb(suppressed ~ year + offset(log(infected)), 
+    data = expTrendData)
+} else {
+  diagsExpModel <- glm(pldhiv ~ year, offset = log(infected),
+    data = expTrendData, family = "poisson")
+  treatedExpModel  <- glm(numART ~ year, offset = log(pldhiv),
+    data = expTrendData, family = "poisson")
+  suppressedExpModel  <- glm(suppressed ~ year, offset = log(numART),
+    data = expTrendData, family = "poisson")
+  overallExpModel  <- glm(suppressed ~ year, offset = log(infected),
+    data = expTrendData, family = "poisson")
 
-# For diagnosed proportion get warnings about iteration limit and
-# a very large theta using glm.nb however still seem to get a good fit
-diagsExpModel <- glm.nb(pldhiv ~ year + offset(log(infected)), 
-  data = expTrendData)  
-
-treatedExpModel  <- glm.nb(numART ~ year +offset(log(pldhiv)), 
-  data = expTrendData)
-suppressedExpModel  <- glm.nb(suppressed ~ year + offset(log(numART)), 
-  data = expTrendData)
-overallExpModel  <- glm.nb(suppressed ~ year + offset(log(infected)), 
-  data = expTrendData)
+}
 
 trendModelsProp[["propdiagnosed"]] <- diagsExpModel
 trendModelsProp[["proptreated"]] <- treatedExpModel
@@ -600,7 +603,7 @@ intervalExpoverall <- exp(confint(overallExpModel, "year", type = "Wald"))
 
 # Plots of estimates and trends ------------------------------------------------
 
-# Plot the proportion, linear model and logistic model
+# Plot the proportion, linear model and logistic model for comparison
 
 # Functions for plotting
 plotPropFull <- function(proportion, lmmodel, logmodel, expmodel, expoffset,
@@ -688,6 +691,9 @@ propTrends <- tibble(stage = c("propdiagnosed", "proptreated",
     intervallmoverall[2]),
   model = "linear")
 
+expModelString <- ifelse(expModelType == "nb", "negative-binomial-offset", 
+  "poisson-offset")
+
 propTrendsExp <- tibble(stage = c("propdiagnosed", "proptreated",
   "propsuppressed", "propoverall"),
   coeff = c(coeffExpdiags, coeffExpart, coeffExpsuppressed, coeffExpoverall),
@@ -697,7 +703,7 @@ propTrendsExp <- tibble(stage = c("propdiagnosed", "proptreated",
     intervalExpoverall[1]),
   upper = c(intervalExpdiags[2], intervalExpart[2], intervalExpsuppressed[2],
     intervalExpoverall[2]),
-  model = "poisson-offset")
+  model = expModelString)
 
 trendCascadeProp <- bind_rows(propTrends, propTrendsExp)
 
@@ -736,8 +742,6 @@ ydf <- hivCascadeIndicators$ydf
 cdr <- hivCascadeIndicators$cdr
 ipr <- hivCascadeIndicators$ipr
 imr <- hivCascadeIndicators$imr
-
-
 
 # Add to trend data and save
 trendData <- bind_rows(trendData, tibble(year = year,
@@ -780,11 +784,11 @@ trendData <- bind_rows(trendData, tibble(year = year,
   lower = hivCascadeIndicators$deaths_lower,
   upper = hivCascadeIndicators$deaths_upper))
 
-# Negative binomial/Poisson models ---------------------------------------------
-# Use a negative binomial/Poisson model with an offset to produce a rate ratio 
+# Negative-binomial/Poisson models ---------------------------------------------
+# Use a negative-binomial/Poisson model with an offset to produce a rate ratio 
 # for the change in the proportion. These are the main models we will use.
 
-# Set-up data for Poisson/exponential models
+# Set-up data for exponential models
 expTrendData <- trendData %>% 
   dplyr::select(year, stage, value) %>% 
   mutate(value = round(value)) %>%
@@ -792,23 +796,26 @@ expTrendData <- trendData %>%
 
 # Models - using denominator as an offset - explicitly add location of of 
 # offset so segmented fits work: https://stackoverflow.com/questions/19034403/r-package-segmented-with-an-offset-term
-# ydfModel <- glm(diagnoses_include ~ year, offset = log(ydfoffest), 
-#   data = expTrendData, family = "poisson")
-# cdrModel  <- glm(diagnoses_include ~ year, offset = log(infections),
-#   data = expTrendData, family = "poisson")
-# iprModel  <- glm(infections ~ year, offset = log(iproffset), 
-#   data = expTrendData, family = "poisson")
-# imrModel  <- glm(infections ~ year, offset = log(imroffset), 
-#   data = expTrendData, family = "poisson")  
 
-ydfModel <- glm.nb(diagnoses_exclude ~ year + offset(log(ydfoffest)), 
-  data = expTrendData)
-cdrModel  <- glm.nb(diagnoses_exclude ~ year + offset(log(infections)),
-  data = expTrendData)
-iprModel  <- glm.nb(infections ~ year + offset(log(iproffset)), 
-  data = expTrendData)
-imrModel  <- glm.nb(infections ~ year + offset(log(imroffset)), 
-  data = expTrendData)
+if (expModelType == "nb") {
+  ydfModel <- glm.nb(diagnoses_exclude ~ year + offset(log(ydfoffest)), 
+    data = expTrendData)
+  cdrModel  <- glm.nb(diagnoses_exclude ~ year + offset(log(infections)),
+    data = expTrendData)
+  iprModel  <- glm.nb(infections ~ year + offset(log(iproffset)), 
+    data = expTrendData)
+  imrModel  <- glm.nb(infections ~ year + offset(log(imroffset)), 
+    data = expTrendData)
+} else {
+  ydfModel <- glm(diagnoses_include ~ year, offset = log(ydfoffest),
+    data = expTrendData, family = "poisson")
+  cdrModel  <- glm(diagnoses_include ~ year, offset = log(infections),
+    data = expTrendData, family = "poisson")
+  iprModel  <- glm(infections ~ year, offset = log(iproffset),
+    data = expTrendData, family = "poisson")
+  imrModel  <- glm(infections ~ year, offset = log(imroffset),
+    data = expTrendData, family = "poisson")
+} 
 
 trendModelsProp[["ydf"]] <- ydfModel
 trendModelsProp[["cdr"]] <- cdrModel
@@ -877,7 +884,7 @@ propTrendsIndicators <- tibble(stage = c("ydf", "cdr", "ipr", "imr"),
   pvalue = c(p_valueydf, p_valuecdr, p_valueipr, p_valueimr),
   lower = c(intervalydf[1], intervalcdr[1], intervalipr[1], intervalimr[1]),
   upper = c(intervalydf[2], intervalcdr[2], intervalipr[2], intervalimr[2]),
-  model = "negative-binomial-offset")
+  model = expModelString)
 
 trendCascadeProp <- bind_rows(trendCascadeProp, propTrendsIndicators)
 
