@@ -38,7 +38,7 @@ LoadLibrary(captioner)
 LoadLibrary(stringr)
 LoadLibrary(svglite)
 
-# Function to tidy notifications
+# Functions to tidy notifications
 source(file.path(Rcode, "AgeCat.R"))
 source(file.path(HIVcode, "TidyNotifications.R"))
 
@@ -48,6 +48,7 @@ minYear <- 19      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE
 years <- startYear:resultsYear
+expModelType <- "nb" # "nb" = negative binomial (default) or "poisson"
 
 # Set up project and cascade to analyse
 projectName <- "HIV_Cascade_Paper"  
@@ -191,26 +192,24 @@ hivCascadeIndicators <- read.csv(inputFileIndicators) %>%
 
 # Simple trends of the cascade steps and gaps
 
-We used a simple Poisson regression with year as the independent covariate 
-for the main cascade steps and indicators over 2004-2016. A more
-advanced trend analyses for the cascade steps was completed by Hamish McMannus
-but we decided a simple poisson progression of the best estimates would be 
+We used a simple Poisson/Negative-binomial regression model with year as the 
+independent covariate for the main cascade steps and indicators over 2004-2022. 
+A more advanced trend analyses for the cascade steps was completed by co-author 
+Hamish McMannus but we decided a simple regression of the best estimates would be 
 sufficient. Hamish's analysis is available in the trend_analysis folder.
 
-We aimed to produce a number of diagnostics of the poisson fit. We considered
+We aimed to produce a number of diagnostics of the regression fit. We considered
 a pseudo R^2 calculation. The pseudo-R^2 uses the rsq package https://cran.r-project.org/web/packages/rsq/index.html
-based on the calculation in the paper: Cameron & Windmeijer, An 
-R-squared measure of goodness of fit for some common nonlinear 
-regression model, Journal of Econometrics, 77 (1997) 329-342. However, this
-package does not seem to work in the latest versions of R so I decided to 
-drop it. 
+based on the calculation in the paper: Cameron & Windmeijer, An R-squared measure 
+of goodness of fit for some common nonlinear regression model, Journal of 
+Econometrics, 77 (1997) 329-342. However, this package does not seem to work in 
+the latest versions of R so I decided to drop it. 
 
 Considered test for heteroscedasticity in the residuals using the 
 Breusch-Pagan test (P > 0.05 means it is okay) using bptest() from the 
 lmtest package https://cran.r-project.org/web/packages/rsq/index.html 
-(but I don't think it is valid for Poisson models).
-Also the standard in built Chi-squared test isn't valid for Poisson
-based on this blog post: http://thestatsgeek.com/2014/04/26/deviance-goodness-of-fit-test-for-poisson-regression/
+(but I don't think it is valid for Poisson models). Also the standard in built 
+Chi-squared test isn't valid for Poisson based on this blog post: http://thestatsgeek.com/2014/04/26/deviance-goodness-of-fit-test-for-poisson-regression/
 So I dropped these tests. 
 
 In the end I decided not to produce a goodness-of-fit value. Rather just rely on
@@ -219,9 +218,9 @@ visual inspection and BIC when comparing models.
 ```{r simple trends}
 # This chunk is used to do some simple trend analysis of the cascade
 # and other indicator estimates over 2004-2020. Throughout coefficients of 
-# Poisson models are exponentiated to represent a rate ratio. Trends for the 
-# cascade percentages and cascade indicators are done in the next chunk 
-# because they need an offset as they are proportions/ratios. 
+# Poisson/Negative-binomial models are exponentiated to represent a rate ratio. 
+# Trends for the cascade percentages and cascade indicators are done in the next 
+# chunk because they need an offset as they are proportions/ratios. 
 
 plotTrends <- FALSE # add overall trend lines to plots
 
@@ -245,17 +244,19 @@ diagsDataInclude <- hivSet %>%
 
 diagsData <- dplyr::bind_rows(diagsDataExclude, diagsDataInclude)
 
-# trendDiagsExclude <- glm(diags ~ year, data = diagsDataExclude,
-#   family = "poisson")
-trendDiagsExclude <- glm.nb(diags ~ year, data = diagsDataExclude)
+if (expModelType == "nb") {
+  trendDiagsExclude <- glm.nb(diags ~ year, data = diagsDataExclude)
+  trendDiagsInclude <- glm.nb(diags ~ year, data = diagsDataInclude)
+} else {
+  trendDiagsExclude <- glm(diags ~ year, data = diagsDataExclude,
+    family = "poisson")
+  trendDiagsInclude <- glm(diags ~ year, data = diagsDataInclude,
+    family = "poisson")
+}
 
 coeffDiagsExclude <- exp(coef(trendDiagsExclude)[2])
 p_valueDiagsExclude  <- summary(trendDiagsExclude)$coefficients["year", "Pr(>|z|)"]
 intervalDiagsExclude  <- exp(confint(trendDiagsExclude, "year", type = "Wald"))
-
-# trendDiagsInclude <- glm(diags ~ year, data = diagsDataInclude,
-#   family = "poisson")
-trendDiagsInclude <- glm.nb(diags ~ year, data = diagsDataInclude)
 
 coeffDiagsInclude <- exp(coef(trendDiagsInclude)[2])
 p_valueDiagsInclude <- summary(trendDiagsInclude)$coefficients["year", "Pr(>|z|)"]
@@ -264,12 +265,8 @@ intervalDiagsInclude <- exp(confint(trendDiagsInclude, "year", type = "Wald"))
 diagsPlot <- ggplot(data = diagsDataExclude, aes(x = year)) +
   geom_line(aes(y = diags, colour = "exclude")) + 
   geom_point(aes(y = diags), colour = "blue") +
-  # geom_line(aes(y = predict(trendDiagsExclude, type = "response")),
-  #   colour = "black") +
   geom_line(data = diagsDataInclude, aes(y = diags, colour = "include")) + 
   geom_point(data = diagsDataInclude, aes(y = diags), colour = "red") +
-  # geom_line(aes(y = predict(trendDiagsInclude, type = "response")),
-  #   colour = "black") +
   geom_point(aes(y = diagsDataInclude$diags - diags, 
     colour = "gap")) +
   geom_line(aes(y = diagsDataInclude$diags - diags, 
@@ -349,10 +346,14 @@ trendModels <- list()
 trendPlots <- list()
 
 for (ii in 1:length(steps)) {
-  tempData <- filter(trendData, stage == unique(trendData$stage)[ii])           
-  # temp <- glm(round(value) ~ year, data = tempData, family = "poisson")
-  temp <- glm.nb(round(value) ~ year, data = tempData)
+  tempData <- filter(trendData, stage == unique(trendData$stage)[ii])
   
+  if (expModelType == "nb") {
+    temp <- glm.nb(round(value) ~ year, data = tempData)
+  } else {
+    temp <- glm(round(value) ~ year, data = tempData, family = "poisson")
+  }
+
   trendCascade$stage[ii] <- steps[ii]
   trendCascade$coeff[ii] <- exp(coef(temp)[2])
   trendCascade$pvalue[ii] <- summary(temp)$coefficients["year",
