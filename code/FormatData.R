@@ -74,7 +74,7 @@ FormatData <- function(estimate, lower = NA, upper = NA, places = NULL,
   
   # Setup defaults - "mid" specifies a mid-line decimal
   decimal <- match.arg(decimal)
-  decimal <- ifelse(decimal == "low", ".", "\xB7")
+  decimal <- ifelse(decimal == "low", ".", "\U00B7")
   thousands <- match.arg(thousands)
   thousands <- ifelse(thousands == "no", "", thousands)
   rangeappend <- match.arg(rangeappend)

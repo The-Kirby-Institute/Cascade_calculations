@@ -928,13 +928,14 @@ save(trendPlots, trendModelsProp,
 # Write the trends data and diagnostics to file
 if (savePlots) {
   
-  write_csv(trendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
+  write_excel_csv(trendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
     toString(startYear), "-", toString(resultsYear), ".csv")))
   
-  trendCascade$model <- "poisson"
+  
+  trendCascade$model <- ifelse(expModelType == "nb", "negative-binomial", "poison")
   trendCascade <- bind_rows(trendCascade, trendCascadeProp)
   
-  write_csv(trendCascade, file.path(figFolder, 
+  write_excel_csv(trendCascade, file.path(figFolder, 
     paste0("HIVcascade_trends_", 
       toString(startYear), "-", toString(resultsYear), ".csv")))
 }
@@ -1181,7 +1182,7 @@ for (ii in 1:length(modelNames)) {
 }
 
 if (savePlots) {
-  write_csv(breakTable, file.path(figFolder, 
+  write_excel_csv(breakTable, file.path(figFolder, 
     paste0("HIVcascade_breakpoints_", 
       toString(startYear), "-", toString(resultsYear), ".csv")))
 }
@@ -1840,7 +1841,7 @@ resultsTable[is.na(resultsTable)] <- 0
 
 captions[["resultsTable"]] <- "Summary results"
 
-decimalMark <- "low" # Should be "mid" but produces error!
+decimalMark <- "mid" # Should be "mid" 
 
 formatTable <- tibble(indicator = resultsTable$indicator)
 formatTable$valueStart <- FormatData(resultsTable$valueStart,
@@ -1882,11 +1883,11 @@ formatTable$rate_ratios <- FormatData(resultsTable$rate_ratio,
   decimal = decimalMark)
 
 if (savePlots) {
-  write_csv(resultsTable, file.path(figFolder, 
+  write_excel_csv(resultsTable, file.path(figFolder, 
     paste0("HIVcascade_Summary_Table_", 
       toString(startYear), "-", toString(resultsYear), ".csv")))
   
-  write_csv(formatTable, file.path(figFolder, 
+  write_excel_csv(formatTable, file.path(figFolder, 
     paste0("HIVcascade_Formated_Table_", 
       toString(startYear), "-", toString(resultsYear), ".csv")))
   
@@ -2173,7 +2174,7 @@ if (runtests) {
   # Save as table -----------------------------------------------------------
   if (savePlots) {
     
-    write_csv(modelTable, file.path(figFolder,
+    write_excel_csv(modelTable, file.path(figFolder,
       paste0("HIVcascade_trend_breakpoints_", 
         toString(startYear), "-", toString(resultsYear), ".csv")))
   }
