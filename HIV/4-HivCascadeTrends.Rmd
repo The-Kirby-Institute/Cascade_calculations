@@ -925,12 +925,44 @@ save(trendPlots, trendModelsProp,
 ```
 
 ```{r Trends table}
+
+# Create a formatted trends data table ---------------------------------------------
+# Replace missing lower and upper bounds with zero
+trendData[is.na(trendData)] <- 0
+
+formatTrendData <- tibble(indicator = trendData$stage)
+formatTrendData$value <- FormatData(trendData$value,
+  trendData$lower, trendData$upper, places = -1,
+  decimal = decimalMark)
+
+# Need to overwrite percentage and proportion estimates so they are not rounded
+# and have the right number of decimal places
+
+propIndices <- which(formatTrendData$indicator %in% c("ydf", "cdr", "imr"))
+
+percentIndices <- which(formatTrendData$indicator %in% c("propdiagnosed", 
+  "proptreated" , "propsuppressed", "propoverall", "ipr"))
+
+formatTrendData$value[propIndices]  <- FormatData(
+  trendData$value[propIndices],
+  trendData$lower[propIndices], 
+  trendData$upper[propIndices], 
+  places = 2, decimal = decimalMark)
+
+formatTrendData$value[percentIndices]  <- FormatData(
+  100*trendData$value[percentIndices],
+  100*trendData$lower[percentIndices],
+  100*trendData$upper[percentIndices], 
+  places = 1, decimal = decimalMark, suffix = "%")
+
 # Write the trends data and diagnostics to file
 if (savePlots) {
   
   write_excel_csv(trendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
     toString(startYear), "-", toString(resultsYear), ".csv")))
   
+  write_excel_csv(formatTrendData, file.path(figFolder, paste0("HIVcascade_Trend_data_",
+    toString(startYear), "-", toString(resultsYear), "-Formatted.csv")))
   
   trendCascade$model <- ifelse(expModelType == "nb", "negative-binomial", "poison")
   trendCascade <- bind_rows(trendCascade, trendCascadeProp)
@@ -938,6 +970,7 @@ if (savePlots) {
   write_excel_csv(trendCascade, file.path(figFolder, 
     paste0("HIVcascade_trends_", 
       toString(startYear), "-", toString(resultsYear), ".csv")))
+
 }
 ```
 
@@ -1837,7 +1870,7 @@ for (ii in steps) {
 # Replace missing lower and upper bounds with zero
 resultsTable[is.na(resultsTable)] <- 0
 
-# Create a formatted table -----------------------------------------------------
+# Create a formatted results table ---------------------------------------------
 
 captions[["resultsTable"]] <- "Summary results"
 
@@ -1853,8 +1886,13 @@ formatTable$valueEnd <- FormatData(resultsTable$valueEnd,
 
 # Need to overwrite percentage and proportion estimates so they are not rounded
 # and have the right number of decimal places
-percentIndices <- c(28:36, 43:45)
-propIndices <- c(37:42, 46:48)
+
+propIndices <- which(formatTable$indicator %in% c("Yearly diagnosed fraction", 
+  "Case detection rate", "Incidence mortality ratio"))
+
+percentIndices <- which(formatTable$indicator %in% c("Percentage diagnosed" , 
+  "Percentage diagnosed treated" , "Percentage treated suppressed", 
+  "Percentage suppressed overall", "Incidence prevalence ratio"))
 
 formatTable$valueStart[propIndices]  <- FormatData(resultsTable$valueStart[propIndices],
   resultsTable$valueStart_low[propIndices], resultsTable$valueStart_up[propIndices], 
@@ -1867,12 +1905,12 @@ formatTable$valueStart[percentIndices]  <- FormatData(
   100*resultsTable$valueStart[percentIndices],
   100*resultsTable$valueStart_low[percentIndices],
   100*resultsTable$valueStart_up[percentIndices], 
-  places = 1, decimal = decimalMark)
+  places = 1, decimal = decimalMark, suffix = "%")
 formatTable$valueEnd[percentIndices] <- FormatData(
   100*resultsTable$valueEnd[percentIndices],
   100*resultsTable$valueEnd_low[percentIndices],
   100*resultsTable$valueEnd_up[percentIndices], 
-  places = 1, decimal = decimalMark)
+  places = 1, decimal = decimalMark, suffix = "%")
 
 formatTable$breakpoints <- FormatData(resultsTable$breakpoints,
   resultsTable$breakpoints_low, resultsTable$breakpoints_up, 
@@ -1890,7 +1928,6 @@ if (savePlots) {
   write_excel_csv(formatTable, file.path(figFolder, 
     paste0("HIVcascade_Formated_Table_", 
       toString(startYear), "-", toString(resultsYear), ".csv")))
-  
 }
 
 ```
