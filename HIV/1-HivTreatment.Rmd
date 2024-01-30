@@ -23,6 +23,7 @@ HIVcode <- file.path(basePath, "code")
 # Load standard libraries and options ----------------------------------
 source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 source(file.path(Rcode, "PlotOptions.R"), echo=TRUE)
+source(file.path(Rcode, "Plotcolors.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 LoadLibrary(readxl)
 
@@ -429,9 +430,9 @@ allTreat <- filter(hivTreated, year >= 2013, population == "all")$value
 propTemp <- tempResArt$value / allTreat
 
 tempResArtPlot <- ggplot(tibble(tempResArt), aes(x = year, y = value)) + 
-  geom_line(colour = "blue") +
-  geom_point(colour = "blue") +
-  geom_line(aes(y = tail(propTemp, 1) * allTreat), colour = "black") +
+  geom_line(colour = PlotColors("hivcascade5")[2]) +
+  geom_point(colour = PlotColors("hivcascade5")[2]) +
+  # geom_line(aes(y = tail(propTemp, 1) * allTreat), colour = "black") +
   expand_limits(y = 0) +
   scale_x_continuous(breaks = tempResArt$year) + 
   xlab("Year") + ylab("Number on ART") +
