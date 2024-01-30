@@ -930,7 +930,7 @@ save(trendPlots, trendModelsProp,
 # Replace missing lower and upper bounds with zero
 trendData[is.na(trendData)] <- 0
 
-formatTrendData <- tibble(indicator = trendData$stage)
+formatTrendData <- tibble(year = trendData$year, indicator = trendData$stage)
 formatTrendData$value <- FormatData(trendData$value,
   trendData$lower, trendData$upper, places = -1,
   decimal = decimalMark)
@@ -1595,25 +1595,25 @@ save(segResults, file = file.path(figFolder, "CascadeSegmentedModels.Rda"))
 ```
 
 ```{r 95-95-95 and 2030 predictions}
-# This chunk is used to estimate indicator values to 2030. 
+# This chunk is used to estimate indicator values up to 2030. 
 
 # Cascade steps
 infectedPredict <- exp(predict(segResults$infected$models[[segResults$infected$bestIndex]], 
-  newdata = data.frame(year = 2020:2030)))
+  newdata = data.frame(year = (resultsYear + 1):2030)))
 diagnosedPredict <- exp(predict(segResults$pldhiv$models[[segResults$pldhiv$bestIndex]], 
-  newdata = data.frame(year = 2020:2030)))
+  newdata = data.frame(year = (resultsYear + 1):2030)))
 numARTPredict <- exp(predict(segResults$numART$models[[segResults$numART$bestIndex]], 
-  newdata = data.frame(year = 2020:2030)))
+  newdata = data.frame(year = (resultsYear + 1):2030)))
 suppressedPredict <- exp(predict(segResults$suppressed$models[[segResults$suppressed$bestIndex]], 
-  newdata = data.frame(year = 2020:2030)))
+  newdata = data.frame(year = (resultsYear + 1):2030)))
 
 # Predict values for cascade percentages using models with offsets
 propdiagnosed95 <- exp(predict(segResults$propdiagnosed$models[[segResults$propdiagnosed$bestIndex]],
-  newdata = data.frame(year = 2020:2030, infected = infectedPredict)))/infectedPredict
+  newdata = data.frame(year = (resultsYear + 1):2030, infected = infectedPredict)))/infectedPredict
 proptreated95 <- exp(predict(segResults$proptreated$models[[segResults$proptreated$bestIndex]],
-  newdata = data.frame(year = 2020:2030, pldhiv = diagnosedPredict)))/diagnosedPredict
+  newdata = data.frame(year = (resultsYear + 1):2030, pldhiv = diagnosedPredict)))/diagnosedPredict
 propsuppressed95 <- exp(predict(segResults$propsuppressed$models[[segResults$propsuppressed$bestIndex]],
-  newdata = data.frame(year = 2020:2030, numART = numARTPredict)))/numARTPredict
+  newdata = data.frame(year = (resultsYear + 1):2030, numART = numARTPredict)))/numARTPredict
 
 # Direct calculations
 diagnosedPredict/infectedPredict
