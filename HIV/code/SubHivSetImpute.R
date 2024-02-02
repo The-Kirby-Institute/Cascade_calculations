@@ -121,19 +121,21 @@ SubHivSetImpute <- function(hivdataframe, fAge, fGender, fExposure, fCob,
     # Exclude ones we don't want and keep ones we want - note a number 
     # of special cases 
     if (fGlobalRegion[1] == "Other cob") {
-      # Category for ASR for everyone not Australian, South-East Asia,
-      # or Sub-Saharan Africa born 
+      # Category for ASR for everyone not Australian, South-East Asia, 
+      # Sub-Saharan Africa born, South and Central America. 
+      # Assume Not reported are Australian
       
       excludeframe <- bind_rows(excludeframe, 
         filter(includeframe, globalregion %in% c("South-East Asia", 
-          "Sub-Saharan Africa")))
+          "Sub-Saharan Africa", "South and Central America")))
       excludeframe <- bind_rows(excludeframe,
-        filter(includeframe, cob == "Australia"))  
+        filter(includeframe, cob %in% c("Australia", "Not Reported")))  
       
       includeframe <- filter(includeframe, 
-        !(cob %in% c("Australia", "Overseas", "Not Reported")))    
+        !(cob %in% c("Australia", "Not Reported")))    
       includeframe <- filter(includeframe, 
-        !(globalregion %in% c("South-East Asia", "Sub-Saharan Africa")))
+        !(globalregion %in% c("South-East Asia", "Sub-Saharan Africa", 
+          "South and Central America")))
       
     } else if (fGlobalRegion[1] == "rhca") {
       # Category for countries with a reciprocal health agreement
@@ -145,11 +147,25 @@ SubHivSetImpute <- function(hivdataframe, fAge, fGender, fExposure, fCob,
         cob %in% c("Belgium", "Finland", "Italy", "Malta", "Netherlands",
           "New Zealand", "Norway", "Ireland", "Slovenia", "Sweden", 
           "United Kingdom"))
+      
     } else if (fGlobalRegion[1] == "South and Central America"){
       excludeframe <- bind_rows(excludeframe,  
         filter(includeframe, !(globalregion %in% c("South America", "Central America", "Caribbean"))))
       includeframe <- filter(includeframe, 
-        globalregion %in% c("South America", "Central America", "Caribbean"))
+        globalregion %in% c("South America", "Central America", "Caribbean")) 
+      
+    } else if (fGlobalRegion[1] == "SSA-SA") {   
+      # Special case for CALD report 
+      excludeframe <- bind_rows(excludeframe,  
+        filter(includeframe, !(globalregion == "Sub-Saharan Africa")))
+      excludeframe <- bind_rows(excludeframe,  
+        filter(includeframe, cob== "South Africa"))
+      
+      includeframe <- 
+        filter(includeframe, !(cob == "South Africa"))
+      includeframe <- filter(includeframe, 
+        globalregion == "Sub-Saharan Africa") 
+      
     } else {
       excludeframe <- bind_rows(excludeframe, filter(includeframe, 
         !(globalregion %in% fGlobalRegion)))
