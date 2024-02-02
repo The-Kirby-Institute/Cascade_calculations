@@ -46,7 +46,7 @@ source(file.path(HIVcode, "TidyNotifications.R"))
 resultsYear <- 2022  # year of cascade we will plot
 minYear <- 19      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
-savePlots <- TRUE
+savePlots <- FALSE
 years <- startYear:resultsYear
 expModelType <- "nb" # "nb" = negative binomial (default) or "poisson"
 
@@ -1619,6 +1619,23 @@ propsuppressed95 <- exp(predict(segResults$propsuppressed$models[[segResults$pro
 diagnosedPredict/infectedPredict
 numARTPredict/diagnosedPredict
 suppressedPredict/numARTPredict
+
+# New infections predictions
+infectionsPredict <-exp(predict(segResults$infections$models[[segResults$infections$bestIndex]], 
+  newdata = data.frame(year = (resultsYear + 1):2030)))
+
+infections2030 <- trendData |> 
+  filter(stage == "infections") |>
+  dplyr::select(year, value) |>
+  bind_rows(
+    tibble(
+      year = (resultsYear + 1):2030, 
+      value = infectionsPredict
+      )
+    ) %>%
+  dplyr::mutate(relative = value/(filter(.,year == 2010)$value))
+
+infections2030 |> tail(20)
 
 ```
 
