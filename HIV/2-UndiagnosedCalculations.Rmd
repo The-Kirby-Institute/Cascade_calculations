@@ -49,12 +49,12 @@ useAdjusted <- TRUE # adjust number undiagnosed and percentage undiagnosed
 # The following can only be TRUE if include and exclude ECDC have been run
 addExclude <- TRUE
 undiagnosedMethod <- "exclude" # "include", "exclude" (default), "average" 
-undiagnosedMethod <- ifelse(cascadeFlag == "Indigenous", "include", undiagnosedMethod)
+undiagnosedMethod <- ifelse(cascadeFlag %in% c("Indigenous"), "include", undiagnosedMethod)
 getNewInfections <- TRUE 
 
 # Use if ECDC bootstrapping hasn't been done
 doUncertainty <- TRUE # Calculate uncertainty estimates
-doUncertainty <- ifelse(cascadeFlag == "Indigenous", FALSE, doUncertainty)
+doUncertainty <- ifelse(cascadeFlag %in% c("Indigenous", "SCAsia"), FALSE, doUncertainty)
 
 # Produce cascadeName from the flag and analysis year. 
 if (analysisYear <= 2016) {
