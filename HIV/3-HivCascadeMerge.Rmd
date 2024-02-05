@@ -30,8 +30,7 @@ artNames <- NULL
 if (multipleCascades && projectName == "ASR_2023") {
   cascadeNames <- c("All", "Male", "Female", "Indigenous", "AusNonIndigenous", 
     "MSM", "MSM_Aus", "MSM_OS", "Hetero", "Hetero_Aus", 
-    "Hetero_OS", "Pwid", "Otherexp", "SSA", "SEA", "SCA" #, Othercob was unable to run
-    )
+    "Hetero_OS", "Pwid", "Otherexp", "SSA", "SEA", "SCA", "Othercob")
 } else {
   # Specify cascades manually (without year)
   cascadeNames <- "All" # specify cascades with project 
