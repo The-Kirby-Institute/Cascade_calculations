@@ -174,23 +174,21 @@ RemoveDuplicates <- function(dobvector, days.ignore,
 # Functions for calculating duplicates ------------------------------------
 NumUnique <- function(dobframe, years, ignore, file = NULL) {
   # Function to loop through years and calculate cumulative number of unique cases 
-  numcases <- rep(NA,length(years))
+  numUniqueCases <- rep(NA,length(years))
   for (ii in seq(along=years)) {
     dobvector <- filter(dobframe,yeardiagnosis <= years[ii])$dob
     dobvector <- dobvector[!is.na(dobvector)] 
-    if (length(dobvector) != 0 && !is.na(dobvector)) {
-      # Make sure our dobvector isn't empty or an NA
-      numcases[ii] <- RemoveDuplicates(dobvector,ignore)
+    if (length(dobvector) != 0 && sum(is.na(dobvector)) == 0)  {
+      # Make sure our dobvector isn't empty/NA
+      numUniqueCases[ii] <- RemoveDuplicates(dobvector,ignore)
     }
   }
   
-  # If selected write final output to file
   if (!is.null(file)) {
-    numcases[ii] <- RemoveDuplicates(dobvector,ignore, write = file)
+    numUniqueCases[ii] <- RemoveDuplicates(dobvector,ignore, write = file)
   }
   
-  # Return vector of unique cases
-  return(numcases)
+  return(numUniqueCases)
 }
 
 ProportionUnique <- function(notificationsData, cumNotifications, 
