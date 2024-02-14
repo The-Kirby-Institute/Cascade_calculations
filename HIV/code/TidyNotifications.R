@@ -105,11 +105,11 @@ TidyNotifications <- function(notificationsData, analysisYear, crCodes,
   hivData$cob <- as.character(hivData$cob)
   
   if (analysisYear >= 2017) {
-    hivData$cob[hivData$cob == "Not Reported"  &&
+    hivData$cob[hivData$cob == "Not Reported"  &
         !(hivData$rob %in%  c("NR", "Oceania/Anatartica"))] <- "Overseas"
   } else {
     hivData$globalregion[hivData$globalregion == "Not Reported"] <- "NR"
-    hivData$cob[hivData$cob == "Not Reported"  &&
+    hivData$cob[hivData$cob == "Not Reported"  &
         !(hivData$rob %in%  c(0, 7))] <- "Overseas"
   }
   
