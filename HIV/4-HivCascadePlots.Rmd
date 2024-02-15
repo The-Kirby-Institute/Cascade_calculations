@@ -79,7 +79,7 @@ startYear <- resultsYear - minYear + 1
 
 # Set up project - If ASR plot all populations otherwise just plot 
 # specified cascade
-projectName <- "ASR_2023" #"ASR_2023" "HIV_Cascade_Paper"
+projectName <- "HIV_Cascade_Paper" #"ASR_2023" "HIV_Cascade_Paper"
 resultsFolder <- file.path(resultsFolder, projectName)
 cascadePop <- "all"
 

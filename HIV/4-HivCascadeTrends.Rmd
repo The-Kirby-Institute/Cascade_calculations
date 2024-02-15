@@ -46,7 +46,7 @@ source(file.path(HIVcode, "TidyNotifications.R"))
 resultsYear <- 2022  # year of cascade we will plot
 minYear <- 19      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
-savePlots <- FALSE
+savePlots <- TRUE
 years <- startYear:resultsYear
 expModelType <- "nb" # "nb" = negative binomial (default) or "poisson"
 
@@ -105,12 +105,10 @@ indicatorNamesNeat <- c("infected" = "Number living with HIV",
   "ipr" = "Incidence prevalence ratio",
   "imr" = "Incidence mortality ratio")
 
-# Create output directory
-if (savePlots) {
-  saveFormat <- ".png" #".svg"
-  figFolder <- file.path(resultsFolder, "figures", resultsYear)
-  dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
-}
+# Create output directory and figure file format
+saveFormat <- ".png" #".svg"
+figFolder <- file.path(resultsFolder, "figures", resultsYear)
+dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
 
 runtests <- FALSE # run chunks that have testing code
 
@@ -124,6 +122,9 @@ asrcols <- PlotColors("hivcascade5")
 
 # Number of x-axis labels
 xTicks <- 4
+
+# Formatted decimal point in output tables
+decimalMark <- "mid" # "low" or "mid" 
 
 ```
 
@@ -1891,8 +1892,6 @@ resultsTable[is.na(resultsTable)] <- 0
 
 captions[["resultsTable"]] <- "Summary results"
 
-decimalMark <- "mid" # Should be "mid" 
-
 formatTable <- tibble(indicator = resultsTable$indicator)
 formatTable$valueStart <- FormatData(resultsTable$valueStart,
   resultsTable$valueStart_low, resultsTable$valueStart_up, places = -1,
@@ -2715,7 +2714,7 @@ if (runtests) {
   # boot-strapping. This allows us to estimate the peak from the 
   # boot-strapped parameters. 
   
-  library(tidymodels)
+  LoadLibrary(tidymodels)
   
   # Set-up indicator fitting 
   set.seed(2653)
