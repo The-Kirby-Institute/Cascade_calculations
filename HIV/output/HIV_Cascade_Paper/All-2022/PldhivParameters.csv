@@ -1,0 +1,2 @@
+cascadeName,targetGender,targetAge,targetCob,targetExposure,targetAtsi,targetState,targetLocalRegion,targetGlobalRegion,excludeAborig,doRetained,doUnique,yearUnique,ecdcData,ecdcVersion,excludeOS,excludeNew,adjustment,projectPldhiv,projectYear,projectName,projectOption,projectDecrease,analysisYear,interState,doAge
+All-2022,all,all,all,all,all,all,all,all,FALSE,TRUE,TRUE,2017,TRUE,1.3.0,FALSE,FALSE,1.46,FALSE,2029,future_sq,status-quo,0,2022,FALSE,FALSE

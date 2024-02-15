@@ -46,6 +46,16 @@ HIV/output/Undiagnosed_metrics_paper/*
 !HIV/output/Undiagnosed_metrics_paper/Final_Results
 !HIV/output/Undiagnosed_metrics_paper/UndiagnosedIndicatorPlots.Rmd
 !HIV/output/Undiagnosed_metrics_paper/Statistical_Analysis
+
+!HIV/output/HIV_Cascade_Paper
+HIV/output/HIV_Cascade_Paper/*
+!HIV/output/HIV_Cascade_Paper/ProjectParameters.csv
+!HIV/output/HIV_Cascade_Paper/All-2022
+!HIV/output/HIV_Cascade_Paper/figures
+HIV/output/HIV_Cascade_Paper/figures/*
+!HIV/output/HIV_Cascade_Paper/figures/2022
+HIV/output/HIV_Cascade_Paper/figures/2022/*.Rda
+
 HIV/trend_analysis/
 HIV/output.dta
 
