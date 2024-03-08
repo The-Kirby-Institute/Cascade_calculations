@@ -1621,6 +1621,8 @@ diagnosedPredict/infectedPredict
 numARTPredict/diagnosedPredict
 suppressedPredict/numARTPredict
 
+numARTPredict/infectedPredict # For Spectrum
+
 # New infections predictions
 infectionsPredict <-exp(predict(segResults$infections$models[[segResults$infections$bestIndex]], 
   newdata = data.frame(year = (resultsYear + 1):2030)))
