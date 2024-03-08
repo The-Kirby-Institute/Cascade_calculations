@@ -89,6 +89,15 @@ SubHivSetImpute <- function(hivdataframe, fAge, fGender, fExposure, fCob,
       includeframe <- filter(includeframe, 
         !(cob %in% c('Australia', 'Canada', 'Ireland', 'New Zealand', 
           'South Africa', 'United Kingdom', 'United States')))
+    } else if (fCob[1] =='mesc') {
+      # Special case - born in mostly English speaking countries
+      # Definition used in CALD report
+      excludeframe <- bind_rows(excludeframe, filter(includeframe, 
+        !(cob %in% c('Australia', 'Canada', 'Ireland', 'New Zealand', 
+          'South Africa', 'United Kingdom', 'United States'))))
+      includeframe <- filter(includeframe, 
+        cob %in% c('Australia', 'Canada', 'Ireland', 'New Zealand', 
+          'South Africa', 'United Kingdom', 'United States'))
     } else {
       excludeframe <- bind_rows(excludeframe,
         filter(includeframe, !(cob %in% fCob)))

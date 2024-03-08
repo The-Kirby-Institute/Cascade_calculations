@@ -67,7 +67,18 @@ extractData <- function(data, fcob, fage, fstate, fgender) {
          subDataNz$departures,
        erp = subDataAll$erp - subDataOz$erp - subDataNz$erp) %>%
       mutate(migrate = departures / erp)
-     
+  
+  } else if (fcob =='mesc') {   
+    # Assume same as overall
+    subData <-  data %>% 
+      filter(year %in% 2004:2014) %>%
+      filter(age %in% fage, cob == 'all', 
+        state %in% fstate, gender %in% fgender) %>% 
+      group_by(year) %>%
+      summarise(departures = sum(nom),
+        erp = sum(erp)) %>%
+      mutate(migrate = departures / erp)
+      
   } else {
     subData <- data %>% 
       filter(year %in% 2004:2014) %>%
@@ -78,8 +89,6 @@ extractData <- function(data, fcob, fage, fstate, fgender) {
         erp = sum(erp)) %>%
       mutate(migrate = departures / erp)
   }
-
-  
   
   return(subData)
   
