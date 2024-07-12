@@ -45,7 +45,7 @@ source(file.path(HIVcode, "GetMigrate.R"))
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2022
+analysisYear <- 2023
 startYear <- 1980 # First year in HIV registry is 1980
 
 allYears <- startYear:analysisYear 
