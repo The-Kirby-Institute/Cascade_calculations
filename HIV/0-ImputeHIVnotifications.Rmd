@@ -47,11 +47,13 @@ source(file.path(Rcode, "FormatData.R"))
 
 
 # Script options
-dataYear <- 2022
+dataYear <- 2023
 
 runImpute <- TRUE
 saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 
-# This file is loaded if runImpute <- FALSE
+                   # This file is loaded if runImpute <- FALSE. 
+
+numImputeSets <- 20 # Number of imputed sets to run.
 
 runChecks <- TRUE
 changeFemaleMsm <- TRUE
@@ -60,7 +62,7 @@ changeFemaleMsm <- TRUE
 
 ```{r Load and clean notifications}
 # This chunk loads the national notifications and does final cleaning 
-# of notifications in prepartion for imputing
+# of notifications in preparation for imputing
 
 # Function to tidy notifications
 source(file.path(Rcode, "AgeCat.R"))
@@ -152,7 +154,7 @@ saveStringDetails <- file.path(setsPath, "imputedHIVset")
 # variables, making sure impute character variables are factors, and 
 # replacing unknown/missing/not reported as NA. 
 cascadeData <- hivData %>%
-  select(c(all_of(impVars), otherVars, postcode)) %>% # Drop postcode later
+  select(c(all_of(impVars), all_of(otherVars), postcode)) %>% # Drop postcode later
   mutate(sex = ifelse(sex == "unknown", NA, sex),
     cob = ifelse(cob == "Not Reported", NA, cob),
     expgroup = ifelse(expgroup == "unknown", NA, expgroup)) %>%
@@ -188,7 +190,7 @@ if (dataYear < 2018) {
   cascadeData[is.na(cascadeData$state), ]$state <- "nsw"
 }
 
-# Check if any msm have missing or wrong gender - three msm are 
+# Check if any msm have missing or wrong gender - five msm are 
 # designated female - replace exposure with "pwid" as coded MSM-IDU
 # (confirmed to be female)
 
@@ -196,7 +198,7 @@ indices <- which(cascadeData$sex == "female" & cascadeData$expgroup == "msm")
 cascadeData[indices, ]$expgroup <- "pwid"
 
 # Fix up issues with postcodes -------------------------------------------
-# The postcode varaible iss ssupposed to record postcode of residence at 
+# The postcode variable is supposed to record postcode of residence at 
 # the time of diagnosis. However, sometimes the place of diagnosis is
 # recorded instead which can be in a different state. Here we search for 
 # erroneous postcodes (based on not corresponding to the state) for each 
@@ -322,7 +324,7 @@ if (runImpute) {
   # Run imputation 
   
   # Multiple imputation using MICE
-  numImputeSets <- 10
+  # numImputeSets <- 10
   maxIterations <- 5 # set to default
   impMethod <- "pmm"
   impSeed <- 500
@@ -652,7 +654,7 @@ if (runChecks) {
 }
 
 if (changeFemaleMsm) {
-  # Seems to be around 5 to 30 mismatches in each set. Should be okay to 
+  # Seems to be 20 to 30 mismatches in each set. Should be okay to 
   # change all msm to male. 
   indices <- which(cascadeDataImpute$sex == "female" & 
       cascadeDataImpute$expgroup == "msm")
