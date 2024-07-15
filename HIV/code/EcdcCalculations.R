@@ -117,7 +117,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
         ungroup() %>%
         spread(expgroup, diags) %>%
         rename(year = yearaids) %>%
-        filter(year != 1956) # remove 1956 AIDS cases about 23. 
+        filter(year >= minYear) # remove 1956 and 1963 AIDS cases about 4 in each set. 
       
     } else {
       diagType <- hivData %>%
