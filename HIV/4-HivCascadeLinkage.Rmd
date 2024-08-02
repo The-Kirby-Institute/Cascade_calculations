@@ -1,0 +1,167 @@
+HIV Cascade Validation
+======================
+
+Richard T. Gray
+
+This script reads in the HIV linkage data for treatment coverage and produces
+a comparison plots against a population's cascade retention and treatment 
+coverage. It is used to validate the cascade estimates and calibrate the 
+migration adjustement factor for populations with PBS treatment data. 
+
+```{r Setup}
+# Open as a project (setting working directory to source and restarting R)
+
+# Set up directories
+basePath <- getwd()
+cascadeFolder <- file.path(basePath, "output")
+
+# Load standard libraries and options ----------------------------------
+library("LeftysRpkg", quietly = TRUE)
+LoadLibrary(tidyverse)
+options(dplyr.summarise.inform = FALSE) 
+LoadLibrary(readxl)
+LoadLibrary(scales)
+
+```
+
+```{r User specified parameters}
+
+linkageYear <- 2023
+cascadeYear <- 2022
+
+cascadeProject <- "ASR_2023"
+cascadeName <- "all"
+artpop <- "all"
+
+startYear <- 2015
+endYear <- 2020
+
+linkagePop <- "all"
+
+savePlots <- TRUE
+
+```
+
+```{r Read in data}
+
+# Set-up data files
+
+linkageDataFile <- file.path(cascadeFolder,
+  paste0("HIV_Linkage_Broad_high_1-", linkageYear, ".csv"))
+
+pldhivFile <- file.path(cascadeFolder, cascadeProject, 
+  paste0(cascadeName, "-", cascadeYear), 
+  paste0("HIVpldhivEstimates-", cascadeYear, ".csv"))
+
+paramsFile <- file.path(cascadeFolder, cascadeProject, 
+  paste0(cascadeName, "-", cascadeYear), "PldhivParameters.csv")
+
+artFile <- file.path(cascadeFolder,
+  paste0("HIVtreatment-", cascadeYear, "-PBS-Ineligible.csv"))
+
+# Read in files ----------------------------------------------------------------
+
+linkageRaw <- read_csv(linkageDataFile)
+
+pldhivRaw <- read_csv(pldhivFile)
+
+artRaw <- read_csv(artFile)
+
+params <- read_csv(paramsFile)
+
+# Clean data ------------------------------------------------------------------
+
+data <-  linkageRaw |>
+  filter(population == linkagePop, year  %in% startYear:endYear) |>
+  dplyr::select(year, retained, treated) 
+
+pldhiv <- pldhivRaw |> 
+  filter(year %in% startYear:endYear, 
+    stage %in% c("pldhiv", "retained")) |>
+  dplyr::select(stage, year, value)
+
+art <- artRaw |> 
+  filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
+  dplyr::select(year, value)
+
+```
+
+```{r Calculate cascade percentages}
+
+diagnosed <- pldhiv |> filter(stage == "pldhiv") |> pull(value)
+retained <- pldhiv |> filter(stage == "retained") |> pull(value)
+treated <- art$value
+
+cascadeGaps <- tibble(year = startYear:endYear, 
+  retained_estimate = retained / diagnosed, 
+  art_estimate = treated / diagnosed) |>
+  left_join(data, by = "year") |> # merge in data
+  pivot_longer(2:5) 
+
+```
+
+```{r Plot data and results}
+
+cascadeRetained <- cascadeGaps |>
+  filter(str_detect(name, "retained"))
+cascadeTreat <- cascadeGaps |>
+  filter(name %in% c("art_estimate", "treated"))
+
+retainedPlot <- ggplot(data = cascadeRetained,
+  aes(x = year, y = value, colour = name)) +
+  geom_line() +
+  scale_y_continuous(labels = percent) +
+  scale_colour_manual(name = "",
+    values = c("blue", "red"),
+    breaks = c("retained_all", "retained_estimate"),
+    labels = c("Linkage retained percentage", "Cascade estimates")) + 
+  geom_pointrange(aes(x = 2013, y = 0.95, ymin = 0.914, ymax = 0.988), colour = "black") + 
+  geom_pointrange(aes(x = 2019, y = 0.9624, ymin = 0.93, ymax = 0.99), colour = "black") + 
+  expand_limits(y = c(0.9, 1)) +
+  xlab("Year") + ylab("Percent retained") +  
+  PlotOptions()
+
+retainedPlot
+
+treatedPlot <- ggplot(data = cascadeTreat,
+  aes(x = year, y = value, colour = name)) +
+  geom_line() +
+  scale_y_continuous(labels = percent) +
+  scale_colour_manual(name = "",
+    values = c("blue", "red"),
+    breaks = c("treated", "art_estimate"),
+    limits = c("treated", "art_estimate"),
+    labels = c("Linkage ART percentage", "Cascade estimates")) +
+  expand_limits(y = c(0.8, 1)) +
+  xlab("Year") + ylab("Percent on ART") +
+  PlotOptions() +
+  geom_text(x = 2015, y = 0.975, color = "black",
+    label = paste0("Adjustment = ", params$adjustment),
+    hjust = 0, size = 3)
+
+treatedPlot
+
+```
+
+```{r Save plots}
+
+# Saved plots are in the cascade folder. Only plot the broad definition
+# as that is the main comparison we are after
+
+if (savePlots) {
+  
+  figureFolder <- file.path(cascadeFolder, cascadeProject, 
+    paste0(cascadeName, "-", cascadeYear))
+  
+  SaveFigure(figureFolder, 
+    paste0("Linkage_Retained_Comparison-", linkageYear, "-Data"), 
+    retainedPlot)
+  
+  SaveFigure(figureFolder, 
+    paste0("Linkage_ART_Comparison-", linkageYear, "-Data"),
+    treatedPlot)
+  
+}
+
+```
+
