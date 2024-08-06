@@ -27,9 +27,9 @@ LoadLibrary(scales)
 ```{r User specified parameters}
 
 linkageYear <- 2023
-cascadeYear <- 2022
+cascadeYear <- 2023
 
-cascadeProject <- "ASR_2023"
+cascadeProject <- "ASR_2024"
 cascadeName <- "all"
 artpop <- "all"
 
@@ -80,7 +80,12 @@ pldhiv <- pldhivRaw |>
     stage %in% c("pldhiv", "retained")) |>
   dplyr::select(stage, year, value)
 
-art <- artRaw |> 
+# Separate 12-month (lower) and 18-month window (treatment estimate) data
+art12 <- artRaw |> 
+  filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
+  dplyr::select(year, value = lower)
+
+art18 <- artRaw |> 
   filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
   dplyr::select(year, value)
 
@@ -90,13 +95,15 @@ art <- artRaw |>
 
 diagnosed <- pldhiv |> filter(stage == "pldhiv") |> pull(value)
 retained <- pldhiv |> filter(stage == "retained") |> pull(value)
-treated <- art$value
+treated12 <- art12$value
+treated18 <- art18$value
 
 cascadeGaps <- tibble(year = startYear:endYear, 
   retained_estimate = retained / diagnosed, 
-  art_estimate = treated / diagnosed) |>
+  art_estimate12 = treated12 / diagnosed,
+  art_estimate18 = treated18 / diagnosed) |>
   left_join(data, by = "year") |> # merge in data
-  pivot_longer(2:5) 
+  pivot_longer(2:6) 
 
 ```
 
@@ -105,7 +112,7 @@ cascadeGaps <- tibble(year = startYear:endYear,
 cascadeRetained <- cascadeGaps |>
   filter(str_detect(name, "retained"))
 cascadeTreat <- cascadeGaps |>
-  filter(name %in% c("art_estimate", "treated"))
+  filter(name %in% c("treated", "art_estimate12", "art_estimate18"))
 
 retainedPlot <- ggplot(data = cascadeRetained,
   aes(x = year, y = value, colour = name)) +
@@ -128,16 +135,17 @@ treatedPlot <- ggplot(data = cascadeTreat,
   geom_line() +
   scale_y_continuous(labels = percent) +
   scale_colour_manual(name = "",
-    values = c("blue", "red"),
-    breaks = c("treated", "art_estimate"),
-    limits = c("treated", "art_estimate"),
-    labels = c("Linkage ART percentage", "Cascade estimates")) +
+    values = c("blue", "red", "black"),
+    breaks = c("treated", "art_estimate12", "art_estimate18"),
+    limits = c("treated", "art_estimate12", "art_estimate18"),
+    labels = c("Linkage ART percentage", "ART 12-month window", 
+      "ART 18-month window")) +
   expand_limits(y = c(0.8, 1)) +
   xlab("Year") + ylab("Percent on ART") +
   PlotOptions() +
   geom_text(x = 2015, y = 0.975, color = "black",
-    label = paste0("Adjustment = ", params$adjustment),
-    hjust = 0, size = 3)
+    label = paste0("Migration multiplier = ", params$adjustment),
+    hjust = 0, size = 4)
 
 treatedPlot
 
@@ -159,9 +167,49 @@ if (savePlots) {
   
   SaveFigure(figureFolder, 
     paste0("Linkage_ART_Comparison-", linkageYear, "-Data"),
-    treatedPlot)
+    treatedPlot, width = 20)
   
 }
 
 ```
 
+```{r Extra plots}
+
+tempDiag <- pldhivRaw |> filter(stage == "pldhiv", year >= 2015) |> pull(value)
+
+tempART <- artRaw |> filter(year >= 2015, population == "all", stage == "numART") |> pull(value)
+
+tempART12 <- artRaw |> filter(year >= 2015, population == "all", stage == "numART") |> pull(lower)
+
+artProp <- tibble(year = startYear:2023, 
+  prop12 = tempART12/tempDiag, 
+  prop18 = tempART/tempDiag) |>
+  pivot_longer(2:3)
+
+ggplot(data = artProp, aes(x = year, y = value, colour = name)) +
+  geom_line() +
+  expand_limits(y = c(0.8, 1)) +
+  scale_colour_manual(name = "",
+    values = c("blue", "red"),
+    breaks = c("prop12", "prop18"),
+    labels = c("12-month window", "18-month window")) + 
+  xlab("Year") + ylab("Percent on ART") +
+  PlotOptions()
+
+cascade <- tibble(year = startYear:2023, 
+  diag = tempDiag,
+  art12 = tempART12, 
+  art18 = tempART) |>
+  pivot_longer(2:4)
+
+ggplot(data = cascade, aes(x = year, y = value, colour = name)) +
+  geom_line() +
+  # expand_limits(y = c(0.8, 1)) +
+  scale_colour_manual(name = "",
+    values = c("blue", "red", "black"),
+    breaks = c("diag", "art12", "art18"),
+    labels = c("Diagnosed", "ART 12-month window", "ART 18-month window")) + 
+  xlab("Year") + ylab("Number") +
+  PlotOptions()
+
+```
