@@ -63,8 +63,11 @@ LoadLibrary(captioner)
 
 
 # Script parameters
-dataYear <- 2019
+ProspectionDataYear <- 2019 # Lastest Propsection data (last year)
+PbsDataYear <- 2023  # Year of latest PBS data  
 analysisYear <- 2020 # If want to do fits for data prior to dataYear
+                     # Generally only need to do fits up to 2020 but 
+                     # data can retrospectively change  
 
 # For analysisYear == 2020 the data used is AHOD prior 2013, Prospection 
 # 10% for 2013, and PBS 100% after 2013. We only consider the uncertainty in 
@@ -98,19 +101,39 @@ if (analysisYear < 2020) {
   pbsFile <- file.path(dataFolder,
     paste0("pharmdash_HIVpatients_clean-", dataYear,
       ".csv"))
+  
+  pbsData <- read.csv(pbsFile, as.is = c(1, 2))
+  
 } else {
-  pbsFile <- file.path(dataFolder,
-    paste0("pbs_art_clean-", analysisYear,
+  prospectionFile <- file.path(dataFolder,
+    paste0("pharmdash_HIVpatients_clean-", ProspectionDataYear,
       ".csv"))
+  
+  pbsFile <- file.path(dataFolder,
+    paste0("pbs_art_clean-", PbsDataYear,
+      ".csv"))
+  
+  prospectionData <- read.csv(prospectionFile)
+  pbsData <- read.csv(pbsFile, as.is = c(1, 2)) 
+  
+  # Need to add Prospection 2013 data to pbsData
+  for (ii in 1:nrow(pbsData)) {
+    
+    temp <- prospectionData[ii,]
+    
+    pbsData[pbsData$gender == temp$gender & 
+        pbsData$state == temp$state, ]$X2013 <- temp$X2013
+    
+  }
 }
-
-pbsData <- read.csv(pbsFile, as.is = c(1, 2))
 
 if (addTempResidents) {
   # Load from file ATRAS estimates merged with NAPHWA estimates in March 
   # 2019 report.
   tempResData <- read.csv(file.path(dataFolder,
-    "ART_medicare_ineligible-2019.csv"))
+    paste0("ART_medicare_ineligible-", PbsDataYear, ".csv"))) |>
+    filter(year <= analysisYear) |>
+    dplyr::select(-notes)
   
 } else {
   tempResData$value <- 0
@@ -134,7 +157,8 @@ tempPbs$year <- unlist(lapply(tempPbs$year, function(x)
   as.numeric(strsplit(as.vector(x), 'X')[[1]][2])))
 
 # Add the PBS data to artEstimates
-artEstimates <- full_join(artEstimates, tempPbs, by = "year")
+artEstimates <- full_join(artEstimates, tempPbs, by = "year") |>
+  filter(year <= analysisYear)
 
 # Add upper and lower bounds for the PBS data
 if (analysisYear < 2019) {
@@ -150,11 +174,11 @@ source(file.path(HIVcode, "pharmDashError.R"), echo=TRUE)
 
 # Loop through years appending lower and upper PBS estimates
 if (analysisYear < 2020) {
-  pbsYears <- 2013:dataYear 
+  pbsYears <- 2013:PbsDataYear 
   prospectionYears <- pbsYears
 } else {
   # Prospection data only used for 2013 rest is PBS 100% data
-  pbsYears <- 2013:dataYear 
+  pbsYears <- 2013:PbsDataYear 
   prospectionYears <- 2013
 }
 
@@ -193,9 +217,9 @@ artEstimates$all[14:nrow(artEstimates)] <-
   artEstimates$pbs[14:nrow(artEstimates)]
 
 # Filter out data for fitting ---------------------------------------------
-artEstimates <- artEstimates %>%
-  filter(year <= dataYear)
-pbsYears <- pbsYears[pbsYears <= dataYear]
+# artEstimates <- artEstimates %>%
+#   filter(year <= dataYear)
+pbsYears <- pbsYears[pbsYears <= analysisYear]
 
 ```
 
