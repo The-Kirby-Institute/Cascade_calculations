@@ -153,7 +153,7 @@ if (analysisYear >= 2020) {
 
 if (analysisYear >= 2023) {
   # Need to do upper estimates as well
-  pbsDataUpper <- read_csv(pbsFile_lower) #, as.is = c(1, 2))
+  pbsDataUpper <- read_csv(pbsFile_upper) #, as.is = c(1, 2))
   
   hivTreatedPbsUpper <- pbsDataUpper %>%
   filter(gender == "all") %>%
