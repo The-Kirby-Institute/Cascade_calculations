@@ -20,7 +20,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   cascadeName, targetGender, targetAge, targetCob, targetExposure, targetAtsi,
   targetState, targetLocalRegion, targetGlobalRegion, useImputed, nImputedSets, 
   excludeAborig, doRetained, doUnique, yearUnique, ecdcData, ecdcVersion, 
-  excludeOS, excludeNew, adjustment, projectPldhiv, projectYear, projectName,
+  excludeOS, excludeNew, adjustment1, adjustment2, adjustStart, adjustStop, 
+  projectPldhiv, projectYear, projectName,
   projectOption, projectDecrease, hivData, allYears, hivBase, hivAdjustments,
   cleanNom, absInterstate, absInterRegion, ageList, yearList, hivAgeDeath) {
   
@@ -99,9 +100,9 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
     targetExposure, targetAtsi, targetState, targetLocalRegion,
     targetGlobalRegion, excludeAborig, doRetained, doUnique, yearUnique, 
-    ecdcData, ecdcVersion, excludeOS, excludeNew, adjustment, projectPldhiv,
-    projectYear, projectName, projectOption, projectDecrease, analysisYear, 
-    interState, doAge)
+    ecdcData, ecdcVersion, excludeOS, excludeNew, adjustment1, adjustment2,  
+    adjustStart, adjustStop, projectPldhiv, projectYear, projectName, 
+    projectOption, projectDecrease, analysisYear, interState, doAge)
   
   ## Subset notifications ------------------------------------------------
   # Create subsetted notifications dataframe. 
@@ -587,8 +588,21 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   # We assume the same deathrate, emigration rate and proportion stay for
   # all local regions based on state, so no targetLocalRegion in call. 
 
-  # Adjust base migration rate
-  hivBase$migrationrate <- adjustment * hivBase$migrationrate
+  # Adjust base migration rate - this adjustment is made to match the ART
+  # coverage data provide by the linkage study it is equivalent to a removal 
+  # rate for PLDHIV. We just assume a linear change in the adjustment over
+  # a specified period with an assumed constant adjustment either side.  
+  
+  indexStart <- which(hivBase$year == (adjustStart - 1))
+  adjustSteps <- adjustStop - adjustStart + 1
+  
+  adjustmentYear <- c(
+    rep(adjustmentStart, indexStart),
+    seq(adjustmentStart, adjustmentStop, length = adjustSteps),
+    rep(adjustmentStop, length((adjustStop + 1):analysisYear))
+    )
+  
+  hivBase$migrationrate <- adjustmentYear * hivBase$migrationrate
   
   subsetRates <- GetAdjustments(hivBase, hivAdjustments, 
     "all", targetGender, targetExposure, targetCob, targetAtsi, 
