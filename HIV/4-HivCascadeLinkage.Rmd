@@ -30,13 +30,12 @@ linkageYear <- 2023
 cascadeYear <- 2023
 
 cascadeProject <- "ASR_2024"
-cascadeName <- "all"
+cascadeName <- "All"
 artpop <- "all"
+linkagePop <- "all"
 
 startYear <- 2015
 endYear <- 2020
-
-linkagePop <- "all"
 
 savePlots <- TRUE
 extraPlots <- TRUE
@@ -227,6 +226,8 @@ if (extraPlots) {
     PlotOptions()
   
   propPlot
+  
+  artProp |> pivot_wider(names_from = "name", values_from = "value")
   
   if (savePlots) {
     
