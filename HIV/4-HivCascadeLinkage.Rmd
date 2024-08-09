@@ -144,7 +144,10 @@ treatedPlot <- ggplot(data = cascadeTreat,
   xlab("Year") + ylab("Percent on ART") +
   PlotOptions() +
   geom_text(x = 2015, y = 0.975, color = "black",
-    label = paste0("Migration multiplier = ", params$adjustment),
+    label = paste0("Emmigration multiplier 1 = ", params$adjustment1),
+    hjust = 0, size = 4) +
+  geom_text(x = 2015, y = 0.96, color = "black",
+    label = paste0("Emmigration multiplier 2 = ", params$adjustment2),
     hjust = 0, size = 4)
 
 treatedPlot
