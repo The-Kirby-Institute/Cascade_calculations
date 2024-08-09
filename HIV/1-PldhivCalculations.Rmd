@@ -64,7 +64,7 @@ projectOutput <- "ASR_2024" # "Undiagnosed_Metrics_Paper" # "ASR_2023" for lates
 # which need to exist
 paramsFile <- "ProjectParameters.csv"
 
-specificParams <- NULL # Run specific rows of parameters in parameters file
+specificParams <- c(1, 10, 17, 23) # Run specific rows of parameters in parameters file
                        # default = NULL; run all 
                        # Otherwise specify row numbers 
 
@@ -424,7 +424,11 @@ pldhivCalculations <- list()
 numNotificationsOrig <- c()
 
 # Row number of cascades we want to run
-runCascades <- ifelse(is,null(specificParams), 1:numCascades, specificParams) 
+if (is.null(specificParams)) {
+  runCascades <- 1:numCascades 
+} else {
+  runCascades <- specificParams
+}
 
 for (ii in runCascades) {
 
@@ -477,7 +481,8 @@ for (ii in runCascades) {
       # Specifications
       useImputed[ii], nImputedSets[ii], excludeAborig[ii], doRetained[ii], 
       doUnique[ii], yearUnique[ii], ecdcData[ii], ecdcVersion[ii], excludeOS[ii],
-      excludeNew[ii], adjustment[ii], adjustmentStop, adjustStart, adjustStop,
+      excludeNew[ii], adjustmentStart[ii], adjustmentStop[ii], adjustStart[ii], 
+      adjustStop[ii],
       # Projection specifications 
       projectPldhiv[ii], projectYear[ii], projectName[ii], projectOption[ii],
       projectDecrease[ii], 

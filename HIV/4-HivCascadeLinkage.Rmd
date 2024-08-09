@@ -30,9 +30,9 @@ linkageYear <- 2023
 cascadeYear <- 2023
 
 cascadeProject <- "ASR_2024"
-cascadeName <- "All"
-artpop <- "all"
-linkagePop <- "all"
+cascadeName <- "Test"
+artpop <- "nsw"
+linkagePop <- "nsw"
 
 startYear <- 2015
 endYear <- 2020
