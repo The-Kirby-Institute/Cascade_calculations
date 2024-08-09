@@ -20,7 +20,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   cascadeName, targetGender, targetAge, targetCob, targetExposure, targetAtsi,
   targetState, targetLocalRegion, targetGlobalRegion, useImputed, nImputedSets, 
   excludeAborig, doRetained, doUnique, yearUnique, ecdcData, ecdcVersion, 
-  excludeOS, excludeNew, adjustment1, adjustment2, adjustStart, adjustStop, 
+  excludeOS, excludeNew, adjustmentStart, adjustmentStop, adjustStart, adjustStop, 
   projectPldhiv, projectYear, projectName,
   projectOption, projectDecrease, hivData, allYears, hivBase, hivAdjustments,
   cleanNom, absInterstate, absInterRegion, ageList, yearList, hivAgeDeath) {
@@ -100,9 +100,10 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   hivParams <- data.frame(cascadeName, targetGender, targetAge, targetCob,
     targetExposure, targetAtsi, targetState, targetLocalRegion,
     targetGlobalRegion, excludeAborig, doRetained, doUnique, yearUnique, 
-    ecdcData, ecdcVersion, excludeOS, excludeNew, adjustment1, adjustment2,  
-    adjustStart, adjustStop, projectPldhiv, projectYear, projectName, 
-    projectOption, projectDecrease, analysisYear, interState, doAge)
+    ecdcData, ecdcVersion, excludeOS, excludeNew, adjustmentStart, 
+    adjustmentStop, adjustStart, adjustStop, projectPldhiv, projectYear, 
+    projectName, projectOption, projectDecrease, analysisYear, interState, 
+    doAge)
   
   ## Subset notifications ------------------------------------------------
   # Create subsetted notifications dataframe. 
