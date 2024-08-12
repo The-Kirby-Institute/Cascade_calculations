@@ -30,9 +30,9 @@ linkageYear <- 2023
 cascadeYear <- 2023
 
 cascadeProject <- "ASR_2024"
-cascadeName <- "Test"
-artpop <- "nsw"
-linkagePop <- "nsw"
+cascadeName <- "All"
+artpop <- "all"
+linkagePop <- "all"
 
 startYear <- 2015
 endYear <- 2020
@@ -144,10 +144,10 @@ treatedPlot <- ggplot(data = cascadeTreat,
   xlab("Year") + ylab("Percent on ART") +
   PlotOptions() +
   geom_text(x = 2015, y = 0.975, color = "black",
-    label = paste0("Emmigration multiplier 1 = ", params$adjustment1),
+    label = paste0("Emmigration multiplier 1 = ", params$adjustmentStart),
     hjust = 0, size = 4) +
   geom_text(x = 2015, y = 0.96, color = "black",
-    label = paste0("Emmigration multiplier 2 = ", params$adjustment2),
+    label = paste0("Emmigration multiplier 2 = ", params$adjustmentStop),
     hjust = 0, size = 4)
 
 treatedPlot
