@@ -64,7 +64,7 @@ projectOutput <- "ASR_2024" # "Undiagnosed_Metrics_Paper" # "ASR_2023" for lates
 # which need to exist
 paramsFile <- "ProjectParameters.csv"
 
-specificParams <- c(1, 10, 17, 23) # Run specific rows of parameters in parameters file
+specificParams <- NULL # Run specific rows of parameters in parameters file
                        # default = NULL; run all 
                        # Otherwise specify row numbers 
 
@@ -93,7 +93,7 @@ if (is.null(paramsFile)) {
   
   numCascades <- 1
   
-  cascadeName <- "All-2023" # (single)
+  cascadeName <- "All-2024" # (single)
   targetGender <- rep("all", numCascades) # all, male, female (single)
   targetAge <- rep("all", numCascades) # all or split (single)
   # Note regarding ageing: The calculations don't specifically target 
@@ -471,7 +471,7 @@ for (ii in runCascades) {
       targetLocalRegion[ii]))
     
   } else {
-
+    
     pldhivCalculations[[ii]] <- CalculatePldhiv(
       analysisYear, saveResults, projectOutput, 
       # Cascade parameters
