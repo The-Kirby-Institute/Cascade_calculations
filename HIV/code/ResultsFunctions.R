@@ -241,10 +241,10 @@ PlotCascade <- function(cascade, year = NULL, ymax = NULL,
   plotBar <- ggplot(data = estimates, aes(x = stage, y = value)) + 
     scale_x_discrete(limits = steps, labels = steplabels) + 
     ylab("Number of people") + xlab("") +  
-    PlotOptions() + theme_classic() + 
+    PlotOptions() + #theme_classic() + 
     theme(
       axis.title.y = element_text(size=12, face = "bold"),
-      axis.text.x = element_text(size=9),
+      axis.text.x = element_text(size=11),
       axis.text.y = element_text(size=11))
   
   # Sort out y-axis
