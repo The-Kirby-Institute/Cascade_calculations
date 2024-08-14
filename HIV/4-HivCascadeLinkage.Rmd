@@ -31,14 +31,17 @@ cascadeYear <- 2023
 
 cascadeProject <- "ASR_2024"
 cascadeName <- "All"
-artpop <- "all"
+
 linkagePop <- "all"
+artpop <- "all"
+pbsPopulation <- TRUE
 
 startYear <- 2015
 endYear <- 2020
 
 savePlots <- TRUE
 extraPlots <- TRUE
+extraPlots <- ifelse(pbsPopulation, extraPlots, FALSE)
 
 ```
 
@@ -81,77 +84,117 @@ pldhiv <- pldhivRaw |>
   dplyr::select(stage, year, value)
 
 # Separate 12-month (lower) and 18-month window (treatment estimate) data
-art12 <- artRaw |> 
-  filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
-  dplyr::select(year, value = lower)
+if (pbsPopulation) {
+  
+  art12 <- artRaw |> 
+    filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
+    dplyr::select(year, value = lower)
+  
+  art18 <- artRaw |> 
+    filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
+    dplyr::select(year, value)
+  
+} 
 
-art18 <- artRaw |> 
-  filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
-  dplyr::select(year, value)
+```
+
+```{r Figure for none PBS populations}
+
+if (!pbsPopulation) {
+  
+  dataAll <-  linkageRaw |>
+  filter(population == "all", year  %in% startYear:endYear) |>
+  dplyr::select(year, retained, treated) 
+  
+  data <- data |> mutate(all = dataAll$treated)
+  
+  treatedPlot <- ggplot(data = data,
+    aes(x = year, y = treated)) +
+    geom_line(aes(colour = "treated")) +
+    geom_line(aes(y = all, colour = "all")) +
+    scale_y_continuous(labels = percent) +
+    scale_colour_manual(name = "Linkage ART percentage",
+      values = c("blue", "red"),
+      breaks = c("treated", "all"),
+      labels = c("Population", "All")) +
+    expand_limits(y = c(0.8, 1)) +
+    xlab("Year") + ylab("Percent on ART") +
+    PlotOptions() 
+  
+  treatedPlot
+  
+}
 
 ```
 
 ```{r Calculate cascade percentages}
 
-diagnosed <- pldhiv |> filter(stage == "pldhiv") |> pull(value)
-retained <- pldhiv |> filter(stage == "retained") |> pull(value)
-treated12 <- art12$value
-treated18 <- art18$value
-
-cascadeGaps <- tibble(year = startYear:endYear, 
-  retained_estimate = retained / diagnosed, 
-  art_estimate12 = treated12 / diagnosed,
-  art_estimate18 = treated18 / diagnosed) |>
-  left_join(data, by = "year") |> # merge in data
-  pivot_longer(2:6) 
-
+if (pbsPopulation) {
+  
+  diagnosed <- pldhiv |> filter(stage == "pldhiv") |> pull(value)
+  retained <- pldhiv |> filter(stage == "retained") |> pull(value)
+  treated12 <- art12$value
+  treated18 <- art18$value
+  
+  cascadeGaps <- tibble(year = startYear:endYear, 
+    retained_estimate = retained / diagnosed, 
+    art_estimate12 = treated12 / diagnosed,
+    art_estimate18 = treated18 / diagnosed) |>
+    left_join(data, by = "year") |> # merge in data
+    pivot_longer(2:6) 
+  
+}
 ```
 
 ```{r Plot data and results}
-
-cascadeRetained <- cascadeGaps |>
-  filter(str_detect(name, "retained"))
-cascadeTreat <- cascadeGaps |>
-  filter(name %in% c("treated", "art_estimate12", "art_estimate18"))
-
-retainedPlot <- ggplot(data = cascadeRetained,
-  aes(x = year, y = value, colour = name)) +
-  geom_line() +
-  scale_y_continuous(labels = percent) +
-  scale_colour_manual(name = "",
-    values = c("blue", "red"),
-    breaks = c("retained", "retained_estimate"),
-    labels = c("Linkage retained percentage", "Cascade estimates")) + 
-  geom_pointrange(aes(x = 2013, y = 0.95, ymin = 0.914, ymax = 0.988), colour = "black") + 
-  geom_pointrange(aes(x = 2019, y = 0.9624, ymin = 0.93, ymax = 0.99), colour = "black") + 
-  expand_limits(y = c(0.9, 1)) +
-  xlab("Year") + ylab("Percent retained") +  
-  PlotOptions()
-
-retainedPlot
-
-treatedPlot <- ggplot(data = cascadeTreat,
-  aes(x = year, y = value, colour = name)) +
-  geom_line() +
-  scale_y_continuous(labels = percent) +
-  scale_colour_manual(name = "",
-    values = c("blue", "red", "black"),
-    breaks = c("treated", "art_estimate12", "art_estimate18"),
-    limits = c("treated", "art_estimate12", "art_estimate18"),
-    labels = c("Linkage ART percentage", "ART 12-month window", 
-      "ART 18-month window")) +
-  expand_limits(y = c(0.8, 1)) +
-  xlab("Year") + ylab("Percent on ART") +
-  PlotOptions() +
-  geom_text(x = 2015, y = 0.975, color = "black",
-    label = paste0("Emmigration multiplier 1 = ", params$adjustmentStart),
-    hjust = 0, size = 4) +
-  geom_text(x = 2015, y = 0.96, color = "black",
-    label = paste0("Emmigration multiplier 2 = ", params$adjustmentStop),
-    hjust = 0, size = 4)
-
-treatedPlot
-
+if (pbsPopulation) {
+  
+  cascadeRetained <- cascadeGaps |>
+    filter(str_detect(name, "retained"))
+  cascadeTreat <- cascadeGaps |>
+    filter(name %in% c("treated", "art_estimate12", "art_estimate18"))
+  
+  retainedPlot <- ggplot(data = cascadeRetained,
+    aes(x = year, y = value, colour = name)) +
+    geom_line() +
+    scale_y_continuous(labels = percent) +
+    scale_colour_manual(name = "",
+      values = c("blue", "red"),
+      breaks = c("retained", "retained_estimate"),
+      labels = c("Linkage retained percentage", "Cascade estimates")) + 
+    geom_pointrange(aes(x = 2013, y = 0.95, ymin = 0.914, ymax = 0.988), colour = "black") + 
+    geom_pointrange(aes(x = 2019, y = 0.9624, ymin = 0.93, ymax = 0.99), colour = "black") + 
+    expand_limits(y = c(0.9, 1)) +
+    xlab("Year") + ylab("Percent retained") +  
+    PlotOptions()
+  
+  retainedPlot
+  
+  treatedPlot <- ggplot(data = cascadeTreat,
+    aes(x = year, y = value, colour = name)) +
+    geom_line() +
+    scale_y_continuous(labels = percent) +
+    scale_colour_manual(name = "",
+      values = c("blue", "red", "black"),
+      breaks = c("treated", "art_estimate12", "art_estimate18"),
+      limits = c("treated", "art_estimate12", "art_estimate18"),
+      labels = c("Linkage ART\npercentage", "ART 12-month\nwindow", 
+        "ART 18-month\nwindow")) +
+    expand_limits(y = c(0.8, 1)) +
+    xlab("Year") + ylab("Percent on ART") +
+    PlotOptions() 
+  
+  treatedPlot
+  
+  treatedPlot2 <- treatedPlot +
+    geom_text(x = 2015, y = 0.975, color = "black",
+      label = paste0("Emmigration multiplier 1 = ", params$adjustmentStart),
+      hjust = 0, size = 4) +
+    geom_text(x = 2015, y = 0.96, color = "black",
+      label = paste0("Emmigration multiplier 2 = ", params$adjustmentStop),
+      hjust = 0, size = 4)
+  
+}
 ```
 
 ```{r Save plots}
@@ -164,14 +207,25 @@ if (savePlots) {
   figureFolder <- file.path(cascadeFolder, cascadeProject, 
     paste0(cascadeName, "-", cascadeYear))
   
-  SaveFigure(figureFolder, 
-    paste0("Linkage_Retained_Comparison-", linkageYear, "-Data"), 
-    retainedPlot)
-  
-  SaveFigure(figureFolder, 
-    paste0("Linkage_ART_Comparison-", linkageYear, "-Data"),
-    treatedPlot, width = 20)
-  
+  if (pbsPopulation) {
+    SaveFigure(figureFolder, 
+      paste0("Linkage_Retained_Comparison-", linkageYear, "-Data"), 
+      retainedPlot, width = 12)
+    
+    SaveFigure(figureFolder, 
+      paste0("Linkage_ART_Comparison-", linkageYear, "-Data"),
+      treatedPlot, width = 12)
+    
+    SaveFigure(figureFolder, 
+      paste0("Linkage_ART_Comparison_Adjustments-", linkageYear, "-Data"),
+      treatedPlot2, width = 12)
+    
+  } else {
+    
+    SaveFigure(figureFolder, 
+      paste0("Linkage_ART_Comparison-", linkageYear, "-Data"),
+      treatedPlot, width = 12)
+  }
 }
 
 ```
@@ -205,7 +259,7 @@ if (extraPlots) {
     scale_colour_manual(name = "",
       values = c("blue", "red", "black"),
       breaks = c("diag", "art12", "art18"),
-      labels = c("Diagnosed", "ART 12-month window", "ART 18-month window")) + 
+      labels = c("Diagnosed", "ART 12-month\nwindow", "ART 18-month\nwindow")) + 
     xlab("Year") + ylab("Number of people ") +
     PlotOptions()
   
@@ -236,11 +290,11 @@ if (extraPlots) {
     
     SaveFigure(figureFolder, 
       paste0("Diagnosed_ART_Estimates-", cascadeYear, "-Data"), 
-      cascadePlot, width = 20)
+      cascadePlot, width = 12)
     
     SaveFigure(figureFolder, 
       paste0("ART_Coverage_Estimates-", cascadeYear, "-Data"),
-      propPlot, width = 20)
+      propPlot)
     
     # Also save the ART proportions
     write_csv(artProp |> pivot_wider(names_from = "name", values_from = "value"), 
