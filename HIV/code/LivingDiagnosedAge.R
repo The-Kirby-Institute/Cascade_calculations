@@ -4,7 +4,7 @@
 
 LivingDiagnosedAge <- function(annualdiags, propunique, deathrate, 
   migration, agedeath, agemigrate, propstay = NULL, arrivals = NULL, 
-  departs = NULL, pldhiv = NULL, normalize = NULL) {
+  departs = NULL, pldhiv = NULL, normalize = NULL, adjustment = NULL) {
   # Calculate the number of people living with diagnosed HIV by age.
   #
   # Args:
@@ -28,6 +28,7 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
   #     overall number of people living with diagnosed HIV across age 
   #     groups by year. This is so we can correct the number in each age 
   #     bin each year so the sum matches the normalized value.  
+  #   adjustment (optional): 
   # Returns:
   #   A data frame with the cumulative number of people living with 
   #   diagnosed HIV by age and year plus....
@@ -75,6 +76,10 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
     doNormalize <- TRUE
   }
   
+  if (is.null(adjustment)) {
+    adjustment <- rep(1, nyears)
+  }
+  
   # Error handling -------------------------------------------------------
   # Make sure all the vectors are the right length and equal to the number of 
   # columns for the matrices. 
@@ -100,26 +105,29 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
   # Main program ----------------------------------------------------------
   
   # Initialize output array
-  nliving <- matrix(0, nages, nyears)
-  nliving[, 1] <- annualdiags[, 1]
-  
-  nduplicates <- matrix(0, nages, nyears)
-  nduplicates[, 1] <- 0
-    
-  ndead <- matrix(0, nages, nyears)
-  ndead[, 1] <- 0
-  
-  nmigrants <- matrix(0, nages, nyears)
-  nmigrants[, 1] <- 0
-  
-  ndeparts <- matrix(0, nages,nyears)
-  ndeparts[, 1] <- 0
-  
-  narrivals <- matrix(0, nages, nyears)
-  narrivals[, 1] <- 0
-  
-  nleave <- matrix(0, nages, nyears)
-  nleave[, 1] <- 0
+  # nliving <- matrix(0, nages, nyears)
+  # nliving[, 1] <- annualdiags[, 1]
+  # 
+  # nduplicates <- matrix(0, nages, nyears)
+  # nduplicates[, 1] <- 0
+  #   
+  # ndead <- matrix(0, nages, nyears)
+  # ndead[, 1] <- 0
+  # 
+  # nmigrants <- matrix(0, nages, nyears)
+  # nmigrants[, 1] <- 0
+  # 
+  # ndeparts <- matrix(0, nages,nyears)
+  # ndeparts[, 1] <- 0
+  # 
+  # narrivals <- matrix(0, nages, nyears)
+  # narrivals[, 1] <- 0
+  # 
+  # nleave <- matrix(0, nages, nyears)
+  # nleave[, 1] <- 0
+  # 
+  # nextra <- matrix(0, nages, nyears)
+  # nextra[, 1] <- 0
   
   # Create an aging rate vector - 5-year age bins. No one 
   # ages in last age bin
@@ -153,14 +161,15 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
       # appropriately especially with the effects of the COVID-19 pandemic on 
       # emigration since 2020. This formula was used up to mid 2022 for 
       # cascade estimates.  
-      nliving[jj, ii] <- nliving[jj, ii - 1] + 
-        propunique[ii] * annualdiags[jj, ii] - 
-        (1 - propstay[ii-1]) * propunique[ii-1] * annualdiags[jj, ii-1] - 
-        deathrate[ii-1] * agedeath[jj, ii-1] * nliving[jj, ii-1] -
-        migration[ii-1] * agemigrate[jj, ii-1] * nliving[jj, ii-1] -
-        departs[jj, ii-1] * nliving[jj, ii-1] +
-        arrivals[jj, ii-1] * (pldhiv[jj, ii-1] - nliving[jj, ii-1]) -
-        nliving[jj, ii - 1] * ageRate[jj] + ageUp
+      # 
+      # nliving[jj, ii] <- nliving[jj, ii - 1] + 
+      #   propunique[ii] * annualdiags[jj, ii] - 
+      #   (1 - propstay[ii-1]) * propunique[ii-1] * annualdiags[jj, ii-1] - 
+      #   deathrate[ii-1] * agedeath[jj, ii-1] * nliving[jj, ii-1] -
+      #   migration[ii-1] * agemigrate[jj, ii-1] * nliving[jj, ii-1] -
+      #   departs[jj, ii-1] * nliving[jj, ii-1] +
+      #   arrivals[jj, ii-1] * (pldhiv[jj, ii-1] - nliving[jj, ii-1]) -
+      #   nliving[jj, ii - 1] * ageRate[jj] + ageUp
       
       # New formula: Used since mid-2022. Calculations provide the number at 
       # the end of the year using the number at the end of the previous year and
@@ -169,7 +178,7 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
       nliving[jj, ii] <- nliving[jj, ii - 1] + 
         propstay[ii] * propunique[ii] * annualdiags[jj, ii] - 
         deathrate[ii] * agedeath[jj, ii] * nliving[jj, ii-1] -
-        migration[ii] * agemigrate[jj, ii] * nliving[jj, ii-1] -
+        adjustment[ii] * migration[ii] * agemigrate[jj, ii] * nliving[jj, ii-1] -
         departs[jj, ii] * nliving[jj, ii-1] +
         arrivals[jj, ii] * (pldhiv[jj, ii-1] - nliving[jj, ii-1]) -
         nliving[jj, ii - 1] * ageRate[jj] + ageUp

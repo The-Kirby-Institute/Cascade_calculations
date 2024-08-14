@@ -592,18 +592,20 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
   # Adjust base migration rate - this adjustment is made to match the ART
   # coverage data provide by the linkage study it is equivalent to a removal 
   # rate for PLDHIV. We just assume a linear change in the adjustment over
-  # a specified period with an assumed constant adjustment either side.  
+  # a specified period with an assumed constant adjustment either side. 
+  # Note the value of adjustmentrate can be negative (reflecting an influx of 
+  # diagnosed people) 
   
   indexStart <- which(hivBase$year == (adjustStart - 1))
   adjustSteps <- adjustStop - adjustStart + 1
   
-  adjustmentYear <- c(
+  adjustmentrate <- c(
     rep(adjustmentStart, indexStart),
     seq(adjustmentStart, adjustmentStop, length = adjustSteps),
     rep(adjustmentStop, length((adjustStop + 1):analysisYear))
     )
-  
-  hivBase$migrationrate <- adjustmentYear * hivBase$migrationrate
+
+  # hivBase$migrationrate <- hivBase$migrationrate
   
   subsetRates <- GetAdjustments(hivBase, hivAdjustments, 
     "all", targetGender, targetExposure, targetCob, targetAtsi, 
@@ -738,7 +740,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRatesAll$annunique, 
         subsetRatesAll$deathrate,
         subsetRatesAll$mrate,
-        subsetRatesAll$propstay) %>%
+        subsetRatesAll$propstay,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -747,7 +750,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRatesAll$annunique,  
         subsetRatesAll$deathrate_upper,
         subsetRatesAll$mrate_upper,
-        subsetRatesAll$propstay_lower) %>%
+        subsetRatesAll$propstay_lower,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -756,7 +760,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRatesAll$annunique,  
         subsetRatesAll$deathrate_lower,
         subsetRatesAll$mrate_lower,
-        subsetRatesAll$propstay_upper) %>%
+        subsetRatesAll$propstay_upper,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -767,6 +772,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRatesAll$deathrate,
         hivBase$migrationrate, 
         subsetRatesAll$propstay,
+        adjustment = adjustmentrate,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrateAll,
         normalize = pldhivOverallAll$pldhiv)
@@ -776,6 +782,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRatesAll$deathrate_upper,
         hivBase$migrationrate_upper, 
         subsetRatesAll$propstay_lower,
+        adjustment = adjustmentrate,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
         normalize = pldhivOverallAllMin$pldhiv)
@@ -785,6 +792,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRatesAll$deathrate_lower,
         hivBase$migrationrate_lower, 
         subsetRatesAll$propstay_upper,
+        adjustment = adjustmentrate,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
         normalize = pldhivOverallAllMax$pldhiv)
@@ -797,7 +805,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$propstay,
         arrivals = subsetRates$inter_arriverate, 
         departs = subsetRates$inter_departrate,
-        pldhiv = pldhivOverallAll$pldhiv) %>%
+        pldhiv = pldhivOverallAll$pldhiv,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -809,7 +818,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$propstay_lower,
         arrivals = subsetRates$inter_arriverate, 
         departs = subsetRates$inter_departrate,
-        pldhiv = pldhivOverallAll$pldhiv) %>%
+        pldhiv = pldhivOverallAll$pldhiv,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -821,7 +831,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$propstay_upper,
         arrivals = subsetRates$inter_arriverate, 
         departs = subsetRates$inter_departrate,
-        pldhiv = pldhivOverallAll$pldhiv) %>%
+        pldhiv = pldhivOverallAll$pldhiv,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -839,6 +850,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         arrivals = interArriverateAge,
         departs = interDepartrateAge,
         pldhiv =  pldhivAgeAll, 
+        adjustment = adjustmentrate,
         normalize = pldhivOverall$pldhiv)
       
       pldhivAllMin <- LivingDiagnosedAge(hivResultsAgeMin,
@@ -851,6 +863,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         arrivals = interArriverateAge,
         departs = interDepartrateAge,
         pldhiv =  pldhivAgeAll,
+        adjustment = adjustmentrate,
         normalize = pldhivOverallMin$pldhiv)
       
       pldhivAllMax <- LivingDiagnosedAge(hivResultsAgeMax,
@@ -863,6 +876,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         arrivals = interArriverateAge,
         departs = interDepartrateAge,
         pldhiv =  pldhivAgeAll,
+        adjustment = adjustmentrate,
         normalize = pldhivOverallMax$pldhiv)
       
     } else {
@@ -871,7 +885,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRatesAll$annunique, 
         subsetRatesAll$deathrate,
         subsetRatesAll$mrate,
-        subsetRatesAll$propstay) %>%
+        subsetRatesAll$propstay,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>% 
         select(year, everything()) %>%
         as_tibble()
@@ -880,7 +895,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRatesAll$annunique,  
         subsetRatesAll$deathrate_upper,
         subsetRatesAll$mrate_upper,
-        subsetRatesAll$propstay_lower) %>%
+        subsetRatesAll$propstay_lower,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -889,7 +905,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRatesAll$annunique,  
         subsetRatesAll$deathrate_lower,
         subsetRatesAll$mrate_lower,
-        subsetRatesAll$propstay_upper) %>%
+        subsetRatesAll$propstay_upper,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -902,7 +919,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$propstay,
         arrivals = subsetRates$inter_arriverate, 
         departs = subsetRates$inter_departrate, 
-        pldhiv = pldhivOverall$pldhiv) %>%
+        pldhiv = pldhivOverall$pldhiv,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -914,7 +932,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$propstay_lower,
         arrivals = subsetRates$inter_arriverate,
         departs = subsetRates$inter_departrate,
-        pldhiv = pldhivOverall$pldhiv) %>%
+        pldhiv = pldhivOverall$pldhiv,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -926,7 +945,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$propstay_upper,
         arrivals = subsetRates$inter_arriverate,
         departs = subsetRates$inter_departrate,
-        pldhiv = pldhivOverall$pldhiv) %>%
+        pldhiv = pldhivOverall$pldhiv,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -948,7 +968,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$annunique, 
         subsetRates$deathrate,
         subsetRates$mrate,
-        subsetRates$propstay) %>%
+        subsetRates$propstay,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -957,7 +978,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$annunique,  
         subsetRates$deathrate_upper,
         subsetRates$mrate_upper,
-        subsetRates$propstay_lower) %>%
+        subsetRates$propstay_lower,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -966,7 +988,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$annunique,  
         subsetRates$deathrate_lower,
         subsetRates$mrate_lower,
-        subsetRates$propstay_upper) %>%
+        subsetRates$propstay_upper,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -982,6 +1005,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$propstay,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
+        adjustment = adjustmentrate,
         normalize = pldhivOverall$pldhiv) 
       
       pldhivAllMin <- LivingDiagnosedAge(hivResultsAgeMin,
@@ -991,6 +1015,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$propstay_lower,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
+        adjustment = adjustmentrate,
         normalize = pldhivOverallMin$pldhiv)
       
       pldhivAllMax <- LivingDiagnosedAge(hivResultsAgeMax,
@@ -1000,6 +1025,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$propstay_upper,
         agedeath = relAgeDeath,
         agemigrate = relAgeMigrate,
+        adjustment = adjustmentrate,
         normalize = pldhivOverallMax$pldhiv)
       
     } else {
@@ -1007,7 +1033,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$annunique, 
         subsetRates$deathrate,
         subsetRates$mrate,
-        subsetRates$propstay) %>%
+        subsetRates$propstay,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -1016,7 +1043,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$annunique,  
         subsetRates$deathrate_upper,
         subsetRates$mrate_upper,
-        subsetRates$propstay_lower) %>%
+        subsetRates$propstay_lower,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()
@@ -1025,7 +1053,8 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         subsetRates$annunique,  
         subsetRates$deathrate_lower,
         subsetRates$mrate_lower,
-        subsetRates$propstay_upper) %>%
+        subsetRates$propstay_upper,
+        adjustment = adjustmentrate) %>%
         mutate(year = allYears) %>%
         select(year, everything()) %>%
         as_tibble()

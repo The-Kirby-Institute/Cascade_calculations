@@ -3,8 +3,8 @@
 # R. T. Gray
 
 LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,  
-                            propstay = NULL, arrivals = NULL, 
-                            departs = NULL, pldhiv = NULL) {
+  propstay = NULL, arrivals = NULL, departs = NULL, pldhiv = NULL, 
+  adjustment = NULL) {
   # Calculate the number of people living with diagnosed HIV.
   #
   # Args:
@@ -20,6 +20,7 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   #     people depart interstate.
   #   pldhiv (optional): If specified, is a numeric vector giving the 
   #     overall number of people living with diagnosed HIV
+  #   adjustment (optional): 
   # Returns:
   #   A numeric vector with the cumulative number of people living with 
   #   diagnosed HIV.
@@ -56,6 +57,10 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   
   if (is.null(pldhiv)) {
     pldhiv <- rep(0, nyears)
+  }
+  
+  if (is.null(adjustment)) {
+    adjustment <- rep(1, nyears)
   }
   
   # Error handling -------------------------------------------------------
@@ -96,6 +101,9 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
   
   nleave <- rep(NA,nyears)
   nleave[1] <- 0
+  
+  nextra <- rep(NA,nyears)
+  nextra[1] <- 0
   
   # Loop through input parameters and calculate numLiving
   for (ii in 2:nyears) {
@@ -138,9 +146,9 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
     # the end of the year using the number at the end of the previous year and
     # changes through the year (assumes new diagnoses stay in the population 
     # except for those who leave immediately) 
-    nliving[ii] <- nliving[ii-1] + propstay[ii] * propunique[ii] *
-      annualdiags[ii] - (deathrate[ii] + migration[ii] +
-                           departs[ii]) * nliving[ii-1] +
+    nliving[ii] <- nliving[ii-1] + 
+      propstay[ii] * propunique[ii] * annualdiags[ii] - 
+      (deathrate[ii] + adjustment[ii] * migration[ii] + departs[ii]) * nliving[ii-1] +
       arrivals[ii] * (pldhiv[ii-1] - nliving[ii-1])
     
     # With small numbers can sometimes get a negative so check and replace with 0
@@ -160,17 +168,21 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
     nleave[ii] <- (1 - propstay[ii]) * propunique[ii] *
       annualdiags[ii]
     
+    # Additional population movements 
+    nextra[ii] <- (adjustment[ii] - 1) * migration[ii] * nliving[ii-1]
+    
   }
  
-  # Put all the outputs into a dataframe
-  
-  # Return final output
-  return(data.frame(pldhiv  = nliving,
-                    diagnoses = annualdiags,
-                    duplicates = nduplicates,
-                    deaths = ndead, 
-                    emigrants = nmigrants,
-                    diag_departs = nleave,
-                    inter_departs = ndeparts,
-                    inter_arrivals = narrivals))
+  # Put all the outputs into a data frame and return
+  return(data.frame(
+    pldhiv  = nliving,
+    diagnoses = annualdiags,
+    duplicates = nduplicates,
+    deaths = ndead, 
+    emigrants = nmigrants,
+    diag_departs = nleave,
+    inter_departs = ndeparts,
+    inter_arrivals = narrivals,
+    extra_migrants = nextra)
+  )
 }
