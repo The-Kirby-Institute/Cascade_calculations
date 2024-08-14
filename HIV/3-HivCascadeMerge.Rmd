@@ -20,14 +20,14 @@ source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
-analysisYear <- 2022
-projectName <-  "HIV_Cascade_Paper" # "ASR_2023"; "HIV_Cascade_Paper"
+analysisYear <- 2023
+projectName <-  "ASR_2024" # "ASR_2024"; "HIV_Cascade_Paper"
 
-multipleCascades <- TRUE
+multipleCascades <- FALSE
 artNames <- NULL
 
 # If this is an ASR project already have specific populations
-if (multipleCascades && projectName == "ASR_2023") {
+if (multipleCascades && projectName == "ASR_2024") {
   cascadeNames <- c("All", "Male", "Female", "Indigenous", "AusNonIndigenous", 
     "MSM", "MSM_Aus", "MSM_OS", "Hetero", "Hetero_Aus", 
     "Hetero_OS", "Pwid", "Otherexp", "SSA", "SEA", "SCA", "Othercob")
@@ -55,9 +55,18 @@ if (projectName %in% c("ASR_2016", "ASR_2017", "ASR_2018", "ASR_2019")) {
   # warning("Non-standard project make sure artString is set correctly")
 }
 
+# Set AHOD population for suppression. Only required for non-PBS populations
+# TODO: do a better job cleaning AHOD so that ahodPop aligns with linkage 
+ahodState <- "all" # Default as most states do not have there own data. 
+ahodPop <- "all"   # Used when artname is different to AHOD name
+                   
+linkagePop <- "all" # to pick the right name corresponding to the cascade name
+
+
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 ```
+
 
 ```{r Load and merge cascade results}
 
@@ -70,6 +79,14 @@ artFile <- file.path(outputFolder, paste0("HIVtreatment-",
 artSuppression <- read_csv(artFile) %>%
   select(stage, everything())
 
+# The linkage data proportions files is the same for all cascades and projects
+linkageDataFile <- file.path(basePath,
+  paste0("Population_ART_Linkage_proportions-2023.csv"))
+
+linkageART <- read_csv(linkageDataFile) %>%
+  pivot_longer(2:ncol(.))
+
+# Start putting together cascades
 hivCascadeAll <- NULL
 
 for (ii in 1:length(cascadeNames)) {
@@ -90,36 +107,125 @@ for (ii in 1:length(cascadeNames)) {
   pldhiv <- read_csv(pldhivFile, 
     col_types = cols(lower = "d", upper = "d"))
   
-  treatment <- artSuppression %>%
-    filter(population == tolower(artNames[ii])) %>%
-    select(-population)
   
-  if (adjustLower) {
-    if (nrow(treatment) > 0) {
-      # Make sure lower bounds for PLHIV, PLDHIV and retained aren't lower
-      # than the lower bound of treatment
-      treatLower <- (treatment %>% filter(stage == "numART"))$lower
-      startLiving <- min(living$year)
-      treatStart <- min(treatment$year)
-      
-      treatLower <- c(rep(0,length(startLiving:(treatStart-1))), treatLower)
-      
-      living$lower <- ifelse(living$lower < treatLower, treatLower, living$lower)
-      
-      pldhivNew <- pldhiv %>% filter(stage == "pldhiv")
-      pldhivNew$lower <- ifelse(pldhivNew$lower < treatLower, treatLower,
-        pldhivNew$lower)
-      
-      retainedNew <- pldhiv %>% filter(stage == "retained")
-      retainedNew$lower <- ifelse(
-        retainedNew$lower < treatLower[(length(treatLower) - 
-            nrow(retainedNew) + 1):length(treatLower)], 
-        treatLower[(length(treatLower) - nrow(retainedNew) + 1):length(treatLower)],
-        retainedNew$lower)
-      
-      
-      pldhiv <- bind_rows(pldhivNew, retainedNew)
-    }
+  if (tolower(artNames[ii]) %in% artSuppression$population) {
+    treatment <- artSuppression %>%
+      filter(population == tolower(artNames[ii])) %>%
+      select(-population)
+    
+    if (adjustLower) {
+      if (nrow(treatment) > 0) {
+        # Make sure lower bounds for PLHIV, PLDHIV and retained aren't lower
+        # than the lower bound of treatment
+        treatLower <- (treatment %>% filter(stage == "numART"))$lower
+        startLiving <- min(living$year)
+        treatStart <- min(treatment$year)
+        
+        treatLower <- c(rep(0,length(startLiving:(treatStart-1))), treatLower)
+        
+        living$lower <- ifelse(living$lower < treatLower, treatLower, living$lower)
+        
+        pldhivNew <- pldhiv %>% filter(stage == "pldhiv")
+        pldhivNew$lower <- ifelse(pldhivNew$lower < treatLower, treatLower,
+          pldhivNew$lower)
+        
+        retainedNew <- pldhiv %>% filter(stage == "retained")
+        retainedNew$lower <- ifelse(
+          retainedNew$lower < treatLower[(length(treatLower) - 
+              nrow(retainedNew) + 1):length(treatLower)], 
+          treatLower[(length(treatLower) - nrow(retainedNew) + 1):length(treatLower)],
+          retainedNew$lower)
+        
+        
+        pldhiv <- bind_rows(pldhivNew, retainedNew)
+      }
+    } 
+  } else if (linkagePop %in% linkageART$name) {
+    # If no PBS data for this population use linkage. 
+    # Note there will be no retained as well.
+    
+    linkageProp <- linkageART |> filter(name == linkagePop)
+    
+    # Extend proportion on ART to the final year
+    linkYears <- linkageProp$year[1]:analysisYear 
+    addYears <- length(linkYears) - nrow(linkageProp)
+    linkProp <- c(linkageProp$value, rep(tail(linkageProp$value,1), addYears))
+    
+    # Create treatment table
+    treatment <- tibble(
+      stage = rep("numART", length(linkYears)),
+      year = linkYears, 
+      value = NA, 
+      lower = NA,
+      upper = NA)
+    
+    treatment$value <- (pldhiv |> filter(stage == "pldhiv", year %in% linkYears))$value * linkProp
+    treatment$lower <- (pldhiv |> filter(stage == "pldhiv", year %in% linkYears))$lower * linkProp
+    treatment$upper <- (pldhiv |> filter(stage == "pldhiv", year %in% linkYears))$upper * linkProp
+    
+    # Read in the AHOD data to calculate suppressed proportions
+    ahodData <- read_csv(file.path(dataFolder, 
+      paste0("ahod", analysisYear, ".csv")),
+      col_types = cols(
+        year = col_integer(),
+        state = col_character(),
+        population = col_character(),
+        n_id = col_double(),
+        num_vl = col_integer(),
+        mean_age = col_double(),
+        n_death = col_integer(),
+        n_rx = col_integer(),
+        n_rx50 = col_integer(),
+        n_rx200 = col_integer(),
+        n_rx400 = col_integer()
+      )) 
+    
+    # Extract the viral suppression data and calulate the proportion suppressed
+    # Defined to be < 200 copies per ml. 
+    propSuppressed <- ahodData %>%
+      filter(population == ahodPop, year %in% linkYears, state == ahodState) |>
+      select(one_of(c("year", "num_vl")), starts_with("n_rx"), -n_rx) %>% 
+      group_by(year) %>%
+      summarise(n = sum(num_vl),
+        n200 = sum(n_rx200)) %>%
+      mutate(prop200 = n200/n) %>%
+      # Added 95% confidence interval
+      mutate(prop200lower = prop200 - qnorm(0.975) * 
+          sqrt(prop200 * (1 - prop200) / n),
+        prop200upper = prop200 + qnorm(0.975) * 
+          sqrt(prop200 * (1 - prop200) / n)) %>%
+      mutate(prop200lower = ifelse(prop200lower < 0, 0, prop200lower),
+        prop200upper = ifelse(prop200upper < 0, 0, prop200upper)) %>%
+      filter(year <= analysisYear) %>%
+      ungroup() 
+    
+    # Calculate suppressed
+    suppressed <- tibble(
+      stage = rep("suppressed", length(linkYears)),
+      year = linkYears, 
+      value = NA, 
+      lower = NA,
+      upper = NA)
+    
+    suppressed$value <- treatment$value * propSuppressed$prop200
+    suppressed$lower <- treatment$lower * propSuppressed$prop200lower
+    suppressed$upper <- treatment$upper * propSuppressed$prop200upper
+    
+    # Merge in to one treatment data frame - to match PBS structure 
+    treatment <- bind_rows(treatment, suppressed)
+    
+  } else {
+    # If no linkage ignore. 
+    print("No ART data for this population")
+    
+    # If no linkage ignore. 
+    treatment <- tibble(
+      stage = character(), 
+      year = double(), 
+      value = double(), 
+      lower = double(),
+      upper = double())
+    
   }
   
   # Bind cascade
@@ -138,7 +244,7 @@ for (ii in 1:length(cascadeNames)) {
     hivCascadeAll <- bind_rows(hivCascadeAll, hivCascade)
   }
   
-}
+} 
 
 # Save final cascade if required
 if (saveResults && mergeAll) {
