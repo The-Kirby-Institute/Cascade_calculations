@@ -54,7 +54,7 @@ if (analysisYear <= 2014) {
   stop("This code not set up for earlier than 2015")
 }
 
-saveEstimates <- TRUE
+saveEstimates <- FALSE
 
 ```
 
@@ -457,15 +457,15 @@ if (analysisYear >= 2022) {
     )
   )
   
-  # Generate final mrate - for 2022 the post-covid data is missing for the 
-  # year 2022 assume same data as for 2019 (pre-covid)
+  # Generate final mrate - the post-covid data is missing for the 
+  # year 2023 assume same data as for 2022 (pre-covid)
   absDepartsMerged <- bind_rows(mrateAll, mrateAus |> filter(year >= 2017))
   absDepartsMerged <- bind_rows(
     absDepartsMerged, 
     tibble(
-      year = 2022,
-      departures = filter(absDepartsMerged, year == 2019)$departures,
-      migrate = filter(absDepartsMerged, year == 2019)$migrate
+      year = 2023,
+      departures = filter(absDepartsMerged, year == 2022)$departures,
+      migrate = filter(absDepartsMerged, year == 2022)$migrate
     )
   )
 
