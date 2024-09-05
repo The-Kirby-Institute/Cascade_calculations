@@ -33,8 +33,15 @@ cascadeProject <- "ASR_2024"
 cascadeName <- "All"
 
 linkagePop <- "all"
-artpop <- "all"
-pbsPopulation <- TRUE
+
+
+artpop <- tolower(cascadeName)
+
+if (artpop %in% c("act", "nsw", "nt", "qld", "sa", "tas", "vic", "wa", "female", "male")) {
+  pbsPopulation <- TRUE
+} else {
+  pbsPopulation <- FALSE
+}
 
 startYear <- 2015
 endYear <- 2020
@@ -98,7 +105,7 @@ if (pbsPopulation) {
 
 ```
 
-```{r Figure for none PBS populations}
+```{r Figure for non-PBS populations}
 
 if (!pbsPopulation) {
   

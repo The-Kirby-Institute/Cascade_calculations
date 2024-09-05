@@ -38,7 +38,7 @@ analysisYear <- 2023
 saveResults <- TRUE 
 projectFolder <-  "ASR_2024" #"ASR_2023"
                                      # "HIV_Cascade_Paper"
-cascadeFlag <- "NSW" # minus year
+cascadeFlag <- "All" # minus year
 ecdcResults <- "exposure"
 ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky 
 # file name issues.

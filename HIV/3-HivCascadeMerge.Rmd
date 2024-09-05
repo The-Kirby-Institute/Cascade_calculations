@@ -55,13 +55,13 @@ if (projectName %in% c("ASR_2016", "ASR_2017", "ASR_2018", "ASR_2019")) {
   # warning("Non-standard project make sure artString is set correctly")
 }
 
-# Set AHOD population for suppression. Only required for non-PBS populations
-# TODO: do a better job cleaning AHOD so that ahodPop aligns with linkage 
-ahodState <- "all" # Default as most states do not have there own data. 
-ahodPop <- "all"   # Used when artname is different to AHOD name
-                   
-linkagePop <- "all" # to pick the right name corresponding to the cascade name
+# Set linkae population for treatment. Only required for non-PBS populations
+linkagePop <- "all" # Used when artname is different to AHOD name
+                    #to pick the right name corresponding to the cascade name
 
+# Set AHOD population for suppression. Only required for non-PBS populations
+ahodState <- "all" # Default as most states do not have there own data. 
+ahodPop <- "all"
 
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
