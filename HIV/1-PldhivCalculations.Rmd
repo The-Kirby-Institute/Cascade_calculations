@@ -40,13 +40,14 @@ estimates of PLHIV previously diagnosed. Result files are saved to the
 specified project folder and have a cascade file handle. 
 
 *Current projects*
-- ASR_2016, ..., ASR_2023 (cascades for the Annual Surveillance Report(ASR))
+- ASR_2016, ..., ASR_2024 (cascades for the Annual Surveillance Report(ASR))
 - ASR_2018_Ageing (age estimates of PLDHIV for ASR and paper)
 - CALD_Cascades
 - HIV_Cascade_Paper
 - Diagnosed_Fraction_2021
 - Taipan_Study_Estimates
 - Ageing_Paper
+- Undiagnosed_Metrics_Paper
 
 ```{r Cascade and script parameters}
 # Chunk to enter all the script parameters we will use
@@ -56,7 +57,7 @@ saveResults <- TRUE
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "ASR_2024" # "Undiagnosed_Metrics_Paper" # "ASR_2023" for latest ASR
+projectOutput <- "HIV_Cascade_Paper" # "ASR_2024" for latest ASR
                             # "HIV_Cascade_Paper"
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
@@ -64,7 +65,7 @@ projectOutput <- "ASR_2024" # "Undiagnosed_Metrics_Paper" # "ASR_2023" for lates
 # which need to exist
 paramsFile <- "ProjectParameters.csv"
 
-specificParams <- NULL  
+specificParams <- 1  
                        # Run specific rows of parameters in parameters file
                        # default = NULL; run all 
                        # Otherwise specify row numbers 
