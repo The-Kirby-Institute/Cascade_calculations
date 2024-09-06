@@ -159,7 +159,7 @@ LivingDiagnosed <- function(annualdiags, propunique, deathrate, migration,
 
     ndead[ii] <- deathrate[ii] * nliving[ii-1]
 
-    nmigrants[ii] <- migration[ii] * nliving[ii-1]
+    nmigrants[ii] <- adjustment[ii] * migration[ii] * nliving[ii-1]
 
     ndeparts[ii] <- departs[ii] * nliving[ii-1]
 
