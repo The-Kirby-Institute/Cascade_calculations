@@ -29,7 +29,7 @@ LoadLibrary(scales)
 linkageYear <- 2023
 cascadeYear <- 2023
 
-cascadeProject <- "ASR_2024"
+cascadeProject <- "HIV_Cascade_Paper"
 cascadeName <- "All"
 
 linkagePop <- "all"
@@ -37,7 +37,7 @@ linkagePop <- "all"
 
 artpop <- tolower(cascadeName)
 
-if (artpop %in% c("act", "nsw", "nt", "qld", "sa", "tas", "vic", "wa", "female", "male")) {
+if (artpop %in% c("all", "act", "nsw", "nt", "qld", "sa", "tas", "vic", "wa", "female", "male")) {
   pbsPopulation <- TRUE
 } else {
   pbsPopulation <- FALSE
@@ -90,17 +90,12 @@ pldhiv <- pldhivRaw |>
     stage %in% c("pldhiv", "retained")) |>
   dplyr::select(stage, year, value)
 
-# Separate 12-month (lower) and 18-month window (treatment estimate) data
 if (pbsPopulation) {
   
-  art12 <- artRaw |> 
-    filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
-    dplyr::select(year, value = lower)
-  
-  art18 <- artRaw |> 
+  art <- artRaw |> 
     filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
     dplyr::select(year, value)
-  
+
 } 
 
 ```
@@ -140,15 +135,13 @@ if (pbsPopulation) {
   
   diagnosed <- pldhiv |> filter(stage == "pldhiv") |> pull(value)
   retained <- pldhiv |> filter(stage == "retained") |> pull(value)
-  treated12 <- art12$value
-  treated18 <- art18$value
+  treated <- art$value
   
   cascadeGaps <- tibble(year = startYear:endYear, 
     retained_estimate = retained / diagnosed, 
-    art_estimate12 = treated12 / diagnosed,
-    art_estimate18 = treated18 / diagnosed) |>
+    art_estimate = treated / diagnosed) |>
     left_join(data, by = "year") |> # merge in data
-    pivot_longer(2:6) 
+    pivot_longer(2:5) 
   
 }
 ```
@@ -159,7 +152,7 @@ if (pbsPopulation) {
   cascadeRetained <- cascadeGaps |>
     filter(str_detect(name, "retained"))
   cascadeTreat <- cascadeGaps |>
-    filter(name %in% c("treated", "art_estimate12", "art_estimate18"))
+    filter(name %in% c("treated", "art_estimate"))
   
   retainedPlot <- ggplot(data = cascadeRetained,
     aes(x = year, y = value, colour = name)) +
@@ -182,11 +175,10 @@ if (pbsPopulation) {
     geom_line() +
     scale_y_continuous(labels = percent) +
     scale_colour_manual(name = "",
-      values = c("blue", "red", "black"),
-      breaks = c("treated", "art_estimate12", "art_estimate18"),
-      limits = c("treated", "art_estimate12", "art_estimate18"),
-      labels = c("Linkage ART\npercentage", "ART 12-month\nwindow", 
-        "ART 18-month\nwindow")) +
+      values = c("blue", "red"),
+      breaks = c("treated", "art_estimate"),
+      limits = c("treated", "art_estimate"),
+      labels = c("Linkage ART\nPercentage", "Cascade ART\nPercentage")) +
     expand_limits(y = c(0.8, 1)) +
     xlab("Year") + ylab("Percent on ART") +
     PlotOptions() 
@@ -246,27 +238,23 @@ if (extraPlots) {
   diagnosedEnd <- pldhivRaw |> 
     filter(stage == "pldhiv", year >= 2015) |> 
     pull(value)
-  art12End <- artRaw |> 
+  artEnd <- artRaw |> 
     filter(year >= 2015, population == artpop, stage == "numART") |> 
     pull(lower)
-  art18End <- artRaw |> 
-    filter(year >= 2015, population == artpop, stage == "numART") |> 
-    pull(value)
-  
+
   # Cascade values for diagnosed and treated
   cascade <- tibble(year = startYear:cascadeYear, 
     diag = diagnosedEnd,
-    art12 = art12End, 
-    art18 = art18End) |>
-    pivot_longer(2:4)
+    art = artEnd) |>
+    pivot_longer(2:3)
   
   cascadePlot <- ggplot(data = cascade, aes(x = year, y = value, colour = name)) +
     geom_line() +
     scale_y_continuous(labels = comma) +
     scale_colour_manual(name = "",
-      values = c("blue", "red", "black"),
-      breaks = c("diag", "art12", "art18"),
-      labels = c("Diagnosed", "ART 12-month\nwindow", "ART 18-month\nwindow")) + 
+      values = c("blue", "red"),
+      breaks = c("diag", "art"),
+      labels = c("Diagnosed", "ART")) + 
     xlab("Year") + ylab("Number of people ") +
     PlotOptions()
   
@@ -274,24 +262,22 @@ if (extraPlots) {
   
   # Proportion on ART for each window period
   artProp <- tibble(year = startYear:cascadeYear, 
-    prop12 = art12End/diagnosedEnd, 
-    prop18 = art18End/diagnosedEnd) |>
-    pivot_longer(2:3)
+    prop = artEnd/diagnosedEnd)
   
-  propPlot <- ggplot(data = artProp, aes(x = year, y = value, colour = name)) +
+  propPlot <- ggplot(data = artProp, aes(x = year, y = prop)) +
     geom_line() +
     expand_limits(y = c(0.8, 1)) +
     scale_y_continuous(labels = percent) +
     scale_colour_manual(name = "",
-      values = c("blue", "red"),
-      breaks = c("prop12", "prop18"),
-      labels = c("12-month window", "18-month window")) + 
+      values = c("red"),
+      breaks = c("prop12"),
+      labels = c("12-month window")) + 
     xlab("Year") + ylab("Percent on ART") +
     PlotOptions()
   
   propPlot
   
-  artProp |> pivot_wider(names_from = "name", values_from = "value")
+  # artProp |> pivot_wider(names_from = "name", values_from = "value")
   
   if (savePlots) {
     
