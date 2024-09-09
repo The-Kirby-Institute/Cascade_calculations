@@ -65,7 +65,7 @@ projectOutput <- "HIV_Cascade_Paper" # "ASR_2024" for latest ASR
 # which need to exist
 paramsFile <- "ProjectParameters.csv"
 
-specificParams <- 1  
+specificParams <- NULL  
                        # Run specific rows of parameters in parameters file
                        # default = NULL; run all 
                        # Otherwise specify row numbers 
