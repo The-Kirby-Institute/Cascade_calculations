@@ -1411,6 +1411,19 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     segvalue3 = fitted(segModel3)/offset,
     segvalue4 = fitted(segModel4)/offset)
   
+  # If indicator is a percentage make sure predicted proportion doesn't go
+  # over 1.
+  if (yPercent) {
+    modelData <- modelData |>
+      mutate(
+        overall = ifelse(overall > 1, 1, overall), 
+        segvalue1 = ifelse(segvalue1 > 1, 1, segvalue1),
+        segvalue2 = ifelse(segvalue2 > 1, 1, segvalue2),
+        segvalue3 = ifelse(segvalue3 > 1, 1, segvalue3),
+        segvalue4 = ifelse(segvalue4 > 1, 1, segvalue4),
+      )
+  }
+  
   # Create plot
   segPlotAll <- ggplot(data = tempData, 
     aes(x = year, y = value)) + 
