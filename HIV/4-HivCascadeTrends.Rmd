@@ -43,8 +43,8 @@ source(file.path(Rcode, "AgeCat.R"))
 source(file.path(HIVcode, "TidyNotifications.R"))
 
 # Script parameters
-resultsYear <- 2022  # year of cascade we will plot
-minYear <- 19      # how long ago do we plot things
+resultsYear <- 2023  # year of cascade we will plot
+minYear <- 20      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
 savePlots <- TRUE
 years <- startYear:resultsYear
@@ -53,7 +53,7 @@ expModelType <- "nb" # "nb" = negative binomial (default) or "poisson"
 # Set up project and cascade to analyse
 projectName <- "HIV_Cascade_Paper"  
 resultsFolder <- file.path(resultsFolder, projectName)
-cascadeName <- "All-2022"
+cascadeName <- "All-2023"
 cascadePop <- "all"
 
 # New infections parameters
@@ -146,7 +146,9 @@ resultsAll <- filter(hivCascade,
 # Load cleaned notifications data and tidy up for diagnoses trend calculations
 origHivData <- read.csv(file.path(notificationsFolder, 
   paste0("cascadeHIVnotifications-clean-", resultsYear, 
-    ".csv")))  
+    ".csv"))) |>
+  filter(yearhiv <= resultsYear)
+
 countryCodes <- read.csv(file.path(dataFolder, 
   "countryRegionCodes.csv"))
 # Read in location of diagnosis coding
@@ -1247,6 +1249,20 @@ segmentStages <- c(names(trendModels), names(trendModelsProp))
 
 allTrendModels <- c(trendModels, trendModelsProp)
 
+# Function for finding minimum gaps between breakpoints ------------------------
+# Assuming we ignore small gaps in the COVID period
+minGapCOVID <- function(breakYears, start, end) {
+  
+  temp <- tibble(
+    years = c(start, breakYears, end), 
+    gaps = c(0, diff(c(start, breakYears, end))))
+  
+  minimum_gap <- min((temp |> filter(years > start, years < 2020))$gaps)
+  
+  return(minimum_gap)
+  
+} 
+
 # Function for producing results -----------------------------------------------
 # If there is an error in fitting one of the segmented models then the previous 
 # model is used
@@ -1322,15 +1338,18 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
   # Calculate minimum gap between breakpoints and ends
   
   if (allow_end_gap) {
-    # Allow gap at end to be less than min_gap. Means can potentially have a 
-    # change point after 2019 which is justifiable I think due to COVID. 
+    # Allow gaps at end to be less than min_gap. Means can potentially have a 
+    # multiple change point after 2020 to account for potential changes during
+    # acute phase of COVID and rebound. 
+
     modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
       "segModel2", "segModel3","segModel4"),
-      minimum_gap = c(Inf, # No breakpoints 
-        min(diff(c(startYear, unname(segModel1$psi[, "Est."])))), 
-        min(diff(c(startYear, unname(segModel2$psi[, "Est."])))),
-        min(diff(c(startYear, unname(segModel3$psi[, "Est."])))), 
-        min(diff(c(startYear, unname(segModel4$psi[, "Est."])))))) 
+      minimum_gap = c(Inf, # No breakpoints
+        minGapCOVID(unname(segModel1$psi[, "Est."]), startYear, resultsYear), 
+        minGapCOVID(unname(segModel2$psi[, "Est."]), startYear, resultsYear), 
+        minGapCOVID(unname(segModel3$psi[, "Est."]), startYear, resultsYear), 
+        minGapCOVID(unname(segModel4$psi[, "Est."]), startYear, resultsYear)))
+
   } else {
     modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
       "segModel2", "segModel3","segModel4"),
@@ -1421,13 +1440,15 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     ylab(yLabel) + xlab("Year") +  
     PlotOptions() + theme(legend.position = "right") + 
     geom_text(x = 2012, y = 0.15 * ymax, 
-      label = sprintf("BIC values\nOverall %s; One CP %s; Two CPs %s; Three CPs %s; Four CPs %s.", 
+      label = sprintf("BIC values\nOverall %s; One CP %s; Two CPs %s; 
+        Three CPs %s; Four CPs %s.", 
         bicStr[1], bicStr[2], bicStr[3], bicStr[4], bicStr[5]), size = 3) 
   
   if (allow_end_gap) {
     segPlotAll <- segPlotAll +
       geom_text(x = 2012, y = 0.05 * ymax, 
-        label = sprintf("Minimum gaps (excluding end)\nOverall %s; One CP %s; Two CPs %s; Three CPs %s; Four CPs %s.", 
+        label = sprintf("Minimum gaps (excluding end)\nOverall %s; One CP %s; 
+          Two CPs %s; Three CPs %s; Four CPs %s.", 
           gapStr[1], gapStr[2], gapStr[3], gapStr[4], gapStr[5]), size = 3)
   } else {
     segPlotAll <- segPlotAll +
@@ -1520,10 +1541,10 @@ initialbp <- list(2010, c(2007, 2016), c(2007, 2012, 2016),
   c(2006, 2010, 2013, 2017))
 
 # Y axis range for each model
-ymax <- c("infected" = 35000,
-  "pldhiv" = 35000,
-  "numART" = 35000, 
-  "suppressed" = 35000,
+ymax <- c("infected" = 40000,
+  "pldhiv" = 40000,
+  "numART" = 40000, 
+  "suppressed" = 40000,
   "undiagnosed" = 4000, 
   "noART" = 7000, 
   "unsuppressed" = 4500,
