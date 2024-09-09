@@ -54,7 +54,9 @@ if (analysisYear <= 2014) {
   stop("This code not set up for earlier than 2015")
 }
 
-saveEstimates <- FALSE
+saveEstimates <- TRUE
+
+plotMigrationData <- TRUE
 
 ```
 
@@ -398,9 +400,14 @@ if (analysisYear >= 2022) {
 if (analysisYear >= 2017) {
   # Given issues with >= 2017 data for permanent removals use 2016 data and
   # then add estimates up to the current year
-  absDeparts <- read.csv(file.path(mainDataFolder, 
+  absDeparts2016 <- read.csv(file.path(mainDataFolder, 
     paste0("ABS_departures_clean-2016.csv")),
     as.is = 1)
+  
+  absDeparts <- read.csv(file.path(mainDataFolder, 
+    paste0("ABS_departures_clean-", analysisYear, ".csv")),
+    as.is = 1)
+  
 } else {
   absDeparts <- read.csv(file.path(mainDataFolder, 
     paste0("ABS_departures_clean-", analysisYear, ".csv")),
@@ -416,10 +423,10 @@ absInterstate <- read.csv(file.path(mainDataFolder,
 
 if (analysisYear >= 2022) {
   # Use 2016 data and then appended Australian Citizen NOM departures data for
-  # 2017-Analysis year becaue the numbers closerly align. 
+  # 2017-Analysis year because the numbers closely align. 
   
-  absDeparts <- mutate(absDeparts, migrate = permanent / erp)
-  mrateAll <- absDeparts |> 
+  absDeparts2016 <- mutate(absDeparts2016, migrate = permanent / erp)
+  mrateAll <- absDeparts2016 |> 
     select(year, departures = permanent, migrate)
   
   absDepartsAus <- absMigrationAus |>
@@ -429,33 +436,53 @@ if (analysisYear >= 2022) {
     select(year, departures, migrate)
   
   # Save a combined data set for testing and comparison
-  testMrate <- 
-    bind_rows(
-      mutate(mrateAll, type = "all"), 
-      mutate(mrateAus, type = "aus")
-    ) |>
-    filter(year >= 2004)
-  
-  plotMrate <- ggplot(data = testMrate, aes(x = year, y = departures, colour = type)) +
-    geom_line() + 
-    expand_limits(y = 0) +
-    scale_colour_manual("",
-      limits = c("all","aus"),
-      values = c("blue", "red"),
-      labels = c("Permanent departures", "Australian citizen NOM departures")) +
-    xlab("Year") + ylab("Departures") +
-    PlotOptions()
-  
-  ggsave(file.path(dataFolder, 
+  if (plotMigrationData) {
+    testMrate <- 
+      bind_rows(
+        mutate(mrateAll, type = "all"), 
+        mutate(mrateAus, type = "aus")
+      ) |>
+      filter(year >= 2004)
+    
+    plotMrate <- ggplot(data = testMrate, aes(x = year, y = departures, colour = type)) +
+      geom_line() + 
+      expand_limits(y = 0) +
+      scale_colour_manual("",
+        limits = c("all","aus"),
+        values = c("blue", "red"),
+        labels = c("Permanent departures", "Australian citizen NOM departures")) +
+      xlab("Year") + ylab("Departures") +
+      PlotOptions()
+
+    plotMdata <- ggplot(data = absDeparts, aes(x = year)) +
+      geom_line(aes(y=permanent, colour = "permanent")) + 
+      geom_line(aes(y=resident, colour = "resident")) +
+      geom_line(aes(y=visitor, colour = "visitor")) +
+      geom_line(data = absDepartsAus, aes(y = departures, colour = "ausnom")) +
+      geom_line(data = absDeparts2016, aes(y = permanent, colour = "2016")) +
+      scale_colour_manual("Departures",
+        limits = c("permanent","resident", "visitor", "2016", "ausnom"),
+        values = c("black", "blue", "red", "purple", "darkgreen"),
+        labels = c("Permanent", "Resident long-term", "Visitor long-term", 
+          "Permanent up to 2016", "Australian citizen\nNOM departures")) +
+      xlab("Year") + ylab("Number of departures") +
+      PlotOptions() + theme(legend.position = "right")
+    
+    ggsave(file.path(dataFolder, 
       paste0("Migration_Permanent_NOM_Test-", analysisYear,".png")), 
-    plot = plotMrate, width = 15, height = 10, units = "cm")
-  
-  write_csv(
-    testMrate, 
-    file.path(dataFolder, 
-      paste0("Migration_Permanent_NOM_Test-", analysisYear,".csv")
+      plot = plotMrate, width = 15, height = 10, units = "cm")
+    
+    ggsave(file.path(dataFolder, 
+      paste0("Migration_Variables_Data-", analysisYear,".png")), 
+      plot = plotMdata, width = 15, height = 10, units = "cm")
+    
+    write_csv(
+      testMrate, 
+      file.path(dataFolder, 
+        paste0("Migration_Permanent_NOM_Test-", analysisYear,".csv")
+      )
     )
-  )
+  }
   
   # Generate final mrate - the post-covid data is missing for the 
   # year 2023 assume same data as for 2022 (pre-covid)
