@@ -767,14 +767,23 @@ trendData <- bind_rows(trendData, tibble(year = year,
   value = hivCascadeIndicators$imr, 
   lower = hivCascadeIndicators$imr_lower, 
   upper = hivCascadeIndicators$imr_upper))
+
+# Diagnoses used to calculate ydf and cdt are different to the 
+# diagnoses_exclude data above # because of different adjustments in the 
+# calculations (specifically removal of duplicates addition of seroconvertors)
+# These need to be stored to set-up offsets for model the trends models for
+# these indicators
+trendData <- bind_rows(trendData, tibble(year = year,
+  stage = "diagnoses_indicators", 
+  value = hivCascadeIndicators$diagnoses, 
+  lower = hivCascadeIndicators$diagnoses_lower, 
+  upper = hivCascadeIndicators$diagnoses_upper))
+
 trendData <- bind_rows(trendData, tibble(year = year,
   stage = "ydfoffest", 
-  value = hivCascadeIndicators$undiag + 
-    filter(trendData, stage == "diagnoses_exclude")$value, 
-  lower = hivCascadeIndicators$undiag_lower + 
-    filter(trendData, stage == "diagnoses_exclude")$value, 
-  upper = hivCascadeIndicators$undiag_upper+ 
-    filter(trendData, stage == "diagnoses_exclude")$value))
+  value = hivCascadeIndicators$undiag + hivCascadeIndicators$diagnoses, 
+  lower = hivCascadeIndicators$undiag_lower + hivCascadeIndicators$diagnoses_lower, 
+  upper = hivCascadeIndicators$undiag_upper + hivCascadeIndicators$diagnoses_upper))
 trendData <- bind_rows(trendData, tibble(year = year,
   stage = "iproffset",
   # IPR is calculated using the plhiv number from the start of each year
@@ -801,18 +810,18 @@ expTrendData <- trendData %>%
 # offset so segmented fits work: https://stackoverflow.com/questions/19034403/r-package-segmented-with-an-offset-term
 
 if (expModelType == "nb") {
-  ydfModel <- glm.nb(diagnoses_exclude ~ year + offset(log(ydfoffest)), 
+  ydfModel <- glm.nb(diagnoses_indicators ~ year + offset(log(ydfoffest)), 
     data = expTrendData)
-  cdrModel  <- glm.nb(diagnoses_exclude ~ year + offset(log(infections)),
+  cdrModel  <- glm.nb(diagnoses_indicators ~ year + offset(log(infections)),
     data = expTrendData)
   iprModel  <- glm.nb(infections ~ year + offset(log(iproffset)), 
     data = expTrendData)
   imrModel  <- glm.nb(infections ~ year + offset(log(imroffset)), 
     data = expTrendData)
 } else {
-  ydfModel <- glm(diagnoses_include ~ year, offset = log(ydfoffest),
+  ydfModel <- glm(diagnoses_indicators ~ year, offset = log(ydfoffest),
     data = expTrendData, family = "poisson")
-  cdrModel  <- glm(diagnoses_include ~ year, offset = log(infections),
+  cdrModel  <- glm(diagnoses_indicators ~ year, offset = log(infections),
     data = expTrendData, family = "poisson")
   iprModel  <- glm(infections ~ year, offset = log(iproffset),
     data = expTrendData, family = "poisson")
@@ -1412,7 +1421,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     segvalue4 = fitted(segModel4)/offset)
   
   # If indicator is a percentage make sure predicted proportion doesn't go
-  # over 1.
+  # over 1
   if (yPercent) {
     modelData <- modelData |>
       mutate(
@@ -1550,8 +1559,8 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
 # breakpoints() results and visual inspection and to test for sensitivity by 
 # varying.
 
-initialbp <- list(2010, c(2007, 2016), c(2007, 2012, 2016),
-  c(2006, 2010, 2013, 2017))
+initialbp <- list(2014, c(2010, 2016), c(2008, 2013, 2018),
+  c(2007, 2012, 2016, 2019))
 
 # Y axis range for each model
 ymax <- c("infected" = 40000,
@@ -1569,7 +1578,7 @@ ymax <- c("infected" = 40000,
   "propsuppressed" = 1.0,
   "propoverall" = 1.0,
   "ydf" = 0.5,  
-  "cdr"=  6.5,
+  "cdr"=  3.5,
   "ipr" = 0.1,
   "imr" = 20)
 
@@ -1583,7 +1592,7 @@ offsets <- list("infected" = 1,
   "diagnoses_exclude" = 1,
   "diagnoses_include" = 1,
   "infections" = 1, 
-  "propdiagnosed" = expTrendData$infected, 
+  "propdiagnosed" = expTrendData$infected,
   "proptreated" = expTrendData$pldhiv,       
   "propsuppressed" = expTrendData$numART,
   "propoverall" = expTrendData$infected,
