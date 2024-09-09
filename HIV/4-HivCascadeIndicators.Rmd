@@ -23,8 +23,8 @@ projectName <- "HIV_Cascade_Paper"   # "ASR_2023", "HIV_Cascade_Paper"
 
 project <- file.path(basePath, "output", projectName)
 
-resultsYear <- 2022
-cascadeList <- "All-2022" #(Include year) "All-2022"
+resultsYear <- 2023
+cascadeList <- "All-2023" #(Include year) "All-2023"
 
 # Result files and specifications
 cascadeFile <- paste0("HIVcascadeEstimates-", resultsYear,".csv")

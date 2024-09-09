@@ -290,8 +290,7 @@ if (extraPlots) {
       propPlot)
     
     # Also save the ART proportions
-    write_csv(artProp |> pivot_wider(names_from = "name", values_from = "value"), 
-      file.path(figureFolder, paste0("ART_Coverage_Estimates-" , cascadeYear, 
+    write_csv(artProp, file.path(figureFolder, paste0("ART_Coverage_Estimates-" , cascadeYear, 
         "-Data.csv")))
     
   }
