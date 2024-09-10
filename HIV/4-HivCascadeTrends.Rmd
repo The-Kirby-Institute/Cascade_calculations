@@ -1269,13 +1269,10 @@ previous analyses and visual inspection to inform this estimate but also
 varied the initial estimate from 2007 to 2013. This produced no change in the 
 fitted curve. 
 
-```{r Segmented trends}
-# This chuck is used to explore the change in trends for each cascade step, gap,
-# and indicator. Some seem to have a change point. We try to find a change point
-# for each stage using the segmented package and with the 
-# negative-binomial/Poisson models. Note if one change point is not found using 
-# the segmented package then the negative-binomial/Poisson model is plotted 
-# instead (suggests it is a better model). 
+```{r Segmented trends - Setup}
+# This chuck is used to setup the analysis of the change in trends for each 
+# cascade step, gap, and indicator. Some seem to have a change point. The 
+# analysis preimary done by a complex function Segment(). 
 
 LoadLibrary(segmented)
 
@@ -1579,11 +1576,18 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     plotall = segPlotAll, plotBest = segPlotBest))
 }
 
-# Find breakpoints -------------------------------------------------------------
-# Initial break point estimates - use trial and error based on 
-# breakpoints() results and visual inspection and to test for sensitivity by 
-# varying.
+```
 
+```{r Segmented trends}
+# We try to find a change point for each stage using the segmented package and 
+# with the negative-binomial/Poisson models. Note if one change point is not 
+# found using the segmented package then the negative-binomial/Poisson model is 
+# plotted instead (suggests it is a better model). 
+
+# Set-up each indicator specifications -----------------------------------------
+
+# Initial break point estimates - use trial and error based on breakpoints() 
+# results and visual inspection and to test for sensitivity by varying.
 initialbp <- list(2014, c(2010, 2016), c(2008, 2013, 2018),
   c(2007, 2012, 2016, 2019))
 
