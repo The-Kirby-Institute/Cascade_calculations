@@ -1337,10 +1337,21 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
       segModel4 <- pmodel
     })
   
+  segModel5 <- tryCatch(segmented(pmodel, seg.Z = ~year, 
+    psi = list(year = initialbp[[5]])),
+    error = function(err) {
+      print(paste0(indicator, ": Error in segmented model 5"))
+      segModel5 <- pmodel
+    })
+  
   # Calculate and save breakpoints for each model
-  modelBreakpoints <- tibble(model = c("pmodel", "segModel1", 
-    "segModel2", "segModel2", "segModel3", "segModel3", "segModel3",
-    "segModel4", "segModel4", "segModel4", "segModel4"),
+  modelBreakpoints <- tibble(
+    model = c("pmodel", 
+      "segModel1", 
+      "segModel2", "segModel2", 
+      "segModel3", "segModel3", "segModel3",
+      "segModel4", "segModel4", "segModel4", "segModel4",
+      "segModel5", "segModel5", "segModel5", "segModel5", "segModel5"),
     estimate = 0,
     lower = 0,
     upper = 0)
@@ -1358,12 +1369,17 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
   if (class(segModel3)[1] == "segmented") {
     modelBreakpoints$estimate[5:7] <- unname(segModel3$psi[,"Est."])
     modelBreakpoints$lower[5:7] <- unname(confint.segmented(segModel3)[, "CI(95%).low"])
-    modelBreakpoints$upper[5:7] <- unname(confint.segmented(segModel3)[, "CI(95%).up"])  }
-  
+    modelBreakpoints$upper[5:7] <- unname(confint.segmented(segModel3)[, "CI(95%).up"])  
+  }
   if (class(segModel4)[1] == "segmented") {
     modelBreakpoints$estimate[8:11] <- unname(segModel4$psi[,"Est."])
     modelBreakpoints$lower[8:11] <- unname(confint.segmented(segModel4)[, "CI(95%).low"])
     modelBreakpoints$upper[8:11] <- unname(confint.segmented(segModel4)[, "CI(95%).up"])
+  }
+  if (class(segModel5)[1] == "segmented") {
+    modelBreakpoints$estimate[12:16] <- unname(segModel5$psi[,"Est."])
+    modelBreakpoints$lower[12:16] <- unname(confint.segmented(segModel5)[, "CI(95%).low"])
+    modelBreakpoints$upper[12:16] <- unname(confint.segmented(segModel5)[, "CI(95%).up"])
   }
   
   # Calculate minimum gap between breakpoints and ends
@@ -1374,30 +1390,35 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     # acute phase of COVID and rebound. 
 
     modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
-      "segModel2", "segModel3","segModel4"),
+      "segModel2", "segModel3", "segModel4", "segModel5"),
       minimum_gap = c(Inf, # No breakpoints
         minGapCOVID(unname(segModel1$psi[, "Est."]), startYear, resultsYear), 
         minGapCOVID(unname(segModel2$psi[, "Est."]), startYear, resultsYear), 
         minGapCOVID(unname(segModel3$psi[, "Est."]), startYear, resultsYear), 
-        minGapCOVID(unname(segModel4$psi[, "Est."]), startYear, resultsYear)))
+        minGapCOVID(unname(segModel4$psi[, "Est."]), startYear, resultsYear),
+        minGapCOVID(unname(segModel5$psi[, "Est."]), startYear, resultsYear)))
 
   } else {
     modelBreakpointGaps <- tibble(model = c("pmodel", "segModel1", 
-      "segModel2", "segModel3","segModel4"),
+      "segModel2", "segModel3", "segModel4", "segModel5"),
       minimum_gap = c(Inf, # No breakpoints 
         min(diff(c(startYear, unname(segModel1$psi[, "Est."]), resultsYear))),
         min(diff(c(startYear, unname(segModel2$psi[, "Est."]), resultsYear))),
         min(diff(c(startYear, unname(segModel3$psi[, "Est."]), resultsYear))),
-        min(diff(c(startYear, unname(segModel4$psi[, "Est."]), resultsYear)))))
+        min(diff(c(startYear, unname(segModel4$psi[, "Est."]), resultsYear))),
+        min(diff(c(startYear, unname(segModel5$psi[, "Est."]), resultsYear)))))
   } 
   
   gapStr <- round(modelBreakpointGaps$minimum_gap, digits = 1)
   
   # Calculate and save slopes for each model
-  modelSlopes <- tibble(model = c("pmodel", "segModel1", "segModel1", 
-    "segModel2", "segModel2", "segModel2", "segModel3", "segModel3",
-    "segModel3", "segModel3", "segModel4", "segModel4", "segModel4", 
-    "segModel4", "segModel4"),
+  modelSlopes <- tibble(
+    model = c("pmodel", 
+      "segModel1", "segModel1",
+      "segModel2", "segModel2", "segModel2",
+      "segModel3", "segModel3", "segModel3", "segModel3",
+      "segModel4", "segModel4", "segModel4", "segModel4", "segModel4",
+      "segModel5", "segModel5", "segModel5", "segModel5", "segModel5", "segModel5"),
     estimate = 0,
     lower = 0,
     upper = 0)
@@ -1421,18 +1442,22 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     modelSlopes$lower[7:10] <- exp(slope(segModel3)$year[,"CI(95%).l"])
     modelSlopes$upper[7:10] <- exp(slope(segModel3)$year[,"CI(95%).u"])
   }
-  
   if (class(segModel4)[1] == "segmented") {
     modelSlopes$estimate[11:15] <- exp(slope(segModel4)$year[,1])
     modelSlopes$lower[11:15] <- exp(slope(segModel4)$year[,"CI(95%).l"])
     modelSlopes$upper[11:15] <- exp(slope(segModel4)$year[,"CI(95%).u"])
   }
+  if (class(segModel5)[1] == "segmented") {
+    modelSlopes$estimate[16:21] <- exp(slope(segModel5)$year[,1])
+    modelSlopes$lower[16:21] <- exp(slope(segModel5)$year[,"CI(95%).l"])
+    modelSlopes$upper[16:21] <- exp(slope(segModel5)$year[,"CI(95%).u"])
+  }
   
   # Calculate and save AIC and BIC values
   aicValues <- c(AIC(pmodel), AIC(segModel1), AIC(segModel2), AIC(segModel3),
-    AIC(segModel4))
+    AIC(segModel4), AIC(segModel5))
   bicValues <- c(BIC(pmodel), BIC(segModel1), BIC(segModel2), BIC(segModel3),
-    BIC(segModel4))
+    BIC(segModel4), BIC(segModel5))
   bicStr <- round(bicValues, digits = 1)
   
   modelData <- data.frame(year = tempData$year, 
@@ -1440,7 +1465,8 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
     segvalue1 = fitted(segModel1)/offset, 
     segvalue2 = fitted(segModel2)/offset,
     segvalue3 = fitted(segModel3)/offset,
-    segvalue4 = fitted(segModel4)/offset)
+    segvalue4 = fitted(segModel4)/offset,
+    segvalue5 = fitted(segModel5)/offset)
   
   # If indicator is a percentage make sure predicted proportion doesn't go
   # over 1
@@ -1452,6 +1478,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
         segvalue2 = ifelse(segvalue2 > 1, 1, segvalue2),
         segvalue3 = ifelse(segvalue3 > 1, 1, segvalue3),
         segvalue4 = ifelse(segvalue4 > 1, 1, segvalue4),
+        segvalue5 = ifelse(segvalue5 > 1, 1, segvalue5)
       )
   }
   
@@ -1470,42 +1497,45 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
       colour = "segment3")) +
     geom_line(data = modelData, aes(y = segvalue4,
       colour = "segment4")) +
+    geom_line(data = modelData, aes(y = segvalue5,
+      colour = "segment5")) +
     scale_x_continuous(breaks = seq(startYear, resultsYear),
       labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = comma, limits = c(0, ymax)) + 
     scale_colour_manual("", values = c(asrcols[2], "black", "blue", 
-      "darkgreen", "purple", "orange2"),
+      "darkgreen", "purple", "orange2", "red4"),
       limits = c("estimates", "overall", "segment1", "segment2", "segment3",
-        "segment4"),
+        "segment4", "segment5"),
       labels = c("Estimates", "Overall", "One change point", 
-        "Two change points", "Three change points",
-        "Four change points")) +
+        "Two change points", "Three change points", "Four change points",
+        "Five change points")) +
     ylab(yLabel) + xlab("Year") +  
     PlotOptions() + theme(legend.position = "right") + 
-    geom_text(x = 2012, y = 0.15 * ymax, 
+    geom_text(x = 2012, y = 0.2 * ymax, 
       label = sprintf("BIC values\nOverall %s; One CP %s; Two CPs %s; 
-        Three CPs %s; Four CPs %s.", 
-        bicStr[1], bicStr[2], bicStr[3], bicStr[4], bicStr[5]), size = 3) 
+        Three CPs %s; Four CPs %s; Five CPs %s.", 
+        bicStr[1], bicStr[2], bicStr[3], bicStr[4], bicStr[5], bicStr[6]), size = 3) 
   
   if (allow_end_gap) {
     segPlotAll <- segPlotAll +
       geom_text(x = 2012, y = 0.05 * ymax, 
-        label = sprintf("Minimum gaps (excluding end)\nOverall %s; One CP %s; 
-          Two CPs %s; Three CPs %s; Four CPs %s.", 
-          gapStr[1], gapStr[2], gapStr[3], gapStr[4], gapStr[5]), size = 3)
+        label = sprintf("Minimum gaps (excluding COVID period)\nOverall %s; One CP %s; 
+          Two CPs %s; Three CPs %s; Four CPs %s, Five CPs %s.", 
+          gapStr[1], gapStr[2], gapStr[3], gapStr[4], gapStr[5], gapStr[6]), size = 3)
   } else {
     segPlotAll <- segPlotAll +
       geom_text(x = 2012, y = 0.05 * ymax, 
-        label = sprintf("Minimum gaps\nOverall %s; One CP %s; Two CPs %s; Three CPs %s; Four CPs %s.", 
-          gapStr[1], gapStr[2], gapStr[3], gapStr[4], gapStr[5]), size = 3)
+        label = sprintf("Minimum gaps\nOverall %s; One CP %s; Two CPs %s; 
+          Three CPs %s; Four CPs %s, Five CPs %s.", 
+          gapStr[1], gapStr[2], gapStr[3], gapStr[4], gapStr[5], gapStr[6]), size = 3)
   } 
   # Select the model with the lowest BIC but with minimum gap > min_gap
   # and plot
-  segModels <- list(pmodel, segModel1, segModel2, segModel3, segModel4)
+  segModels <- list(pmodel, segModel1, segModel2, segModel3, segModel4, segModel5)
   
   modelBreakpointGaps$bic <- bicValues
-  modelBreakpointGaps$number <- 1:5
+  modelBreakpointGaps$number <- 1:6
   
   eligible <- modelBreakpointGaps %>%
     filter(minimum_gap >= min_gap)
@@ -1589,7 +1619,7 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
 # Initial break point estimates - use trial and error based on breakpoints() 
 # results and visual inspection and to test for sensitivity by varying.
 initialbp <- list(2014, c(2010, 2016), c(2008, 2013, 2018),
-  c(2007, 2012, 2016, 2019))
+  c(2007, 2012, 2016, 2019), c(2007, 2010, 2013, 2016, 2019))
 
 # Y axis range for each model
 ymax <- c("infected" = 40000,
@@ -1655,12 +1685,12 @@ steps <- names(ymax)
 segResults <- list()
 
 for (ii in steps) {
-  print(ii)
+  print(ii)  
   segResults[[ii]] <- Segment(ii, initialbp, ymax[ii], 
     minimum =  filter(trendData, stage == ii)$lower,
     maximum = filter(trendData, stage == ii)$upper, 
     yLabels[ii], save = savePlots, offset = offsets[[ii]], 
-    yPercent = yPercent[ii], min_gap = 3, allow_end_gap = TRUE)
+    yPercent = yPercent[ii], min_gap = 4, allow_end_gap = TRUE)
 }
 
 save(segResults, file = file.path(figFolder, "CascadeSegmentedModels.Rda"))
