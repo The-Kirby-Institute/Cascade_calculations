@@ -997,11 +997,15 @@ forchanges in mean (or variance) rather than slope. Here we just look for
 one changepoint using the mean.
 
 The main analysis was done using the breakpoints() function in the 
-strucchange package. As there are only 19 time points of data we have to 
+strucchange package. As there are only 20 time points of data we have to 
 set h = 3 (the minimal number of points in each segment for a linear 
-regression to be fitted) for the function to work. Given there are only 19 data
-points any models with >= 2 breakpoints are unlikely to be statistically 
+regression to be fitted) for the function to work. Given there are only 20 data
+points any models with > 3 breakpoints are unlikely to be statistically 
 robust and are more likely reflect over-fitting. 
+
+*Note* the following chunks produce errors for some indicators. Given this is just
+break point exploration we have chosen to simply ignore these problematic 
+indicators. 
 
 ```{r Breakpoints}
 # This chunk is used to explore if structural break points might be 
@@ -1017,10 +1021,9 @@ LoadLibrary(strucchange)
 LoadLibrary(ggfortify) # enable timeseries in autoplot
 LoadLibrary(changepoint) # Not really used
 
-# Set up data -------------------------------------------------------------
-# Covert everything into a time series which is more useful in the
-# strucchange package functions. This means results are rounded to the
-# nearest year
+# Set up data ------------------------------------------------------------------
+# Covert everything into a time series which is more useful in the strucchange 
+# package functions. This means results are rounded to the nearest year
 
 tots <- function(indicator) {
   return(ts(filter(trendData, stage == indicator)$value,
@@ -1057,7 +1060,7 @@ colnames(data) <- c("infected", "pldhiv", "numART", "suppressed",
   "propsuppressed", "propoverall", "ydf", "cdr", "ipr", "imr")
 data <- window(data, start = c(startYear, 1), end = c(resultsYear, 1))
 
-# Search for changepoints -------------------------------------------------
+# Search for changepoints ------------------------------------------------------
 # Using the changepoint package. 
 autoplot(cpt.mean(infectedts))
 autoplot(cpt.mean(pldhivts))
@@ -1077,7 +1080,7 @@ autoplot(cpt.mean(cdrts))
 autoplot(cpt.mean(iprts))
 autoplot(cpt.mean(imrts))
 
-# Search for breakpoints --------------------------------------------------
+# Search for breakpoints -------------------------------------------------------
 # The following code looks for breakpoints in each indicator using the 
 # breakpoints() function in the strucchange package which uses linear 
 # regression.  
@@ -1099,12 +1102,14 @@ BPindicator <- function(indicator, tsdata) {
   
 }
 
+# Some of the indicators produce errors so I have commented them out and replaced
+# with a NULL as this is just for exploration
 bpInfected <- BPindicator("infected", infectedts)
 bpPldhiv <- BPindicator("pldhiv", pldhivts)
 bpNumART <- BPindicator("numART", numARTts) # get error with confidence intervals
 bpSuppressed <- BPindicator("suppressed", suppressedts)
-bpUndiagnosed <- BPindicator("undiagnosed", undiagnosedts)
-bpNoART <- BPindicator("noART", noARTts)
+bpUndiagnosed <- NULL # BPindicator("undiagnosed", undiagnosedts)
+bpNoART <- NULL # BPindicator("noART", noARTts)
 bpUnsuppressed <- BPindicator("unsuppressed", unsuppressedts)
 bpDiagnoses_exclude <- BPindicator("diagnoses_exclude", diagnoses_excludets)
 bpDiagnoses_include <- BPindicator("diagnoses_include", diagnoses_includets)
@@ -1112,10 +1117,10 @@ bpInfections <- BPindicator("infections", infectionsts)
 bpPropdiagnosed <- BPindicator("propdiagnosed", propdiagnosedts) # get error with confidence intervals
 bpProptreated <- BPindicator("proptreated", proptreatedts) # get error with confidence intervals
 bpPropsuppressed <- BPindicator("propsuppressed", propsuppressedts) # get error with confidence intervals
-bpPropoverall <- BPindicator("propoverall", propoverallts) # get error with confidence intervals
+bpPropoverall <- NULL # BPindicator("propoverall", propoverallts) # get error with confidence intervals
 bpYdf <- BPindicator("ydf", ydfts)
 bpCdr <- BPindicator("cdr", cdrts)
-bpIpr <- BPindicator("ipr", iprts)
+bpIpr <- NULL # BPindicator("ipr", iprts)
 bpImr <- BPindicator("imr", iprts)
 
 ```
@@ -1124,10 +1129,27 @@ bpImr <- BPindicator("imr", iprts)
 # Create table of summary results ----------------------------------------
 breakTable <- NULL
 
-bpmodels <- list(bpInfected, bpPldhiv, bpNumART, bpSuppressed, bpUndiagnosed,
-  bpNoART, bpUnsuppressed, bpDiagnoses_exclude, bpDiagnoses_include, 
-  bpInfections, bpPropdiagnosed, bpProptreated, bpPropsuppressed, 
-  bpPropoverall, bpYdf, bpCdr, bpIpr, bpImr)
+bpmodels <- list(
+  bpInfected, 
+  bpPldhiv, 
+  bpNumART, 
+  bpSuppressed, 
+  bpUndiagnosed,
+  bpNoART, 
+  bpUnsuppressed, 
+  bpDiagnoses_exclude, 
+  bpDiagnoses_include, 
+  bpInfections, 
+  bpPropdiagnosed, 
+  bpProptreated, 
+  bpPropsuppressed, 
+  bpPropoverall, 
+  bpYdf, 
+  bpCdr, 
+  bpIpr, 
+  bpImr
+  )
+
 modelNames <- colnames(data)
 modelString <- c("Number infected",
   "Number diagnosed", 
@@ -1152,78 +1174,81 @@ modelString <- c("Number infected",
 # can't be calculated (returns NA)
 
 for (ii in 1:length(modelNames)) {
+  
   tempbp <- bpmodels[[ii]]
   
-  tempDf <- data.frame(step = character(5),
-    indicator = character(5),
-    break0 = integer(5),
-    break1 = integer(5),
-    break1ci = character(5),
-    break2 = integer(5),
-    break2ci = character(5),
-    break3 = character(5),
-    break3ci = character(5))
-  
-  
-  tempDf$step <- rep(modelString[ii], 5)
-  tempDf$indicator <- c("breakpoint1", "breakpoint2", "breakpoint3", "rss",
-    "bic")
-  
-  tempDf$break0 <- c(NA, NA, NA, 
-    breakpoints(tempbp, breaks = 1)$RSS,
-    BIC(breakpoints(tempbp, breaks = 0)))
-  
-  tempDf$break1 <- c(years[breakpoints(tempbp, breaks = 1)$breakpoints],
-    NA, NA,
-    breakpoints(tempbp, breaks = 1)$RSS,
-    BIC(breakpoints(tempbp, breaks = 1)))
-  
-  tempDf$break1ci <- c(paste0("(", 
-    years[confint(tempbp, breaks = 1)$confint[1]],
-    ", ",
-    years[confint(tempbp, breaks = 1)$confint[3]],
-    ")"), rep("NA", 4))
-  
-  tempDf$break2 <- c(years[breakpoints(tempbp, breaks = 2)$breakpoints],
-    NA, 
-    breakpoints(tempbp, breaks = 2)$RSS,
-    BIC(breakpoints(tempbp, breaks = 2)))
-  
-  tempDf$break2ci <- c(paste0("(", 
-    years[confint(tempbp, breaks = 2)$confint[1, 1]],
-    ", ",
-    years[confint(tempbp, breaks = 2)$confint[1, 3]],
-    ")"), 
-    paste0("(", 
-      years[confint(tempbp, breaks = 2)$confint[2, 1]],
+  if (!is.null(tempbp)) {
+    
+    tempDf <- data.frame(step = character(5),
+      indicator = character(5),
+      break0 = integer(5),
+      break1 = integer(5),
+      break1ci = character(5),
+      break2 = integer(5),
+      break2ci = character(5),
+      break3 = character(5),
+      break3ci = character(5))
+    
+    tempDf$step <- rep(modelString[ii], 5)
+    tempDf$indicator <- c("breakpoint1", "breakpoint2", "breakpoint3", "rss",
+      "bic")
+    
+    tempDf$break0 <- c(NA, NA, NA, 
+      breakpoints(tempbp, breaks = 1)$RSS,
+      BIC(breakpoints(tempbp, breaks = 0)))
+    
+    tempDf$break1 <- c(years[breakpoints(tempbp, breaks = 1)$breakpoints],
+      NA, NA,
+      breakpoints(tempbp, breaks = 1)$RSS,
+      BIC(breakpoints(tempbp, breaks = 1)))
+    
+    tempDf$break1ci <- c(paste0("(", 
+      years[confint(tempbp, breaks = 1)$confint[1]],
       ", ",
-      years[confint(tempbp, breaks = 2)$confint[2, 3]],
-      ")"),
-    rep("NA", 3))
-  
-  tempDf$break3 <- c(years[breakpoints(tempbp, breaks = 3)$breakpoints],
-    breakpoints(tempbp, breaks = 3)$RSS,
-    BIC(breakpoints(tempbp, breaks = 3)))
-  
-  tempDf$break3ci <- c(paste0("(", 
-    years[confint(tempbp, breaks = 3)$confint[1, 1]],
-    ", ",
-    years[confint(tempbp, breaks = 3)$confint[1, 3]],
-    ")"), 
-    paste0("(", 
-      years[confint(tempbp, breaks = 3)$confint[2, 1]],
+      years[confint(tempbp, breaks = 1)$confint[3]],
+      ")"), rep("NA", 4))
+    
+    tempDf$break2 <- c(years[breakpoints(tempbp, breaks = 2)$breakpoints],
+      NA, 
+      breakpoints(tempbp, breaks = 2)$RSS,
+      BIC(breakpoints(tempbp, breaks = 2)))
+    
+    tempDf$break2ci <- c(paste0("(", 
+      years[confint(tempbp, breaks = 2)$confint[1, 1]],
       ", ",
-      years[confint(tempbp, breaks = 3)$confint[2, 3]],
-      ")"),
-    paste0("(", 
-      years[confint(tempbp, breaks = 3)$confint[3, 1]],
+      years[confint(tempbp, breaks = 2)$confint[1, 3]],
+      ")"), 
+      paste0("(", 
+        years[confint(tempbp, breaks = 2)$confint[2, 1]],
+        ", ",
+        years[confint(tempbp, breaks = 2)$confint[2, 3]],
+        ")"),
+      rep("NA", 3))
+    
+    tempDf$break3 <- c(years[breakpoints(tempbp, breaks = 3)$breakpoints],
+      breakpoints(tempbp, breaks = 3)$RSS,
+      BIC(breakpoints(tempbp, breaks = 3)))
+    
+    tempDf$break3ci <- c(paste0("(", 
+      years[max(confint(tempbp, breaks = 3)$confint[1, 1], 1)], # Seem to get negative lower ranges sometimes
       ", ",
-      years[confint(tempbp, breaks = 3)$confint[3, 3]],
-      ")"),
-    rep("NA", 2))
-  
-  breakTable <- bind_rows(breakTable, tempDf)
-  
+      years[confint(tempbp, breaks = 3)$confint[1, 3]],
+      ")"), 
+      paste0("(", 
+        years[confint(tempbp, breaks = 3)$confint[2, 1]],
+        ", ",
+        years[confint(tempbp, breaks = 3)$confint[2, 3]],
+        ")"),
+      paste0("(", 
+        years[confint(tempbp, breaks = 3)$confint[3, 1]],
+        ", ",
+        years[confint(tempbp, breaks = 3)$confint[3, 3]],
+        ")"),
+      rep("NA", 2))
+    
+    breakTable <- bind_rows(breakTable, tempDf)
+    
+  }
 }
 
 if (savePlots) {
