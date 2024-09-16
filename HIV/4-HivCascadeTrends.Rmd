@@ -245,15 +245,26 @@ diagsDataInclude <- hivSet %>%
   filter(year >= startYear) %>%
   mutate(overseas = "yes")
 
-diagsData <- dplyr::bind_rows(diagsDataExclude, diagsDataInclude)
+diagsDataOS <- hivSet %>%
+  filter(!is.na(previ_diag_overseas)) %>%
+  group_by(yeardiagnosis) %>%
+  summarise(diags = n()) %>%
+  rename(year = yeardiagnosis) %>%
+  filter(year >= startYear) %>%
+  mutate(overseas = "only")
+
+diagsData <- dplyr::bind_rows(diagsDataExclude, diagsDataInclude, diagsDataOS)
 
 if (expModelType == "nb") {
   trendDiagsExclude <- glm.nb(diags ~ year, data = diagsDataExclude)
   trendDiagsInclude <- glm.nb(diags ~ year, data = diagsDataInclude)
+  trendDiagsOS <- glm.nb(diags ~ year, data = diagsDataOS)
 } else {
   trendDiagsExclude <- glm(diags ~ year, data = diagsDataExclude,
     family = "poisson")
   trendDiagsInclude <- glm(diags ~ year, data = diagsDataInclude,
+    family = "poisson")
+  trendDiagsOS <- glm(diags ~ year, data = diagsDataOS,
     family = "poisson")
 }
 
@@ -265,15 +276,17 @@ coeffDiagsInclude <- exp(coef(trendDiagsInclude)[2])
 p_valueDiagsInclude <- summary(trendDiagsInclude)$coefficients["year", "Pr(>|z|)"]
 intervalDiagsInclude <- exp(confint(trendDiagsInclude, "year", type = "Wald"))
 
+coeffDiagsOS <- exp(coef(trendDiagsOS)[2])
+p_valueDiagsOS <- summary(trendDiagsOS)$coefficients["year", "Pr(>|z|)"]
+intervalDiagsOS <- exp(confint(trendDiagsOS, "year", type = "Wald"))
+
 diagsPlot <- ggplot(data = diagsDataExclude, aes(x = year)) +
   geom_line(aes(y = diags, colour = "exclude")) + 
   geom_point(aes(y = diags), colour = "blue") +
   geom_line(data = diagsDataInclude, aes(y = diags, colour = "include")) + 
   geom_point(data = diagsDataInclude, aes(y = diags), colour = "red") +
-  geom_point(aes(y = diagsDataInclude$diags - diags, 
-    colour = "gap")) +
-  geom_line(aes(y = diagsDataInclude$diags - diags, 
-    colour = "gap")) +
+  geom_line(data = diagsDataOS, aes(y = diags, colour = "gap")) + 
+  geom_point(data = diagsDataOS, aes(y = diags), colour = "black") +
   scale_colour_manual(name = "", values = c("red", "blue", "black"),
     breaks = c("include", "exclude", "gap"), 
     labels = c("Including previously diagnosed overseas", 
@@ -2043,11 +2056,11 @@ formatTable$rate_ratios <- FormatData(resultsTable$rate_ratio,
 if (savePlots) {
   write_excel_csv(resultsTable, file.path(figFolder, 
     paste0("HIVcascade_Summary_Table_", 
-      toString(startYear), "-", toString(resultsYear), ".csv")))
+      startYear, "-", resultsYear, ".csv")))
   
   write_excel_csv(formatTable, file.path(figFolder, 
     paste0("HIVcascade_Formated_Table_", 
-      toString(startYear), "-", toString(resultsYear), ".csv")))
+      startYear, "-", resultsYear, ".csv")))
 }
 
 ```
