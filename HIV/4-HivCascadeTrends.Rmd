@@ -62,7 +62,7 @@ infectsCalculation <- "exclude" # "include", "exclude" or "middle"
 # Specifications for each cascade step and indicator - primarily for plotting
 allIndicators <- c("infected", "pldhiv", "retained", "numART", "suppressed",
   "undiagnosed", "noART", "unsuppressed", "diagnoses_exclude",
-  "diagnoses_include", "infections", "propdiagnosed", "proptreated",
+  "diagnoses_include", "diagnoses_os", "infections", "propdiagnosed", "proptreated",
   "propsuppressed", "propoverall", "ydf", "cdr", "ipr", "imr")
 
 indicatorNames <- c("infected" = "Living with HIV",
@@ -75,6 +75,7 @@ indicatorNames <- c("infected" = "Living with HIV",
   "unsuppressed" = "On ART but unsuppressed",
   "diagnoses_exclude" = "Diagnoses excluding OS",
   "diagnoses_include" = "Diagnoses including OS",
+  "diagnoses_os" = "Diagnoses overseas",
   "infections" ="Annual new infections",
   "propdiagnosed" = "Percentage diagnosed",
   "proptreated" =  "Percentage diagnosed treated",
@@ -95,6 +96,7 @@ indicatorNamesNeat <- c("infected" = "Number living with HIV",
   "unsuppressed" = "Number unsuppressed\n(VL >= 200 copies/ml)",
   "diagnoses_exclude" = "Annual notifications\n(excluding OS diagnoses)",
   "diagnoses_include" = "Annual notifications\n(including OS diagnoses)",
+  "diagnoses_os" = "Annual notifications\n(previous diagnosis OS)", 
   "infections" = "Annual new infections\n ",
   "propdiagnosed" = "Percentage of\nPLHIV diagnosed", 
   "proptreated" =  "Percentage diagnosed\non ART",
@@ -342,6 +344,9 @@ trendData <- bind_rows(trendData,
     dplyr::select(year, stage, value = diags, lower, upper),
   diagsDataInclude %>% 
     mutate(stage = "diagnoses_include", lower = NA, upper = NA) %>% 
+    dplyr::select(year, stage, value = diags, lower, upper), 
+  diagsDataOS %>% 
+    mutate(stage = "diagnoses_os", lower = NA, upper = NA) %>% 
     dplyr::select(year, stage, value = diags, lower, upper), 
   newInfects %>% 
     mutate(stage = "infections") %>% 
@@ -920,13 +925,14 @@ legend <- get_legend(trendPlots$diagnoses_include)
 combinedIndicatorPlot <- plot_grid(
   trendPlots$diagnoses_include + theme(legend.position="none"), 
   trendPlots$diagnoses_exclude + theme(legend.position="none"),
+  trendPlots$diagnoses_os + theme(legend.position="none"),
   trendPlots$infections + theme(legend.position="none"),
   trendPlotsProp$ydf + theme(legend.position="none"), 
   trendPlotsProp$cdr + theme(legend.position="none"), 
   trendPlotsProp$ipr + theme(legend.position="none"), 
   trendPlotsProp$imr + theme(legend.position="none"), 
   ncol = 2, nrow = 4, 
-  labels = c("A", "B", "C", "D", "E", "F", "G")) 
+  labels = c("A", "B", "C", "D", "E", "F", "G", "H")) 
 
 if (savePlots) {
   ggsave(file.path(figFolder,
@@ -934,7 +940,7 @@ if (savePlots) {
       toString(startYear), "-",
       toString(resultsYear),
       saveFormat, sep = "")),
-    plot = combinedIndicatorPlot, width = 18, height = 32, units = "cm")
+    plot = combinedIndicatorPlot, width = 16, height = 32, units = "cm")
 }
 
 ```
@@ -1053,6 +1059,7 @@ noARTts <- tots("noART")
 unsuppressedts <- tots("unsuppressed")
 diagnoses_excludets <- tots("diagnoses_exclude")
 diagnoses_includets <- tots("diagnoses_include")
+diagnoses_osts <- tots("diagnoses_os")
 infectionsts <- tots("infections")
 propdiagnosedts <- tots("propdiagnosed")
 proptreatedts <- tots("proptreated")
@@ -1064,11 +1071,11 @@ iprts <- tots("ipr")
 imrts <- tots("imr")
 
 data <- cbind(infectedts, pldhivts, numARTts, suppressedts, undiagnosedts,
-  noARTts, unsuppressedts, diagnoses_excludets, diagnoses_includets,
-  infectionsts, propdiagnosedts, proptreatedts, propsuppressedts, propoverallts,
+  noARTts, unsuppressedts, diagnoses_excludets, diagnoses_includets, 
+  diagnoses_osts, infectionsts, propdiagnosedts, proptreatedts, propsuppressedts, propoverallts,
   ydfts, cdrts, iprts, imrts)
 colnames(data) <- c("infected", "pldhiv", "numART", "suppressed",
-  "undiagnosed","noART", "unsuppressed", "diagnoses_exclude",
+  "undiagnosed","noART", "unsuppressed", "diagnoses_exclude", "diagnoses_os", 
   "diagnoses_include", "infections", "propdiagnosed", "proptreated",
   "propsuppressed", "propoverall", "ydf", "cdr", "ipr", "imr")
 data <- window(data, start = c(startYear, 1), end = c(resultsYear, 1))
@@ -1084,6 +1091,7 @@ autoplot(cpt.mean(noARTts))
 autoplot(cpt.mean(unsuppressedts))
 autoplot(cpt.mean(diagnoses_excludets))
 autoplot(cpt.mean(diagnoses_includets))
+autoplot(cpt.mean(diagnoses_osts))
 autoplot(cpt.mean(propdiagnosedts))
 autoplot(cpt.mean(proptreatedts))
 autoplot(cpt.mean(propsuppressedts))
@@ -1126,6 +1134,7 @@ bpNoART <- NULL # BPindicator("noART", noARTts)
 bpUnsuppressed <- BPindicator("unsuppressed", unsuppressedts)
 bpDiagnoses_exclude <- BPindicator("diagnoses_exclude", diagnoses_excludets)
 bpDiagnoses_include <- BPindicator("diagnoses_include", diagnoses_includets)
+bpDiagnoses_os <- BPindicator("diagnoses_os", diagnoses_osts)
 bpInfections <- BPindicator("infections", infectionsts)
 bpPropdiagnosed <- BPindicator("propdiagnosed", propdiagnosedts) # get error with confidence intervals
 bpProptreated <- BPindicator("proptreated", proptreatedts) # get error with confidence intervals
@@ -1152,6 +1161,7 @@ bpmodels <- list(
   bpUnsuppressed, 
   bpDiagnoses_exclude, 
   bpDiagnoses_include, 
+  bpDiagnoses_os, 
   bpInfections, 
   bpPropdiagnosed, 
   bpProptreated, 
@@ -1173,6 +1183,7 @@ modelString <- c("Number infected",
   "On ART but unsuppressed",
   "Diagnoses excluding OS",
   "Diagnoses including OS",
+  "Diagnoses overseas",
   "Annual new infections",
   "Proportion diagnosed", 
   "Proportion diagnosed treated",
@@ -1644,6 +1655,7 @@ ymax <- c("infected" = 40000,
   "unsuppressed" = 4500,
   "diagnoses_exclude" = 1500,
   "diagnoses_include" = 1500,
+  "diagnoses_os" = 1500,
   "infections" = 1500, 
   "propdiagnosed" = 1.0, 
   "proptreated" = 1.0,       
@@ -1663,6 +1675,7 @@ offsets <- list("infected" = 1,
   "unsuppressed" = 1,
   "diagnoses_exclude" = 1,
   "diagnoses_include" = 1,
+  "diagnoses_os" = 1,
   "infections" = 1, 
   "propdiagnosed" = expTrendData$infected,
   "proptreated" = expTrendData$pldhiv,       
@@ -1682,6 +1695,7 @@ yPercent <- c("infected" = FALSE,
   "unsuppressed" = FALSE,
   "diagnoses_exclude" = FALSE,
   "diagnoses_include" = FALSE,
+  "diagnoses_os" = FALSE,
   "infections" = FALSE, 
   "propdiagnosed" = TRUE, 
   "proptreated" = TRUE,       
@@ -1725,11 +1739,11 @@ suppressedPredict <- exp(predict(segResults$suppressed$models[[segResults$suppre
 
 # Predict values for cascade percentages using models with offsets
 propdiagnosed95 <- exp(predict(segResults$propdiagnosed$models[[segResults$propdiagnosed$bestIndex]],
-  newdata = data.frame(year = (resultsYear + 1):2030, infected = infectedPredict)))/infectedPredict
+  newdata = data.frame(year = (resultsYear + 1):2030, infected = infectedPredict)))#/infectedPredict
 proptreated95 <- exp(predict(segResults$proptreated$models[[segResults$proptreated$bestIndex]],
-  newdata = data.frame(year = (resultsYear + 1):2030, pldhiv = diagnosedPredict)))/diagnosedPredict
+  newdata = data.frame(year = (resultsYear + 1):2030, pldhiv = diagnosedPredict)))#/diagnosedPredict
 propsuppressed95 <- exp(predict(segResults$propsuppressed$models[[segResults$propsuppressed$bestIndex]],
-  newdata = data.frame(year = (resultsYear + 1):2030, numART = numARTPredict)))/numARTPredict
+  newdata = data.frame(year = (resultsYear + 1):2030, numART = numARTPredict)))#/numARTPredict
 
 # Direct calculations
 diagnosedPredict/infectedPredict
@@ -1894,13 +1908,14 @@ indicatorsFullPlot <-  ggdraw() +
   draw_plot(
     plot_grid(RmLegened(segResults[["diagnoses_include"]]$plotBest),
       RmLegened(segResults[["diagnoses_exclude"]]$plotBest),
+      RmLegened(segResults[["diagnoses_os"]]$plotBest),
       RmLegened(segResults[["infections"]]$plotBest),
       RmLegened(segResults[["ydf"]]$plotBest),
       RmLegened(segResults[["cdr"]]$plotBest),
       RmLegened(segResults[["ipr"]]$plotBest),
       RmLegened(segResults[["imr"]]$plotBest),
       ncol = 2, nrow = 4, align = "v",
-      labels = c("A", "B", "C", "D", "E", "F", "G")), 0, 0, 1, 0.95)
+      labels = c("A", "B", "C", "D", "E", "F", "G", "H")), 0, 0, 1, 0.95)
 
 captions[["cascadeIndicators"]] <- "Trends in cascade related indicators over 2004-2022. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
 
