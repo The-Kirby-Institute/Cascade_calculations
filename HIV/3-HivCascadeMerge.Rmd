@@ -21,16 +21,16 @@ LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
 analysisYear <- 2023
-projectName <-  "HIV_Cascade_Paper" # "ASR_2024"; "HIV_Cascade_Paper"
+projectName <-  "ASR_2024" # "ASR_2024"; "HIV_Cascade_Paper"
 
-multipleCascades <- FALSE
+multipleCascades <- TRUE
 artNames <- NULL
 
 # If this is an ASR project already have specific populations
 if (multipleCascades && projectName == "ASR_2024") {
   cascadeNames <- c("All", "Male", "Female", "Indigenous", "AusNonIndigenous", 
-    "MSM", "MSM_Aus", "MSM_OS", "Hetero", "Hetero_Aus", 
-    "Hetero_OS", "Pwid", "Otherexp", "SSA", "SEA", "SCA", "Othercob")
+    "NonIndigenous", "MSM", "MSM_AUS", "MSM_OS", "Hetero", "Pwid", "SSA", "SEA", 
+    "SCA")
 } else {
   # Specify cascades manually (without year)
   cascadeNames <- "All" # specify cascades with project 
@@ -55,14 +55,6 @@ if (projectName %in% c("ASR_2016", "ASR_2017", "ASR_2018", "ASR_2019")) {
   # warning("Non-standard project make sure artString is set correctly")
 }
 
-# Set linkae population for treatment. Only required for non-PBS populations
-linkagePop <- "all" # Used when artname is different to AHOD name
-                    #to pick the right name corresponding to the cascade name
-
-# Set AHOD population for suppression. Only required for non-PBS populations
-ahodState <- "all" # Default as most states do not have there own data. 
-ahodPop <- "all"
-
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 ```
@@ -86,10 +78,27 @@ linkageDataFile <- file.path(basePath,
 linkageART <- read_csv(linkageDataFile) %>%
   pivot_longer(2:ncol(.))
 
+# Cascade name conversion to linkage and AHOD populations
+cascadePops <- read_csv(file.path(outputFolder, projectName, 
+    paste0("CascadeNames-", yearStr, ".csv")))
+
 # Start putting together cascades
 hivCascadeAll <- NULL
 
 for (ii in 1:length(cascadeNames)) {
+  
+  
+  # Set linkage and AHOD population for treatment and suppression. 
+  # Only required for non-PBS populations
+  linkagePop <- cascadePops |> 
+    filter(cascade == cascadeNames[ii]) |>
+    pull(linkage_pop)
+  ahodState <- cascadePops |> 
+    filter(cascade == cascadeNames[ii]) |>
+    pull(ahod_state)
+  ahodPop <- cascadePops |> 
+    filter(cascade == cascadeNames[ii]) |>
+    pull(ahod_pop)
   
   # Specify cascade folders
   cascadeFolder <- file.path(outputFolder, projectName, 
@@ -217,6 +226,7 @@ for (ii in 1:length(cascadeNames)) {
   } else {
     # If no linkage ignore. 
     print("No ART data for this population")
+    print(cascadeNames[ii])
     
     # If no linkage ignore. 
     treatment <- tibble(
