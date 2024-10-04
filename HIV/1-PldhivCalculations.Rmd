@@ -57,7 +57,7 @@ saveResults <- TRUE
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "HIV_Cascade_Paper" # "ASR_2024" for latest ASR
+projectOutput <- "ASR_2024" # "ASR_2024" for latest ASR
                             # "HIV_Cascade_Paper"
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
@@ -65,10 +65,10 @@ projectOutput <- "HIV_Cascade_Paper" # "ASR_2024" for latest ASR
 # which need to exist
 paramsFile <- "ProjectParameters.csv"
 
-specificParams <- NULL  
+specificParams <- NULL
                        # Run specific rows of parameters in parameters file
                        # default = NULL; run all 
-                       # Otherwise specify row numbers 
+                       # Otherwise specify row numbers (be careful with header row). 
 
 # Cascade options----------------------------------------------------------
 # The following variables specify the characteristics and hence the 
