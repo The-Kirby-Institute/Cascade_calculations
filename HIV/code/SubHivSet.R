@@ -169,7 +169,8 @@ SubHivSet <- function(hivdataframe, fAge, fGender, fExposure, fCob, fAtsi,
     }
   }
   
-  if(fAtsi[1] != 'all' && fCob[1] == "Australia" && length(fCob) == 1){
+  if (fAtsi[1] != 'all' && length(fCob) == 1) {
+  # if(fAtsi[1] != 'all' && fCob[1] == "Australia" && length(fCob) == 1){
     # Store unkowns
     unknownframe <- bind_rows(unknownframe, filter(includeframe, 
       aboriggroup == 'Not Reported'))

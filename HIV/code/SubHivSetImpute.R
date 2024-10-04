@@ -105,7 +105,8 @@ SubHivSetImpute <- function(hivdataframe, fAge, fGender, fExposure, fCob,
     }
   }
   
-  if (fAtsi[1] != 'all' && fCob[1] == "Australia" && length(fCob) == 1) {
+  if (fAtsi[1] != 'all' && length(fCob) == 1) {
+  # if (fAtsi[1] != 'all' && fCob[1] == "Australia" && length(fCob) == 1) {
     # Exclude ones we don't want and keep ones we want
     excludeframe <- bind_rows(excludeframe, 
       filter(includeframe, !(aboriggroup %in% fAtsi)))
