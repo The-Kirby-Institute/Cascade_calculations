@@ -32,7 +32,15 @@ cascadeYear <- 2023
 cascadeProject <- "ASR_2024"
 cascadeName <- "All"
 
-linkagePop <- "all"
+# Cascade name conversion to linkage and AHOD populations
+cascadePops <- read_csv(file.path(cascadeFolder, cascadeProject, 
+    paste0("cascadeNames-", cascadeYear, ".csv")))
+
+linkagePop <- cascadePops |> 
+    filter(cascade == cascadeName) |>
+    pull(linkage_pop)
+
+#linkagePop <- "all"
 
 artpop <- tolower(cascadeName)
 
