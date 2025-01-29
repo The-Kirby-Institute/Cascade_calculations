@@ -46,7 +46,7 @@ source(file.path(HIVcode, "TidyNotifications.R"))
 resultsYear <- 2023  # year of cascade we will plot
 minYear <- 20      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
-savePlots <- TRUE
+savePlots <- FALSE
 years <- startYear:resultsYear
 expModelType <- "nb" # "nb" = negative binomial (default) or "poisson"
 
@@ -198,7 +198,7 @@ hivCascadeIndicators <- read.csv(inputFileIndicators) %>%
 # Simple trends of the cascade steps and gaps
 
 We used a simple Poisson/Negative-binomial regression model with year as the 
-independent covariate for the main cascade steps and indicators over 2004-2022. 
+independent covariate for the main cascade steps and indicators over 2004-2023. 
 A more advanced trend analyses for the cascade steps was completed by co-author 
 Hamish McMannus but we decided a simple regression of the best estimates would be 
 sufficient. Hamish's analysis is available in the trend_analysis folder.
@@ -1865,7 +1865,7 @@ cascadeFullPlot <- ggdraw() +
     size = 12)
 
 # Figure captions
-captions[["cascadeFull"]] <- "HIV notifications in Australia and Australia's HIV cascade to the end of 2022. A) Annual notifications data. B) HIV cascade at end of 2022 including estimates for retained in care (note lower range of Diagnosed and Retained in care adjusted to equal lower range of number Receiving treatment). Horizontal lines show the UNAIDS 90-90-90 targets. C) Estimate numbers and percentages of people living with HIV in each step of the HIV cascade over 2004-2022.  "
+captions[["cascadeFull"]] <- "HIV notifications in Australia and Australia's HIV cascade to the end of 2023. A) Annual notifications data. B) HIV cascade at end of 2023 including estimates for retained in care (note lower range of Diagnosed and Retained in care adjusted to equal lower range of number Receiving treatment). Horizontal lines show the UNAIDS 95-95-95 targets. C) Estimate numbers and percentages of people living with HIV in each step of the HIV cascade over 2004-2023.  "
 
 # Cascade trends ---------------------------------------------------------------
 legend <- get_legend(segResults[["infected"]]$plotBest)
@@ -1880,7 +1880,7 @@ cascadeTrendPlot <- ggdraw() +
       ncol = 2, nrow = 2, align = "v",
       labels = c("A", "B", "C", "D", "E", "F")), 0, 0, 1, 0.95)
 
-captions[["stepTrends"]] <- "Estimates and trends for each HIV cascade step over 2004-2022. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points. "
+captions[["stepTrends"]] <- "Estimates and trends for each HIV cascade step over 2004-2023. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points. "
 
 # Cascade gaps -----------------------------------------------------------------
 legend <- get_legend(segResults[["undiagnosed"]]$plotBest)
@@ -1898,7 +1898,7 @@ gapsFullPlot <- ggdraw() +
       ncol = 2, nrow = 3, align = "v",
       labels = c("A", "B", "C", "D", "E", "F")), 0, 0, 1, 0.95)
 
-captions[["cascadeGaps"]] <- "Trends in the estimated gaps of the HIV cascade over 2004-2022. Red lines show the estimated values from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
+captions[["cascadeGaps"]] <- "Trends in the estimated gaps of the HIV cascade over 2004-2023. Red lines show the estimated values from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
 
 # Remaining cascade indicators --------------------------------------------------- 
 legend <- get_legend(segResults[["diagnoses_include"]]$plotBest)
@@ -1917,7 +1917,7 @@ indicatorsFullPlot <-  ggdraw() +
       ncol = 2, nrow = 4, align = "v",
       labels = c("A", "B", "C", "D", "E", "F", "G", "H")), 0, 0, 1, 0.95)
 
-captions[["cascadeIndicators"]] <- "Trends in cascade related indicators over 2004-2022. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
+captions[["cascadeIndicators"]] <- "Trends in cascade related indicators over 2004-2023. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
 
 # Save combined plots ----------------------------------------------------------
 if (savePlots) {
