@@ -85,6 +85,8 @@ Chlamydia/data/retestsNSWgp_clean-2015.csv
 Chlamydia/data/2021/*-v1.csv
 Chlamydia/data/2021/CT_notification_proportions-2021.csv
 Chlamydia/data/2022/CT_notification_proportions-2022.csv
+Chlamydia/data/2023/CT_notification_proportions-2023.csv
+
 # Chlamydia/output/figures/
 Chlamydia/output/*
 !Chlamydia/output/2016
