@@ -147,7 +147,7 @@ typeDiag <- function(hivData, type, minYear = 1980,
         msm = ifelse(is.nan(msm), 0, msm),
         pwid = ifelse(is.nan(pwid), 0, pwid),
         otherexp = ifelse(is.nan(otherexp), 0, otherexp)) %>%
-      select(-known, -unknown)
+      dplyr::select(-known, -unknown)
     
     allYears <- minYear:max(hivData$yeardiagnosis)
     # requiredYears <- allYears[!(allYears %in% diagType$year)]
@@ -279,7 +279,7 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
     if (!("not_reported" %in% names(cd4DiagsAll))) cd4DiagsAll$not_reported <- 0
     
     cd4DiagsAll <- cd4DiagsAll %>% 
-      mutate(total = apply(select(., 2:10), 1, sum)) %>%
+      mutate(total = apply(dplyr::select(., 2:10), 1, sum)) %>%
       rename(year = yeardiagnosis)
   } else {
     # First filter out concurrent aids cases
@@ -291,7 +291,7 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
       summarise(diags = n() / dataSets) %>%
       ungroup() %>%
       spread(cd4bin, diags) %>%
-      mutate(total = apply(select(., 2:6), 1, sum)) %>%
+      mutate(total = apply(dplyr::select(., 2:6), 1, sum)) %>%
       rename(year = yeardiagnosis)
   }
   cd4DiagsAll[is.na(cd4DiagsAll)] <- 0
@@ -307,12 +307,12 @@ cd4All <- function(hivData, cd4binGroup, minYear = 1980, useprop = FALSE,
   
   # Select what we want
   cd4Diags <- cd4DiagsAll %>%
-    select("year", all_of(cd4binSelect))
+    dplyr::select("year", all_of(cd4binSelect))
   colnames(cd4Diags)[2] <- c("all")
   
   if (useprop) {
     
-    propCD4all <- t(apply(select(cd4DiagsAll, -year, -total, 
+    propCD4all <- t(apply(dplyr::select(cd4DiagsAll, -year, -total, 
       -not_reported), 1, function(row) row/sum(row)))
     
     propCD4all[is.nan(propCD4all)] <- 0
@@ -374,7 +374,7 @@ cd4Exposure <- function(hivData, cd4binGroup,
     
     cd4ExpBin <- cd4DiagsExp %>%
       filter(cd4London == cd4binGroup) %>%
-      select(-cd4London, -unknown) %>%
+      dplyr::select(-cd4London, -unknown) %>%
       rename(year = yeardiagnosis)
     
   } else {
@@ -398,7 +398,7 @@ cd4Exposure <- function(hivData, cd4binGroup,
     
     cd4ExpBin <- cd4DiagsExp %>%
       filter(cd4bin == cd4binGroup) %>%
-      select(-cd4bin, -unknown) %>%
+      dplyr::select(-cd4bin, -unknown) %>%
       rename(year = yeardiagnosis)
     
   }

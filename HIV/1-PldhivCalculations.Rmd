@@ -57,7 +57,7 @@ saveResults <- TRUE
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "ASR_2024" # "ASR_2024" for latest ASR
+projectOutput <- "NSW_Cascade_2024" # "ASR_2024" for latest ASR
                             # "HIV_Cascade_Paper"
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
@@ -65,7 +65,7 @@ projectOutput <- "ASR_2024" # "ASR_2024" for latest ASR
 # which need to exist
 paramsFile <- "ProjectParameters.csv"
 
-specificParams <- NULL
+specificParams <- 1
                        # Run specific rows of parameters in parameters file
                        # default = NULL; run all 
                        # Otherwise specify row numbers (be careful with header row). 
@@ -125,7 +125,7 @@ if (is.null(paramsFile)) {
   # and how many sets to use.
   # 
   useImputed <- rep(TRUE, numCascades)
-  nImputedSets <- rep(10, numCascades)  # Default is 10, the maximum
+  nImputedSets <- rep(20, numCascades)  # Default is 20, the maximum
   
   # Script options--------------------------------------------------------
   # The following variables specify the various calculation options. 

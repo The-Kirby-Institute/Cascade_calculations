@@ -203,7 +203,7 @@ ProportionUnique <- function(notificationsData, cumNotifications,
   
   # Do calculations for all notifications first-----------------------------
   
-  dobAll <- select(notificationsData, dob, yeardiagnosis) # Overall
+  dobAll <- dplyr::select(notificationsData, dob, yeardiagnosis) # Overall
   numberUniqueAll <- NumUnique(dobAll, allYears, ignore)
   numberUniqueAll[is.na(numberUniqueAll)] <- 0
   
@@ -305,7 +305,7 @@ GetUnique <- function(hivSet, allYears, yearUnique = NULL) {
   } 
   
   uniqueNotifications <- uniqueNotifications %>%  
-    select(year, notifications, annunique, cumunique, propunique, unique, 
+    dplyr::select(year, notifications, annunique, cumunique, propunique, unique, 
       duplicates, totalnotifications, cumpropunique, cum_unique, cumduplicates,
       propunique_replace, unique_replace, duplicates_replace,
       cumpropunique_replace, cum_unique_replace, cumduplicates_replace)
