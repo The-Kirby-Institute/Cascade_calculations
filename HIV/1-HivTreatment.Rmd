@@ -339,6 +339,14 @@ if (addTempRes) {
   # Populations to add temporary resident treatment estimates
   pops <- c("act", "all", "female", "male", "nsw", "nt", "qld", "sa", 
     "tas", "vic", "wa")
+  
+  # Use 2023 state data to allocate overall Medicare ineligible ART number to 
+  # each state - the number for each state is availble in the file
+  # ~/HIV/data/ART_medicare_ineligible-2023.csv
+
+  statesProps <- c("act" = 29/2521, "nsw" = 976/2521, "nt" = 35/2521, 
+    "qld" = 405/2521, "sa" = 117/2521, "tas" = 14/2521, "vic" = 700/2521, 
+    "wa" = 245/2521)
 
   tempResProp <- tibble(
     year = integer(), 
@@ -382,10 +390,23 @@ if (addTempRes) {
         tempRes <- atrasMale * endTempRes
         tempResMin <- atrasMale * endTempResMin
         tempResMax <- atrasMale * endTempResMax
-      } else {
+      } else if (pops[ii] == "all"){
         tempRes <- endTempRes * tempEnd / endAll
         tempResMin <- endTempResMin * tempEndLower / endLower
         tempResMax <- endTempResMax * tempEndUpper / endUpper
+      } else {
+        if (analysisYear < 2023) {
+          tempRes <- endTempRes * tempEnd / endAll
+          tempResMin <- endTempResMin * tempEndLower / endLower
+          tempResMax <- endTempResMax * tempEndUpper / endUpper
+        } else {
+          # Year 2023 and a state 
+          popProp <- unname(statesProps[pops[ii]])
+          
+          tempRes <- popProp * endTempRes
+          tempResMin <- popProp * endTempResMin
+          tempResMax <- popProp * endTempResMax
+        }
       }
       
       tempProp <- tempRes/(tempRes + tempEnd)
@@ -445,10 +466,23 @@ if (addTempRes) {
         tempPop <- atrasMale * tempRes
         tempPopMin <- atrasMale * tempResMin
         tempPopMax <- atrasMale * tempResMax
-      } else {
+      } else if (pop == "all"){
         tempPop <- tempRes * tempValue / treatAll
         tempPopMin <- tempResMin * tempLower / treatLower
         tempPopMax <- tempResMax * tempUpper / treatUpper
+      } else {
+        if (analysisYear < 2023) {
+          tempPop <- tempRes * tempValue / treatAll
+          tempPopMin <- tempResMin * tempLower / treatLower
+          tempPopMax <- tempResMax * tempUpper / treatUpper
+        } else {
+          # Year 2023 and a state 
+          popProp <- unname(statesProps[pop])
+          
+          tempPop <- popProp * tempRes
+          tempPopMin <- popProp * tempResMin
+          tempPopMax <- popProp * tempResMax
+        }
       }
       
       # Estimate proportion using total overall number rather than max/min values
@@ -510,7 +544,7 @@ write.csv(tempResProp, file.path(dataFolder,
 
 # Plot temporary resident ART estimates
 allTreat <- filter(hivTreated, year >= 2013, population == "all")$value
-propTemp <- tempResArt$value / allTreat
+propTemp <- filter(tempResArt, population == "all")$value / allTreat
 
 tempResArtPlot <- ggplot(tibble(tempResArt), aes(x = year, y = value)) + 
   geom_line(colour = PlotColors("hivcascade5")[2]) +
