@@ -27,6 +27,7 @@ source(file.path(Rcode, "PlotOptions.R"))
 source(file.path(Rcode, "PlotColors.R"))
 source(file.path(Rcode, "EveryNth.R"))
 source(file.path(Rcode, "FormatData.R"))
+source(file.path(Rcode, "GetLegend.R"))
 source(file.path(HIVcode, "ResultsFunctions.R"))
 LoadLibrary(tidyverse)
 LoadLibrary(segmented)
@@ -730,7 +731,7 @@ trendCascadeProp <- bind_rows(propTrends, propTrendsExp)
 
 # Save plots --------------------------------------------------------------
 # Create a group 90-90-90 plot with trend lines
-legend <- get_legend(diagsPropPlot)
+legend <- GetLegend(diagsPropPlot)
 
 # Update group plot
 combinedPropPlot <- plot_grid(
@@ -919,7 +920,7 @@ propTrendsIndicators <- tibble(stage = c("ydf", "cdr", "ipr", "imr"),
 trendCascadeProp <- bind_rows(trendCascadeProp, propTrendsIndicators)
 
 # Create a group indicator plot ------------------------------------------------
-legend <- get_legend(trendPlots$diagnoses_include)
+legend <- GetLegend(trendPlots$diagnoses_include)
 
 # Update group plot
 combinedIndicatorPlot <- plot_grid(
@@ -1603,8 +1604,8 @@ Segment <- function(indicator, initialbp, ymax, yLabel, minimum = NA,
   
   if (save) {
     # Save the current plot as a combined plot
-    legend1 <- get_legend(segPlotAll)
-    legend2 <- get_legend(segPlotBest + theme(legend.position = "right"))
+    legend1 <- GetLegend(segPlotAll)
+    legend2 <- GetLegend(segPlotBest + theme(legend.position = "right"))
     
     segPlotCombine <- ggdraw() +
       draw_plot(segPlotAll + theme(legend.position="none"), 
@@ -1804,7 +1805,8 @@ plotCascadeAll <- PlotCascade(latestCascade, retained = TRUE, ymax = 35000,
   targetlines = "95", targetlabels = FALSE) + 
   scale_y_continuous(breaks = seq(0, 40000, by = 10000),
     labels =  comma,
-    limits = c(0, 35000))
+    limits = c(0, 40000)) +
+  ylab(paste("Number of people in", resultsYear))
 
 # Stacked HIV cascade ----------------------------------------------------------
 plotLabels <- c("Undiagnosed", 
@@ -1847,7 +1849,7 @@ stackPlotProp <- stackPlotBase + geom_area(stat="identity",
   scale_y_continuous(labels = percent)
 
 # Create a combined plot
-legend <- get_legend(stackPlotNum)
+legend <- GetLegend(stackPlotNum)
 stackPlotNum2 <- stackPlotNum + theme(legend.position="none")
 stackPlotProp2 <- stackPlotProp + theme(legend.position="none")
 
@@ -1868,7 +1870,7 @@ cascadeFullPlot <- ggdraw() +
 captions[["cascadeFull"]] <- "HIV notifications in Australia and Australia's HIV cascade to the end of 2023. A) Annual notifications data. B) HIV cascade at end of 2023 including estimates for retained in care (note lower range of Diagnosed and Retained in care adjusted to equal lower range of number Receiving treatment). Horizontal lines show the UNAIDS 95-95-95 targets. C) Estimate numbers and percentages of people living with HIV in each step of the HIV cascade over 2004-2023.  "
 
 # Cascade trends ---------------------------------------------------------------
-legend <- get_legend(segResults[["infected"]]$plotBest)
+legend <- GetLegend(segResults[["infected"]]$plotBest)
 
 cascadeTrendPlot <- ggdraw() + 
   draw_plot(legend, 0, 0.95, 1, 0.05) + 
@@ -1883,7 +1885,7 @@ cascadeTrendPlot <- ggdraw() +
 captions[["stepTrends"]] <- "Estimates and trends for each HIV cascade step over 2004-2023. Red lines and shading show the estimated values and range from the HIV cascade calculations. Black lines show the piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points. "
 
 # Cascade gaps -----------------------------------------------------------------
-legend <- get_legend(segResults[["undiagnosed"]]$plotBest)
+legend <- GetLegend(segResults[["undiagnosed"]]$plotBest)
 
 gapsFullPlot <- ggdraw() +
   draw_plot(legend, 0, 0.95, 1, 0.05) + 
@@ -1901,7 +1903,7 @@ gapsFullPlot <- ggdraw() +
 captions[["cascadeGaps"]] <- "Trends in the estimated gaps of the HIV cascade over 2004-2023. Red lines show the estimated values from the HIV cascade calculations. Black lines show the best fitting piecewise negative binomial model predictions. Vertical dashed lines show the location of detected change points."
 
 # Remaining cascade indicators --------------------------------------------------- 
-legend <- get_legend(segResults[["diagnoses_include"]]$plotBest)
+legend <- GetLegend(segResults[["diagnoses_include"]]$plotBest)
 
 indicatorsFullPlot <-  ggdraw() +
   draw_plot(legend, 0, 0.95, 1, 0.05) +
@@ -1926,7 +1928,7 @@ if (savePlots) {
       toString(startYear), "-",
       toString(resultsYear),
       saveFormat, sep = "")),
-    plot = cascadeFullPlot, width = 22, height = 16, units = "cm")
+    plot = cascadeFullPlot, width = 25, height = 18, units = "cm")
   
   ggsave(file.path(figFolder,
     paste("HIVtrends_Full_Plot_",
@@ -2506,7 +2508,7 @@ if (runtests) {
   # Figure caption
   figs("trendSensitivity", "Trends in the number diagnosed not on ART over 2004-2016 under varying assumptions for the number on ART.The red discs show the best estimates for the cascade. The black lines show the estimates from the overall fitted Poisson models. The blue lines show the estimates from the segmented fitted Poisson models.")
   
-  legend <- get_legend(segTestPlot[[1]])
+  legend <- GetLegend(segTestPlot[[1]])
   
   # Add the original plot to the combination plot
   combinedTest <- grid.arrange(legend, 
@@ -2804,7 +2806,7 @@ if (runtests) {
   }
   
   # Create combined plot
-  legend <- get_legend(fitPlots[[1]])
+  legend <- GetLegend(fitPlots[[1]])
   
   stagesDiffsPlot3 <- ggdraw() +
     draw_plot(legend, 0, 0.93, 1, 0.07) + 
@@ -2974,7 +2976,7 @@ if (runtests) {
   }
   
   # Create combined plot
-  legend <- get_legend(bootstrapPlots[[1]])
+  legend <- GetLegend(bootstrapPlots[[1]])
   
   combinedBootsPlot <- ggdraw() +
     draw_plot(legend, 0, 0.93, 1, 0.07) + 
