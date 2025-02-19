@@ -47,7 +47,7 @@ source(file.path(HIVcode, "TidyNotifications.R"))
 resultsYear <- 2023  # year of cascade we will plot
 minYear <- 20      # how long ago do we plot things
 startYear <- resultsYear - minYear + 1 
-savePlots <- FALSE
+savePlots <- TRUE
 years <- startYear:resultsYear
 expModelType <- "nb" # "nb" = negative binomial (default) or "poisson"
 
@@ -66,7 +66,7 @@ allIndicators <- c("infected", "pldhiv", "retained", "numART", "suppressed",
   "diagnoses_include", "diagnoses_os", "infections", "propdiagnosed", "proptreated",
   "propsuppressed", "propoverall", "ydf", "cdr", "ipr", "imr")
 
-indicatorNames <- c("infected" = "Living with HIV",
+indicatorNames <- c("infected" = "People living with HIV",
   "pldhiv" = "Diagnosed",
   "retained" = "Retained in care",
   "numART" = "Receiving ART",
@@ -99,7 +99,7 @@ indicatorNamesNeat <- c("infected" = "Number living with HIV",
   "diagnoses_include" = "Annual notifications\n(including OS diagnoses)",
   "diagnoses_os" = "Annual notifications\n(previous diagnosis OS)", 
   "infections" = "Annual new infections\n ",
-  "propdiagnosed" = "Percentage of\nPLHIV diagnosed", 
+  "propdiagnosed" = "Percentage of people\nliving with HIV diagnosed", 
   "proptreated" =  "Percentage diagnosed\non ART",
   "propsuppressed" =  "Percentage on\nART suppressed",
   "propoverall" = "Percentage overall\nsuppressed",
@@ -731,7 +731,7 @@ trendCascadeProp <- bind_rows(propTrends, propTrendsExp)
 
 # Save plots --------------------------------------------------------------
 # Create a group 90-90-90 plot with trend lines
-legend <- GetLegend(diagsPropPlot)
+# legend <- GetLegend(diagsPropPlot)
 
 # Update group plot
 combinedPropPlot <- plot_grid(
@@ -920,7 +920,7 @@ propTrendsIndicators <- tibble(stage = c("ydf", "cdr", "ipr", "imr"),
 trendCascadeProp <- bind_rows(trendCascadeProp, propTrendsIndicators)
 
 # Create a group indicator plot ------------------------------------------------
-legend <- GetLegend(trendPlots$diagnoses_include)
+# legend <- GetLegend(trendPlots$diagnoses_include)
 
 # Update group plot
 combinedIndicatorPlot <- plot_grid(
@@ -1843,9 +1843,9 @@ stackPlotBase <- ggplot(data = stackResults, aes(x = year, y = value,
   theme(legend.text = element_text(size = 8))
 
 stackPlotNum <- stackPlotBase + geom_area(stat="identity") + 
-  ylab("Number of PLHIV") + scale_y_continuous(labels = comma)
+  ylab("Number living with HIV") + scale_y_continuous(labels = comma)
 stackPlotProp <- stackPlotBase + geom_area(stat="identity", 
-  position= "fill") + ylab("Percentage of PLHIV") +
+  position= "fill") + ylab("Percentage living with HIV") +
   scale_y_continuous(labels = percent)
 
 # Create a combined plot
@@ -1867,7 +1867,7 @@ cascadeFullPlot <- ggdraw() +
     size = 12)
 
 # Figure captions
-captions[["cascadeFull"]] <- "HIV notifications in Australia and Australia's HIV cascade to the end of 2023. A) Annual notifications data. B) HIV cascade at end of 2023 including estimates for retained in care (note lower range of Diagnosed and Retained in care adjusted to equal lower range of number Receiving treatment). Horizontal lines show the UNAIDS 95-95-95 targets. C) Estimate numbers and percentages of people living with HIV in each step of the HIV cascade over 2004-2023.  "
+captions[["cascadeFull"]] <- "HIV notifications in Australia and Australia's HIV cascade to the end of 2023. A) Annual notifications data. B) HIV cascade at end of 2023 including estimates for retained in care (note lower range of Diagnosed and Retained in care adjusted to equal lower range of number Receiving treatment). Horizontal lines show the UNAIDS 95-95-95 targets. C) Estimate numbers and percentages of people with HIV in each step of the HIV cascade over 2004-2023.  "
 
 # Cascade trends ---------------------------------------------------------------
 legend <- GetLegend(segResults[["infected"]]$plotBest)

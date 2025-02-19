@@ -273,7 +273,7 @@ PlotCascade <- function(cascade, year = NULL, ymax = NULL,
   if (ranges) {
     plotBar <- plotBar + 
       geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1,
-        color = "black", size = 1.1) 
+        color = "black", linewidth = 1.1) 
   }
   
   # Add percents
