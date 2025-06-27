@@ -34,10 +34,10 @@ LoadLibrary(readxl)
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2023
+analysisYear <- 2024
 saveResults <- TRUE 
-projectFolder <-  "ASR_2024" #"ASR_2024"
-                                     # "HIV_Cascade_Paper"
+projectFolder <-  "ASR_2025" #"ASR_2025"
+                             # "HIV_Cascade_Paper" 
 cascadeFlag <- "All" # minus year
 ecdcResults <- "exposure"
 ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky 

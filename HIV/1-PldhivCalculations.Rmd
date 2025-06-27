@@ -51,13 +51,13 @@ specified project folder and have a cascade file handle.
 
 ```{r Cascade and script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2023
+analysisYear <- 2024
 saveResults <- TRUE
 
 # Set HIV cascade parameters----------------------------------
 
 # Overarching project folder where all cascades will be stored
-projectOutput <- "NSW_Cascade_2024" # "ASR_2024" for latest ASR
+projectOutput <- "ASR_2025" # "ASR_2025" for latest ASR
                             # "HIV_Cascade_Paper"
 
 # Project CSV file for specifying cascade parameters - NULL = manual 
@@ -65,7 +65,7 @@ projectOutput <- "NSW_Cascade_2024" # "ASR_2024" for latest ASR
 # which need to exist
 paramsFile <- "ProjectParameters.csv"
 
-specificParams <- 1
+specificParams <- NULL
                        # Run specific rows of parameters in parameters file
                        # default = NULL; run all 
                        # Otherwise specify row numbers (be careful with header row). 
