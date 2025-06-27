@@ -1913,32 +1913,32 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       
       # Save results
       if (doAge) {
-        write_csv(rownames_to_column(as.data.frame(pldhivAllFuture), 
+        write_excel_csv(rownames_to_column(as.data.frame(pldhivAllFuture), 
           var = "agebin"), paste0(saveStringDetails, projectName,
             ".csv")) 
-        write_csv(rownames_to_column(as.data.frame(pldhivAllMinFuture), 
+        write_excel_csv(rownames_to_column(as.data.frame(pldhivAllMinFuture), 
           var = "agebin"), paste0(saveStringDetails, projectName,
             "-min.csv"))
-        write_csv(rownames_to_column(as.data.frame(pldhivAllMaxFuture), 
+        write_excel_csv(rownames_to_column(as.data.frame(pldhivAllMaxFuture), 
           var = "agebin"), paste0(saveStringDetails, projectName,
             "-max.csv"))
         
-        write_csv(pldhivOverallFuture, paste0(saveStringDetails, 
+        write_excel_csv(pldhivOverallFuture, paste0(saveStringDetails, 
           projectName, "_overall.csv"))
-        write_csv(pldhivOverallMinFuture, paste0(saveStringDetails, 
+        write_excel_csv(pldhivOverallMinFuture, paste0(saveStringDetails, 
           projectName, "_overall-min.csv"))
-        write_csv(pldhivOverallMaxFuture, paste0(saveStringDetails, 
+        write_excel_csv(pldhivOverallMaxFuture, paste0(saveStringDetails, 
           projectName, "_overall-max.csv"))
         
-        write_csv(hivDiagnosedFuture, paste0(saveStringPldhiv, "-",
+        write_excel_csv(hivDiagnosedFuture, paste0(saveStringPldhiv, "-",
           projectName, ".csv"))
       } else {
-        write_csv(pldhivAllFuture, paste0(saveStringDetails, projectName,
+        write_excel_csv(pldhivAllFuture, paste0(saveStringDetails, projectName,
           ".csv"))
-        write_csv(pldhivAllMinFuture, paste0(saveStringDetails, projectName,
-          "-max.csv"))
-        write_csv(pldhivAllMaxFuture, paste0(saveStringDetails, projectName,
-          "-min.csv"))
+        write_excel_csv(pldhivAllMinFuture, paste0(saveStringDetails, 
+          projectName, "-max.csv"))
+        write_excel_csv(pldhivAllMaxFuture, paste0(saveStringDetails, 
+          projectName, "-min.csv"))
       }
     }
   }
