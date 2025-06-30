@@ -84,18 +84,17 @@ hivData <-
 if (sum(is.na(hivData$yeardiagnosis)) > 0) {
   # This should be zero. 2024 has one notification with missing year
   warning("Some notifications have missing year of diagnosis")
-  print(sum(is.na(hivData$yeardiagnosis)) > 0)
+  print(sum(is.na(hivData$yeardiagnosis)))
   
   # Manually change the few missing or spit out error
   if (analysisYear == 2024) {
-  # For 2024 one notification has missing yeardiagnosis 
-  # Set year diagnosis to 2024 manually
-  hivData$yeardiagnsis[is.na(hivData$yeardiagnosis)] <- 2024
+    # For 2024 one notification has missing yeardiagnosis 
+    # Set year diagnosis to 2024 manually
+    hivData$yeardiagnosis[is.na(hivData$yeardiagnosis)] <- 2024
   } else {
     stop("Notifications with missing year of diagnosis") 
   }
 }
-
 
 # Quick checks that we are not doing analysis outside of the data or
 # have the wrong notifications file
@@ -109,7 +108,7 @@ if (min(hivData$yeardiagnosis) > startYear) {
 
 # Setup our working data frame
 hivSet <- filter(hivData, yeardiagnosis <= analysisYear) 
-  
+
 
 # Start storing things
 hivBaseRates <- data.frame(year = allYears) 
@@ -405,6 +404,11 @@ absMigration <- read.csv(file.path(mainDataFolder,
   paste0("ABS_migration_clean-", analysisYear, ".csv")), 
   as.is = 1)
 
+if (analysisYear >= 2023) {
+  # Issues with lastest data
+  warning("Don't have updated data for 2023-2024. Will assume same values as 2022.") 
+}
+
 if (analysisYear >= 2022) {
   # Will use overall NOM departures and Australian citizen departures to 
   # estimate the migration rate
@@ -460,7 +464,8 @@ if (analysisYear >= 2022) {
       ) |>
       filter(year >= 2004)
     
-    plotMrate <- ggplot(data = testMrate, aes(x = year, y = departures, colour = type)) +
+    plotMrate <- ggplot(data = testMrate, 
+      aes(x = year, y = departures, colour = type)) +
       geom_line() + 
       expand_limits(y = 0) +
       scale_colour_manual("",
@@ -469,7 +474,7 @@ if (analysisYear >= 2022) {
         labels = c("Permanent departures", "Australian citizen NOM departures")) +
       xlab("Year") + ylab("Departures") +
       PlotOptions()
-
+    
     plotMdata <- ggplot(data = absDeparts, aes(x = year)) +
       geom_line(aes(y=permanent, colour = "permanent")) + 
       geom_line(aes(y=resident, colour = "resident")) +
@@ -501,17 +506,17 @@ if (analysisYear >= 2022) {
   }
   
   # Generate final mrate - the post-covid data is missing for the 
-  # year 2023 assume same data as for 2022 (pre-covid)
+  # year 2023-2024 assume same data as for 2022 (pre-covid)
   absDepartsMerged <- bind_rows(mrateAll, mrateAus |> filter(year >= 2017))
   absDepartsMerged <- bind_rows(
     absDepartsMerged, 
     tibble(
-      year = 2023,
+      year = 2023:2024,
       departures = filter(absDepartsMerged, year == 2022)$departures,
       migrate = filter(absDepartsMerged, year == 2022)$migrate
     )
   )
-
+  
   mrate <- absDepartsMerged$migrate
   
 } else if (analysisYear %in%  2017:2021) {
@@ -951,12 +956,12 @@ for (ii in 1:nrow(hivParams)) {
 }
 
 # Load AHOD data to calculate mortality and do some simple 
-# TODO: TEMPORARY AHOD DATA USED FOR 2022 AS DATA NOT YET AVAILABLE - 27 June 2022
 ahodData <- read.csv(file.path(dataFolder, 
   paste0("ahod", analysisYear, ".csv")))
 
-# Load gender deathrate ratios - NEED TO UPDATE THE ESTIMATES IN THIS FILE EACH
+# TODO: Load gender deathrate ratios - NEED TO UPDATE THE ESTIMATES IN THIS FILE EACH
 # YEAR
+warning("Make sure you update the sexDrates regression to the analysisYear in the Excel Spreadsheet")
 sexDrates <- read_excel(file.path(dataFolder,
   "HIV_Gender_Deathrates.xlsx"),
   sheet = 2) %>%
@@ -1235,7 +1240,7 @@ hivAdjustments$drate_qld_upper <- hivAdjustments$drate_qld_upper /
 # This chunk calculates interstate migration rates. At this stage just 
 # calculate the best fit. Don't worry about upper and lower bounds.
 
-# First estimate erp for each state
+# First estimate ERP for each state
 states <- c("nsw", "vic", "qld", "nt", "wa", "sa", "tas", "act", "all")
 
 stateErp <- data.frame(year = allYears)
