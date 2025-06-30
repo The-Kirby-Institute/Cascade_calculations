@@ -47,7 +47,7 @@ source(file.path(Rcode, "FormatData.R"))
 
 
 # Script options
-dataYear <- 2023
+dataYear <- 2024
 
 runImpute <- TRUE
 saveImpute <- TRUE # Save as ImputeSets.Rd in setsPath directory. 
@@ -110,7 +110,7 @@ regionCodes <- read_csv(file.path(dataFolder, "postcodeRegionCodes.csv"),
 
 # Tidy up notifications for calculations
 hivData <- TidyNotifications(origHivData, dataYear, countryCodes,
-  regionCodes) %>% filter(yearhiv <= dataYear)
+  regionCodes) |> filter(yeardiagnosis <= dataYear) 
 
 # Data checks-------------------------------------------------------------
 
@@ -282,7 +282,7 @@ if (length(waErr) != 0) cascadeData[waErr, ]$postcode <- NA
 imputeData <- cascadeData %>%
   select(impVars) # Drop postcode later
 otherData <- cascadeData %>%
-  select(otherVars) %>%
+  select(all_of(otherVars)) %>%
   rownames_to_column(var = "notification") %>%
   mutate(notification = as.integer(notification))
 
