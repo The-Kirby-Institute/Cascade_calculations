@@ -45,7 +45,7 @@ source(file.path(HIVcode, "GetMigrate.R"))
 
 ```{r Script parameters}
 # Chunk to enter all the script parameters we will use
-analysisYear <- 2023
+analysisYear <- 2024
 startYear <- 1980 # First year in HIV registry is 1980
 
 allYears <- startYear:analysisYear 
@@ -80,6 +80,22 @@ hivData <-
   TidyNotifications(
     rawNotifications, analysisYear, countryCodes, regionCodes
   ) 
+
+if (sum(is.na(hivData$yeardiagnosis)) > 0) {
+  # This should be zero. 2024 has one notification with missing year
+  warning("Some notifications have missing year of diagnosis")
+  print(sum(is.na(hivData$yeardiagnosis)) > 0)
+  
+  # Manually change the few missing or spit out error
+  if (analysisYear == 2024) {
+  # For 2024 one notification has missing yeardiagnosis 
+  # Set year diagnosis to 2024 manually
+  hivData$yeardiagnsis[is.na(hivData$yeardiagnosis)] <- 2024
+  } else {
+    stop("Notifications with missing year of diagnosis") 
+  }
+}
+
 
 # Quick checks that we are not doing analysis outside of the data or
 # have the wrong notifications file
