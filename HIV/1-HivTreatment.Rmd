@@ -28,7 +28,7 @@ LoadLibrary(tidyverse)
 LoadLibrary(readxl)
 
 # Primary script parameters
-analysisYear <- 2023
+analysisYear <- 2024
 replaceValues <- TRUE
 saveResults <- TRUE
 

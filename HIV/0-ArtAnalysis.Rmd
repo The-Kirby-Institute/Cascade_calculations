@@ -64,7 +64,7 @@ LoadLibrary(captioner)
 
 # Script parameters
 ProspectionDataYear <- 2019 # Lastest Propsection data (last year)
-PbsDataYear <- 2023  # Year of latest PBS data  
+PbsDataYear <- 2024  # Year of latest PBS data  
 analysisYear <- 2020 # If want to do fits for data prior to dataYear
                      # Generally only need to do fits up to 2020 but 
                      # data can retrospectively change  
