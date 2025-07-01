@@ -54,7 +54,9 @@ specified project folder and have a cascade file handle.
 analysisYear <- 2024
 saveResults <- TRUE
 
-# Set HIV cascade parameters----------------------------------
+calibration <- TRUE
+
+# Set HIV cascade parameters----------------------------------------------------
 
 # Overarching project folder where all cascades will be stored
 projectOutput <- "ASR_2025" # "ASR_2025" for latest ASR
@@ -65,12 +67,12 @@ projectOutput <- "ASR_2025" # "ASR_2025" for latest ASR
 # which need to exist
 paramsFile <- "ProjectParameters.csv"
 
-specificParams <- NULL
+specificParams <- 1
                        # Run specific rows of parameters in parameters file
                        # default = NULL; run all 
                        # Otherwise specify row numbers (be careful with header row). 
 
-# Cascade options----------------------------------------------------------
+# Cascade options---------------------------------------------------------------
 # The following variables specify the characteristics and hence the 
 # notifications that will be included in the cascade. For some variables a 
 # combination of categories can used by specifying a vector. Other 
@@ -120,14 +122,14 @@ if (is.null(paramsFile)) {
   # Sub-Saharan Africa, Oceania, South American, Other cob, etc 
   # (combination)
   
-  # Imputation options-------------------------------------------------------
+  # Imputation options----------------------------------------------------------
   # These variables specify if the imputed notifications sets should be used 
   # and how many sets to use.
   # 
   useImputed <- rep(TRUE, numCascades)
   nImputedSets <- rep(20, numCascades)  # Default is 20, the maximum
   
-  # Script options--------------------------------------------------------
+  # Script options--------------------------------------------------------------
   # The following variables specify the various calculation options. 
   # When calculating multiple cascades these are entered as a vector. All
   # vectors need to be the same length (equal to numCascades).
@@ -202,7 +204,7 @@ if (is.null(paramsFile)) {
   
   # Imputation options
   useImputed <- cascadeParameters$useImputed # Default: TRUE
-  nImputedSets <- cascadeParameters$nImputedSets # Default: 10
+  nImputedSets <- cascadeParameters$nImputedSets # Default: 20
   
   # Script options
   excludeAborig <- cascadeParameters$excludeAborig # Default: FALSE
@@ -233,6 +235,21 @@ if (is.null(paramsFile)) {
   projectDecrease <- cascadeParameters$projectDecrease # Default: 0
     
 } 
+# Calibration option------------------------------------------------------------
+if (calibration) {
+ 
+  # Specify year of linkage for calibration
+  linkageYear <- 2024
+
+   # Change settings if this is a calibration run
+  if (length(specificParams) > 1) {
+   stop("Calibration should be for one set of parameters at a time.")
+  }
+  
+  ecdcData <- FALSE 
+  nImputedSets <- 1 # Try one first but need to do full set to validate calibration
+  
+}
 
 ```
 
@@ -496,3 +513,102 @@ for (ii in runCascades) {
 }
 
 ```
+
+```{r Generate calibration plot}
+# Basic calibration plot to do a quick calibration needs to be verified with the
+# full 2-HivCascadeLinkage.Rmd
+
+if (calibration) {
+
+  LoadLibrary(scales)
+  LoadLibrary(cowplot)
+  source(file.path(Rcode, "PlotOptions.R"))
+
+  # Cascade name conversion to linkage and AHOD populations
+  cascadePops <- read_csv(file.path(outputFolder, projectOutput, 
+    paste0("cascadeNames-", analysisYear, ".csv")))
+  
+  cascadeCalib <- strsplit(cascadeName[specificParams],"-")[[1]][1] 
+  
+  # Set-up PBS data
+  linkagePop <- cascadePops |> 
+    filter(cascade == cascadeCalib) |>
+    pull(linkage_pop)
+  
+  artpop <- tolower(cascadeCalib)
+  
+  if (artpop %in% c("all", "act", "nsw", "nt", "qld", "sa", "tas", "vic", "wa", "female", "male")) {
+    pbsPopulation <- TRUE
+  } else {
+    stop("Can't calibrate without PBS data.")
+  }
+  
+  # Plot specifications
+  startYear <- 2015
+  endYear <- 2024  
+  
+  # Set-up data files ----------------------------------------------------------
+
+  linkageDataFile <- file.path(outputFolder,
+    paste0("HIV_Linkage_Broad_high_1-", linkageYear, ".csv"))
+  
+  paramsFile <- file.path(outputFolder, projectOutput, 
+    paste0(cascadeCalib, "-", analysisYear), "PldhivParameters.csv")
+  
+  artFile <- file.path(outputFolder,
+    paste0("HIVtreatment-", analysisYear, "-PBS-Ineligible.csv"))
+  
+  # Read in files ----------------------------------------------------------------
+  
+  linkageRaw <- read_csv(linkageDataFile)
+  
+  artRaw <- read_csv(artFile)
+  
+  params <- read_csv(paramsFile)
+  
+  # Clean data -------------------------------------------------------------------
+  
+  data <-  linkageRaw |>
+    filter(population == linkagePop, year  %in% startYear:endYear) |>
+    dplyr::select(year, retained, treated) 
+  
+  art <- artRaw |> 
+    filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
+    dplyr::select(year, value)
+  
+  pldhiv <- pldhivCalculations[[1]]$pldhivAll  |> 
+    filter(year %in% startYear:endYear) |>
+    dplyr::select(year, pldhiv)
+  
+  # Calculate cascade steps and gaps
+  diagnosed <- pldhiv |> pull(pldhiv)
+  treated <- art$value
+  
+  cascadeGaps <- tibble(year = startYear:endYear, 
+    art_estimate = treated / diagnosed) |>
+    left_join(data |> select(-retained), by = "year") |> # merge in data
+    pivot_longer(2:3) 
+  
+  # Produce calibration plot
+  treatedPlot <- ggplot(data = cascadeGaps,
+    aes(x = year, y = value, colour = name)) +
+    geom_line() +
+    scale_y_continuous(labels = percent) +
+    scale_colour_manual(name = "",
+      values = c("blue", "red"),
+      breaks = c("treated", "art_estimate"),
+      limits = c("treated", "art_estimate"),
+      labels = c("Linkage ART percentage", "Cascade ART percentage")) +
+    expand_limits(y = c(0.7, 1)) +
+    xlab("Year") + ylab("Percent on ART") +
+    PlotOptions() 
+  
+  # print out adjustments for record
+  print(adjustmentStart[1])
+  print(adjustmentStop[1])
+  
+  treatedPlot
+}
+
+```
+
