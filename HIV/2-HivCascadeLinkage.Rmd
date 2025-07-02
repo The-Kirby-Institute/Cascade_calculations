@@ -21,15 +21,16 @@ LoadLibrary(tidyverse)
 options(dplyr.summarise.inform = FALSE) 
 LoadLibrary(readxl)
 LoadLibrary(scales)
+LoadLibrary(cowplot)
 
 ```
 
 ```{r User specified parameters}
 
-linkageYear <- 2023
-cascadeYear <- 2023
+linkageYear <- 2024
+cascadeYear <- 2024
 
-cascadeProject <- "ASR_2024"
+cascadeProject <- "ASR_2025"
 cascadeName <- "All"
 
 # Cascade name conversion to linkage and AHOD populations
@@ -43,6 +44,8 @@ linkagePop <- cascadePops |>
 #linkagePop <- "all"
 
 artpop <- tolower(cascadeName)
+artpop <- "all"
+
 
 if (artpop %in% c("all", "act", "nsw", "nt", "qld", "sa", "tas", "vic", "wa", "female", "male")) {
   pbsPopulation <- TRUE
@@ -51,10 +54,10 @@ if (artpop %in% c("all", "act", "nsw", "nt", "qld", "sa", "tas", "vic", "wa", "f
 }
 
 startYear <- 2015
-endYear <- 2020
+endYear <- 2024
 
-savePlots <- TRUE
-extraPlots <- TRUE
+savePlots <- FALSE
+extraPlots <- FALSE
 extraPlots <- ifelse(pbsPopulation, extraPlots, FALSE)
 
 ```
@@ -168,10 +171,10 @@ if (pbsPopulation) {
     scale_colour_manual(name = "",
       values = c("blue", "red"),
       breaks = c("retained", "retained_estimate"),
-      labels = c("Linkage retained percentage", "Cascade estimates")) + 
+      labels = c("Linkage retained percentage", "Cascade retained percentage")) + 
     geom_pointrange(aes(x = 2013, y = 0.95, ymin = 0.914, ymax = 0.988), colour = "black") + 
     geom_pointrange(aes(x = 2019, y = 0.9624, ymin = 0.93, ymax = 0.99), colour = "black") + 
-    expand_limits(y = c(0.9, 1)) +
+    expand_limits(y = c(0.7, 1)) +
     xlab("Year") + ylab("Percent retained") +  
     PlotOptions()
   
@@ -185,8 +188,8 @@ if (pbsPopulation) {
       values = c("blue", "red"),
       breaks = c("treated", "art_estimate"),
       limits = c("treated", "art_estimate"),
-      labels = c("Linkage ART\nPercentage", "Cascade ART\nPercentage")) +
-    expand_limits(y = c(0.8, 1)) +
+      labels = c("Linkage ART percentage", "Cascade ART percentage")) +
+    expand_limits(y = c(0.7, 1)) +
     xlab("Year") + ylab("Percent on ART") +
     PlotOptions() 
   
@@ -196,10 +199,33 @@ if (pbsPopulation) {
     geom_text(x = 2015, y = 0.975, color = "black",
       label = paste0("Emmigration multiplier 1 = ", params$adjustmentStart),
       hjust = 0, size = 4) +
-    geom_text(x = 2015, y = 0.96, color = "black",
+    geom_text(x = 2015, y = 0.955, color = "black",
       label = paste0("Emmigration multiplier 2 = ", params$adjustmentStop),
       hjust = 0, size = 4)
   
+  # Produce combined plot for paper
+  if (cascadeProject == "HIV_Cascade_Paper") {
+
+   legend <- GetLegend(
+     treatedPlot + scale_colour_manual(name = "",
+      values = c("blue", "red"),
+      breaks = c("treated", "art_estimate"),
+      limits = c("treated", "art_estimate"),
+      labels = c("HIV linkage estimates", "Cascade estimates"))
+   )
+   
+   combinedPlot <- ggdraw() + 
+     draw_plot(legend, 0, 0.95, 1, 0.05) + 
+     draw_plot(
+       plot_grid(
+         treatedPlot + theme(legend.position = "none"),
+         retainedPlot + theme(legend.position = "none"),
+         labels = c("A", "B"), 
+         ncol = 1, nrow = 2, align = "v"),
+       0, 0, 1, 0.95
+     )
+  }
+
 }
 ```
 
@@ -232,6 +258,12 @@ if (savePlots) {
       paste0("Linkage_ART_Comparison-", linkageYear, "-Data"),
       treatedPlot, width = 12)
   }
+  
+   if (cascadeProject == "HIV_Cascade_Paper") {
+     SaveFigure(figureFolder, 
+      paste0("Linkage_Combined_Comparison-", linkageYear, "-Data"),
+      combinedPlot, width = 12, height = 16)
+   } 
 }
 
 ```
