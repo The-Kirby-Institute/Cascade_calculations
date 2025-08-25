@@ -65,7 +65,7 @@ projectOutput <- "ASR_2025" # "ASR_2025" for latest ASR
 # which need to exist
 paramsFile <- "ProjectParameters.csv"
 
-specificParams <- 1
+specificParams <- NULL
 # Run specific rows of parameters in parameters file
 # default = NULL; run all 
 # Otherwise specify row numbers (be careful with header row). 
@@ -248,10 +248,10 @@ if (calibration) {
   if (length(specificParams) > 1) {
     stop("Calibration should be for one set of parameters at a time.")
   }
-  
-  ecdcData <- FALSE 
-  ecdcExcludeRun <- FALSE
-  nImputedSets <- 1 # Try one first but need to do full set to validate calibration
+      
+  ecdcData[specificParams] <- FALSE 
+  ecdcExcludeRun[specificParams] <- FALSE
+  nImputedSets[specificParams] <- 1 # Try one first but need to do full set to validate calibration
   
 }
 
@@ -485,6 +485,10 @@ for (ii in runCascades) {
 
   if (calibration) {
     print(paste(cascadeName[ii], "- Conducting calibration run"))
+    
+    # ecdcData[ii] <- FALSE 
+    # ecdcExcludeRun[ii] <- FALSE
+
   } else {
     print(cascadeName[ii])
   }
@@ -611,7 +615,7 @@ if (calibration) {
     filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
     dplyr::select(year, value)
   
-  pldhiv <- pldhivCalculations[[1]]$pldhivAll  |> 
+  pldhiv <- pldhivCalculations[[specificParams]]$pldhivAll  |> 
     filter(year %in% startYear:endYear) |>
     dplyr::select(year, pldhiv)
   
@@ -639,8 +643,8 @@ if (calibration) {
     PlotOptions() 
   
   # print out adjustments for record
-  print(adjustmentStart[1])
-  print(adjustmentStop[1])
+  print(adjustmentStart[specificParams])
+  print(adjustmentStop[specificParams])
   
   treatedPlot
 }

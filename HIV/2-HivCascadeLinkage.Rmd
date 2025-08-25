@@ -33,19 +33,21 @@ cascadeYear <- 2024
 cascadeProject <- "ASR_2025"
 cascadeName <- "All"
 
+# ASR_2025 c("All", "Male", "Female", "Indigenous", "AusNonIndigenous", 
+  # "NonIndigenous", "MSM", "MSM_AUS", "MSM_OS", "Hetero", "Pwid", "SSA", "SEA", 
+  # "SCA"
+
 # Cascade name conversion to linkage and AHOD populations
 cascadePops <- read_csv(file.path(cascadeFolder, cascadeProject, 
-    paste0("cascadeNames-", cascadeYear, ".csv")))
+  paste0("cascadeNames-", cascadeYear, ".csv")))
 
 linkagePop <- cascadePops |> 
-    filter(cascade == cascadeName) |>
-    pull(linkage_pop)
+  filter(cascade == cascadeName) |>
+  pull(linkage_pop)
 
-#linkagePop <- "all"
-
-artpop <- tolower(cascadeName)
-artpop <- "all"
-
+artpop <- cascadePops |> 
+  filter(cascade == cascadeName) |>
+  pull(artpop)
 
 if (artpop %in% c("all", "act", "nsw", "nt", "qld", "sa", "tas", "vic", "wa", "female", "male")) {
   pbsPopulation <- TRUE
@@ -53,10 +55,11 @@ if (artpop %in% c("all", "act", "nsw", "nt", "qld", "sa", "tas", "vic", "wa", "f
   pbsPopulation <- FALSE
 }
 
+# Plot specifications 
 startYear <- 2015
-endYear <- 2024
+endYear <- cascadeYear
 
-savePlots <- FALSE
+savePlots <- TRUE
 extraPlots <- FALSE
 extraPlots <- ifelse(pbsPopulation, extraPlots, FALSE)
 
@@ -105,7 +108,7 @@ if (pbsPopulation) {
   art <- artRaw |> 
     filter(year %in% startYear:endYear, population == artpop, stage == "numART") |>
     dplyr::select(year, value)
-
+  
 } 
 
 ```
@@ -114,26 +117,72 @@ if (pbsPopulation) {
 
 if (!pbsPopulation) {
   
+  # Only plot the linkage data and compare to the overall population. 
   dataAll <-  linkageRaw |>
-  filter(population == "all", year  %in% startYear:endYear) |>
-  dplyr::select(year, retained, treated) 
+    filter(population == "all", year  %in% startYear:endYear) |>
+    dplyr::select(year, retained, treated) 
   
-  data <- data |> mutate(all = dataAll$treated)
+  data <- data |> mutate(all_retained = dataAll$retained,
+    all_treated = dataAll$treated)
+  
+  # Plot to the end of the linkage data
+  endYear <- max(data$year)
+  
+  retainedPlot <- ggplot(data = data,
+    aes(x = year, y = retained)) +
+    geom_line(aes(colour = "retained")) +
+    geom_line(aes(y = all_retained, colour = "all_retained")) +
+    scale_y_continuous(labels = percent) +
+    scale_x_continuous(
+      breaks = 2015:endYear, 
+      labels = EveryNth(2015:endYear, 3, inverse = TRUE)) +
+    scale_colour_manual(name = "Linkage retained percentage",
+      values = c("blue", "red"),
+      breaks = c("retained", "all_retained"),
+      labels = c("Sub-population", "Overall")) +
+    expand_limits(y = c(0.8, 1), x = c(2015, endYear)) +
+    xlab("Year") + ylab("Percent retained") +
+    PlotOptions() 
+  
+  retainedPlot
   
   treatedPlot <- ggplot(data = data,
     aes(x = year, y = treated)) +
     geom_line(aes(colour = "treated")) +
-    geom_line(aes(y = all, colour = "all")) +
+    geom_line(aes(y = all_treated, colour = "all_treated")) +
     scale_y_continuous(labels = percent) +
+    scale_x_continuous(
+      breaks = 2015:endYear, 
+      labels = EveryNth(2015:endYear, 3, inverse = TRUE)) +
     scale_colour_manual(name = "Linkage ART percentage",
       values = c("blue", "red"),
-      breaks = c("treated", "all"),
-      labels = c("Population", "All")) +
-    expand_limits(y = c(0.8, 1)) +
+      breaks = c("treated", "all_treated"),
+      labels = c("Sub-population", "Overall")) +
+    expand_limits(y = c(0.8, 1), x = c(2015, endYear)) +
     xlab("Year") + ylab("Percent on ART") +
     PlotOptions() 
   
   treatedPlot
+  
+  legend <- GetLegend(
+    treatedPlot + scale_colour_manual(name = "",
+      values = c("blue", "red"),
+      breaks = c("treated", "all_treated"),
+      limits = c("treated", "all_treated"),
+      labels = c("Sub-population estimates", "Overall estimates"))
+  )
+  
+  combinedPlot <- ggdraw() + 
+    draw_plot(legend, 0, 0.95, 1, 0.05) + 
+    draw_plot(
+      plot_grid(
+        retainedPlot + theme(legend.position = "none"),
+        treatedPlot + theme(legend.position = "none"),
+        ncol = 2, nrow = 1, align = "h"),
+      0, 0, 1, 0.95
+    )
+  
+  combinedPlot
   
 }
 
@@ -168,13 +217,17 @@ if (pbsPopulation) {
     aes(x = year, y = value, colour = name)) +
     geom_line() +
     scale_y_continuous(labels = percent) +
+    scale_x_continuous(breaks = 2012:2024, 
+      labels = EveryNth(2012:2024, 3, inverse = TRUE)) +
     scale_colour_manual(name = "",
       values = c("blue", "red"),
       breaks = c("retained", "retained_estimate"),
       labels = c("Linkage retained percentage", "Cascade retained percentage")) + 
-    geom_pointrange(aes(x = 2013, y = 0.95, ymin = 0.914, ymax = 0.988), colour = "black") + 
-    geom_pointrange(aes(x = 2019, y = 0.9624, ymin = 0.93, ymax = 0.99), colour = "black") + 
-    expand_limits(y = c(0.7, 1)) +
+    geom_pointrange(aes(x = 2013, y = 0.95, ymin = 0.914, ymax = 0.988), 
+      colour = "black") + 
+    geom_pointrange(aes(x = 2019, y = 0.9624, ymin = 0.93, ymax = 0.99), 
+      colour = "black") + 
+    expand_limits(y = c(0.8, 1), x = c(2012, 2024)) +
     xlab("Year") + ylab("Percent retained") +  
     PlotOptions()
   
@@ -184,12 +237,14 @@ if (pbsPopulation) {
     aes(x = year, y = value, colour = name)) +
     geom_line() +
     scale_y_continuous(labels = percent) +
+    scale_x_continuous(breaks = 2015:2024, 
+      labels = EveryNth(2015:2024, 3, inverse = TRUE)) +
     scale_colour_manual(name = "",
       values = c("blue", "red"),
       breaks = c("treated", "art_estimate"),
       limits = c("treated", "art_estimate"),
       labels = c("Linkage ART percentage", "Cascade ART percentage")) +
-    expand_limits(y = c(0.7, 1)) +
+    expand_limits(y = c(0.8, 1), x = (2015:2024)) +
     xlab("Year") + ylab("Percent on ART") +
     PlotOptions() 
   
@@ -205,27 +260,46 @@ if (pbsPopulation) {
   
   # Produce combined plot for paper
   if (cascadeProject == "HIV_Cascade_Paper") {
-
-   legend <- GetLegend(
-     treatedPlot + scale_colour_manual(name = "",
-      values = c("blue", "red"),
-      breaks = c("treated", "art_estimate"),
-      limits = c("treated", "art_estimate"),
-      labels = c("HIV linkage estimates", "Cascade estimates"))
-   )
-   
-   combinedPlot <- ggdraw() + 
-     draw_plot(legend, 0, 0.95, 1, 0.05) + 
-     draw_plot(
-       plot_grid(
-         treatedPlot + theme(legend.position = "none"),
-         retainedPlot + theme(legend.position = "none"),
-         labels = c("A", "B"), 
-         ncol = 1, nrow = 2, align = "v"),
-       0, 0, 1, 0.95
-     )
+    
+    legend <- GetLegend(
+      treatedPlot + scale_colour_manual(name = "",
+        values = c("blue", "red"),
+        breaks = c("treated", "art_estimate"),
+        limits = c("treated", "art_estimate"),
+        labels = c("HIV linkage estimates", "Cascade estimates"))
+    )
+    
+    combinedPlot <- ggdraw() + 
+      draw_plot(legend, 0, 0.95, 1, 0.05) + 
+      draw_plot(
+        plot_grid(
+          treatedPlot + theme(legend.position = "none"),
+          retainedPlot + theme(legend.position = "none"),
+          labels = c("A", "B"), 
+          ncol = 1, nrow = 2, align = "v"),
+        0, 0, 1, 0.95
+      )
+    
+  } else {
+    
+    legend <- GetLegend(
+      treatedPlot + scale_colour_manual(name = "",
+        values = c("blue", "red"),
+        breaks = c("treated", "art_estimate"),
+        limits = c("treated", "art_estimate"),
+        labels = c("HIV linkage estimates", "Cascade estimates"))
+    )
+    
+    combinedPlot <- ggdraw() + 
+      draw_plot(legend, 0, 0.95, 1, 0.05) + 
+      draw_plot(
+        plot_grid(
+          retainedPlot + theme(legend.position = "none"),
+          treatedPlot + theme(legend.position = "none"),
+          ncol = 2, nrow = 1, align = "h"),
+        0, 0, 1, 0.95
+      )
   }
-
 }
 ```
 
@@ -242,28 +316,28 @@ if (savePlots) {
   if (pbsPopulation) {
     SaveFigure(figureFolder, 
       paste0("Linkage_Retained_Comparison-", linkageYear, "-Data"), 
-      retainedPlot, width = 12)
+      retainedPlot, width = 14)
     
     SaveFigure(figureFolder, 
       paste0("Linkage_ART_Comparison-", linkageYear, "-Data"),
-      treatedPlot, width = 12)
-    
-    SaveFigure(figureFolder, 
-      paste0("Linkage_ART_Comparison_Adjustments-", linkageYear, "-Data"),
-      treatedPlot2, width = 12)
-    
+      treatedPlot, width = 14)
+
   } else {
-    
-    SaveFigure(figureFolder, 
-      paste0("Linkage_ART_Comparison-", linkageYear, "-Data"),
-      treatedPlot, width = 12)
+
+     SaveFigure(figureFolder, 
+      paste0("Linkage_ART_Comparison_Adjustments-", linkageYear, "-Data"),
+      treatedPlot2, width = 14)
   }
   
-   if (cascadeProject == "HIV_Cascade_Paper") {
-     SaveFigure(figureFolder, 
+  if (cascadeProject == "HIV_Cascade_Paper") {
+    SaveFigure(figureFolder, 
       paste0("Linkage_Combined_Comparison-", linkageYear, "-Data"),
-      combinedPlot, width = 12, height = 16)
-   } 
+      combinedPlot, width = 14, height = 16)
+  } else {
+    SaveFigure(figureFolder, 
+      paste0("Linkage_Combined_Comparison-", linkageYear, "-Data"),
+      combinedPlot, width = 20, height = 8)
+  }
 }
 
 ```
@@ -280,7 +354,7 @@ if (extraPlots) {
   artEnd <- artRaw |> 
     filter(year >= 2015, population == artpop, stage == "numART") |> 
     pull(lower)
-
+  
   # Cascade values for diagnosed and treated
   cascade <- tibble(year = startYear:cascadeYear, 
     diag = diagnosedEnd,
@@ -330,7 +404,7 @@ if (extraPlots) {
     
     # Also save the ART proportions
     write_csv(artProp, file.path(figureFolder, paste0("ART_Coverage_Estimates-" , cascadeYear, 
-        "-Data.csv")))
+      "-Data.csv")))
     
   }
   

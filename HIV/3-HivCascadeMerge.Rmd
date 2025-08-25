@@ -20,17 +20,19 @@ source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
-analysisYear <- 2023
-projectName <-  "ASR_2024" # "ASR_2024"; "HIV_Cascade_Paper"
+analysisYear <- 2024
+projectName <-  "ASR_2025" # "ASR_2024"; "HIV_Cascade_Paper"
 
-multipleCascades <- TRUE
+multipleCascades <- FALSE
 artNames <- NULL
 
 # If this is an ASR project already have specific populations
-if (multipleCascades && projectName == "ASR_2024") {
-  cascadeNames <- c("All", "Male", "Female", "Indigenous", "AusNonIndigenous", 
-    "NonIndigenous", "MSM", "MSM_AUS", "MSM_OS", "Hetero", "Pwid", "SSA", "SEA", 
-    "SCA")
+if (multipleCascades && projectName == "ASR_2025") {
+  cascadeNames <- c("All", "Male", "Female", "MSM_AUS", "MSM_OS", 
+    "Hetero_ Aus", "Hetero_Os")
+    # "MSM", "Indigenous", "AusNonIndigenous", 
+    # "NonIndigenous", "Hetero", "Pwid", "SSA", "SEA", 
+    # "SCA")
 } else {
   # Specify cascades manually (without year)
   cascadeNames <- "All" # specify cascades with project 
@@ -40,7 +42,7 @@ if (is.null(artNames)) {
   artNames <- cascadeNames
 }
 
-mergeAll <- TRUE
+mergeAll <- FALSE
 adjustLower <- TRUE # adjust lower bounds to match lower bound of treatment
 saveResults <- TRUE
 
@@ -80,7 +82,7 @@ linkageART <- read_csv(linkageDataFile) %>%
 
 # Cascade name conversion to linkage and AHOD populations
 cascadePops <- read_csv(file.path(outputFolder, projectName, 
-    paste0("CascadeNames-", yearStr, ".csv")))
+  paste0("CascadeNames-", yearStr, ".csv")))
 
 # Start putting together cascades
 hivCascadeAll <- NULL
@@ -149,79 +151,95 @@ for (ii in 1:length(cascadeNames)) {
         pldhiv <- bind_rows(pldhivNew, retainedNew)
       }
     } 
-  } else if (linkagePop %in% linkageART$name) {
-    # If no PBS data for this population use linkage. 
-    # Note there will be no retained as well.
-    
-    linkageProp <- linkageART |> filter(name == linkagePop)
-    
-    # Extend proportion on ART to the final year
-    linkYears <- linkageProp$year[1]:analysisYear 
-    addYears <- length(linkYears) - nrow(linkageProp)
-    linkProp <- c(linkageProp$value, rep(tail(linkageProp$value,1), addYears))
-    
-    # Create treatment table
-    treatment <- tibble(
-      stage = rep("numART", length(linkYears)),
-      year = linkYears, 
-      value = NA, 
-      lower = NA,
-      upper = NA)
-    
-    treatment$value <- (pldhiv |> filter(stage == "pldhiv", year %in% linkYears))$value * linkProp
-    treatment$lower <- (pldhiv |> filter(stage == "pldhiv", year %in% linkYears))$lower * linkProp
-    treatment$upper <- (pldhiv |> filter(stage == "pldhiv", year %in% linkYears))$upper * linkProp
-    
-    # Read in the AHOD data to calculate suppressed proportions
-    ahodData <- read_csv(file.path(dataFolder, 
-      paste0("ahod", analysisYear, ".csv")),
-      col_types = cols(
-        year = col_integer(),
-        state = col_character(),
-        population = col_character(),
-        n_id = col_double(),
-        num_vl = col_integer(),
-        mean_age = col_double(),
-        n_death = col_integer(),
-        n_rx = col_integer(),
-        n_rx50 = col_integer(),
-        n_rx200 = col_integer(),
-        n_rx400 = col_integer()
-      )) 
-    
-    # Extract the viral suppression data and calulate the proportion suppressed
-    # Defined to be < 200 copies per ml. 
-    propSuppressed <- ahodData %>%
-      filter(population == ahodPop, year %in% linkYears, state == ahodState) |>
-      select(one_of(c("year", "num_vl")), starts_with("n_rx"), -n_rx) %>% 
-      group_by(year) %>%
-      summarise(n = sum(num_vl),
-        n200 = sum(n_rx200)) %>%
-      mutate(prop200 = n200/n) %>%
-      # Added 95% confidence interval
-      mutate(prop200lower = prop200 - qnorm(0.975) * 
-          sqrt(prop200 * (1 - prop200) / n),
-        prop200upper = prop200 + qnorm(0.975) * 
-          sqrt(prop200 * (1 - prop200) / n)) %>%
-      mutate(prop200lower = ifelse(prop200lower < 0, 0, prop200lower),
-        prop200upper = ifelse(prop200upper < 0, 0, prop200upper)) %>%
-      filter(year <= analysisYear) %>%
-      ungroup() 
-    
-    # Calculate suppressed
-    suppressed <- tibble(
-      stage = rep("suppressed", length(linkYears)),
-      year = linkYears, 
-      value = NA, 
-      lower = NA,
-      upper = NA)
-    
-    suppressed$value <- treatment$value * propSuppressed$prop200
-    suppressed$lower <- treatment$lower * propSuppressed$prop200lower
-    suppressed$upper <- treatment$upper * propSuppressed$prop200upper
-    
-    # Merge in to one treatment data frame - to match PBS structure 
-    treatment <- bind_rows(treatment, suppressed)
+  } else if (length(linkagePop) != 0) {
+    if (linkagePop %in% linkageART$name) {
+      # If no PBS data for this population use linkage. 
+      # Note there will be no retained as well.
+      
+      linkageProp <- linkageART |> filter(name == linkagePop)
+      
+      # Extend proportion on ART to the final year
+      linkYears <- linkageProp$year[1]:analysisYear 
+      addYears <- length(linkYears) - nrow(linkageProp)
+      linkProp <- c(linkageProp$value, rep(tail(linkageProp$value,1), addYears))
+      
+      # Create treatment table
+      treatment <- tibble(
+        stage = rep("numART", length(linkYears)),
+        year = linkYears, 
+        value = NA, 
+        lower = NA,
+        upper = NA)
+      
+      treatment$value <- (pldhiv |> filter(stage == "pldhiv", year %in% linkYears))$value * linkProp
+      treatment$lower <- (pldhiv |> filter(stage == "pldhiv", year %in% linkYears))$lower * linkProp
+      treatment$upper <- (pldhiv |> filter(stage == "pldhiv", year %in% linkYears))$upper * linkProp
+      
+      # Read in the AHOD data to calculate suppressed proportions
+      ahodData <- read_csv(file.path(dataFolder, 
+        paste0("ahod", analysisYear, ".csv")),
+        col_types = cols(
+          year = col_integer(),
+          state = col_character(),
+          population = col_character(),
+          n_id = col_double(),
+          num_vl = col_integer(),
+          mean_age = col_double(),
+          n_death = col_integer(),
+          n_rx = col_integer(),
+          n_rx50 = col_integer(),
+          n_rx200 = col_integer(),
+          n_rx400 = col_integer()
+        )) 
+      
+      # Extract the viral suppression data and calulate the proportion suppressed
+      # Defined to be < 200 copies per ml. 
+      propSuppressed <- ahodData %>%
+        filter(population == ahodPop, year %in% linkYears, state == ahodState) |>
+        select(one_of(c("year", "num_vl")), starts_with("n_rx"), -n_rx) %>% 
+        group_by(year) %>%
+        summarise(n = sum(num_vl),
+          n200 = sum(n_rx200)) %>%
+        mutate(prop200 = n200/n) %>%
+        # Added 95% confidence interval
+        mutate(prop200lower = prop200 - qnorm(0.975) * 
+            sqrt(prop200 * (1 - prop200) / n),
+          prop200upper = prop200 + qnorm(0.975) * 
+            sqrt(prop200 * (1 - prop200) / n)) %>%
+        mutate(prop200lower = ifelse(prop200lower < 0, 0, prop200lower),
+          prop200upper = ifelse(prop200upper < 0, 0, prop200upper)) %>%
+        filter(year <= analysisYear) %>%
+        ungroup() 
+      
+      # Calculate suppressed
+      suppressed <- tibble(
+        stage = rep("suppressed", length(linkYears)),
+        year = linkYears, 
+        value = NA, 
+        lower = NA,
+        upper = NA)
+      
+      suppressed$value <- treatment$value * propSuppressed$prop200
+      suppressed$lower <- treatment$lower * propSuppressed$prop200lower
+      suppressed$upper <- treatment$upper * propSuppressed$prop200upper
+      
+      # Merge in to one treatment data frame - to match PBS structure 
+      treatment <- bind_rows(treatment, suppressed)
+    } else {
+      
+      # If no linkage ignore. 
+      print("No ART data for this population")
+      print(cascadeNames[ii])
+      
+      # If no linkage ignore. 
+      treatment <- tibble(
+        stage = character(), 
+        year = double(), 
+        value = double(), 
+        lower = double(),
+        upper = double())
+      
+    }
     
   } else {
     # If no linkage ignore. 
