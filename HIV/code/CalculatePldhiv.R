@@ -1347,64 +1347,73 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
       # Only save a subset of results 
       saveStringPldhiv <- file.path(resultsPath, 
         paste0("HIVpldhivEstimates-", toString(analysisYear)))
-      write_csv(hivDiagnosed, paste0(saveStringPldhiv, "_exclude.csv"))
+      write_excel_csv(hivDiagnosed, paste0(saveStringPldhiv, 
+        "_exclude.csv"))
       
       saveStringDetails <- file.path(resultsPath, 
         paste0("pldhiv-", toString(analysisYear), "-"))
-      write_csv(pldhivAll, paste0(saveStringDetails, "all_exclude.csv"))
-      write_csv(pldhivAllMin, paste0(saveStringDetails, "min_exclude.csv"))
-      write_csv(pldhivAllMax, paste0(saveStringDetails, "max_exclude.csv"))
+      write_excel_csv(pldhivAll, paste0(saveStringDetails, 
+        "all_exclude.csv"))
+      write_excel_csv(pldhivAllMin, paste0(saveStringDetails, 
+        "min_exclude.csv"))
+      write_excel_csv(pldhivAllMax, paste0(saveStringDetails, 
+        "max_exclude.csv"))
       
       # Save excluded notifications
       saveStringExclude <- file.path(resultsPath, "ExcludedNotifications")
-      write_csv(ExcludedNotifications, paste0(saveStringExclude, ".csv"))
+      write_excel_csv(ExcludedNotifications, 
+        paste0(saveStringExclude, ".csv"))
       
     } else {
       if (doAge) {
         saveStringDetails <- file.path(resultsPath, 
           paste0("pldhiv-", toString(analysisYear), "-age-"))
-        write_csv(rownames_to_column(as.data.frame(pldhivAll), 
+        write_excel_csv(rownames_to_column(as.data.frame(pldhivAll), 
           var = "agebin"),
           paste0(saveStringDetails, "all.csv"))
-        write_csv(rownames_to_column(as.data.frame(pldhivAllMin), 
+        write_excel_csv(rownames_to_column(as.data.frame(pldhivAllMin), 
           var = "agebin"), paste0(saveStringDetails, "min.csv"))
-        write_csv(rownames_to_column(as.data.frame(pldhivAllMax), 
+        write_excel_csv(rownames_to_column(as.data.frame(pldhivAllMax), 
           var = "agebin"), paste0(saveStringDetails, "max.csv"))
         
         # Save overall as well
         saveStringDetails <- file.path(resultsPath, 
           paste0("pldhiv-", toString(analysisYear), "-"))
-        write_csv(pldhivOverall, paste0(saveStringDetails, "all.csv"))
-        write_csv(pldhivOverallMin, paste0(saveStringDetails, "min.csv"))
-        write_csv(pldhivOverallMax, paste0(saveStringDetails, "max.csv"))
+        write_excel_csv(pldhivOverall, paste0(saveStringDetails, "all.csv"))
+        write_excel_csv(pldhivOverallMin, 
+          paste0(saveStringDetails, "min.csv"))
+        write_excel_csv(pldhivOverallMax, 
+          paste0(saveStringDetails, "max.csv"))
         
       } else {
         saveStringDetails <- file.path(resultsPath, 
           paste0("pldhiv-", toString(analysisYear), "-"))
-        write_csv(pldhivAll, paste0(saveStringDetails, "all.csv"))
-        write_csv(pldhivAllMin, paste0(saveStringDetails, "min.csv"))
-        write_csv(pldhivAllMax, paste0(saveStringDetails, "max.csv"))
+        write_excel_csv(pldhivAll, paste0(saveStringDetails, "all.csv"))
+        write_excel_csv(pldhivAllMin, paste0(saveStringDetails, "min.csv"))
+        write_excel_csv(pldhivAllMax, paste0(saveStringDetails, "max.csv"))
       }
       
       # Save main results
       saveStringPldhiv <- file.path(resultsPath, 
         paste0("HIVpldhivEstimates-", toString(analysisYear)))
       if (doAge) {
-        write_csv(hivDiagnosedOverall, paste0(saveStringPldhiv, ".csv"))
+        write_excel_csv(hivDiagnosedOverall, 
+          paste0(saveStringPldhiv, ".csv"))
         saveStringPldhiv <- paste0(saveStringPldhiv, "-age")
       }
-      write_csv(hivDiagnosed, paste0(saveStringPldhiv, ".csv"))
+      write_excel_csv(hivDiagnosed, paste0(saveStringPldhiv, ".csv"))
       
       #save parameters 
       saveStringParams <- file.path(resultsPath, "PldhivParameters")
       
       # Write to csv
-      write_csv(hivParams, paste0(saveStringParams, ".csv"))
+      write_excel_csv(hivParams, paste0(saveStringParams, ".csv"))
       
       # Write uniqueNotifications to file
       if (doUnique) {
         saveStringUnique <- file.path(resultsPath, "UniqueNotifications")
-        write_csv(uniqueNotifications, paste0(saveStringUnique, ".csv"))
+        write_excel_csv(uniqueNotifications, 
+          paste0(saveStringUnique, ".csv"))
       }
     }
   }
