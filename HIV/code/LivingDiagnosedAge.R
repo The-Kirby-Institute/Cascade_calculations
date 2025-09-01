@@ -105,29 +105,29 @@ LivingDiagnosedAge <- function(annualdiags, propunique, deathrate,
   # Main program ----------------------------------------------------------
   
   # Initialize output array
-  # nliving <- matrix(0, nages, nyears)
-  # nliving[, 1] <- annualdiags[, 1]
-  # 
-  # nduplicates <- matrix(0, nages, nyears)
-  # nduplicates[, 1] <- 0
-  #   
-  # ndead <- matrix(0, nages, nyears)
-  # ndead[, 1] <- 0
-  # 
-  # nmigrants <- matrix(0, nages, nyears)
-  # nmigrants[, 1] <- 0
-  # 
-  # ndeparts <- matrix(0, nages,nyears)
-  # ndeparts[, 1] <- 0
-  # 
-  # narrivals <- matrix(0, nages, nyears)
-  # narrivals[, 1] <- 0
-  # 
-  # nleave <- matrix(0, nages, nyears)
-  # nleave[, 1] <- 0
-  # 
-  # nextra <- matrix(0, nages, nyears)
-  # nextra[, 1] <- 0
+  nliving <- matrix(0, nages, nyears)
+  nliving[, 1] <- annualdiags[, 1]
+# 
+#   nduplicates <- matrix(0, nages, nyears)
+#   nduplicates[, 1] <- 0
+# 
+#   ndead <- matrix(0, nages, nyears)
+#   ndead[, 1] <- 0
+# 
+#   nmigrants <- matrix(0, nages, nyears)
+#   nmigrants[, 1] <- 0
+# 
+#   ndeparts <- matrix(0, nages,nyears)
+#   ndeparts[, 1] <- 0
+# 
+#   narrivals <- matrix(0, nages, nyears)
+#   narrivals[, 1] <- 0
+# 
+#   nleave <- matrix(0, nages, nyears)
+#   nleave[, 1] <- 0
+# 
+#   nextra <- matrix(0, nages, nyears)
+#   nextra[, 1] <- 0
   
   # Create an aging rate vector - 5-year age bins. No one 
   # ages in last age bin
