@@ -739,10 +739,10 @@ for (region in states) {
 # (post COVID). We separate the pre-COVID and COVID data given the massive 
 # interruption to migration that occurred during the COVID period. 
 # 
-# Data for 2013-2023 in the local file 
-# ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_Feb2025.xlsx.
+# Data for 2013-2024 in the local file 
+# ~\Australian Care Cascades - Documents\data\6m_followUp_NSW_Aug2025.xlsx.
 # The variables below store the cumulative emigration proportion for 
-# Australian born diagnosed and overseas born to end 2023 with the COVID data 
+# Australian born diagnosed and overseas born to end 2024 with the COVID data 
 # separated out.  
 ausBornEmigrate19 <- 0.0076849
 osBornEmigrate19 <- 0.0904007
@@ -750,8 +750,8 @@ osBornEmigrate19 <- 0.0904007
 ausBornEmigrateCOVID <- 0.0
 osBornEmigrateCOVID <- 0.0298507
 
-ausBornEmigrate2022 <- 0.0067114
-osBornEmigrate2022 <- 0.025974
+ausBornEmigrate2022 <- 0.0042194
+osBornEmigrate2022 <- 0.0356164
 
 ausBornEmigrate <- 
   c(
