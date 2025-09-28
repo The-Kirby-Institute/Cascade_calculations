@@ -186,9 +186,9 @@ if (pubPlots) {
   hivResults$deaths <- cumsum(pldhivAll$deaths)
   hivResults$deaths_min <- cumsum(pldhivMin$deaths)
   hivResults$deaths_max <- cumsum(pldhivMax$deaths)
-  hivResults$emmigrants <- cumsum(pldhivAll$emigrants + pldhivAll$diag_departs)
-  hivResults$emmigrants_min <- cumsum(pldhivMin$emigrants + pldhivMin$diag_departs)
-  hivResults$emmigrants_max <- cumsum(pldhivMax$emigrants + pldhivMax$diag_departs)
+  hivResults$emigrants <- cumsum(pldhivAll$emigrants + pldhivAll$diag_departs)
+  hivResults$emigrants_min <- cumsum(pldhivMin$emigrants + pldhivMin$diag_departs)
+  hivResults$emigrants_max <- cumsum(pldhivMax$emigrants + pldhivMax$diag_departs)
   
   hivBase <- read.csv(file.path(dataFolder, paste0("HIVbaseEstimates-",
     toString(resultsYear), ".csv")))
@@ -561,14 +561,14 @@ if (pubPlots) {
   
   # Includes post-diagnosis emigrants
   plotMigrants <- ggplot(data = hivResults, aes(x = yeardiagnosis, 
-    y = emmigrants)) +
+    y = emigrants)) +
     geom_line(color = asrcols[2])  +
     scale_x_continuous(breaks = seq(startYear, resultsYear),
       labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     expand_limits(y = 0) +
     scale_y_continuous(labels = comma) + 
-    ylab("Number of emmigrants") + xlab("Year") +  
+    ylab("Number of emigrants") + xlab("Year") +  
     PlotOptions()
   
   # Only permanent removals
@@ -579,7 +579,7 @@ if (pubPlots) {
       labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
       limits = c(startYear, resultsYear)) +
     scale_y_continuous(labels = percent, limits = c(0, 0.01)) + 
-    ylab("Emmigration rate (%)") + xlab("Year") +  
+    ylab("Emigration rate (%)") + xlab("Year") +  
     PlotOptions()
   
   # Save plots
