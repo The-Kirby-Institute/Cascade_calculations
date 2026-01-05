@@ -1,0 +1,154 @@
+year,stage,region,context,sex,proportion,prop_lower,prop_upper,source,reference
+2020,notifications,urban,all,all,0.737960482,0.737960482,0.737960482,notifications data,
+2020,notifications,regional,all,all,0.219641289,0.219641289,0.219641289,notifications data,
+2020,notifications,remote,all,all,0.04239823,0.04239823,0.04239823,notifications data,
+2020,diagnoses,all,shc,all,0.11,0.11,0.11,"(Grulich et al. 2014, table 4, usual GP %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2020,diagnoses,all,gp,all,0.797,0.797,0.797,"(Grulich et al. 2014, table 4, sexual health clini %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2020,diagnoses,all,other,all,0.092,0.092,0.092,"(Grulich et al. 2014, table 4, Other + pharmacy %)","Grulich AE, de Visser RO, Badcock PB, Smith AM, Richters J, Rissel C, et al. Knowledge about and experience of sexually transmissible infections in a representative sample of adults: the Second Australian Study of Health and Relationships. Sexual health 2014; 11:481–494.
+"
+2020,treated,urban,gp,all,0.8879,0.8879,0.8879,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2020,treated,regional,gp,all,0.8879,0.8879,0.8879,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2020,treated,urban,other,all,0.99,0.99,0.99,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2020,treated,regional,other,all,1,1,1,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2020,treated,remote,shc,all,0.96,0.96,0.96,(Foster et al. 2016),Foster et al. Does being in a regional area impact on the timeliness of treatment?  STD 2016:43;506
+2020,treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),"Guy R, et al. The impact of sexually transmissible infection programs in remote Aboriginal communities in Australia: a systematic review. Sexual Health. 2012;9 (3):205-12."
+2020,retested,urban,shc,males,0.495666196,0.481661365,0.509677783,ACCESS shc urban,
+2020,retested,regional,shc,males,0.47235387,0.432964848,0.512083172,ACCESS shc regional+remote,
+2020,retested,remote,shc,males,0.47235387,0.432964848,0.512083172,ACCESS shc regional+remote,
+2020,retested,urban,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2020,retested,regional,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2020,retested,remote,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2020,retested,urban,shc,females,0.321821036,0.296353303,0.348376417,ACCESS shc urban,
+2020,retested,regional,shc,females,0.383512545,0.326687749,0.443600201,ACCESS shc regional+remote,
+2020,retested,remote,shc,females,0.383512545,0.326687749,0.443600201,ACCESS shc regional+remote,
+2020,retested,urban,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2020,retested,regional,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2020,retested,remote,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2020,retested,urban,shc,all,0.460019114,0.44763925,0.472448193,ACCESS shc urban,
+2020,retested,regional,shc,all,0.44650655,0.414063023,0.479404437,ACCESS shc regional+remote,
+2020,retested,remote,shc,all,0.44650655,0.414063023,0.479404437,ACCESS shc regional+remote,
+2020,retested,urban,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2020,retested,regional,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2020,retested,remote,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2021,notifications,urban,all,all,0.727087553,0.727087553,0.727087553,notifications data,
+2021,notifications,regional,all,all,0.228088652,0.228088652,0.228088652,notifications data,
+2021,notifications,remote,all,all,0.044823795,0.044823795,0.044823795,notifications data,
+2021,diagnoses,all,shc,all,0.11,0.11,0.11,"(Grulich et al. 2014, table 4, usual GP %)",
+2021,diagnoses,all,gp,all,0.797,0.797,0.797,"(Grulich et al. 2014, table 4, sexual health clini %)",
+2021,diagnoses,all,other,all,0.092,0.092,0.092,"(Grulich et al. 2014, table 4, Other + pharmacy %)",
+2021,treated,urban,gp,all,0.8879,0.8879,0.8879,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2021,treated,regional,gp,all,0.8879,0.8879,0.8879,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2021,treated,urban,other,all,0.99,0.99,0.99,(Foster et al. 2016),
+2021,treated,regional,other,all,1,1,1,(Foster et al. 2016),
+2021,treated,remote,shc,all,0.96,0.96,0.96,(Foster et al. 2016),
+2021,treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),
+2021,retested,urban,shc,males,0.536548113,0.521977184,0.551057361,ACCESS shc urban,
+2021,retested,regional,shc,males,0.431089744,0.391984164,0.471055915,ACCESS shc regional+remote,
+2021,retested,remote,shc,males,0.431089744,0.391984164,0.471055915,ACCESS shc regional+remote,
+2021,retested,urban,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2021,retested,regional,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2021,retested,remote,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2021,retested,urban,shc,females,0.368703108,0.337818679,0.400682885,ACCESS shc urban,
+2021,retested,regional,shc,females,0.4,0.339308551,0.463817002,ACCESS shc regional+remote,
+2021,retested,remote,shc,females,0.4,0.339308551,0.463817002,ACCESS shc regional+remote,
+2021,retested,urban,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2021,retested,regional,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2021,retested,remote,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2021,retested,urban,shc,all,0.507473438,0.494233408,0.520703064,ACCESS shc urban,
+2021,retested,regional,shc,all,0.424173318,0.391302974,0.457716543,ACCESS shc regional+remote,
+2021,retested,remote,shc,all,0.424173318,0.391302974,0.457716543,ACCESS shc regional+remote,
+2021,retested,urban,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2021,retested,regional,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2021,retested,remote,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2022,notifications,urban,all,all,0.729843834,0.729843834,0.729843834,notifications data,
+2022,notifications,regional,all,all,0.225718901,0.225718901,0.225718901,notifications data,
+2022,notifications,remote,all,all,0.044437264,0.044437264,0.044437264,notifications data,
+2022,diagnoses,all,shc,all,0.11,0.11,0.11,"(Grulich et al. 2014, table 4, usual GP %)",
+2022,diagnoses,all,gp,all,0.797,0.797,0.797,"(Grulich et al. 2014, table 4, sexual health clini %)",
+2022,diagnoses,all,other,all,0.092,0.092,0.092,"(Grulich et al. 2014, table 4, Other + pharmacy %)",
+2022,treated,urban,gp,all,0.8879,0.8879,0.8879,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2022,treated,regional,gp,all,0.8879,0.8879,0.8879,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2022,treated,urban,other,all,0.99,0.99,0.99,(Foster et al. 2016),
+2022,treated,regional,other,all,1,1,1,(Foster et al. 2016),
+2022,treated,remote,shc,all,0.96,0.96,0.96,(Foster et al. 2016),
+2022,treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),
+2022,retested,urban,shc,males,0.539014942,0.525630196,0.552344049,ACCESS shc urban,
+2022,retested,regional,shc,males,0.444444444,0.407621728,0.481875722,ACCESS shc regional+remote,
+2022,retested,remote,shc,males,0.444444444,0.407621728,0.481875722,ACCESS shc regional+remote,
+2022,retested,urban,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2022,retested,regional,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2022,retested,remote,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2022,retested,urban,shc,females,0.344890511,0.316889346,0.373992721,ACCESS shc urban,
+2022,retested,regional,shc,females,0.347368421,0.292784639,0.406139966,ACCESS shc regional+remote,
+2022,retested,remote,shc,females,0.347368421,0.292784639,0.406139966,ACCESS shc regional+remote,
+2022,retested,urban,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2022,retested,regional,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2022,retested,remote,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2022,retested,urban,shc,all,0.506101281,0.493922754,0.518272618,ACCESS shc urban,
+2022,retested,regional,shc,all,0.416666667,0.385931608,0.448052548,ACCESS shc regional+remote,
+2022,retested,remote,shc,all,0.416666667,0.385931608,0.448052548,ACCESS shc regional+remote,
+2022,retested,urban,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2022,retested,regional,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2022,retested,remote,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2023,notifications,urban,all,all,0.738317146,0.738317146,0.738317146,,
+2023,notifications,regional,all,all,0.215128876,0.215128876,0.215128876,,
+2023,notifications,remote,all,all,0.046553978,0.046553978,0.046553978,,
+2023,diagnoses,all,shc,all,0.11,0.11,0.11,"(Grulich et al. 2014, table 4, usual GP %)",
+2023,diagnoses,all,gp,all,0.797,0.797,0.797,"(Grulich et al. 2014, table 4, sexual health clini %)",
+2023,diagnoses,all,other,all,0.092,0.092,0.092,"(Grulich et al. 2014, table 4, Other + pharmacy %)",
+2023,treated,urban,gp,all,0.8879,0.8879,0.8879,(Jung 2023),
+2023,treated,regional,gp,all,0.8879,0.8879,0.8879,(Jung 2023),
+2023,treated,urban,other,all,0.99,0.99,0.99,(Foster et al. 2016),
+2023,treated,regional,other,all,1,1,1,(Foster et al. 2016),
+2023,treated,remote,shc,all,0.96,0.96,0.96,(Foster et al. 2016),
+2023,treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),
+2023,retested,urban,shc,males,0.506943336,0.494483229,0.519394879,ACCESS shc urban,
+2023,retested,regional,shc,males,0.448548813,0.412839624,0.484786512,ACCESS shc regional+remote,
+2023,retested,remote,shc,males,0.448548813,0.412839624,0.484786512,ACCESS shc regional+remote,
+2023,retested,urban,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2023,retested,regional,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2023,retested,remote,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2023,retested,urban,shc,females,0.3566804,0.333960262,0.380055516,ACCESS shc urban,
+2023,retested,regional,shc,females,0.336158192,0.28759377,0.388340685,ACCESS shc regional+remote,
+2023,retested,remote,shc,females,0.336158192,0.28759377,0.388340685,ACCESS shc regional+remote,
+2023,retested,urban,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2023,retested,regional,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2023,retested,remote,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2023,retested,urban,shc,all,0.47470331,0.463716617,0.485714409,ACCESS shc urban,
+2023,retested,regional,shc,all,0.413607878,0.384629634,0.443187468,ACCESS shc regional+remote,
+2023,retested,remote,shc,all,0.413607878,0.384629634,0.443187468,ACCESS shc regional+remote,
+2023,retested,urban,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2023,retested,regional,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2023,retested,remote,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2024,notifications,urban,all,all,0.742276545,0.742276545,0.742276545,,
+2024,notifications,regional,all,all,0.20980836,0.20980836,0.20980836,,
+2024,notifications,remote,all,all,0.047915095,0.047915095,0.047915095,,
+2024,diagnoses,all,shc,all,0.11,0.11,0.11,"(Grulich et al. 2014, table 4, usual GP %)",
+2024,diagnoses,all,gp,all,0.797,0.797,0.797,"(Grulich et al. 2014, table 4, sexual health clini %)",
+2024,diagnoses,all,other,all,0.092,0.092,0.092,"(Grulich et al. 2014, table 4, Other + pharmacy %)",
+2024,treated,urban,gp,all,0.8879,0.8879,0.8879,(Jung 2023),
+2024,treated,regional,gp,all,0.8879,0.8879,0.8879,(Jung 2023),
+2024,treated,urban,other,all,0.99,0.99,0.99,(Foster et al. 2016),
+2024,treated,regional,other,all,1,1,1,(Foster et al. 2016),
+2024,treated,remote,shc,all,0.96,0.96,0.96,(Foster et al. 2016),
+2024,treated,remote,phc,all,0.85,0.85,0.85,(Guy et al. 2012),
+2024,retested,urban,shc,males,0.457320319,0.444258141,0.470441045,ACCESS shc urban,
+2024,retested,regional,shc,males,0.41598916,0.380287229,0.452577686,ACCESS shc regional+remote,
+2024,retested,remote,shc,males,0.41598916,0.380287229,0.452577686,ACCESS shc regional+remote,
+2024,retested,urban,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2024,retested,regional,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2024,retested,remote,gp,males,0.165,0.1274,0.2026,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2024,retested,urban,shc,females,0.319700461,0.297899114,0.342308427,ACCESS shc urban,
+2024,retested,regional,shc,females,0.299363057,0.249883814,0.353843486,ACCESS shc regional+remote,
+2024,retested,remote,shc,females,0.299363057,0.249883814,0.353843486,ACCESS shc regional+remote,
+2024,retested,urban,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2024,retested,regional,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2024,retested,remote,gp,females,0.259,0.2263,0.2917,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2024,retested,urban,shc,all,0.424925736,0.413641914,0.436287865,ACCESS shc urban,
+2024,retested,regional,shc,all,0.379734848,0.35048438,0.409871208,ACCESS shc regional+remote,
+2024,retested,remote,shc,all,0.379734848,0.35048438,0.409871208,ACCESS shc regional+remote,
+2024,retested,urban,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2024,retested,regional,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."
+2024,retested,remote,gp,all,0.226,0.2009,0.2511,(Jung 2023),"Jung, et al. The Chlamydia Care Cascade of Young People Attending Australian General Practices; a Descriptive Study to Assess Gaps in Care. Sexual Health, October 2, 2023. https://doi.org/10.1071/SH23096."

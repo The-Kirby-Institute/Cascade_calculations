@@ -44,8 +44,8 @@ source(file.path(Rcode, "FormatData.R"), echo = TRUE)
 currTime <- format(Sys.time(), "%y-%m-%d") # to append to files
 
 # Script parameters
-resultsYear <- 2023 # year of cascade we will calculate and plot   
-dataYear <- 2023 # year data for estimates was generated (to handle updated 
+resultsYear <- 2024 # year of cascade we will calculate and plot   
+dataYear <- 2024 # year data for estimates was generated (to handle updated 
                  # data) this is the data output year as well.
 numyears <- 5 # Number of years of cascades
 
@@ -655,7 +655,16 @@ chlamcascade <- chlamcascade %>%
   bind_rows(maleRetested) %>%
   bind_rows(femaleRetested) %>%
   bind_rows(allRetested)
-  
+
+updateTreated <- chlamcascade %>% 
+  filter(stage == "treated") %>%  
+  mutate(percentprevious = 100 * estimate / filter(chlamcascade, 
+    stage == "notifications")$estimate,
+    percentpreviousLower = 100 * lower / filter(chlamcascade, 
+      stage == "notifications")$upper,
+    percentpreviousUpper = 100 * upper / filter(chlamcascade, 
+      stage == "notifications")$lower)
+
 updateRetested <- chlamcascade %>% 
   filter(stage == "retested") %>%  
   mutate(percentprevious = 100 * estimate / filter(chlamcascade, stage == "treated")$estimate,
@@ -663,7 +672,8 @@ updateRetested <- chlamcascade %>%
     percentpreviousUpper = 100 * upper / filter(chlamcascade, stage == "treated")$lower)
 
 chlamcascade <- chlamcascade %>%
-  filter(stage != "retested") %>%
+  filter(stage %in% c("infections", "notifications")) %>%
+  bind_rows(updateTreated) %>%
   bind_rows(updateRetested)
 
 # Store in our cascade
