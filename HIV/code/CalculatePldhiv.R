@@ -1149,7 +1149,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
     
     # Save parameters 
     saveStringParams <- file.path(resultsEcdcPath, "Parameters")
-    write_csv(hivParams, paste0(saveStringParams, ".csv"))
+    write_excel_csv(hivParams, paste0(saveStringParams, ".csv"))
     
     # Save annual proportion with CD4 count
     
@@ -1159,7 +1159,7 @@ CalculatePldhiv <- function(analysisYear, saveResults, projectOutput,
         cd4 = sum(cd4bin != "not_reported")/ecdcImputeSets) |>
       mutate(prop_with_cd4 = cd4/n)
     
-    write_csv(propCD4, file.path(resultsEcdcPath, "propCD4.csv"))
+    write_excel_csv(propCD4, file.path(resultsEcdcPath, "propCD4.csv"))
     
     # Save deaths and emigrants into ECDC
     

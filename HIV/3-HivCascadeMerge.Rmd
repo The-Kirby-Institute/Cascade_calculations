@@ -21,18 +21,16 @@ LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
 analysisYear <- 2024
-projectName <-  "ASR_2025" # "ASR_2024"; "HIV_Cascade_Paper"
+projectName <-  "ASR_2025" # "ASR_2025"; "HIV_Cascade_Paper"
 
 multipleCascades <- FALSE
 artNames <- NULL
 
 # If this is an ASR project already have specific populations
 if (multipleCascades && projectName == "ASR_2025") {
-  cascadeNames <- c("All", "Male", "Female", "MSM_AUS", "MSM_OS", 
-    "Hetero_ Aus", "Hetero_Os")
-    # "MSM", "Indigenous", "AusNonIndigenous", 
-    # "NonIndigenous", "Hetero", "Pwid", "SSA", "SEA", 
-    # "SCA")
+  cascadeNames <- c("All", "NonIndigenous", "AusNonIndigenous", "Indigenous", "Male", 
+  "Female", "SCA", "SSA", "SEA", "MSM", "MSM_AUS", "MSM_OS", "Hetero",
+  "Hetero_Aus", "Hetero_Os", "Pwid")
 } else {
   # Specify cascades manually (without year)
   cascadeNames <- "All" # specify cascades with project 
@@ -42,7 +40,7 @@ if (is.null(artNames)) {
   artNames <- cascadeNames
 }
 
-mergeAll <- FALSE
+mergeAll <- TRUE
 adjustLower <- TRUE # adjust lower bounds to match lower bound of treatment
 saveResults <- TRUE
 
@@ -256,14 +254,15 @@ for (ii in 1:length(cascadeNames)) {
     
   }
   
-  # Bind cascade
-  hivCascade <- bind_rows(living, pldhiv, treatment) %>%
-    mutate(population = tolower(cascadeNames[ii])) %>%
-    select(stage, year, population, everything())
+  # Bind cascade and round so CSV is read by excel correctly
+  hivCascade <- bind_rows(living, pldhiv, treatment) |>
+    mutate(population = tolower(cascadeNames[ii])) |>
+    dplyr::select(stage, year, population, everything()) |> 
+    mutate_at(c("value", "lower", "upper"), \(x) round(x, digits = 5))
   
   # Save if required
   if (saveResults) {
-    write_csv(hivCascade, paste0(cascadeFolder, 
+    write_excel_csv(hivCascade, paste0(cascadeFolder, 
       "/HIVcascadeEstimates-", yearStr, ".csv"))
   }
   
@@ -276,7 +275,7 @@ for (ii in 1:length(cascadeNames)) {
 
 # Save final cascade if required
 if (saveResults && mergeAll) {
-  write_csv(hivCascadeAll, file.path(outputFolder, projectName,
+  write_excel_csv(hivCascadeAll, file.path(outputFolder, projectName,
     paste0("HIVcascadeEstimates-", yearStr, "_", currTime, ".csv")))
 }
 

@@ -36,9 +36,11 @@ LoadLibrary(readxl)
 # Chunk to enter all the script parameters we will use
 analysisYear <- 2024
 saveResults <- TRUE 
-projectFolder <-  "ASR_2025" #"ASR_2025"
+projectFolder <-  "ASR_2025" # "ASR_2025"
                              # "HIV_Cascade_Paper" 
+                             # 
 cascadeFlag <- "All" # minus year
+
 ecdcResults <- "exposure"
 ecdcGroup <- "All" # Should be "All" by default but sometimes get tricky 
 # file name issues.
@@ -49,7 +51,7 @@ useAdjusted <- TRUE # adjust number undiagnosed and percentage undiagnosed
 # The following can only be TRUE if include and exclude ECDC have been run
 addExclude <- TRUE
 undiagnosedMethod <- "exclude" # "include", "exclude" (default), "average" 
-undiagnosedMethod <- ifelse(cascadeFlag %in% c("Indigenous"), "include", undiagnosedMethod)
+# undiagnosedMethod <- ifelse(cascadeFlag %in% c("Indigenous"), "include", undiagnosedMethod)
 getNewInfections <- TRUE 
 
 # Use if ECDC bootstrapping hasn't been done
@@ -501,14 +503,14 @@ if (saveResults) {
     paste0("HIVpositiveEstimates-", toString(analysisYear)))
   
   # Write to csv
-  write_csv(plhivResults, paste0(saveStringPlhiv, ".csv")) 
+  write_excel_csv(plhivResults, paste0(saveStringPlhiv, ".csv")) 
   
   # Save plhiv
   saveStringUndiagnosed <- file.path(outputFolder, projectFolder, 
     cascadeName, paste0("plhivEstimates-", toString(analysisYear)))
   
   # Write to csv
-  write_csv(plhiv, paste0(saveStringUndiagnosed, ".csv"))
+  write_excel_csv(plhiv, paste0(saveStringUndiagnosed, ".csv"))
   
   if (getNewInfections) {
     # Save new infections
@@ -516,7 +518,7 @@ if (saveResults) {
       cascadeName, paste0("newInfectionsEstimates-", toString(analysisYear)))
     
     # Write to csv
-    write_csv(newInfections, paste0(saveStringInfections, ".csv"))
+    write_excel_csv(newInfections, paste0(saveStringInfections, ".csv"))
   }
 }
 
