@@ -408,7 +408,8 @@ write.csv(tempResProp, file.path(dataFolder,
 allTreat <- filter(hivTreated, year >= 2013, population == "all")$value
 propTemp <- filter(tempResArt, population == "all")$value / allTreat
 
-tempResArtPlot <- ggplot(tibble(tempResArt), aes(x = year, y = value)) + 
+tempResArtPlot <- ggplot(tibble(tempResArt) |> filter(population == "all"), 
+  aes(x = year, y = value)) + 
   geom_line(colour = PlotColors("hivcascade5")[2]) +
   geom_point(colour = PlotColors("hivcascade5")[2]) +
   # geom_line(aes(y = tail(propTemp, 1) * allTreat), colour = "black") +
