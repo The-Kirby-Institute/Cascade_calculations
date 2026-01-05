@@ -41,10 +41,19 @@
 #' 
 #' @import tidyverse, scales, (LeftysRpkg)
 #' 
+
+library(LeftysRpkg)
+LoadLibrary(tidyverse)
+LoadLibrary(scales)
+
 PlotStiCascade <- function(cascade, year = NULL, ymax = NULL, plotcolours = NULL, 
     steplabels = NULL, ranges = TRUE, percentages = FALSE, pheight = NULL) {
     
-    # Argument checking and setup defaults if not specified
+    # Argument checking and set-up defaults if not specified
+    steps <- c("infections", "notifications","treated", "retested")
+    nsteps <- 4
+    barWidth <- 0.8
+    
     if (is.null(year)) {
         cascadeYear <- max(cascade$year) # default to latest year 
     } else {
@@ -62,12 +71,8 @@ PlotStiCascade <- function(cascade, year = NULL, ymax = NULL, plotcolours = NULL
     } 
     
     if (is.null(steplabels)) {
-        steplabels <- steps
+        steplabels <- c("Infected", "Diagnosed","Treated", "Retested")
     }
-    
-    steps <- c("Infected", "Diagnosed","Treated", "Retested")
-    nsteps <- 4
-    barWidth <- 0.8
     
     # Set up results we want to plot
     estimates <- cascade |>
@@ -75,7 +80,7 @@ PlotStiCascade <- function(cascade, year = NULL, ymax = NULL, plotcolours = NULL
     
     # Basic plot
     plotBar <- ggplot(data = estimates, aes(x = stage, y = value)) + 
-        scale_x_discrete(limits = steps, labels = steplabels) + 
+        scale_x_discrete(breaks = steps, limits = steps, labels = steplabels) + 
         ylab("Number of people") + xlab("") +  
         PlotOptions() + 
         theme(
