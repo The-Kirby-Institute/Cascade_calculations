@@ -54,8 +54,13 @@ expModelType <- "nb" # "nb" = negative binomial (default) or "poisson"
 # Set up project and cascade to analyse
 projectName <- "HIV_Cascade_Paper"  
 resultsFolder <- file.path(resultsFolder, projectName)
-cascadeName <- "All-2023"
-cascadePop <- "all"
+cascadeName <- "Male-2023" # All-2023, Female-2023, Male-2023
+cascadePop <- "male" # all, female, male
+
+# Limit populations for the moment
+if (!(cascadePop %in% c("all", "female", "male"))) {
+  stop("Script not setup for other populations")
+}
 
 # New infections parameters
 infectsCalculation <- "exclude" # "include", "exclude" or "middle"
@@ -110,7 +115,7 @@ indicatorNamesNeat <- c("infected" = "Number living with HIV",
 
 # Create output directory and figure file format
 saveFormat <- ".png" #".svg"
-figFolder <- file.path(resultsFolder, "figures", resultsYear)
+figFolder <- file.path(resultsFolder, "figures", paste0(cascadePop, "-", resultsYear))
 dir.create(figFolder, showWarnings = FALSE, recursive = TRUE)
 
 runtests <- FALSE # run chunks that have testing code
@@ -158,6 +163,12 @@ countryCodes <- read.csv(file.path(dataFolder,
 regionCodes <- read.csv(file.path(dataFolder, "postcodeRegionCodes.csv"))
 hivSet <- TidyNotifications(origHivData, resultsYear, countryCodes,
   regionCodes)
+
+# Filter out cascadePop
+if (cascadePop != "all") {
+  hivSet <- hivSet |>
+    filter(sex == cascadePop)
+}
 
 # Load new infections estimates
 inputFileInfections <- file.path(resultsFolder, cascadeName,
@@ -283,6 +294,17 @@ coeffDiagsOS <- exp(coef(trendDiagsOS)[2])
 p_valueDiagsOS <- summary(trendDiagsOS)$coefficients["year", "Pr(>|z|)"]
 intervalDiagsOS <- exp(confint(trendDiagsOS, "year", type = "Wald"))
 
+# Produce a diagnoses plot
+if (cascadePop == "all") {
+  diagsMax = 1500
+} else if (cascadePop == "female") {
+  diagsMax = 300
+} else if (cascadePop == "male") {
+  diagsMax = 1200
+} else {
+  stop("Unknown cascade population")
+}
+
 diagsPlot <- ggplot(data = diagsDataExclude, aes(x = year)) +
   geom_line(aes(y = diags, colour = "exclude")) + 
   geom_point(aes(y = diags), colour = "blue") +
@@ -296,7 +318,7 @@ diagsPlot <- ggplot(data = diagsDataExclude, aes(x = year)) +
       "Excluding previously diagnosed overses", 
       "Previously diagnosed overseas (difference)"),
     guide = guide_legend(nrow = 3)) +
-  scale_y_continuous(labels = comma, limits = c(0, 1500)) +
+  scale_y_continuous(labels = comma, limits = c(0, diagsMax)) +
   scale_x_continuous(breaks = seq(startYear, resultsYear),
     labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
     limits = c(startYear, resultsYear)) +
@@ -1107,6 +1129,9 @@ autoplot(cpt.mean(imrts))
 # breakpoints() function in the strucchange package which uses linear 
 # regression.  
 
+# Sometimes the indicators produce errors so I have commented them out and 
+# replaced with a NULL as this is just for exploration
+
 BPindicator <- function(indicator, tsdata) {
   bpIndicator <- breakpoints(data[, indicator] ~ years, data = data, h = 3)
   print(summary(bpIndicator))
@@ -1115,7 +1140,11 @@ BPindicator <- function(indicator, tsdata) {
   plot(bpIndicator)
   plot(tsdata)
   lines(bpIndicator)
-  try(lines(confint(bpIndicator))) # CIs might not be able to be calculated
+  # CIs might not be able to be calculated so ignore and return a NULL
+  res <- try(lines(confint(bpIndicator)), silent = TRUE) 
+  if (inherits(res, "try-error")) {
+    return(NULL)
+  }
   lines(fitted(bpIndicator, breaks = 1), col = 4)
   lines(fitted(bpIndicator, breaks = 2), col = 2)
   lines(fitted(bpIndicator, breaks = 3), col = 3)
@@ -1124,26 +1153,24 @@ BPindicator <- function(indicator, tsdata) {
   
 }
 
-# Some of the indicators produce errors so I have commented them out and replaced
-# with a NULL as this is just for exploration
 bpInfected <- BPindicator("infected", infectedts)
 bpPldhiv <- BPindicator("pldhiv", pldhivts)
-bpNumART <- BPindicator("numART", numARTts) # get error with confidence intervals
+bpNumART <- BPindicator("numART", numARTts) 
 bpSuppressed <- BPindicator("suppressed", suppressedts)
-bpUndiagnosed <- NULL # BPindicator("undiagnosed", undiagnosedts)
-bpNoART <- NULL # BPindicator("noART", noARTts)
+bpUndiagnosed <- BPindicator("undiagnosed", undiagnosedts)
+bpNoART <- BPindicator("noART", noARTts)
 bpUnsuppressed <- BPindicator("unsuppressed", unsuppressedts)
 bpDiagnoses_exclude <- BPindicator("diagnoses_exclude", diagnoses_excludets)
 bpDiagnoses_include <- BPindicator("diagnoses_include", diagnoses_includets)
 bpDiagnoses_os <- BPindicator("diagnoses_os", diagnoses_osts)
 bpInfections <- BPindicator("infections", infectionsts)
-bpPropdiagnosed <- BPindicator("propdiagnosed", propdiagnosedts) # get error with confidence intervals
-bpProptreated <- BPindicator("proptreated", proptreatedts) # get error with confidence intervals
-bpPropsuppressed <- BPindicator("propsuppressed", propsuppressedts) # get error with confidence intervals
-bpPropoverall <- NULL # BPindicator("propoverall", propoverallts) # get error with confidence intervals
+bpPropdiagnosed <- BPindicator("propdiagnosed", propdiagnosedts) 
+bpProptreated <- BPindicator("proptreated", proptreatedts) 
+bpPropsuppressed <- BPindicator("propsuppressed", propsuppressedts) 
+bpPropoverall <- BPindicator("propoverall", propoverallts) 
 bpYdf <- BPindicator("ydf", ydfts)
 bpCdr <- BPindicator("cdr", cdrts)
-bpIpr <- NULL # BPindicator("ipr", iprts)
+bpIpr <- BPindicator("ipr", iprts)
 bpImr <- BPindicator("imr", iprts)
 
 ```
@@ -1196,7 +1223,8 @@ modelString <- c("Number infected",
   "Incidence mortality ratio")
 
 # NOTE: confidence interval calculation will produce lots of warnings if it
-# can't be calculated (returns NA)
+# can't be calculated (returns NA). Seem to get negative lower ranges sometimes 
+# so just replace with first year as just for exloration not analysis
 
 for (ii in 1:length(modelNames)) {
   
@@ -1228,7 +1256,7 @@ for (ii in 1:length(modelNames)) {
       BIC(breakpoints(tempbp, breaks = 1)))
     
     tempDf$break1ci <- c(paste0("(", 
-      years[confint(tempbp, breaks = 1)$confint[1]],
+      years[max(confint(tempbp, breaks = 1)$confint[1],1)],
       ", ",
       years[confint(tempbp, breaks = 1)$confint[3]],
       ")"), rep("NA", 4))
@@ -1239,7 +1267,7 @@ for (ii in 1:length(modelNames)) {
       BIC(breakpoints(tempbp, breaks = 2)))
     
     tempDf$break2ci <- c(paste0("(", 
-      years[confint(tempbp, breaks = 2)$confint[1, 1]],
+      years[max(confint(tempbp, breaks = 2)$confint[1, 1], 1)], 
       ", ",
       years[confint(tempbp, breaks = 2)$confint[1, 3]],
       ")"), 
@@ -1255,7 +1283,7 @@ for (ii in 1:length(modelNames)) {
       BIC(breakpoints(tempbp, breaks = 3)))
     
     tempDf$break3ci <- c(paste0("(", 
-      years[max(confint(tempbp, breaks = 3)$confint[1, 1], 1)], # Seem to get negative lower ranges sometimes
+      years[max(confint(tempbp, breaks = 3)$confint[1, 1], 1)], 
       ", ",
       years[confint(tempbp, breaks = 3)$confint[1, 3]],
       ")"), 
@@ -1647,6 +1675,7 @@ initialbp <- list(2014, c(2010, 2016), c(2008, 2013, 2018),
   c(2007, 2012, 2016, 2019), c(2007, 2010, 2013, 2016, 2019))
 
 # Y axis range for each model
+if (cascadePop == "all") { 
 ymax <- c("infected" = 40000,
   "pldhiv" = 40000,
   "numART" = 40000, 
@@ -1666,6 +1695,49 @@ ymax <- c("infected" = 40000,
   "cdr"=  3.5,
   "ipr" = 0.1,
   "imr" = 20)
+} else if (cascadePop == "female") {
+  ymax <- c("infected" = 4500,
+  "pldhiv" = 4500,
+  "numART" = 4500, 
+  "suppressed" = 4500,
+  "undiagnosed" = 400, 
+  "noART" = 600, 
+  "unsuppressed" = 450,
+  "diagnoses_exclude" = 150,
+  "diagnoses_include" = 250,
+  "diagnoses_os" = 200,
+  "infections" = 120, 
+  "propdiagnosed" = 1.0, 
+  "proptreated" = 1.0,       
+  "propsuppressed" = 1.0,
+  "propoverall" = 1.0,
+  "ydf" = 0.7,  
+  "cdr"=  35,
+  "ipr" = 0.1,
+  "imr" = 25)
+} else if (cascadePop == "male") {
+  ymax <- c("infected" = 32000,
+  "pldhiv" = 32000,
+  "numART" = 32000, 
+  "suppressed" = 32000,
+  "undiagnosed" =3000, 
+  "noART" = 6000, 
+  "unsuppressed" = 3000,
+  "diagnoses_exclude" = 1000,
+  "diagnoses_include" = 1200,
+  "diagnoses_os" = 500,
+  "infections" = 1000, 
+  "propdiagnosed" = 1.0, 
+  "proptreated" = 1.0,       
+  "propsuppressed" = 1.0,
+  "propoverall" = 1.0,
+  "ydf" = 0.5,  
+  "cdr"=  3.5,
+  "ipr" = 0.1,
+  "imr" = 15)
+} else {
+  stor("Unknwon cascade population")
+}
 
 offsets <- list("infected" = 1,
   "pldhiv" = 1,
@@ -1797,15 +1869,26 @@ latestCascade$lower[latestCascade$stage == "retained"] <-
     latestCascade$lower[latestCascade$stage == "numART"], 
     latestCascade$lower[latestCascade$stage == "retained"])
 
-plotCascadeAll <- PlotCascade(latestCascade, retained = TRUE, ymax = 35000,
+if (cascadePop == "all") {
+  cascadeMax = 40000
+} else if (cascadePop == "female") {
+  cascadeMax = 4500
+} else if (cascadePop == "male") {
+  cascadeMax = 32000
+} else {
+  stop("Unknown cascade population")
+}
+
+plotCascadeAll <- PlotCascade(latestCascade, retained = TRUE, ymax = cascadeMax,
   plotcolours = asrcols,  
   steplabels = c("Living\nwith HIV", "Diagnosed", "Retained\nin care",
     "Receiving\ntreatment", "Suppressed\n(VL < 200)"), 
   percentages = TRUE,
   targetlines = "95", targetlabels = FALSE) + 
-  scale_y_continuous(breaks = seq(0, 40000, by = 10000),
+  scale_y_continuous(breaks = seq(0, cascadeMax, 
+    by = 10^floor(log10(cascadeMax))),
     labels =  comma,
-    limits = c(0, 40000)) +
+    limits = c(0, cascadeMax)) +
   ylab(paste("Number of people in", resultsYear))
 
 # Stacked HIV cascade ----------------------------------------------------------
