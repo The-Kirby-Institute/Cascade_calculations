@@ -27,10 +27,10 @@ LoadLibrary(cowplot)
 
 ```{r User specified parameters}
 
-linkageYear <- 2024
-cascadeYear <- 2024
+linkageYear <- 2023
+cascadeYear <- 2023
 
-cascadeProject <- "ASR_2025"
+cascadeProject <- "HIV_Cascade_Paper"
 cascadeName <- "All"
 
 # ASR_2025 c("All", "NonIndigenous", "AusNonIndigenous", "Indigenous", "Male", 
@@ -208,17 +208,20 @@ if (pbsPopulation) {
 ```{r Plot data and results}
 if (pbsPopulation) {
   
+  # endYear <- max(data$year)
+  endYear <- 2023
+  
   cascadeRetained <- cascadeGaps |>
-    filter(str_detect(name, "retained"))
+    filter(str_detect(name, "retained"), year <= endYear)
   cascadeTreat <- cascadeGaps |>
-    filter(name %in% c("treated", "art_estimate"))
+    filter(name %in% c("treated", "art_estimate"), year <= endYear)
   
   retainedPlot <- ggplot(data = cascadeRetained,
     aes(x = year, y = value, colour = name)) +
     geom_line() +
     scale_y_continuous(labels = percent) +
-    scale_x_continuous(breaks = 2012:2024, 
-      labels = EveryNth(2012:2024, 3, inverse = TRUE)) +
+    scale_x_continuous(breaks = 2012:endYear, 
+      labels = EveryNth(2012:endYear, 3, inverse = TRUE)) +
     scale_colour_manual(name = "",
       values = c("blue", "red"),
       breaks = c("retained", "retained_estimate"),
@@ -227,7 +230,7 @@ if (pbsPopulation) {
       colour = "black") + 
     geom_pointrange(aes(x = 2019, y = 0.9624, ymin = 0.93, ymax = 0.99), 
       colour = "black") + 
-    expand_limits(y = c(0.8, 1), x = c(2012, 2024)) +
+    expand_limits(y = c(0.8, 1), x = c(2012, endYear)) +
     xlab("Year") + ylab("Percent retained") +  
     PlotOptions()
   
@@ -237,14 +240,14 @@ if (pbsPopulation) {
     aes(x = year, y = value, colour = name)) +
     geom_line() +
     scale_y_continuous(labels = percent) +
-    scale_x_continuous(breaks = 2015:2024, 
-      labels = EveryNth(2015:2024, 3, inverse = TRUE)) +
+    scale_x_continuous(breaks = 2015:endYear, 
+      labels = EveryNth(2015:endYear, 3, inverse = TRUE)) +
     scale_colour_manual(name = "",
       values = c("blue", "red"),
       breaks = c("treated", "art_estimate"),
       limits = c("treated", "art_estimate"),
       labels = c("Linkage ART percentage", "Cascade ART percentage")) +
-    expand_limits(y = c(0.8, 1), x = (2015:2024)) +
+    expand_limits(y = c(0.8, 1), x = (2015:endYear)) +
     xlab("Year") + ylab("Percent on ART") +
     PlotOptions() 
   
@@ -316,11 +319,11 @@ if (savePlots) {
   if (pbsPopulation) {
     SaveFigure(figureFolder, 
       paste0("Linkage_Retained_Comparison-", linkageYear, "-Data"), 
-      retainedPlot, width = 14)
+      retainedPlot, width = 14, height = 12)
     
     SaveFigure(figureFolder, 
       paste0("Linkage_ART_Comparison-", linkageYear, "-Data"),
-      treatedPlot, width = 14)
+      treatedPlot, width = 14, height = 12)
 
   } else {
 

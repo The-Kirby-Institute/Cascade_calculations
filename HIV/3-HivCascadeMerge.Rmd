@@ -20,8 +20,8 @@ source(file.path(Rcode, "LoadLibrary.R"), echo=TRUE)
 LoadLibrary(tidyverse)
 
 # Primary script parameters ---------------------------------------------------
-analysisYear <- 2024
-projectName <-  "ASR_2025" # "ASR_2025"; "HIV_Cascade_Paper"
+analysisYear <- 2023
+projectName <-  "HIV_Cascade_Paper" # "ASR_2025"; "HIV_Cascade_Paper"
 
 multipleCascades <- FALSE
 artNames <- NULL
@@ -40,7 +40,7 @@ if (is.null(artNames)) {
   artNames <- cascadeNames
 }
 
-mergeAll <- TRUE
+mergeAll <- FALSE
 adjustLower <- TRUE # adjust lower bounds to match lower bound of treatment
 saveResults <- TRUE
 
@@ -125,7 +125,11 @@ for (ii in 1:length(cascadeNames)) {
     if (adjustLower) {
       if (nrow(treatment) > 0) {
         # Make sure lower bounds for PLHIV, PLDHIV and retained aren't lower
-        # than the lower bound of treatment
+        # than the lower bound of treatment. 
+        # 
+        # Also make sure retained estimate isn't lower than the ART estimate. 
+        
+        treat <- (treatment %>% filter(stage == "numART"))$value
         treatLower <- (treatment %>% filter(stage == "numART"))$lower
         startLiving <- min(living$year)
         treatStart <- min(treatment$year)
@@ -144,6 +148,12 @@ for (ii in 1:length(cascadeNames)) {
               nrow(retainedNew) + 1):length(treatLower)], 
           treatLower[(length(treatLower) - nrow(retainedNew) + 1):length(treatLower)],
           retainedNew$lower)
+        
+        retainedNew$value <- ifelse(
+          retainedNew$value < treat[(length(treat) - 
+              nrow(retainedNew) + 1):length(treat)], 
+          treat[(length(treatLower) - nrow(retainedNew) + 1):length(treat)],
+          retainedNew$value)
         
         
         pldhiv <- bind_rows(pldhivNew, retainedNew)

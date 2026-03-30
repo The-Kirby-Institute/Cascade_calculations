@@ -776,7 +776,7 @@ hivBaseRates$propstay_lower <- propAus * (1 - 2 * ausBornEmigrate) + (1 - propAu
   (1 - 2 * osBornEmigrate)
 hivBaseRates$propstay_upper <- rep(1, length(allYears))
 
-# Adjust overall reates for Indigenous vs non-Indigenous
+# Adjust overall rates for Indigenous vs non-Indigenous
 nonAborigDiags <- hivResults$totalnotifications *
   hivAborigCum$non_indigenous
 aborigDiags <- hivResults$totalnotifications *

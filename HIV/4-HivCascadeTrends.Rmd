@@ -54,8 +54,8 @@ expModelType <- "nb" # "nb" = negative binomial (default) or "poisson"
 # Set up project and cascade to analyse
 projectName <- "HIV_Cascade_Paper"  
 resultsFolder <- file.path(resultsFolder, projectName)
-cascadeName <- "Male-2023" # All-2023, Female-2023, Male-2023
-cascadePop <- "male" # all, female, male
+cascadeName <- "All-2023" # All-2023, Female-2023, Male-2023
+cascadePop <- "all" # all, female, male
 
 # Limit populations for the moment
 if (!(cascadePop %in% c("all", "female", "male"))) {
@@ -1850,7 +1850,7 @@ RmLegened <- function(plot) {
   return(plot + theme(legend.position = "none"))
 }
 
-# HIV Cascade in 2020 ----------------------------------------------------------
+# HIV Cascade in results year ---------------------------------------------------
 latestCascade <- filter(hivCascadeAll,
   population == cascadePop,
   year == resultsYear)
