@@ -1,0 +1,674 @@
+---
+title: "HIV Cascade Paper Figures"
+author: "Richard T. Gray"
+date: Latest version - `r format(Sys.Date(), format="%B %d, %Y")`
+editor_options: 
+  chunk_output_type: console
+---
+
+This document is used to produce the figures for a manuscript on the HIV cascade
+in AUstralia between 2004-2023. All results, figures and tables have already 
+been generated. The code here is used to load those results and produce the
+final figures. 
+
+```{r setup}
+# Open as a project (setting working directory to source and restarting R)
+
+# Set up directories
+basePath <- getwd()
+Rcode <- file.path(dirname(dirname(dirname(dirname(getwd())))), "code")
+HIVcode <- file.path(dirname(dirname(dirname(getwd()))), "code")
+# dataFolder <- file.path(dirname(dirname(getwd())), "data")
+# resultsFolder <- file.path(basePath, "output")
+
+# Load standard libraries and options ----------------------------------
+source(file.path(Rcode, "LoadLibrary.R"))
+source(file.path(Rcode, "PlotOptions.R"))
+source(file.path(Rcode, "PlotColors.R"))
+source(file.path(Rcode, "EveryNth.R"))
+source(file.path(Rcode, "FormatData.R"))
+source(file.path(Rcode, "GetLegend.R"))
+source(file.path(HIVcode, "ResultsFunctions.R"))
+LoadLibrary(tidyverse)
+LoadLibrary(scales)
+LoadLibrary(cowplot) # Note this masks ggsave with save_plot
+# LoadLibrary(captioner)
+# LoadLibrary(stringr)
+LoadLibrary(svglite)
+
+# Script parameters
+resultsYear <- 2023  # year of cascade we will plot
+minYear <- 20      # how long ago do we plot things
+startYear <- resultsYear - minYear + 1 
+# savePlots <- TRUE
+years <- startYear:resultsYear
+
+savePlots <- TRUE
+# Create output directory and figure file format
+saveFormat <- ".png" #".svg"
+# figFolder <- file.path(resultsFolder, "figures", paste0(cascadePop, "-", resultsYear))
+
+# Captions
+captions <- list()
+
+# Plot colours 
+asrcols <- PlotColors("hivcascade5")
+
+# Number of x-axis labels
+xTicks <- 4
+
+# Formatted decimal point in output tables
+decimalMark <- "mid" # "low" or "mid" 
+
+stackPlotLabels <- c("Undiagnosed", 
+  "Diagnosed untreated", 
+  "On ART:  VL > 200 last test", 
+  "On ART: VL < 200 last test")
+
+stackPlotCols <- asrcols[c(1, 2, 4, 5)]
+
+
+```
+
+```{r Load results}
+
+loadRData <- function(fileName){
+# Loads an Rda file, and returns the separate variables in a list
+# https://stackoverflow.com/questions/5577221/can-i-load-a-saved-r-object-into-a-new-object-name
+    load(fileName)
+    mget(ls()[ls() != "fileName"])
+}
+
+# allTrendPlots <- loadRData(file.path(basePath, paste0("all-", resultsYear),
+#   "CascadeTrendPlots.Rda"))
+# allTrendModels <- loadRData(file.path(basePath, paste0("all-", resultsYear),
+#   "CascadeTrendModels.Rda"))
+allTrendData <- loadRData(file.path(basePath, paste0("all-", resultsYear),
+  "CascadeTrendData.Rda"))
+allSegmentedModels <- loadRData(file.path(basePath, paste0("all-", resultsYear),
+  "CascadeSegmentedModels.Rda"))
+
+maleTrendData <- loadRData(file.path(basePath, paste0("male-", resultsYear),
+  "CascadeTrendData.Rda"))
+maleSegmentedModels <- loadRData(file.path(basePath, paste0("male-", resultsYear),
+  "CascadeSegmentedModels.Rda"))
+
+femaleTrendData <- loadRData(file.path(basePath, paste0("female-", resultsYear),
+  "CascadeTrendData.Rda"))
+femaleSegmentedModels <- loadRData(file.path(basePath, paste0("female-", resultsYear),
+  "CascadeSegmentedModels.Rda"))
+
+# Read in HIV cascade results to get retained estimates (all other estimates 
+# are in the TrendDataFiles
+cascadeFile <- paste0("HIVcascadeEstimates-", resultsYear,  ".csv")
+
+allCascade <- read_csv(file.path(dirname(basePath), paste0("All-", resultsYear),
+  cascadeFile)) |>
+  filter(year == resultsYear)
+
+maleCascade <- read_csv(file.path(dirname(basePath), 
+  paste0("Male-", resultsYear), cascadeFile)) |>
+  filter(year == resultsYear)
+
+femaleCascade <- read_csv(file.path(dirname(basePath), 
+  paste0("Female-", resultsYear), cascadeFile)) |>
+  filter(year == resultsYear)
+
+
+```
+
+```{r Plot functions}
+# Setup some useful functions for generating the plots
+
+RmLegend <- function(plot) {
+  return(plot + theme(legend.position = "none"))
+}
+
+# Adjust diagnosed and retained estimates so the lower bound is not less than 
+# the lower bound for ART
+AdjustCascade <- function(latestCascade) {
+  latestCascade$lower[latestCascade$stage == "pldhiv"] <-
+    ifelse(latestCascade$lower[latestCascade$stage == "pldhiv"] < 
+        latestCascade$lower[latestCascade$stage == "numART"], 
+      latestCascade$lower[latestCascade$stage == "numART"], 
+      latestCascade$lower[latestCascade$stage == "pldhiv"])
+  
+  latestCascade$lower[latestCascade$stage == "retained"] <-
+    ifelse(latestCascade$lower[latestCascade$stage == "retained"] < 
+        latestCascade$lower[latestCascade$stage == "numART"], 
+      latestCascade$lower[latestCascade$stage == "numART"], 
+      latestCascade$lower[latestCascade$stage == "retained"])
+  
+  return(latestCascade)
+}
+
+Ybreak <- function(value) {
+  10^floor(log10(value))
+}
+
+# Function for ymax for each population
+CascadeMax <- function(cascadePop) {
+  if (cascadePop == "all") {
+    cascadeMax = 40000
+  } else if (cascadePop == "female") {
+    cascadeMax = 4500
+  } else if (cascadePop == "male") {
+    cascadeMax = 32000
+  } else {
+    stop("Unknown cascade population")
+  }
+  return(cascadeMax)
+}
+
+PlotPopCascade <- function(cascade, pop) {
+  
+  plot <- PlotCascade(AdjustCascade(cascade), retained = TRUE, 
+    ymax = CascadeMax(pop),
+    plotcolours = asrcols,  
+    # steplabels = c("", "", "", ""),
+    steplabels = c("Living\nwith HIV", "Diagnosed", "Retained\nin care",
+      "Receiving\ntreatment", "Suppressed\n(VL < 200)"),
+    percentages = FALSE, targetlabels = FALSE) + 
+    scale_y_continuous(breaks = seq(0, CascadeMax(pop), 
+      by = Ybreak(CascadeMax(pop))),
+      labels =  comma,
+      limits = c(0, CascadeMax(pop))) +
+    ylab(paste("Number of people in", resultsYear))
+  
+  return(plot)
+}
+
+stackCascade <- function(cascade) {
+  # Set up cascdae data for stacked plots
+  stackCascade <- cascade |>
+    filter(stage != "retained", year >= startYear) |>
+    dplyr::select(year, stage, value)|>
+    spread(stage, value) |>
+    mutate(undiagnosed = infected - pldhiv,
+      diagnosed = pldhiv - numART,
+      unsuppressed = numART - suppressed) |>
+    dplyr::select(year, undiagnosed, diagnosed, unsuppressed, suppressed) |>
+    gather("stage", "value", 2:5) |>
+    mutate(stage = factor(stage, levels = c("undiagnosed", "diagnosed", 
+      "unsuppressed", "suppressed"))) |>
+    arrange(stage)
+  
+  return(stackCascade)
+
+}  
+
+ExtractCascade <- function(cascadeData) {  
+  data <- cascadeData$trendData |> 
+    filter(stage %in% c("infected", "pldhiv", "numART", "suppressed"))  
+  
+  return(data)
+}
+
+StackPlots <- function(trendData) {
+  
+  stackPlotBase <- ggplot(data = stackCascade(ExtractCascade(trendData)), 
+    aes(x = year, y = value,  fill = stage)) + 
+    xlab("Year") +
+    scale_fill_manual(values = stackPlotCols, name = "", labels = stackPlotLabels, 
+      guide = guide_legend(nrow = 1)) +  
+    scale_x_continuous(breaks = seq(startYear, resultsYear),
+      labels =  rev(EveryNth(seq(resultsYear, startYear), xTicks, inverse = TRUE)),
+      limits = c(startYear, resultsYear)) +
+    PlotOptions() + 
+    theme(legend.text = element_text(size = 8))
+  
+  stackPlotNum <- stackPlotBase + geom_area(stat="identity") + 
+    ylab("Number living with HIV") + scale_y_continuous(labels = comma)
+  stackPlotProp <- stackPlotBase + geom_area(stat="identity", 
+    position= "fill") + ylab("Percentage living with HIV") +
+    scale_y_continuous(labels = percent)
+  
+  return(list(number = stackPlotNum, proportion = stackPlotProp))
+  
+}
+
+```
+
+```{r Figure 1}
+# Basic cascade trends and 2023 cascades
+# 
+# 3 x 3 plot
+
+# Final year full cascades
+plotCascadeAll <- PlotPopCascade(allCascade, "all")
+plotCascadeMale <- PlotPopCascade(maleCascade, "male")
+plotCascadeFemale <- PlotPopCascade(femaleCascade, "female")
+
+# Stacked HIV cascades 
+stackPlotsAll <- StackPlots(allTrendData) 
+stackPlotsMale <- StackPlots(maleTrendData) 
+stackPlotsFemale <- StackPlots(femaleTrendData) 
+
+# Produce a combined plot
+legendCascade <- GetLegend(stackPlotsAll$number)
+
+cascadePlot <- ggdraw() +
+  draw_plot(
+    plot_grid(
+      RmLegend(stackPlotsAll$number),
+      RmLegend(stackPlotsAll$proportion),
+      plotCascadeAll,
+      RmLegend(stackPlotsMale$number),
+      RmLegend(stackPlotsMale$proportion),
+      plotCascadeMale,
+      RmLegend(stackPlotsFemale$number),
+      RmLegend(stackPlotsFemale$proportion),
+      plotCascadeFemale,
+      ncol = 3, nrow = 3, align = "v",
+      byrow = FALSE),
+    0, 0.05, 1, 0.9) +
+  draw_plot(legendCascade, 0, 0.025, 1, 0.05) +
+  draw_plot_label(c("Overall", "Males", "Females"),
+    c(0.5 * 0.33, 1.5 * 0.33, 2.5 * 0.33),
+    c(0.975, 0.975, 0.975),
+    size = 12, hjust = 0, vjust = 1)
+
+cascadePlot
+
+# Separate plots
+
+cascadePlotAll <- ggdraw() + 
+  draw_plot(GetLegend(stackPlotsAll$number), 0, 0.95, 1, 0.05) +
+  draw_plot(RmLegend(stackPlotsAll$number), 0, 0.5, 0.5, 0.45) +
+  draw_plot(RmLegend(stackPlotsAll$proportion), 0.5, 0.5, 0.5, 0.45) +
+  draw_plot(plotCascadeAll, 0.25, 0, 0.5, 0.5) +
+  draw_plot_label(c("A", "B", "C"), 
+    c(0, 0.5, 0.25), c(0.95, 0.95, 0.5), 
+    size = 12)
+
+cascadePlotMale <- ggdraw() + 
+  draw_plot(GetLegend(stackPlotsMale$number), 0, 0.95, 1, 0.05) +
+  draw_plot(RmLegend(stackPlotsMale$number), 0, 0.5, 0.5, 0.45) +
+  draw_plot(RmLegend(stackPlotsMale$proportion), 0.5, 0.5, 0.5, 0.45) +
+  draw_plot(plotCascadeMale, 0.25, 0, 0.5, 0.5) +
+  draw_plot_label(c("A", "B", "C"), 
+    c(0, 0.5, 0.25), c(0.95, 0.95, 0.5), 
+    size = 12)
+
+cascadePlotFemale <- ggdraw() + 
+  draw_plot(GetLegend(stackPlotsFemale$number), 0, 0.95, 1, 0.05) +
+  draw_plot(RmLegend(stackPlotsFemale$number), 0, 0.5, 0.5, 0.45) +
+  draw_plot(RmLegend(stackPlotsFemale$proportion), 0.5, 0.5, 0.5, 0.45) +
+  draw_plot(plotCascadeFemale, 0.25, 0, 0.5, 0.5) +
+  draw_plot_label(c("A", "B", "C"), 
+    c(0, 0.5, 0.25), c(0.95, 0.95, 0.5), 
+    size = 12)
+
+```
+
+```{r Figure 2}
+# Cascade gaps 
+# 
+# 6 x 3 plot?
+
+legend <- GetLegend(allSegmentedModels$segResults[["undiagnosed"]]$plotBest)
+
+gapsFullPlot <- ggdraw() +
+  draw_plot(legend, 0, 0.0, 1, 0.05) + 
+  draw_plot(
+    plot_grid(
+      RmLegend(allSegmentedModels$segResults[["undiagnosed"]]$plotBest) + xlab("") +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      RmLegend(allSegmentedModels$segResults[["propdiagnosed"]]$plotBest) + xlab("") +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      RmLegend(allSegmentedModels$segResults[["noART"]]$plotBest) + xlab("") + 
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      RmLegend(allSegmentedModels$segResults[["proptreated"]]$plotBest) + xlab("") + 
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      RmLegend(allSegmentedModels$segResults[["unsuppressed"]]$plotBest) + xlab("") +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      RmLegend(allSegmentedModels$segResults[["propsuppressed"]]$plotBest) +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      # Males
+      RmLegend(maleSegmentedModels$segResults[["undiagnosed"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(maleSegmentedModels$segResults[["propdiagnosed"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(maleSegmentedModels$segResults[["noART"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(maleSegmentedModels$segResults[["proptreated"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(maleSegmentedModels$segResults[["unsuppressed"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(maleSegmentedModels$segResults[["propsuppressed"]]$plotBest) +
+        ylab(""),
+      # Females
+      RmLegend(femaleSegmentedModels$segResults[["undiagnosed"]]$plotBest) + xlab("") +
+        ylab(""), 
+      RmLegend(femaleSegmentedModels$segResults[["propdiagnosed"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(femaleSegmentedModels$segResults[["noART"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(femaleSegmentedModels$segResults[["proptreated"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(femaleSegmentedModels$segResults[["unsuppressed"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(femaleSegmentedModels$segResults[["propsuppressed"]]$plotBest) +
+        ylab(""),
+      ncol = 3, nrow = 6, align = "v",
+      byrow = FALSE), 
+    0, 0.05, 1, 0.9) + 
+   draw_plot_label(c("Overall", "Males", "Females"), 
+     c(0.5 * 0.333, 1.5 * 0.333, 2.5 * 0.333), c(0.975, 0.975, 0.975),
+     hjust = 0, vjust = 1) 
+  
+
+gapsFullPlot
+
+# separate plots
+# Already done using the 4-CascadeTrends.Rmd script. 
+
+```
+
+```{r Figure 3}
+# Key indicator trends: overseas notifications, previous diagnosis overseas, 
+# new infections, prevalence
+# 
+# 4 x 3 plot
+
+legend <- GetLegend(allSegmentedModels$segResults[["diagnoses_exclude"]]$plotBest)
+
+indicatorsPlot <- ggdraw() +
+  draw_plot(legend, 0, 0.0, 1, 0.05) + 
+  draw_plot(
+    plot_grid(
+      RmLegend(allSegmentedModels$segResults[["diagnoses_exclude"]]$plotBest) + xlab("") +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      RmLegend(allSegmentedModels$segResults[["diagnoses_os"]]$plotBest) + xlab("") +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      RmLegend(allSegmentedModels$segResults[["infected"]]$plotBest) + xlab("") +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      RmLegend(allSegmentedModels$segResults[["infections"]]$plotBest) + xlab("") +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      # Males
+      RmLegend(maleSegmentedModels$segResults[["diagnoses_exclude"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(maleSegmentedModels$segResults[["diagnoses_os"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(maleSegmentedModels$segResults[["infected"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(maleSegmentedModels$segResults[["infections"]]$plotBest) + xlab("") +
+        ylab(""),
+      # Females
+      RmLegend(femaleSegmentedModels$segResults[["diagnoses_exclude"]]$plotBest) + 
+        xlab("") + ylab(""),
+      RmLegend(femaleSegmentedModels$segResults[["diagnoses_os"]]$plotBest) + 
+        xlab("") + ylab(""),
+      RmLegend(femaleSegmentedModels$segResults[["infected"]]$plotBest) + 
+        xlab("") + ylab(""),
+      RmLegend(femaleSegmentedModels$segResults[["infections"]]$plotBest) + 
+        xlab("") + ylab(""),
+      ncol = 3, nrow = 4, align = "v",
+      byrow = FALSE),
+    0, 0.05, 1, 0.9) + 
+   draw_plot_label(c("Overall", "Males", "Females"), 
+     c(0.5 * 0.333, 1.5 * 0.333, 2.5 * 0.333), c(0.975, 0.975, 0.975),
+     hjust = 0, vjust = 1)   
+
+indicatorsPlot
+
+# Separate plots
+indicatorsPlotAll <- ggdraw() +
+  draw_plot(legend, 0, 0.95, 1, 0.05) + 
+  draw_plot(
+    plot_grid(
+      RmLegend(allSegmentedModels$segResults[["diagnoses_exclude"]]$plotBest),
+      RmLegend(allSegmentedModels$segResults[["diagnoses_os"]]$plotBest),
+      RmLegend(allSegmentedModels$segResults[["infected"]]$plotBest),
+      RmLegend(allSegmentedModels$segResults[["infections"]]$plotBest),
+      ncol = 2, nrow = 2, align = "v",
+      labels = c("A", "B", "C", "D")), 
+    0, 0, 1, 0.95)
+
+indicatorsPlotMale <- ggdraw() +
+  draw_plot(legend, 0, 0.95, 1, 0.05) + 
+  draw_plot(
+    plot_grid(
+      RmLegend(maleSegmentedModels$segResults[["diagnoses_exclude"]]$plotBest),
+      RmLegend(maleSegmentedModels$segResults[["diagnoses_os"]]$plotBest),
+      RmLegend(maleSegmentedModels$segResults[["infected"]]$plotBest),
+      RmLegend(maleSegmentedModels$segResults[["infections"]]$plotBest),
+      ncol = 2, nrow = 2, align = "v",
+      labels = c("A", "B", "C", "D")), 
+    0, 0, 1, 0.95)
+
+indicatorsPlotFemale <- ggdraw() +
+  draw_plot(legend, 0, 0.95, 1, 0.05) + 
+  draw_plot(
+    plot_grid(
+      RmLegend(femaleSegmentedModels$segResults[["diagnoses_exclude"]]$plotBest),
+      RmLegend(femaleSegmentedModels$segResults[["diagnoses_os"]]$plotBest),
+      RmLegend(femaleSegmentedModels$segResults[["infected"]]$plotBest),
+      RmLegend(femaleSegmentedModels$segResults[["infections"]]$plotBest),
+      ncol = 2, nrow = 2, align = "v",
+      labels = c("A", "B", "C", "D")), 
+    0, 0, 1, 0.95)
+
+      
+```
+
+```{r Figure 4}
+# Other epidemiological metrics
+# 
+# 3 x 3 plot
+
+legend <- GetLegend(allSegmentedModels$segResults[["ydf"]]$plotBest)
+
+metricsPlot <- ggdraw() +
+  draw_plot(legend, 0, 0.0, 1, 0.05) + 
+  draw_plot(
+    plot_grid(
+      RmLegend(allSegmentedModels$segResults[["ydf"]]$plotBest) + xlab("") +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      RmLegend(allSegmentedModels$segResults[["cdr"]]$plotBest) + xlab("") +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      RmLegend(allSegmentedModels$segResults[["ipr"]]$plotBest) + xlab("") +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      RmLegend(allSegmentedModels$segResults[["imr"]]$plotBest) + xlab("") +
+        theme(axis.title.y = element_text(size = rel(0.75))),
+      # Males
+      RmLegend(maleSegmentedModels$segResults[["ydf"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(maleSegmentedModels$segResults[["cdr"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(maleSegmentedModels$segResults[["ipr"]]$plotBest) + xlab("") +
+        ylab(""),
+      RmLegend(maleSegmentedModels$segResults[["imr"]]$plotBest) + xlab("") +
+        ylab(""),
+      # Females
+      RmLegend(femaleSegmentedModels$segResults[["ydf"]]$plotBest) + 
+        xlab("") + ylab(""),
+      RmLegend(femaleSegmentedModels$segResults[["cdr"]]$plotBest) + 
+        xlab("") + ylab(""),
+      RmLegend(femaleSegmentedModels$segResults[["ipr"]]$plotBest) + 
+        xlab("") + ylab(""),
+      RmLegend(femaleSegmentedModels$segResults[["imr"]]$plotBest) + 
+        xlab("") + ylab(""),
+      ncol = 3, nrow = 4, align = "v",
+      byrow = FALSE),
+    0, 0.05, 1, 0.9) + 
+  draw_plot_label(c("Overall", "Males", "Females"), 
+    c(0.5 * 0.333, 1.5 * 0.333, 2.5 * 0.333), c(0.975, 0.975, 0.975),
+    hjust = 0, vjust = 1)
+
+metricsPlot
+
+# Seperate plots
+metricsPlotAll <- ggdraw() +
+  draw_plot(legend, 0, 0.95, 1, 0.05) + 
+  draw_plot(
+    plot_grid(
+      RmLegend(allSegmentedModels$segResults[["ydf"]]$plotBest),
+      RmLegend(allSegmentedModels$segResults[["cdr"]]$plotBest),
+      RmLegend(allSegmentedModels$segResults[["ipr"]]$plotBest),
+      RmLegend(allSegmentedModels$segResults[["imr"]]$plotBest),
+      ncol = 2, nrow = 2, align = "v",
+      labels = c("A", "B", "C", "D")), 
+    0, 0, 1, 0.95)
+
+metricsPlotMale <- ggdraw() +
+  draw_plot(legend, 0, 0.95, 1, 0.05) + 
+  draw_plot(
+    plot_grid(
+      RmLegend(maleSegmentedModels$segResults[["ydf"]]$plotBest),
+      RmLegend(maleSegmentedModels$segResults[["cdr"]]$plotBest),
+      RmLegend(maleSegmentedModels$segResults[["ipr"]]$plotBest),
+      RmLegend(maleSegmentedModels$segResults[["imr"]]$plotBest),
+      ncol = 2, nrow = 2, align = "v",
+      labels = c("A", "B", "C", "D")), 
+    0, 0, 1, 0.95)
+
+metricsPlotFemale <- ggdraw() +
+  draw_plot(legend, 0, 0.95, 1, 0.05) + 
+  draw_plot(
+    plot_grid(
+      RmLegend(femaleSegmentedModels$segResults[["ydf"]]$plotBest),
+      RmLegend(femaleSegmentedModels$segResults[["cdr"]]$plotBest),
+      RmLegend(femaleSegmentedModels$segResults[["ipr"]]$plotBest),
+      RmLegend(femaleSegmentedModels$segResults[["imr"]]$plotBest),
+      ncol = 2, nrow = 2, align = "v",
+      labels = c("A", "B", "C", "D")), 
+    0, 0, 1, 0.95)
+
+```
+
+```{r Save plots}
+
+if (savePlots) {
+  # Figure 1
+  ggsave(file.path(basePath,
+    paste("Figure1_Cascades_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = cascadePlot, width = 24, height = 24, units = "cm")
+  
+  
+  ggsave(file.path(basePath,
+    paste("Figure1_Cascades_All_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = cascadePlotAll, width = 25, height = 18, units = "cm")
+  
+  # Save SVG for all as well
+  ggsave(file.path(basePath,
+    paste("Figure1_Cascades_All_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      ".svg", sep = "")),
+    plot = cascadePlotAll, width = 25, height = 18, units = "cm")
+  
+  ggsave(file.path(basePath,
+    paste("Figure1_Cascades_Female_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = cascadePlotFemale, width = 25, height = 18, units = "cm")
+  
+  ggsave(file.path(basePath,
+    paste("Figure1_Cascades_Male_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = cascadePlotMale, width = 25, height = 18, units = "cm")
+  
+  # Figure 2
+  ggsave(file.path(basePath,
+    paste("Figure2_Gaps_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = gapsFullPlot, width = 24, height = 42, units = "cm")
+  
+   # Save SVG for all as well
+   ggsave(file.path(basePath,
+    paste("Figure2_Gaps_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      ".svg", sep = "")),
+    plot = gapsFullPlot, width = 24, height = 42, units = "cm")
+  
+  # Figure 3
+  ggsave(file.path(basePath,
+    paste("Figure3_Indicators_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = indicatorsPlot, width = 24, height = 28, units = "cm")
+  
+  ggsave(file.path(basePath,
+    paste("Figure3_Indicators_All_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = indicatorsPlotAll, width = 22, height = 16, units = "cm")
+  
+  # Save SVG for all as well
+  ggsave(file.path(basePath,
+    paste("Figure3_Indicators_All_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      ".svg", sep = "")),
+    plot = indicatorsPlotAll, width = 22, height = 16, units = "cm")
+  
+  ggsave(file.path(basePath,
+    paste("Figure3_Indicators_Male_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = indicatorsPlotMale, width = 22, height = 16, units = "cm")
+  
+  ggsave(file.path(basePath,
+    paste("Figure3_Indicators_Female_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = indicatorsPlotFemale, width = 22, height = 16, units = "cm")
+  
+  # Figure 4
+  ggsave(file.path(basePath,
+    paste("Figure4_Metrics_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = metricsPlot, width = 24, height = 28, units = "cm")
+  
+  ggsave(file.path(basePath,
+    paste("Figure4_Metrics_All_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = metricsPlotAll, width = 22, height = 16, units = "cm")
+  
+  # Save SVG for all as well
+  ggsave(file.path(basePath,
+    paste("Figure4_Metrics_All_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      ".svg", sep = "")),
+    plot = metricsPlotAll, width = 22, height = 16, units = "cm")
+  
+  ggsave(file.path(basePath,
+    paste("Figure4_Metrics_Male_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = metricsPlotMale, width = 22, height = 16, units = "cm")
+  
+  ggsave(file.path(basePath,
+    paste("Figure4_Metrics_Female_",
+      toString(startYear), "-",
+      toString(resultsYear),
+      saveFormat, sep = "")),
+    plot = metricsPlotFemale, width = 22, height = 16, units = "cm")
+  
+}
+
+```
+

@@ -50,13 +50,20 @@ HIV/output/Undiagnosed_metrics_paper/*
 
 !HIV/output/HIV_Cascade_Paper
 HIV/output/HIV_Cascade_Paper/*
+
 !HIV/output/HIV_Cascade_Paper/ProjectParameters.csv
-!HIV/output/HIV_Cascade_Paper/All-2022
+!HIV/output/HIV_Cascade_Paper/All-2023
+!HIV/output/HIV_Cascade_Paper/Female-2023
+!HIV/output/HIV_Cascade_Paper/Male-2023
 !HIV/output/HIV_Cascade_Paper/figures
 HIV/output/HIV_Cascade_Paper/figures/*
-!HIV/output/HIV_Cascade_Paper/figures/2022
-HIV/output/HIV_Cascade_Paper/figures/2022/*.Rda
+!HIV/output/HIV_Cascade_Paper/figures/all-2023
+!HIV/output/HIV_Cascade_Paper/figures/female-2023
+!HIV/output/HIV_Cascade_Paper/figures/male-2023
+!HIV/output/HIV_Cascade_Paper/figures/*.svg
+!HIV/output/HIV_Cascade_Paper/figures/Paper_Figures.Rmd
 
+HIV/output/HIV_Cascade_Paper/figures/2022/*.Rda
 HIV/trend_analysis/
 HIV/output.dta
 
